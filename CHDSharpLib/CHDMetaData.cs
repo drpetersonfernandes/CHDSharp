@@ -1,4 +1,5 @@
 ﻿using CHDSharpLib.Utils;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,18 +12,12 @@ internal static class CHDMetaData
 {
     internal static uint CHD_MDFLAGS_CHECKSUM = 0x01;        // indicates data is checksummed
 
-    internal static chd_error ReadMetaData(Stream file, CHDHeader chd, Message consoleOut)
+    internal static chd_error ReadMetaData(Stream file, CHDHeader chd)
     {
         using BinaryReader br = new BinaryReader(file, Encoding.UTF8, true);
 
-        // List<byte[]>metaHashes contains the byte data that is hashed below to validate the meta data
-        // each metaHash is 24 bytes:
-        // 0-3  : is the byte data for the metaTag
-        // 4-23 : is the SHA1 of the metaData
-
         List<byte[]> metaHashes = new List<byte[]>();
 
-        // loop over the metadata, until metaoffset=0
         while (chd.metaoffset != 0)
         {
             file.Seek((long)chd.metaoffset, SeekOrigin.Begin);
@@ -35,14 +30,13 @@ internal static class CHDMetaData
             byte[] metaData = new byte[metaLength];
             file.ReadExactly(metaData, 0, metaData.Length);
 
-            if (consoleOut != null)
-            {
-                consoleOut?.Invoke($"{(char)((metaTag >> 24) & 0xFF)}{(char)((metaTag >> 16) & 0xFF)}{(char)((metaTag >> 8) & 0xFF)}{(char)((metaTag >> 0) & 0xFF)}  Length: {metaLength}");
-                if (Util.isAscii(metaData))
-                    consoleOut?.Invoke($"Data: {Encoding.ASCII.GetString(metaData)}");
-                else
-                    consoleOut?.Invoke($"Data: Binary Data Length {metaData.Length}");
-            }
+            Log.Debug("{MetaTag}  Length: {MetaLength}",
+                $"{(char)((metaTag >> 24) & 0xFF)}{(char)((metaTag >> 16) & 0xFF)}{(char)((metaTag >> 8) & 0xFF)}{(char)((metaTag >> 0) & 0xFF)}",
+                metaLength);
+            if (Util.isAscii(metaData))
+                Log.Debug("Data: {MetaData}", Encoding.ASCII.GetString(metaData));
+            else
+                Log.Debug("Data: Binary Data Length {Length}", metaData.Length);
 
             // take the 4 byte metaTag, and the metaData
             // SHA1 the metaData to 20 byte SHA1

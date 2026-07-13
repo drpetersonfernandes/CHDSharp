@@ -1,4 +1,5 @@
 using CHDSharpLib.Utils;
+using Serilog;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -67,14 +68,8 @@ internal class MapEntry
 }
 
 
-public delegate void Message(string message);
-public delegate void FileMessage(string filename, string message);
-
 public static class CHD
 {
-    public static Message fileProcessInfo; // returns the name of the file being processed
-    public static Message progress; // returns the progress of the file
-    public static Message consoleOut;
     public static int taskCount = 8;
 
     public static chd_error CheckFile(Stream s, string filename, bool deepCheck, out uint? chdVersion, out byte[] chdSHA1, out byte[] chdMD5)
@@ -86,7 +81,7 @@ public static class CHD
         if (!CheckHeader(s, out uint length, out uint version))
             return chd_error.CHDERR_INVALID_FILE;
 
-        consoleOut?.Invoke($@"CHD Version {version}");
+        Log.Information("CHD Version {Version}", version);
         chd_error valid = chd_error.CHDERR_INVALID_DATA;
         CHDHeader chd = null;
         try
@@ -110,7 +105,7 @@ public static class CHD
                     break;
                 default:
                     {
-                        consoleOut?.Invoke($@"Unknown version {version}");
+                        Log.Warning("Unknown version {Version}", version);
                         return chd_error.CHDERR_UNSUPPORTED_VERSION;
                     }
             }
@@ -122,7 +117,7 @@ public static class CHD
 
         if (valid != chd_error.CHDERR_NONE)
         {
-            consoleOut?.Invoke($"Child CHD found, cannot be processed");
+            Log.Warning("Child CHD found, cannot be processed");
             return valid;
         }
 
@@ -132,7 +127,7 @@ public static class CHD
 
         if (!Util.IsAllZeroArray(chd.parentmd5) || !Util.IsAllZeroArray(chd.parentsha1))
         {
-            consoleOut?.Invoke($"Child CHD found, cannot be processed");
+            Log.Warning("Child CHD found, cannot be processed");
             return chd_error.CHDERR_REQUIRES_PARENT;
         }
 
@@ -141,7 +136,7 @@ public static class CHD
 
         if (((ulong)chd.totalblocks * (ulong)chd.blocksize) != chd.totalbytes)
         {
-            consoleOut?.Invoke($"{(ulong)chd.totalblocks * (ulong)chd.blocksize} != {chd.totalbytes}");
+            Log.Debug("{BlocksXSize} != {TotalBytes}", (ulong)chd.totalblocks * (ulong)chd.blocksize, chd.totalbytes);
         }
 
 
@@ -150,31 +145,31 @@ public static class CHD
         {
             strComp += $", {chd.compression[i].ToString().Substring(10)}";
         }
-        fileProcessInfo?.Invoke($"{Path.GetFileName(filename)}, V:{version} {strComp}");
+        Log.Information("{Filename}, V:{Version} {Compression}", Path.GetFileName(filename), version, strComp);
 
         CHDBlockRead.FindBlockReaders(chd);
-        CHDBlockRead.FindRepeatedBlocks(chd, consoleOut);
+        CHDBlockRead.FindRepeatedBlocks(chd);
         int blocksToKeep = (1024 * 1024 * 512) / (int)chd.blocksize;
-        CHDBlockRead.KeepMostRepeatedBlocks(chd, blocksToKeep, consoleOut);
+        CHDBlockRead.KeepMostRepeatedBlocks(chd, blocksToKeep);
 
         valid = taskCount == 0 ? DecompressData(s, chd) : DecompressDataParallel(s, chd);
 
         if (valid != chd_error.CHDERR_NONE)
         {
-            consoleOut?.Invoke($"Data Decompress Failed: {valid}");
+            Log.Error("Data Decompress Failed: {Error}", valid);
             return valid;
         }
 
-        valid = CHDMetaData.ReadMetaData(s, chd, consoleOut);
+        valid = CHDMetaData.ReadMetaData(s, chd);
 
         if (valid != chd_error.CHDERR_NONE)
         {
-            consoleOut?.Invoke($"Meta Data Failed: {valid}");
+            Log.Error("Meta Data Failed: {Error}", valid);
             return valid;
         }
 
 
-        consoleOut?.Invoke($"Valid");
+        Log.Information("Valid");
         return chd_error.CHDERR_NONE;
     }
 
@@ -286,7 +281,7 @@ public static class CHD
             {
                 /* progress */
                 if ((block % 1000) == 0)
-                    progress?.Invoke($"Verifying, {(100 - sizetoGo * 100 / chd.totalbytes):N1}% complete...\r");
+                    Log.Debug("Verifying, {Percent:N1}% complete", 100 - sizetoGo * 100 / chd.totalbytes);
 
                 MapEntry mapEntry = chd.map[block];
                 if (mapEntry.length > 0)
@@ -317,11 +312,11 @@ public static class CHD
                 sizetoGo -= (ulong)sizenext;
 
             }
-            progress?.Invoke($"Verifying, 100.0% complete...");
+            Log.Debug("Verifying, 100.0% complete");
         }
         catch (Exception e)
         {
-            consoleOut?.Invoke(e.Message);
+            Log.Error(e, "Data Decompress Failed");
             return chd_error.CHDERR_DECOMPRESSION_ERROR;
         }
 
@@ -390,7 +385,7 @@ public static class CHD
 
                         //progress?.Invoke($"Verifying: {(long)block * 100 / chd.totalblocks:N0}%     Load buffer: {blocksToDecompress.Count}    Hash buffer: {blocksToHash.Count}");;
 
-                        progress?.Invoke($"Verifying: {(long)block * 100 / chd.totalblocks:N0}%");
+                        Log.Debug("Verifying: {Percent:N0}%", (long)block * 100 / chd.totalblocks);
                     }
                     MapEntry mapEntry = chd.map[block];
 
@@ -519,17 +514,14 @@ public static class CHD
         Task.WaitAll(allTasks.ToArray());
 
 
-        progress?.Invoke($"Verifying, 100% complete.");
+        Log.Debug("Verifying, 100% complete");
 
-        if (consoleOut != null)
-        {
-            arrPoolIn.ReadStats(out int issuedArraysTotal, out int returnedArraysTotal);
-            consoleOut.Invoke($"In: Issued Arrays Total {issuedArraysTotal},  returned Arrays Total {returnedArraysTotal}, block size {chd.blocksize}");
-            arrPoolOut.ReadStats(out issuedArraysTotal, out returnedArraysTotal);
-            consoleOut.Invoke($"Out: Issued Arrays Total {issuedArraysTotal},  returned Arrays Total {returnedArraysTotal}, block size {chd.blocksize}");
-            arrPoolCache.ReadStats(out issuedArraysTotal, out returnedArraysTotal);
-            consoleOut.Invoke($"Cache: Issued Arrays Total {issuedArraysTotal},  returned Arrays Total {returnedArraysTotal}, block size {chd.blocksize}");
-        }
+        arrPoolIn.ReadStats(out int issuedArraysTotal, out int returnedArraysTotal);
+        Log.Debug("In: Issued Arrays Total {Issued}, returned Arrays Total {Returned}, block size {BlockSize}", issuedArraysTotal, returnedArraysTotal, chd.blocksize);
+        arrPoolOut.ReadStats(out issuedArraysTotal, out returnedArraysTotal);
+        Log.Debug("Out: Issued Arrays Total {Issued}, returned Arrays Total {Returned}, block size {BlockSize}", issuedArraysTotal, returnedArraysTotal, chd.blocksize);
+        arrPoolCache.ReadStats(out issuedArraysTotal, out returnedArraysTotal);
+        Log.Debug("Cache: Issued Arrays Total {Issued}, returned Arrays Total {Returned}, block size {BlockSize}", issuedArraysTotal, returnedArraysTotal, chd.blocksize);
 
         if (errMaster != chd_error.CHDERR_NONE)
 

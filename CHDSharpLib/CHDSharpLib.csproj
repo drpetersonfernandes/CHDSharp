@@ -23,4 +23,16 @@
       <InternalsVisibleTo Include="CHDSharp.Tests" />
     </ItemGroup>
 
+    <ItemGroup>
+        <None Remove="References\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Remove="References\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Page Remove="References\**" />
+    </ItemGroup>
+
 </Project>

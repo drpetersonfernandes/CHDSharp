@@ -1,4 +1,4 @@
-﻿using CHDReaderTest.Flac.FlacDeps;
+using CHDReaderTest.Flac.FlacDeps;
 
 namespace CUETools.Codecs.Flake
 {
@@ -7,7 +7,7 @@ namespace CUETools.Codecs.Flake
         public FlacSubframe()
         {
             rc = new RiceContext();
-            coefs = new int[lpc.MAX_LPC_ORDER];
+            coefs = new int[Lpc.MAX_LPC_ORDER];
         }
         public SubframeType type;
         public int order;

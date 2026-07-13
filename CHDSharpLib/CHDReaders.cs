@@ -37,13 +37,48 @@ internal static partial class CHDReaders
 
 
 
+    internal static chd_error zstd(byte[] buffIn, int buffInLength, byte[] buffOut, int buffOutLength, CHDCodec codec)
+    {
+        return zstd(buffIn, 0, buffInLength, buffOut, 0, buffOutLength, codec);
+    }
+    private static chd_error zstd(byte[] buffIn, int buffInStart, int buffInLength, byte[] buffOut, int buffOutStart, int buffOutLength, CHDCodec codec)
+    {
+        codec.bZstd ??= new ZstdSharp.Decompressor();
+        try
+        {
+            int written = codec.bZstd.Unwrap(
+                new ReadOnlySpan<byte>(buffIn, buffInStart, buffInLength),
+                new Span<byte>(buffOut, buffOutStart, buffOutLength));
+            if (written != buffOutLength)
+                return chd_error.CHDERR_DECOMPRESSION_ERROR;
+        }
+        catch
+        {
+            return chd_error.CHDERR_DECOMPRESSION_ERROR;
+        }
+        return chd_error.CHDERR_NONE;
+    }
+
+
+
+
     internal static chd_error lzma(byte[] buffIn, int buffInLength, byte[] buffOut, int buffOutLength, CHDCodec codec)
     {
         return lzma(buffIn, 0, buffInLength, buffOut, buffOutLength, codec);
     }
     private static chd_error lzma(byte[] buffIn, int buffInStart, int compsize, byte[] buffOut, int buffOutLength, CHDCodec codec)
     {
-        //hacky header creator
+        // CHD LZMA hunks are RAW, headerless LZMA payloads. There is no 5-byte
+        // LZMA properties header stored in the stream (unlike a .lzma file).
+        // Both MAME's chdman (encoder) and libchdr (decoder) use FIXED settings
+        // and synthesise the properties rather than reading them:
+        //   lc=3, lp=0, pb=2  =>  properties[0] = (pb*5 + lp)*9 + lc = 93  (== libchdr decoder_props[0])
+        // The dictionary size only has to be >= the maximum back-reference
+        // distance. Each hunk is compressed independently, so that distance is
+        // always < hunkbytes; using buffOutLength (= hunkbytes) is therefore
+        // always sufficient and keeps the reusable dictionary buffer small.
+        // Do NOT try to read properties from the first bytes of buffIn - those
+        // bytes are already compressed data and skipping them corrupts the hunk.
         byte[] properties = new byte[5];
         int posStateBits = 2;
         int numLiteralPosStateBits = 0;
@@ -107,6 +142,21 @@ internal static partial class CHDReaders
 
     private static chd_error flac(byte[] buffIn, int buffInStart, int buffInLength, byte[] buffOut, int buffOutLength, bool swapEndian, CHDCodec codec, out int srcPos)
     {
+        // CHD FLAC data is HEADERLESS - it is a bare sequence of FLAC frames with
+        // NO fLaC stream marker and NO STREAMINFO metadata block. There is nothing
+        // to read the sample rate / channels / bit-depth from; that information is
+        // implicit in the CHD format itself.
+        //
+        // libchdr does the same thing: flac_codec_decompress() hardcodes
+        // flac_decoder_reset(..., 44100, 2, ...). The 44100 is arbitrary - sample
+        // rate does NOT affect FLAC sample-value decoding (AudioDecoder only
+        // validates that the per-frame rate code is a standard one and otherwise
+        // ignores it). What matters for correct decoding is:
+        //   - bits-per-sample = 16  (always true for CHD FLAC)
+        //   - channel count   = 2   (CD/raw FLAC hunks are 16-bit stereo samples)
+        // Both are fixed by the CHD format and validated against each frame header
+        // inside DecodeFrame(); the actual per-frame block size is also read from
+        // the frame header, so no block-size hint is required here.
         codec.FLAC_settings ??= new AudioPCMConfig(16, 2, 44100);
         codec.FLAC_audioDecoder ??= new AudioDecoder(codec.FLAC_settings);
         codec.FLAC_audioBuffer ??= new AudioBuffer(codec.FLAC_settings, buffOutLength); //audio buffer to take decoded samples and read them to bytes.
@@ -253,6 +303,48 @@ internal static partial class CHDReaders
         {
             Array.Copy(codec.bSector, framenum * CD_MAX_SECTOR_DATA, buffOut, framenum * CD_FRAME_SIZE, CD_MAX_SECTOR_DATA);
             Array.Copy(codec.bSubcode, framenum * CD_MAX_SUBCODE_DATA, buffOut, framenum * CD_FRAME_SIZE + CD_MAX_SECTOR_DATA, CD_MAX_SUBCODE_DATA);
+        }
+        return chd_error.CHDERR_NONE;
+    }
+
+
+    internal static chd_error cdzstd(byte[] buffIn, int buffInLength, byte[] buffOut, int buffOutLength, CHDCodec codec)
+    {
+        /* determine header bytes */
+        int frames = buffOutLength / CD_FRAME_SIZE;
+        int complen_bytes = (buffOutLength < 65536) ? 2 : 3;
+        int ecc_bytes = (frames + 7) / 8;
+        int header_bytes = ecc_bytes + complen_bytes;
+
+        /* extract compressed length of base */
+        int complen_base = (buffIn[ecc_bytes + 0] << 8) | buffIn[ecc_bytes + 1];
+        if (complen_bytes > 2)
+            complen_base = (complen_base << 8) | buffIn[ecc_bytes + 2];
+
+        codec.bSector ??= new byte[frames * CD_MAX_SECTOR_DATA];
+        codec.bSubcode ??= new byte[frames * CD_MAX_SUBCODE_DATA];
+
+        chd_error err = zstd(buffIn, header_bytes, complen_base, codec.bSector, 0, frames * CD_MAX_SECTOR_DATA, codec);
+        if (err != chd_error.CHDERR_NONE)
+            return err;
+
+        err = zstd(buffIn, header_bytes + complen_base, buffInLength - header_bytes - complen_base, codec.bSubcode, 0, frames * CD_MAX_SUBCODE_DATA, codec);
+        if (err != chd_error.CHDERR_NONE)
+            return err;
+
+        /* reassemble the data */
+        for (int framenum = 0; framenum < frames; framenum++)
+        {
+            Array.Copy(codec.bSector, framenum * CD_MAX_SECTOR_DATA, buffOut, framenum * CD_FRAME_SIZE, CD_MAX_SECTOR_DATA);
+            Array.Copy(codec.bSubcode, framenum * CD_MAX_SUBCODE_DATA, buffOut, framenum * CD_FRAME_SIZE + CD_MAX_SECTOR_DATA, CD_MAX_SUBCODE_DATA);
+
+            // reconstitute the ECC data and sync header 
+            int sectorStart = framenum * CD_FRAME_SIZE;
+            if ((buffIn[framenum / 8] & (1 << (framenum % 8))) != 0)
+            {
+                Array.Copy(s_cd_sync_header, 0, buffOut, sectorStart, s_cd_sync_header.Length);
+                cdRom.ecc_generate(buffOut, sectorStart);
+            }
         }
         return chd_error.CHDERR_NONE;
     }

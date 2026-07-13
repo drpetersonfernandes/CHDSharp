@@ -45,9 +45,11 @@ public enum chd_codec
     CHD_CODEC_LZMA = 0x6C7A6D61, // lzma
     CHD_CODEC_HUFFMAN = 0x68756666, // huff
     CHD_CODEC_FLAC = 0x666C6163, // flac
+    CHD_CODEC_ZSTD = 0x7A737464, // zstd
     CHD_CODEC_CD_ZLIB = 0x63647A6C, // cdzl
     CHD_CODEC_CD_LZMA = 0x63646C7A, // cdlz
     CHD_CODEC_CD_FLAC = 0x6364666C, // cdfl
+    CHD_CODEC_CD_ZSTD = 0x63647A73, // cdzs
     CHD_CODEC_AVHUFF = 0x61766875, // avhu
     CHD_CODEC_ERROR = 0x0eeeeeee
 }

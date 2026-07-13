@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "CHDSharpTest": {
-      "commandName": "Project",
-      "commandLineArgs": "\"E:\\RomVault\\RomRoot\\MAME - CHDs\""
-    }
-  }
-}

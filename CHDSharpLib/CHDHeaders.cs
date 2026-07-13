@@ -1,4 +1,4 @@
-﻿using CHDSharpLib.Utils;
+using CHDSharpLib.Utils;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -28,15 +28,16 @@ internal static class CHDHeaders
         const int HARD_DISK_SECTOR_SIZE = 512;
         chd.totalbytes = cylinders * heads * sectors * HARD_DISK_SECTOR_SIZE;
         chd.blocksize = chd.blocksize * HARD_DISK_SECTOR_SIZE;
+        chd.unitbytes = chd.blocksize;
 
-        chd.map = new mapentry[chd.totalblocks];
+        chd.map = new MapEntry[chd.totalblocks];
 
         Dictionary<ulong, int> mapBack = new Dictionary<ulong, int>();
 
         for (int i = 0; i < chd.totalblocks; i++)
         {
             ulong tmpu = br.ReadUInt64BE();
-            chd.map[i] = new mapentry();
+            chd.map[i] = new MapEntry();
 
 
             if (mapBack.TryGetValue(tmpu, out int v))
@@ -79,15 +80,16 @@ internal static class CHDHeaders
 
         const int HARD_DISK_SECTOR_SIZE = 512;
         chd.totalbytes = cylinders * heads * sectors * HARD_DISK_SECTOR_SIZE;
+        chd.unitbytes = chd.blocksize;
 
-        chd.map = new mapentry[chd.totalblocks];
+        chd.map = new MapEntry[chd.totalblocks];
 
         Dictionary<ulong, int> mapBack = new Dictionary<ulong, int>();
 
         for (int i = 0; i < chd.totalblocks; i++)
         {
             ulong tmpu = br.ReadUInt64BE();
-            chd.map[i] = new mapentry();
+            chd.map[i] = new MapEntry();
 
 
             if (mapBack.TryGetValue(tmpu, out int v))
@@ -127,14 +129,15 @@ internal static class CHDHeaders
         chd.md5 = br.ReadBytes(16);
         chd.parentmd5 = br.ReadBytes(16);
         chd.blocksize = br.ReadUInt32BE();    // length of a CHD Block
+        chd.unitbytes = chd.blocksize;
         chd.rawsha1 = br.ReadBytes(20);
         chd.parentsha1 = br.ReadBytes(20);
 
-        chd.map = new mapentry[chd.totalblocks];
+        chd.map = new MapEntry[chd.totalblocks];
 
         for (int i = 0; i < chd.totalblocks; i++)
         {
-            chd.map[i] = new mapentry();
+            chd.map[i] = new MapEntry();
             chd.map[i].offset = br.ReadUInt64BE();
             chd.map[i].crc = br.ReadUInt32BE();
             chd.map[i].length = (uint)((br.ReadByte() << 8) | (br.ReadByte() << 0) | (br.ReadByte() << 16));
@@ -160,15 +163,16 @@ internal static class CHDHeaders
         chd.metaoffset = br.ReadUInt64BE();
 
         chd.blocksize = br.ReadUInt32BE();    // length of a CHD Block
+        chd.unitbytes = chd.blocksize;
         chd.sha1 = br.ReadBytes(20);
         chd.parentsha1 = br.ReadBytes(20);
         chd.rawsha1 = br.ReadBytes(20);
 
-        chd.map = new mapentry[chd.totalblocks];
+        chd.map = new MapEntry[chd.totalblocks];
 
         for (int i = 0; i < chd.totalblocks; i++)
         {
-            chd.map[i] = new mapentry();
+            chd.map[i] = new MapEntry();
             chd.map[i].offset = br.ReadUInt64BE();
             chd.map[i].crc = br.ReadUInt32BE();
             chd.map[i].length = (uint)((br.ReadUInt16BE()) | (br.ReadByte() << 16));
@@ -195,6 +199,7 @@ internal static class CHDHeaders
 
         chd.blocksize = br.ReadUInt32BE();    // length of a CHD Hunk (Block)
         uint unitbytes = br.ReadUInt32BE();
+        chd.unitbytes = unitbytes;
         chd.rawsha1 = br.ReadBytes(20);
         chd.sha1 = br.ReadBytes(20);
         chd.parentsha1 = br.ReadBytes(20);
@@ -202,6 +207,7 @@ internal static class CHDHeaders
         chd.totalblocks = (uint)((chd.totalbytes + chd.blocksize - 1) / chd.blocksize);
 
         bool chdCompressed = chd.compression[0] != chd_codec.CHD_CODEC_NONE;
+        chd.uncompressedMap = !chdCompressed;
 
         chd_error err = chdCompressed ?
                 compressed_v5_map(br, mapoffset, chd.totalblocks, chd.blocksize, unitbytes, out chd.map) :
@@ -211,24 +217,37 @@ internal static class CHDHeaders
     }
 
 
-    private static chd_error uncompressed_v5_map(BinaryReader br, ulong mapoffset, uint totalblocks, uint blocksize, out mapentry[] map)
+    private static chd_error uncompressed_v5_map(BinaryReader br, ulong mapoffset, uint totalblocks, uint blocksize, out MapEntry[] map)
     {
         br.BaseStream.Seek((long)mapoffset, SeekOrigin.Begin);
 
-        map = new mapentry[totalblocks];
+        map = new MapEntry[totalblocks];
         for (int blockIndex = 0; blockIndex < totalblocks; blockIndex++)
         {
-            map[blockIndex] = new mapentry();
-            map[blockIndex].comptype = compression_type.COMPRESSION_NONE;
-            map[blockIndex].length = blocksize;
-            map[blockIndex].offset = br.ReadUInt32BE() * blocksize;
+            map[blockIndex] = new MapEntry();
+            uint offsetWord = br.ReadUInt32BE();
+            if (offsetWord == 0)
+            {
+                // Offset word 0 in an uncompressed V5 map means: take this hunk
+                // from the parent (same hunk index), or zero-fill if no parent.
+                // Mark as PARENT; the read path resolves same-hunk from parent.
+                map[blockIndex].comptype = compression_type.COMPRESSION_PARENT;
+                map[blockIndex].length = blocksize;
+                map[blockIndex].offset = (ulong)blockIndex; // direct parent hunk index
+            }
+            else
+            {
+                map[blockIndex].comptype = compression_type.COMPRESSION_NONE;
+                map[blockIndex].length = blocksize;
+                map[blockIndex].offset = (ulong)offsetWord * blocksize;
+            }
         }
         return chd_error.CHDERR_NONE;
     }
 
-    private static chd_error compressed_v5_map(BinaryReader br, ulong mapoffset, uint totalBlocks, uint blocksize, uint unitbytes, out mapentry[] map)
+    private static chd_error compressed_v5_map(BinaryReader br, ulong mapoffset, uint totalBlocks, uint blocksize, uint unitbytes, out MapEntry[] map)
     {
-        map = new mapentry[totalBlocks];
+        map = new MapEntry[totalBlocks];
 
         /* read the reader */
         br.BaseStream.Seek((long)mapoffset, SeekOrigin.Begin);
@@ -241,7 +260,7 @@ internal static class CHDHeaders
         br.ReadByte();                       //15 not used
 
         byte[] compressed_arr = new byte[mapbytes];
-        br.BaseStream.Read(compressed_arr, 0, (int)mapbytes);
+        br.BaseStream.ReadExactly(compressed_arr, 0, (int)mapbytes);
 
         BitStream bitbuf = new BitStream(compressed_arr, 0, (int)mapbytes);
 
@@ -262,7 +281,7 @@ internal static class CHDHeaders
         compression_type lastcomp = 0;
         for (uint blockIndex = 0; blockIndex < totalBlocks; blockIndex++)
         {
-            map[blockIndex] = new mapentry();
+            map[blockIndex] = new MapEntry();
             if (repcount > 0)
             {
                 map[blockIndex].comptype = lastcomp;

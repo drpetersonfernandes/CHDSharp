@@ -154,6 +154,11 @@ internal static partial class CHDReaders
                 uint? curdest = audioChannelDestStart[channelNumber];
                 if (curdest != null)
                 {
+                    // AVHuff FLAC streams are headerless (no STREAMINFO), one FLAC
+                    // stream PER audio channel, so channel count = 1 (mono). Sample
+                    // rate is irrelevant to decoding (see notes in CHDReaders.flac);
+                    // bit-depth is fixed at 16. These match how MAME encodes AVHuff
+                    // audio, so the values are correct for every AVHuff CHD.
                     codec.AVHUFF_settings ??= new AudioPCMConfig(16, 1, 48000);
                     codec.AVHUFF_audioDecoder ??= new AudioDecoder(codec.AVHUFF_settings); //read the data and decode it in to a 1D array of samples - the buffer seems to want 2D :S
                     AudioBuffer audioBuffer = new AudioBuffer(codec.AVHUFF_settings, blockSize); //audio buffer to take decoded samples and read them to bytes.
@@ -276,7 +281,13 @@ internal static partial class CHDReaders
 
     private static chd_error DecodeVideo(uint width, uint height, byte[] buffIn, uint buffInOffset, uint buffInLength, byte[] buffOut, uint buffOutOffset, uint dstride, CHDCodec codec)
     {
-        // if the high bit of the first byte is set, we decode losslessly
+        // The first video byte is MAME AVHuff's video-encoding marker. The high
+        // bit (0x80) signals that the video stream is Huffman(+RLE) encoded, which
+        // is the ONLY video encoding AVHuff produces. It is NOT a lossy/lossless
+        // selector - AVHuff video is always this Huffman delta-RLE form, decoded
+        // below. Any other value means an encoding we don't recognise.
+        // (Note: libchdr 0.3.0 does not implement AVHuff at all, so there is no
+        // additional "lossy" path to port - this is already the complete decode.)
         if ((buffIn[buffInOffset] & 0x80) == 0)
             return chd_error.CHDERR_INVALID_DATA;
 

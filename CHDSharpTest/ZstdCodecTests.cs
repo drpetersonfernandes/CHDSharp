@@ -1,0 +1,147 @@
+using System.IO;
+using System.Linq;
+using CHDSharpLib;
+using Xunit;
+
+namespace CHDSharp.Tests;
+
+/// <summary>
+/// Builds Zstd (`zstd`) and CD-Zstd (`cdzs`) CHDs via chdman from a real source
+/// file, then verifies the C# decoder reproduces the original data byte-for-byte
+/// (SHA1 must be unchanged by recompression). Exercises Phase 1 codecs.
+/// Skips when chdman or a suitable source file is unavailable.
+/// </summary>
+public sealed class ZstdCodecFixture : System.IDisposable
+{
+    public string TempDir { get; }
+    public string CdzsPath { get; }      // CD source recompressed to cdzs
+    public string CdzsExpectedSha1 { get; }
+    public string ZstdPath { get; }      // raw/HD source recompressed to zstd
+    public string ZstdExpectedSha1 { get; }
+    public string SkipReason { get; }
+
+    public ZstdCodecFixture()
+    {
+        if (!TestPaths.ChdmanAvailable)
+        {
+            SkipReason = "chdman.exe not available";
+            return;
+        }
+
+        var present = ChdListData.AllPaths()
+            .Where(File.Exists)
+            .Select(p => new FileInfo(p))
+            .OrderBy(fi => fi.Length)
+            .Select(fi => fi.FullName)
+            .ToList();
+
+        if (present.Count == 0)
+        {
+            SkipReason = "No CHD files from the list are present";
+            return;
+        }
+
+        TempDir = TestPaths.CreateTempDir();
+
+        // A CD-type file (hunk size multiple of the CD frame) for cdzs.
+        string cdSource = present.FirstOrDefault(p =>
+        {
+            if (CHDFile.Open(p, out CHDFile c) != chd_error.CHDERR_NONE) return false;
+            using (c) return c.HunkBytes % 2448 == 0;
+        });
+        if (cdSource != null)
+        {
+            CdzsExpectedSha1 = RawSha1(cdSource);
+            string outp = Path.Combine(TempDir, "cdzs.chd");
+            if (Chdman.Copy(cdSource, outp, "cdzs"))
+                CdzsPath = outp;
+        }
+
+        // Any openable file recompressed to raw zstd (chdman picks a valid unit size).
+        string rawSource = present.FirstOrDefault(p =>
+        {
+            if (CHDFile.Open(p, out CHDFile c) != chd_error.CHDERR_NONE) return false;
+            c.Dispose();
+            return true;
+        });
+        if (rawSource != null)
+        {
+            ZstdExpectedSha1 = RawSha1(rawSource);
+            string zoutp = Path.Combine(TempDir, "zstd.chd");
+            if (Chdman.Copy(rawSource, zoutp, "zstd"))
+                ZstdPath = zoutp;
+        }
+
+        if (CdzsPath == null && ZstdPath == null)
+            SkipReason = "chdman could not produce zstd/cdzs test files";
+    }
+
+    private static string RawSha1(string path)
+    {
+        if (CHDFile.Open(path, out CHDFile c) != chd_error.CHDERR_NONE)
+            return null;
+        using (c) return HashUtil.ToHex(c.RawSHA1);
+    }
+
+    public void Dispose()
+    {
+        try { if (TempDir != null && Directory.Exists(TempDir)) Directory.Delete(TempDir, true); }
+        catch { }
+    }
+}
+
+public class ZstdCodecTests : IClassFixture<ZstdCodecFixture>
+{
+    private readonly ZstdCodecFixture _fx;
+    public ZstdCodecTests(ZstdCodecFixture fx) => _fx = fx;
+
+    [Fact]
+    public void Cdzs_DecodesToOriginalData()
+    {
+        if (_fx.CdzsPath == null)
+            Assert.Skip(_fx.SkipReason ?? "cdzs test file unavailable");
+
+        chd_error err = CHDFile.Open(_fx.CdzsPath, out CHDFile chd);
+        Assert.Equal(chd_error.CHDERR_NONE, err);
+        using (chd)
+        {
+            Assert.Equal(_fx.CdzsExpectedSha1, ChdListIntegrationTests.ComputeFullImageSha1(chd));
+        }
+    }
+
+    [Fact]
+    public void Cdzs_CheckFileVerifies()
+    {
+        if (_fx.CdzsPath == null)
+            Assert.Skip(_fx.SkipReason ?? "cdzs test file unavailable");
+
+        using Stream s = File.OpenRead(_fx.CdzsPath);
+        chd_error err = CHD.CheckFile(s, "cdzs.chd", true, out _, out _, out _);
+        Assert.Equal(chd_error.CHDERR_NONE, err);
+    }
+
+    [Fact]
+    public void Zstd_DecodesToOriginalData()
+    {
+        if (_fx.ZstdPath == null)
+            Assert.Skip(_fx.SkipReason ?? "zstd test file unavailable");
+
+        chd_error err = CHDFile.Open(_fx.ZstdPath, out CHDFile chd);
+        Assert.Equal(chd_error.CHDERR_NONE, err);
+        using (chd)
+        {
+            Assert.Equal(_fx.ZstdExpectedSha1, ChdListIntegrationTests.ComputeFullImageSha1(chd));
+        }
+    }
+
+    [Fact]
+    public void Zstd_CheckFileVerifies()
+    {
+        if (_fx.ZstdPath == null)
+            Assert.Skip(_fx.SkipReason ?? "zstd test file unavailable");
+
+        using Stream s = File.OpenRead(_fx.ZstdPath);
+        chd_error err = CHD.CheckFile(s, "zstd.chd", true, out _, out _, out _);
+        Assert.Equal(chd_error.CHDERR_NONE, err);
+    }
+}

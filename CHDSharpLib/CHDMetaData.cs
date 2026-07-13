@@ -33,7 +33,7 @@ internal static class CHDMetaData
             metaLength &= 0x00ffffff;
 
             byte[] metaData = new byte[metaLength];
-            file.Read(metaData, 0, metaData.Length);
+            file.ReadExactly(metaData, 0, metaData.Length);
 
             if (consoleOut != null)
             {

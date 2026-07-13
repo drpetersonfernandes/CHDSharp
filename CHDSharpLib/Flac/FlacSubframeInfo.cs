@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using CHDReaderTest.Flac.FlacDeps;
 
 namespace CUETools.Codecs.Flake
@@ -10,8 +10,8 @@ namespace CUETools.Codecs.Flake
             best = new FlacSubframe();
             sf = new LpcSubframeInfo();
             best_fixed = new ulong[5];
-            lpc_ctx = new LpcContext[lpc.MAX_LPC_WINDOWS];
-            for (int i = 0; i < lpc.MAX_LPC_WINDOWS; i++)
+            lpc_ctx = new LpcContext[Lpc.MAX_LPC_WINDOWS];
+            for (int i = 0; i < Lpc.MAX_LPC_WINDOWS; i++)
                 lpc_ctx[i] = new LpcContext();
         }
 
@@ -28,7 +28,7 @@ namespace CUETools.Codecs.Flake
             best.type = SubframeType.Verbatim;
             best.size = AudioSamples.UINT32_MAX;
             sf.Reset();
-            for (int iWindow = 0; iWindow < lpc.MAX_LPC_WINDOWS; iWindow++)
+            for (int iWindow = 0; iWindow < Lpc.MAX_LPC_WINDOWS; iWindow++)
                 lpc_ctx[iWindow].Reset();
             //sf.obits = obits;
             done_fixed = 0;

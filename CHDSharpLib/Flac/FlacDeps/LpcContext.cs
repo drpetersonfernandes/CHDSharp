@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using CUETools.Codecs;
 
@@ -8,8 +8,8 @@ namespace CHDReaderTest.Flac.FlacDeps
     {
         public LpcSubframeInfo()
         {
-            autocorr_section_values = new double[lpc.MAX_LPC_SECTIONS, lpc.MAX_LPC_ORDER + 1];
-            autocorr_section_orders = new int[lpc.MAX_LPC_SECTIONS];
+            autocorr_section_values = new double[Lpc.MAX_LPC_SECTIONS, Lpc.MAX_LPC_ORDER + 1];
+            autocorr_section_orders = new int[Lpc.MAX_LPC_SECTIONS];
         }
 
         // public LpcContext[] lpc_ctx;
@@ -78,24 +78,24 @@ namespace CHDReaderTest.Flac.FlacDeps
         unsafe public void compute_autocorr(/*const*/ int* data, float* window, int min_order, int order, int blocksize, double* autoc)
         {
             if (m_type == SectionType.OneLarge)
-                lpc.compute_autocorr_windowless_large(data + m_start, m_end - m_start, min_order, order, autoc);
+                Lpc.compute_autocorr_windowless_large(data + m_start, m_end - m_start, min_order, order, autoc);
             else if (m_type == SectionType.One)
-                lpc.compute_autocorr_windowless(data + m_start, m_end - m_start, min_order, order, autoc);
+                Lpc.compute_autocorr_windowless(data + m_start, m_end - m_start, min_order, order, autoc);
             else if (m_type == SectionType.Data)
-                lpc.compute_autocorr(data + m_start, window + m_start, m_end - m_start, min_order, order, autoc);
+                Lpc.compute_autocorr(data + m_start, window + m_start, m_end - m_start, min_order, order, autoc);
             else if (m_type == SectionType.Glue)
-                lpc.compute_autocorr_glue(data, window, m_start, m_end, min_order, order, autoc);
+                Lpc.compute_autocorr_glue(data, window, m_start, m_end, min_order, order, autoc);
             else if (m_type == SectionType.OneGlue)
-                lpc.compute_autocorr_glue(data + m_start, min_order, order, autoc);
+                Lpc.compute_autocorr_glue(data + m_start, min_order, order, autoc);
         }
 
         unsafe public static void Detect(int _windowcount, float* window_segment, int stride, int sz, int bps, LpcWindowSection* sections)
         {
             int section_id = 0;
             var boundaries = new List<int>();
-            var types = new SectionType[_windowcount, lpc.MAX_LPC_SECTIONS * 2];
-            var alias = new int[_windowcount, lpc.MAX_LPC_SECTIONS * 2];
-            var alias_set = new int[_windowcount, lpc.MAX_LPC_SECTIONS * 2];
+            var types = new SectionType[_windowcount, Lpc.MAX_LPC_SECTIONS * 2];
+            var alias = new int[_windowcount, Lpc.MAX_LPC_SECTIONS * 2];
+            var alias_set = new int[_windowcount, Lpc.MAX_LPC_SECTIONS * 2];
             for (int x = 0; x < sz; x++)
             {
                 for (int i = 0; i < _windowcount; i++)
@@ -110,9 +110,9 @@ namespace CHDReaderTest.Flac.FlacDeps
                                 && w == window_segment[i1 * stride + x])
                                 alias[i1, boundaries.Count] = i;
                     }
-                    if (boundaries.Count >= lpc.MAX_LPC_SECTIONS * 2) throw new IndexOutOfRangeException();
+                    if (boundaries.Count >= Lpc.MAX_LPC_SECTIONS * 2) throw new IndexOutOfRangeException();
                     types[i, boundaries.Count] =
-                        boundaries.Count >= lpc.MAX_LPC_SECTIONS * 2 - 2 ?
+                        boundaries.Count >= Lpc.MAX_LPC_SECTIONS * 2 - 2 ?
                         SectionType.Data : w == 0.0 ?
                         SectionType.Zero : w != 1.0 ?
                         SectionType.Data : bps * 2 + BitReader.log2i(sz) >= 61 ?
@@ -141,9 +141,9 @@ namespace CHDReaderTest.Flac.FlacDeps
             {
                 for (int i = 0; i < _windowcount; i++)
                 {
-                    LpcWindowSection* window_sections = sections + i * lpc.MAX_LPC_SECTIONS;
+                    LpcWindowSection* window_sections = sections + i * Lpc.MAX_LPC_SECTIONS;
                     // leave room for glue
-                    if (secs[i] >= lpc.MAX_LPC_SECTIONS - 1)
+                    if (secs[i] >= Lpc.MAX_LPC_SECTIONS - 1)
                     {
                         throw new IndexOutOfRangeException();
                         //window_sections[secs[i] - 1].m_type = LpcWindowSection.SectionType.Data;
@@ -155,7 +155,7 @@ namespace CHDReaderTest.Flac.FlacDeps
                 }
                 for (int i = 0; i < _windowcount; i++)
                 {
-                    LpcWindowSection* window_sections = sections + i * lpc.MAX_LPC_SECTIONS;
+                    LpcWindowSection* window_sections = sections + i * Lpc.MAX_LPC_SECTIONS;
                     int sec = secs[i] - 1;
                     if (sec > 0
                         && j > 0 && (alias_set[i, j] == alias_set[i, j - 1] || window_sections[sec].m_type == SectionType.Zero)
@@ -168,22 +168,22 @@ namespace CHDReaderTest.Flac.FlacDeps
                         secs[i]--;
                         continue;
                     }
-                    if (section_id >= lpc.MAX_LPC_SECTIONS) throw new IndexOutOfRangeException();
+                    if (section_id >= Lpc.MAX_LPC_SECTIONS) throw new IndexOutOfRangeException();
                     if (alias_set[i, j] != 0
                         && types[i, j] != SectionType.Zero
-                        && section_id < lpc.MAX_LPC_SECTIONS)
+                        && section_id < Lpc.MAX_LPC_SECTIONS)
                     {
                         for (int i1 = i; i1 < _windowcount; i1++)
                             if (alias[i1, j] == i && secs[i1] > 0)
-                                sections[i1 * lpc.MAX_LPC_SECTIONS + secs[i1] - 1].m_id = section_id;
+                                sections[i1 * Lpc.MAX_LPC_SECTIONS + secs[i1] - 1].m_id = section_id;
                         section_id++;
                     }
                     // TODO: section_id for glue? nontrivial, must be sure next sections are the same size
                     if (sec > 0
                         && (window_sections[sec].m_type == SectionType.One || window_sections[sec].m_type == SectionType.OneLarge)
-                        && window_sections[sec].m_end - window_sections[sec].m_start >= lpc.MAX_LPC_ORDER
+                        && window_sections[sec].m_end - window_sections[sec].m_start >= Lpc.MAX_LPC_ORDER
                         && (window_sections[sec - 1].m_type == SectionType.One || window_sections[sec - 1].m_type == SectionType.OneLarge)
-                        && window_sections[sec - 1].m_end - window_sections[sec - 1].m_start >= lpc.MAX_LPC_ORDER)
+                        && window_sections[sec - 1].m_end - window_sections[sec - 1].m_start >= Lpc.MAX_LPC_ORDER)
                     {
                         window_sections[sec + 1] = window_sections[sec];
                         window_sections[sec].m_end = window_sections[sec].m_start;
@@ -209,16 +209,16 @@ namespace CHDReaderTest.Flac.FlacDeps
             {
                 for (int s = 0; s < secs[i]; s++)
                 {
-                    LpcWindowSection* window_sections = sections + i * lpc.MAX_LPC_SECTIONS;
+                    LpcWindowSection* window_sections = sections + i * Lpc.MAX_LPC_SECTIONS;
                     if (window_sections[s].m_type == SectionType.Glue
                         || window_sections[s].m_type == SectionType.OneGlue)
                     {
                         window_sections[s].m_end = window_sections[s + 1].m_end;
                     }
                 }
-                while (secs[i] < lpc.MAX_LPC_SECTIONS)
+                while (secs[i] < Lpc.MAX_LPC_SECTIONS)
                 {
-                    LpcWindowSection* window_sections = sections + i * lpc.MAX_LPC_SECTIONS;
+                    LpcWindowSection* window_sections = sections + i * Lpc.MAX_LPC_SECTIONS;
                     window_sections[secs[i]++].setZero(sz, sz);
                 }
             }
@@ -232,12 +232,12 @@ namespace CHDReaderTest.Flac.FlacDeps
     {
         public LpcContext()
         {
-            coefs = new int[lpc.MAX_LPC_ORDER];
-            reflection_coeffs = new double[lpc.MAX_LPC_ORDER];
-            prediction_error = new double[lpc.MAX_LPC_ORDER];
-            autocorr_values = new double[lpc.MAX_LPC_ORDER + 1];
-            best_orders = new int[lpc.MAX_LPC_ORDER];
-            done_lpcs = new uint[lpc.MAX_LPC_PRECISIONS];
+            coefs = new int[Lpc.MAX_LPC_ORDER];
+            reflection_coeffs = new double[Lpc.MAX_LPC_ORDER];
+            prediction_error = new double[Lpc.MAX_LPC_ORDER];
+            autocorr_values = new double[Lpc.MAX_LPC_ORDER + 1];
+            best_orders = new int[Lpc.MAX_LPC_ORDER];
+            done_lpcs = new uint[Lpc.MAX_LPC_PRECISIONS];
         }
 
         /// <summary>
@@ -246,7 +246,7 @@ namespace CHDReaderTest.Flac.FlacDeps
         public void Reset()
         {
             autocorr_order = 0;
-            for (int iPrecision = 0; iPrecision < lpc.MAX_LPC_PRECISIONS; iPrecision++)
+            for (int iPrecision = 0; iPrecision < Lpc.MAX_LPC_PRECISIONS; iPrecision++)
                 done_lpcs[iPrecision] = 0;
         }
 
@@ -266,7 +266,7 @@ namespace CHDReaderTest.Flac.FlacDeps
             fixed (double* reff = reflection_coeffs, autoc = autocorr_values, err = prediction_error)
             {
                 for (int i = autocorr_order; i <= order; i++) autoc[i] = 0;
-                for (int section = 0; section < lpc.MAX_LPC_SECTIONS; section++)
+                for (int section = 0; section < Lpc.MAX_LPC_SECTIONS; section++)
                 {
                     if (sections[section].m_type == LpcWindowSection.SectionType.Zero)
                     {
@@ -292,7 +292,7 @@ namespace CHDReaderTest.Flac.FlacDeps
                         sections[section].compute_autocorr(samples, window, autocorr_order, order, blocksize, autoc);
                     }
                 }
-                lpc.compute_schur_reflection(autoc, (uint)order, reff, err);
+                Lpc.compute_schur_reflection(autoc, (uint)order, reff, err);
                 autocorr_order = order + 1;
             }
         }
@@ -303,10 +303,10 @@ namespace CHDReaderTest.Flac.FlacDeps
                 return;
             fixed (double* reff = reflection_coeffs, autoc = autocorr_values, err = prediction_error)
             {
-                lpc.compute_autocorr(samples, blocksize, 0, order + 1, autoc, window);
+                Lpc.compute_autocorr(samples, blocksize, 0, order + 1, autoc, window);
                 for (int i = 1; i <= order; i++)
                     autoc[i] = autoc[i + 1];
-                lpc.compute_schur_reflection(autoc, (uint)order, reff, err);
+                Lpc.compute_schur_reflection(autoc, (uint)order, reff, err);
                 autocorr_order = order + 1;
             }
         }
@@ -317,7 +317,7 @@ namespace CHDReaderTest.Flac.FlacDeps
             {
                 for (int i = 0; i <= order; i++)
                     autoc[i] = autocorr[i];
-                lpc.compute_schur_reflection(autoc, (uint)order, reff, err);
+                Lpc.compute_schur_reflection(autoc, (uint)order, reff, err);
                 autocorr_order = order + 1;
             }
         }
@@ -328,7 +328,7 @@ namespace CHDReaderTest.Flac.FlacDeps
             {
                 for (int i = 0; i <= order; i++)
                     autoc[i] = autocorr[i];
-                lpc.compute_schur_reflection(autoc, (uint)order, reff, err);
+                Lpc.compute_schur_reflection(autoc, (uint)order, reff, err);
                 autocorr_order = order + 1;
             }
         }
@@ -370,7 +370,7 @@ namespace CHDReaderTest.Flac.FlacDeps
         public void ComputeLPC(float* lpcs)
         {
             fixed (double* reff = reflection_coeffs)
-                lpc.compute_lpc_coefs((uint)autocorr_order - 1, reff, lpcs);
+                Lpc.compute_lpc_coefs((uint)autocorr_order - 1, reff, lpcs);
         }
 
         public double[] autocorr_values;

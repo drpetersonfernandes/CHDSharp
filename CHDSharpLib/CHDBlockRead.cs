@@ -87,8 +87,8 @@ namespace CHDSharpLib
 
         internal static void KeepMostRepeatedBlocks(CHDHeader chd, int blocksToKeep, Message consoleOut)
         {
-            List<mapentry> mapentries = new List<mapentry>();
-            foreach (mapentry me in chd.map)
+            List<MapEntry> mapentries = new List<MapEntry>();
+            foreach (MapEntry me in chd.map)
             {
                 if (me.UseCount > 0)
                 {
@@ -104,7 +104,7 @@ namespace CHDSharpLib
             mapentries.Sort((a, b) => b.UsageWeight.CompareTo(a.UsageWeight));
 
             int c = 0;
-            foreach (mapentry me in mapentries)
+            foreach (MapEntry me in mapentries)
             {
                 if (c < blocksToKeep)
                 {
@@ -136,7 +136,7 @@ namespace CHDSharpLib
                 me.selfMapEntry = null;
             });
         }
-        internal static int GetWeigth(CHDHeader chd, mapentry me)
+        internal static int GetWeigth(CHDHeader chd, MapEntry me)
         {
             if (me.comptype == compression_type.COMPRESSION_NONE)
                 return 1;
@@ -172,51 +172,53 @@ namespace CHDSharpLib
                 case chd_codec.CHD_CODEC_LZMA: return CHDReaders.lzma;
                 case chd_codec.CHD_CODEC_HUFFMAN: return CHDReaders.huffman;
                 case chd_codec.CHD_CODEC_FLAC: return CHDReaders.flac;
+                case chd_codec.CHD_CODEC_ZSTD: return CHDReaders.zstd;
                 case chd_codec.CHD_CODEC_CD_ZLIB: return CHDReaders.cdzlib;
                 case chd_codec.CHD_CODEC_CD_LZMA: return CHDReaders.cdlzma;
                 case chd_codec.CHD_CODEC_CD_FLAC: return CHDReaders.cdflac;
+                case chd_codec.CHD_CODEC_CD_ZSTD: return CHDReaders.cdzstd;
                 case chd_codec.CHD_CODEC_AVHUFF: return CHDReaders.avHuff;
                 default: return null;
             }
         }
 
-        internal static chd_error ReadBlock(mapentry mapentry, ArrayPool arrPool, CHDReader[] compression, CHDCodec codec, byte[] buffOut, int buffOutLength)
+        internal static chd_error ReadBlock(MapEntry mapEntry, ArrayPool arrPool, CHDReader[] compression, CHDCodec codec, byte[] buffOut, int buffOutLength)
         {
             bool checkCrc = true;
 
-            switch (mapentry.comptype)
+            switch (mapEntry.comptype)
             {
                 case compression_type.COMPRESSION_TYPE_0:
                 case compression_type.COMPRESSION_TYPE_1:
                 case compression_type.COMPRESSION_TYPE_2:
                 case compression_type.COMPRESSION_TYPE_3:
                     {
-                        lock (mapentry)
+                        lock (mapEntry)
                         {
-                            if (mapentry.buffOutCache == null)
+                            if (mapEntry.buffOutCache == null)
                             {
                                 chd_error ret = chd_error.CHDERR_UNSUPPORTED_FORMAT;
-                                ret = compression[(int)mapentry.comptype].Invoke(mapentry.buffIn, (int)mapentry.length, buffOut, buffOutLength, codec);
+                                ret = compression[(int)mapEntry.comptype].Invoke(mapEntry.buffIn, (int)mapEntry.length, buffOut, buffOutLength, codec);
 
                                 if (ret != chd_error.CHDERR_NONE)
                                     return ret;
 
                                 // if this block is re-used keep a copy of it.
-                                if (mapentry.UseCount > 0)
+                                if (mapEntry.UseCount > 0)
                                 {
-                                    mapentry.buffOutCache = arrPool.Rent();
-                                    Array.Copy(buffOut, 0, mapentry.buffOutCache, 0, buffOutLength);
+                                    mapEntry.buffOutCache = arrPool.Rent();
+                                    Array.Copy(buffOut, 0, mapEntry.buffOutCache, 0, buffOutLength);
                                 }
                                 break;
                             }
 
-                            Array.Copy(mapentry.buffOutCache, 0, buffOut, 0, (int)buffOutLength);
+                            Array.Copy(mapEntry.buffOutCache, 0, buffOut, 0, (int)buffOutLength);
 
-                            Interlocked.Decrement(ref mapentry.UseCount);
-                            if (mapentry.UseCount == 0)
+                            Interlocked.Decrement(ref mapEntry.UseCount);
+                            if (mapEntry.UseCount == 0)
                             {
-                                arrPool.Return(mapentry.buffOutCache);
-                                mapentry.buffOutCache = null;
+                                arrPool.Return(mapEntry.buffOutCache);
+                                mapEntry.buffOutCache = null;
                             }
                             checkCrc = false;
                         }
@@ -224,27 +226,27 @@ namespace CHDSharpLib
                     }
                 case compression_type.COMPRESSION_NONE:
                     {
-                        lock (mapentry)
+                        lock (mapEntry)
                         {
-                            if (mapentry.buffOutCache == null)
+                            if (mapEntry.buffOutCache == null)
                             {
-                                Array.Copy(mapentry.buffIn, 0, buffOut, 0, buffOutLength);
+                                Array.Copy(mapEntry.buffIn, 0, buffOut, 0, buffOutLength);
 
-                                if (mapentry.UseCount > 0)
+                                if (mapEntry.UseCount > 0)
                                 {
-                                    mapentry.buffOutCache = arrPool.Rent();
-                                    Array.Copy(buffOut, 0, mapentry.buffOutCache, 0, buffOutLength);
+                                    mapEntry.buffOutCache = arrPool.Rent();
+                                    Array.Copy(buffOut, 0, mapEntry.buffOutCache, 0, buffOutLength);
                                 }
                                 break;
                             }
 
 
-                            Array.Copy(mapentry.buffOutCache, 0, buffOut, 0, (int)buffOutLength);
-                            Interlocked.Decrement(ref mapentry.UseCount);
-                            if (mapentry.UseCount == 0)
+                            Array.Copy(mapEntry.buffOutCache, 0, buffOut, 0, (int)buffOutLength);
+                            Interlocked.Decrement(ref mapEntry.UseCount);
+                            if (mapEntry.UseCount == 0)
                             {
-                                arrPool.Return(mapentry.buffOutCache);
-                                mapentry.buffOutCache = null;
+                                arrPool.Return(mapEntry.buffOutCache);
+                                mapEntry.buffOutCache = null;
                             }
 
                             checkCrc = false;
@@ -254,7 +256,7 @@ namespace CHDSharpLib
 
                 case compression_type.COMPRESSION_MINI:
                     {
-                        byte[] tmp = BitConverter.GetBytes(mapentry.offset);
+                        byte[] tmp = BitConverter.GetBytes(mapEntry.offset);
                         for (int i = 0; i < 8; i++)
                         {
                             buffOut[i] = tmp[7 - i];
@@ -270,7 +272,7 @@ namespace CHDSharpLib
 
                 case compression_type.COMPRESSION_SELF:
                     {
-                        chd_error retcs = ReadBlock(mapentry.selfMapEntry, arrPool, compression, codec, buffOut, buffOutLength);
+                        chd_error retcs = ReadBlock(mapEntry.selfMapEntry, arrPool, compression, codec, buffOut, buffOutLength);
                         if (retcs != chd_error.CHDERR_NONE)
                             return retcs;
                         // check CRC in the read_block_into_cache call
@@ -284,9 +286,9 @@ namespace CHDSharpLib
 
             if (checkCrc)
             {
-                if (mapentry.crc != null && !CRC.VerifyDigest((uint)mapentry.crc, buffOut, 0, (uint)buffOutLength))
+                if (mapEntry.crc != null && !CRC.VerifyDigest((uint)mapEntry.crc, buffOut, 0, (uint)buffOutLength))
                     return chd_error.CHDERR_DECOMPRESSION_ERROR;
-                if (mapentry.crc16 != null && CRC16.calc(buffOut, (int)buffOutLength) != mapentry.crc16)
+                if (mapEntry.crc16 != null && CRC16.calc(buffOut, (int)buffOutLength) != mapEntry.crc16)
                     return chd_error.CHDERR_DECOMPRESSION_ERROR;
             }
             return chd_error.CHDERR_NONE;

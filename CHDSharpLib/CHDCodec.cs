@@ -19,8 +19,9 @@ namespace CHDSharpLib
 
         internal byte[] blzma = null;
 
-        internal ushort[] bHuffman = null;
+        internal ZstdSharp.Decompressor bZstd = null;
 
+        internal ushort[] bHuffman = null;
         internal ushort[] bHuffmanHi = null;
         internal ushort[] bHuffmanLo = null;
 

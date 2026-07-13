@@ -1,4 +1,4 @@
-﻿using CHDSharpLib.Utils;
+using CHDSharpLib.Utils;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -19,7 +19,16 @@ internal class CHDHeader
     public uint blocksize;
     public uint totalblocks;
 
-    public mapentry[] map;
+    // V5: size of a "unit" used for parent block address translation.
+    // For V1-V4 parent entries the offset is a direct hunk index, so unitbytes
+    // is only meaningful for V5 (set to blocksize as a harmless default otherwise).
+    public uint unitbytes;
+
+    // True when the V5 map is the uncompressed variant. In that map an offset
+    // word of 0 means "read this hunk from the parent" (or zero-fill if none).
+    public bool uncompressedMap;
+
+    public MapEntry[] map;
 
     public byte[] md5; // just compressed data
     public byte[] rawsha1; // just compressed data
@@ -31,7 +40,7 @@ internal class CHDHeader
     public ulong metaoffset;
 }
 
-internal class mapentry
+internal class MapEntry
 {
     public compression_type comptype;
     public uint length; // length of compressed data
@@ -39,7 +48,7 @@ internal class mapentry
     public uint? crc = null; // V3 & V4
     public ushort? crc16 = null; // V5
 
-    public mapentry selfMapEntry; // link to self mapentry data used in COMPRESSION_SELF (replaces offset index)
+    public MapEntry selfMapEntry; // link to self MapEntry data used in COMPRESSION_SELF (replaces offset index)
 
     //Used to optimmize block reading so that any block in only decompressed once.
     public int UseCount;
@@ -169,6 +178,67 @@ public static class CHD
         return chd_error.CHDERR_NONE;
     }
 
+    /// <summary>
+    /// Fully verifies a (possibly child/differential) CHD, resolving parent
+    /// references against the CHD at <paramref name="parentFilename"/> (pass null
+    /// for a standalone CHD). Reads the whole image via the random-access
+    /// <see cref="CHDFile"/> API, validates the raw-data hash (SHA1/MD5) and, for
+    /// V4/V5, the metadata SHA1. This is a sequential (single-threaded) verify -
+    /// use <see cref="CheckFile"/> for the fast parallel path on standalone CHDs.
+    /// </summary>
+    public static chd_error CheckFileWithParent(string filename, string parentFilename,
+        out uint? chdVersion, out byte[] chdSHA1, out byte[] chdMD5)
+    {
+        chdVersion = null;
+        chdSHA1 = null;
+        chdMD5 = null;
+
+        chd_error err = CHDFile.Open(filename, parentFilename, out CHDFile chd);
+        if (err != chd_error.CHDERR_NONE)
+            return err;
+
+        using (chd)
+        {
+            chdVersion = chd.Version;
+            chdSHA1 = chd.SHA1;
+            chdMD5 = chd.MD5;
+
+            byte[] expectedSha1 = chd.RawSHA1;
+            byte[] expectedMd5 = chd.MD5;
+            bool haveSha1 = expectedSha1 != null && !Util.IsAllZeroArray(expectedSha1);
+            bool haveMd5 = expectedMd5 != null && !Util.IsAllZeroArray(expectedMd5);
+
+            using MD5 md5Check = haveMd5 ? MD5.Create() : null;
+            using SHA1 sha1Check = haveSha1 ? SHA1.Create() : null;
+
+            byte[] buffer = new byte[chd.HunkBytes];
+            ulong sizetoGo = chd.TotalBytes;
+            ulong offset = 0;
+            while (sizetoGo > 0)
+            {
+                int chunk = (int)Math.Min((ulong)buffer.Length, sizetoGo);
+                err = chd.Read(offset, buffer, 0, chunk);
+                if (err != chd_error.CHDERR_NONE)
+                    return err;
+                md5Check?.TransformBlock(buffer, 0, chunk, null, 0);
+                sha1Check?.TransformBlock(buffer, 0, chunk, null, 0);
+                offset += (ulong)chunk;
+                sizetoGo -= (ulong)chunk;
+            }
+
+            byte[] tmp = new byte[0];
+            md5Check?.TransformFinalBlock(tmp, 0, 0);
+            sha1Check?.TransformFinalBlock(tmp, 0, 0);
+
+            if (haveMd5 && !Util.ByteArrEquals(expectedMd5, md5Check.Hash))
+                return chd_error.CHDERR_DECOMPRESSION_ERROR;
+            if (haveSha1 && !Util.ByteArrEquals(expectedSha1, sha1Check.Hash))
+                return chd_error.CHDERR_DECOMPRESSION_ERROR;
+
+            return chd_error.CHDERR_NONE;
+        }
+    }
+
     private static readonly uint[] HeaderLengths = new uint[] { 0, 76, 80, 120, 108, 124 };
     private static readonly byte[] id = { (byte)'M', (byte)'C', (byte)'o', (byte)'m', (byte)'p', (byte)'r', (byte)'H', (byte)'D' };
 
@@ -218,12 +288,12 @@ public static class CHD
                 if ((block % 1000) == 0)
                     progress?.Invoke($"Verifying, {(100 - sizetoGo * 100 / chd.totalbytes):N1}% complete...\r");
 
-                mapentry mapEntry = chd.map[block];
+                MapEntry mapEntry = chd.map[block];
                 if (mapEntry.length > 0)
                 {
                     mapEntry.buffIn = arrPool.Rent();
                     file.Seek((long)mapEntry.offset, System.IO.SeekOrigin.Begin);
-                    file.Read(mapEntry.buffIn, 0, (int)mapEntry.length);
+                    file.ReadExactly(mapEntry.buffIn, 0, (int)mapEntry.length);
                 }
 
                 /* read the block into the cache */
@@ -322,15 +392,15 @@ public static class CHD
 
                         progress?.Invoke($"Verifying: {(long)block * 100 / chd.totalblocks:N0}%");
                     }
-                    mapentry mapentry = chd.map[block];
+                    MapEntry mapEntry = chd.map[block];
 
-                    if (mapentry.length > 0)
+                    if (mapEntry.length > 0)
                     {
-                        if (file.Position != (long)mapentry.offset)
-                            file.Seek((long)mapentry.offset, System.IO.SeekOrigin.Begin);
+                        if (file.Position != (long)mapEntry.offset)
+                            file.Seek((long)mapEntry.offset, System.IO.SeekOrigin.Begin);
 
-                        mapentry.buffIn = arrPoolIn.Rent();
-                        file.Read(mapentry.buffIn, 0, (int)mapentry.length);
+                        mapEntry.buffIn = arrPoolIn.Rent();
+                        file.ReadExactly(mapEntry.buffIn, 0, (int)mapEntry.length);
                     }
 
                     blocksToDecompress.Add(block, ct);
@@ -340,7 +410,7 @@ public static class CHD
                     blocksToDecompress.Add(-1);
 
             }
-            catch (Exception e)
+            catch
             {
                 if (ct.IsCancellationRequested)
                     return;
@@ -368,9 +438,9 @@ public static class CHD
                         int block = blocksToDecompress.Take(ct);
                         if (block == -1)
                             return;
-                        mapentry mapentry = chd.map[block];
-                        mapentry.buffOut = arrPoolOut.Rent();
-                        chd_error err = CHDBlockRead.ReadBlock(mapentry, arrPoolCache, chd.chdReader, codec, mapentry.buffOut, (int)chd.blocksize);
+                        MapEntry mapEntry = chd.map[block];
+                        mapEntry.buffOut = arrPoolOut.Rent();
+                        chd_error err = CHDBlockRead.ReadBlock(mapEntry, arrPoolCache, chd.chdReader, codec, mapEntry.buffOut, (int)chd.blocksize);
                         if (err != chd_error.CHDERR_NONE)
                         {
                             ts.Cancel();
@@ -379,14 +449,14 @@ public static class CHD
                         }
                         blocksToHash.Add(block, ct);
 
-                        if (mapentry.length > 0)
+                        if (mapEntry.length > 0)
                         {
-                            arrPoolIn.Return(mapentry.buffIn);
-                            mapentry.buffIn = null;
+                            arrPoolIn.Return(mapEntry.buffIn);
+                            mapEntry.buffIn = null;
                         }
                     }
                 }
-                catch (Exception e)
+                catch
                 {
                     if (ct.IsCancellationRequested)
                         return;
@@ -415,13 +485,13 @@ public static class CHD
                     {
                         int sizenext = sizetoGo > (ulong)chd.blocksize ? (int)chd.blocksize : (int)sizetoGo;
 
-                        mapentry mapentry = chd.map[proc];
+                        MapEntry mapEntry = chd.map[proc];
 
-                        md5Check?.TransformBlock(mapentry.buffOut, 0, sizenext, null, 0);
-                        sha1Check?.TransformBlock(mapentry.buffOut, 0, sizenext, null, 0);
+                        md5Check?.TransformBlock(mapEntry.buffOut, 0, sizenext, null, 0);
+                        sha1Check?.TransformBlock(mapEntry.buffOut, 0, sizenext, null, 0);
 
-                        arrPoolOut.Return(mapentry.buffOut);
-                        mapentry.buffOut = null;
+                        arrPoolOut.Return(mapEntry.buffOut);
+                        mapEntry.buffOut = null;
                         aheadLock.Release();
 
                         /* prepare for the next block */

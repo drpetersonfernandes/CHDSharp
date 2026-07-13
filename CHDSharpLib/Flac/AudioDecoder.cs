@@ -555,9 +555,9 @@ namespace CUETools.Codecs.Flake
 				for (int i = sub.best.order; i > 0; i--)
 					csum += (ulong)Math.Abs(coefs[i - 1]);
 				if ((csum << sub.obits) >= 1UL << 32)
-					lpc.decode_residual_long(sub.best.residual, sub.samples, frame.blocksize, sub.best.order, coefs, sub.best.shift);
+					Lpc.decode_residual_long(sub.best.residual, sub.samples, frame.blocksize, sub.best.order, coefs, sub.best.shift);
 				else
-					lpc.decode_residual(sub.best.residual, sub.samples, frame.blocksize, sub.best.order, coefs, sub.best.shift);
+					Lpc.decode_residual(sub.best.residual, sub.samples, frame.blocksize, sub.best.order, coefs, sub.best.shift);
 			}
 		}
 

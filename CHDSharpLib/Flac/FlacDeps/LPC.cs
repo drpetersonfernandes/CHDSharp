@@ -2,7 +2,7 @@ using System;
 
 namespace CHDReaderTest.Flac.FlacDeps
 {
-    public class lpc
+    public class Lpc
     {
         public const int MAX_LPC_ORDER = 32;
         public const int MAX_LPC_WINDOWS = 16;
@@ -136,10 +136,10 @@ namespace CHDReaderTest.Flac.FlacDeps
 #if FPAC
 			short* data1 = stackalloc short[len + 1];
 			short* data2 = stackalloc short[len + 1];
-			int* c1 = stackalloc int[lpc.MAX_LPC_ORDER + 1];
-			int* c2 = stackalloc int[lpc.MAX_LPC_ORDER + 1];
-			int* c3 = stackalloc int[lpc.MAX_LPC_ORDER + 1];
-			int* c4 = stackalloc int[lpc.MAX_LPC_ORDER + 1];
+			int* c1 = stackalloc int[Lpc.MAX_LPC_ORDER + 1];
+			int* c2 = stackalloc int[Lpc.MAX_LPC_ORDER + 1];
+			int* c3 = stackalloc int[Lpc.MAX_LPC_ORDER + 1];
+			int* c4 = stackalloc int[Lpc.MAX_LPC_ORDER + 1];
 
 			for (int i = 0; i < len; i++)
 			{

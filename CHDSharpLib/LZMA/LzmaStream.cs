@@ -288,8 +288,10 @@ namespace Compress.Support.Compression.LZMA
             while (sizeToGo > 0)
             {
                 int sizenow = sizeToGo > 1024 ? 1024 : (int)sizeToGo;
-                Read(tmpBuff, 0, sizenow);
-                sizeToGo -= sizenow;
+                int read = Read(tmpBuff, 0, sizenow);
+                if (read == 0)
+                    break;
+                sizeToGo -= read;
             }
 
             return offset;

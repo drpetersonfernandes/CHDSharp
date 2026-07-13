@@ -178,7 +178,7 @@ namespace CHDReaderTest.Flac.FlacDeps
                                 sections[i1 * Lpc.MAX_LPC_SECTIONS + secs[i1] - 1].m_id = section_id;
                         section_id++;
                     }
-                    // TODO: section_id for glue? nontrivial, must be sure next sections are the same size
+                    // section_id for glue? nontrivial, must be sure next sections are the same size
                     if (sec > 0
                         && (window_sections[sec].m_type == SectionType.One || window_sections[sec].m_type == SectionType.OneLarge)
                         && window_sections[sec].m_end - window_sections[sec].m_start >= Lpc.MAX_LPC_ORDER

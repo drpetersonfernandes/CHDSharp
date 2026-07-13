@@ -1,7 +1,308 @@
 # CHDSharp
 
-Combined optimized native C# CHD reader.
-Supports all available CHD Version 1-5, and all compression methods:
-zlib,lzma,huff,avhuff,flac
+**Pure C# CHD (Compressed Hunks of Data) reader — V1–V5, all codecs, parent/child chaining, 100% match with MAME chdman.**
 
-See the CHDSharpReference repo for the reference code version of this project.
+> A fork of [RomVault/CHDSharp](https://github.com/RomVault/CHDSharp) by [Gordon Jefferyes (gjefferyes)](https://github.com/gjefferyes), extended with Zstd, AVHuff, V5 compressed map, random-access API, parent/child chaining, parallel verification, and comprehensive chdman integration tests.
+
+[![.NET](https://img.shields.io/badge/.NET-10.0-blueviolet)](https://dotnet.microsoft.com/)
+[![License](https://img.shields.io/badge/license-GPL--3.0-green)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-38%20passed-brightgreen)](#testing)
+
+---
+
+## Overview
+
+CHDSharp is a **read-only** CHD library and CLI tool written entirely in C#. It decompresses and verifies CHD files produced by MAME's `chdman` tool, byte-for-byte, matching chdman's output exactly.
+
+It supports every CHD format version (V1 through V5), every compression codec (zlib, lzma, huffman, flac, zstd, AVHuff, and all CD variants), and parent/child (differential) CHD chains.
+
+---
+
+## Features
+
+- **Read any CHD** — V1, V2, V3, V4, V5 headers and all internal map formats
+- **All 10 codecs** — zlib, lzma, huffman, flac, zstd, AVHuff + CD variants (`cdzl`, `cdlz`, `cdfl`, `cdzs`)
+- **Random-access API** — `ReadHunk(hunknum)` and `Read(offset, length)` with zero-copy caching
+- **Full verification** — deep decompress + per-hunk CRC + raw SHA1/MD5 + metadata SHA1
+- **Parent/child chaining** — differential CHDs referencing a parent, with wrong-parent detection
+- **Parallel decompression** — multi-threaded `CheckFile` with bounded memory via `SemaphoreSlim`
+- **100% chdman match** — integration-tested against `chdman info`, `chdman verify`, and `chdman extractraw`
+- **CLI tool** — verify directories, file lists, random-access self-test, parent/child validation
+
+---
+
+## Supported CHD Formats
+
+| Version | Header Size | Map Type | Status |
+|---------|-------------|----------|--------|
+| V1 | 76 bytes | Self-hunk dedup | ✅ |
+| V2 | 80 bytes | Self-hunk dedup | ✅ |
+| V3 | 120 bytes | CRC32 map, self-hunk | ✅ |
+| V4 | 108 bytes | CRC32 map, parent chain | ✅ |
+| V5 | 124 bytes | CRC16 map, compressed/uncompressed map, RLE, parent/unit chain | ✅ |
+
+### Codec Support Matrix
+
+| Codec | FourCC | CD Equivalent | Status |
+|-------|--------|---------------|--------|
+| Zlib | `zlib` | `cdzl` | ✅ |
+| LZMA | `lzma` | `cdlz` | ✅ |
+| Huffman | `huff` | — | ✅ |
+| FLAC | `flac` | `cdfl` | ✅ |
+| Zstd | `zstd` | `cdzs` | ✅ |
+| AVHuff | `avhu` | — | ✅ |
+
+---
+
+## Quick Start
+
+### CLI
+
+```bash
+# Verify all .chd files in a directory
+CHDSharp D:\CHD
+
+# Verify a list of CHD paths from a text file
+CHDSharp --list chd_paths.txt
+
+# Random-access self-test on a single CHD
+CHDSharp --random game.chd
+
+# Verify a child (differential) CHD against its parent
+CHDSharp --parent child.chd parent.chd
+```
+
+### Library
+
+```csharp
+using CHDSharpLib;
+
+// Check if a stream is a valid CHD
+bool isChd = CHD.CheckHeader(stream, out uint length, out uint version);
+
+// Full verification (decompresses every hunk, validates CRC, SHA1, MD5)
+using Stream s = File.OpenRead("game.chd");
+chd_error err = CHD.CheckFile(s, "game.chd", deepCheck: true,
+    out uint? version, out byte[] sha1, out byte[] md5);
+// err == CHDERR_NONE on success
+
+// Random access (open once, read hunks or byte ranges on demand)
+chd_error open = CHDFile.Open("game.chd", out CHDFile chd);
+using (chd)
+{
+    Console.WriteLine($"V{chd.Version}: {chd.TotalBytes} bytes, {chd.HunkCount} hunks");
+
+    // Read a single decompressed hunk
+    byte[] hunk = new byte[chd.HunkBytes];
+    chd.ReadHunk(42, hunk);
+
+    // Read arbitrary byte range (handles hunk boundaries automatically)
+    byte[] buf = new byte[1024];
+    chd.Read(offset: 0x10000, buf, 0, buf.Length);
+}
+
+// Parent/child chain (differential CHDs)
+chd_error childOpen = CHDFile.Open("child.chd", "parent.chd", out CHDFile child);
+using (child)
+{
+    chd.ReadHunk(0, hunk);  // transparently resolves parent hunks
+}
+```
+
+---
+
+## API Reference
+
+### `CHD` — Static verification API
+
+| Method | Description |
+|--------|-------------|
+| `CheckHeader(Stream, out uint length, out uint version)` | Sniff the CHD magic `MComprHD` and return header length + version. |
+| `CheckFile(Stream, string name, bool deep, out uint? ver, out byte[] sha1, out byte[] md5)` | Full deep verification of a standalone CHD. `deep=true` decompresses every hunk. |
+| `CheckFileWithParent(string child, string parent, out uint? ver, out byte[] sha1, out byte[] md5)` | Full verification of a child CHD with its parent. |
+
+### `CHDFile` — Random-access reader
+
+| Method | Description |
+|--------|-------------|
+| `Open(string path, out CHDFile chd)` | Open standalone CHD. Fails with `CHDERR_REQUIRES_PARENT` if child. |
+| `Open(string path, string parentPath, out CHDFile chd)` | Open child CHD with parent (parent owned by the child). |
+| `Open(string path, CHDFile parent, out CHDFile chd)` | Open child CHD with an external parent. |
+| `Open(Stream, bool leaveOpen, out CHDFile chd)` | Open from a seekable stream. |
+| `ReadHunk(uint hunknum, byte[] buffer)` | Decompress a single hunk into a pre-allocated buffer. |
+| `Read(ulong offset, byte[] dest, int destOff, int count)` | Read arbitrary byte range. Crosses hunk boundaries. |
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Version` | `uint` | CHD format version (1–5). |
+| `TotalBytes` | `ulong` | Decompressed image size. |
+| `HunkBytes` | `uint` | Size of one hunk in bytes. |
+| `HunkCount` | `uint` | Total number of hunks. |
+| `SHA1` | `byte[]` | Combined SHA1 (image + metadata). |
+| `RawSHA1` | `byte[]` | Raw image data SHA1 only. |
+| `MD5` | `byte[]` | Raw image MD5 (V1–V3 only). |
+| `RequiresParent` | `bool` | True if this is a differential CHD needing a parent. |
+
+### `chd_error` — Error codes
+
+| Value | Meaning |
+|-------|---------|
+| `CHDERR_NONE` | Success |
+| `CHDERR_FILE_NOT_FOUND` | File does not exist |
+| `CHDERR_INVALID_FILE` | Not a valid CHD |
+| `CHDERR_REQUIRES_PARENT` | Child CHD opened without a parent |
+| `CHDERR_INVALID_PARENT` | Wrong parent SHA1 |
+| `CHDERR_HUNK_OUT_OF_RANGE` | Hunk index >= `HunkCount` |
+| `CHDERR_DECOMPRESSION_ERROR` | CRC mismatch or codec failure |
+| `CHDERR_UNSUPPORTED_VERSION` | Unsupported CHD version |
+| ... | (21 additional error codes) |
+
+---
+
+## Architecture
+
+```
+┌────────────────────────────────────────────────────┐
+│                    Public API                       │
+│  CHD.CheckFile()  CHDFile.Open()  CHDFile.Read()   │
+├────────────────────────────────────────────────────┤
+│  CHDHeaders    →  Parse V1–V5 headers + maps       │
+│  CHDBlockRead  →  Dispatch hunk → codec delegate   │
+│  CHDReaders    →  Decompression delegates (10)     │
+│  CHDCodec      →  Per-codec reusable state         │
+│  CHDMetaData   →  Metadata traversal + SHA1 check   │
+├────────────────────────────────────────────────────┤
+│  Utils/                                             │
+│  CRC · CRC16 · BitStream · HuffmanDecoder ·        │
+│  HuffmanDecoderRLE · BigEndian · ArrayPool · cdRom  │
+├────────────────────────────────────────────────────┤
+│  LZMA/                                              │
+│  LzmaStream · LzmaDecoder · LzmaEncoder ·          │
+│  RangeCoder · LzBinTree · LzInWindow · LzOutWindow  │
+├────────────────────────────────────────────────────┤
+│  Flac/                                              │
+│  AudioDecoder · FlacFrame · FlacSubframe ·         │
+│  BitReader · LPC · RiceContext · WindowFunction     │
+├────────────────────────────────────────────────────┤
+│  ZstdSharp.Port  (NuGet)                            │
+└────────────────────────────────────────────────────┘
+```
+
+### Parallel Decompression Pipeline
+
+`CheckFile(deepCheck: true)` uses a 3-stage producer/consumer pipeline:
+
+```
+Producer (1 thread)          Decompressors (taskCount threads)       Hasher (1 thread)
+┌──────────────┐            ┌─────────────────────────────┐        ┌──────────────────┐
+│ Read blocks  │──→ BQ ──→ │ Decompress + CRC validate    │──→ BQ ──→│ Reorder + MD5/   │
+│ from file    │            │ (per-codec delegates)        │        │ SHA1 hash        │
+└──────────────┘            └─────────────────────────────┘        └──────────────────┘
+                                    │                                        │
+                                    └── SemaphoreSlim ──→ memory throttle ───┘
+```
+
+- **BQ** = `BlockingCollection<int>` (bounded, backpressure)
+- **`taskCount`** configurable via `CHD.taskCount` (default 8)
+- Memory bounded by `~512MB / hunkSize` outstanding decompressed buffers
+
+---
+
+## Building from Source
+
+### Prerequisites
+
+- [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) or later
+- Windows, Linux, or macOS (any platform supporting .NET 10)
+
+### Build
+
+```bash
+git clone https://github.com/drpetersonfernandes/CHDSharp.git
+cd CHDSharp
+dotnet build -c Release
+```
+
+The output binary is at `CHDSharp/bin/Release/net10.0/CHDSharp.exe` (Windows) or `CHDSharp.dll` (cross-platform via `dotnet CHDSharp.dll`).
+
+### Dependencies
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| [ZstdSharp.Port](https://www.nuget.org/packages/ZstdSharp.Port/) | 0.8.8 | Zstd decompression (V5 zstd/cdzs codecs) |
+
+All other codecs (zlib, lzma, huffman, flac, AVHuff) are implemented from scratch in C# with zero native dependencies.
+
+---
+
+## Testing
+
+The test suite contains **38 tests** across 5 test classes, verified against MAME `chdman` 0.288.
+
+### Test Categories
+
+| Class | Type | Description |
+|-------|------|-------------|
+| `HeaderAndApiTests` | Unit | Header sniffing, magic validation, error paths |
+| `ChecksumTests` | Unit | CRC-32 / CRC-16 test vectors |
+| `RandomAccessTests` | Integration | ReadHunk/Read bounds, determinism, cross-hunk reads |
+| `ZstdCodecTests` | Integration | Zstd/CD-Zstd round-trip via chdman recompression |
+| `ParentChainTests` | Integration | Parent/child CHD chain validation |
+| `ChdListIntegrationTests` | Integration | **Cross-checked against chdman**: header info, deep verify, full-read SHA1, random-access byte-range extraction |
+
+### Cross-Check Methodology
+
+Every integration test that touches decoded data is verified against `chdman`:
+
+```
+Header info     →  chdman info -i file        (version, sizes, SHA1, Data SHA1)
+Deep verify     →  chdman verify -i file       (exit code match)
+Random access   →  chdman extractraw -isb -ib   (byte-for-byte comparison)
+Zstd round-trip →  chdman copy -c zstd/cdzs    (recompress + verify)
+Parent chain    →  chdman verify -i child -ip parent
+```
+
+Place `chdman.exe` at the repo root, put your CHD files in `D:\CHD` (or configure `TestPaths.ChdFolder`), and run:
+
+```bash
+dotnet test
+```
+
+---
+
+## Comparison with libchdr
+
+| Feature | libchdr 0.3.0 (C) | CHDSharp (C#) |
+|---------|-------------------|---------------|
+| V1–V5 headers | ✅ | ✅ |
+| zlib, lzma, huffman, flac | ✅ | ✅ |
+| Zstd (zstd, cdzs) | ❌ | ✅ |
+| AVHuff | ❌ | ✅ |
+| Parent/child chains | ✅ | ✅ |
+| Random access | ✅ | ✅ |
+| Parallel verification | ❌ | ✅ |
+| Native dependencies | zlib, lzma, flac | **none** (pure C# + ZstdSharp) |
+| CHD creation | ❌ | ❌ |
+
+CHDSharp exceeds libchdr 0.3.0's read capabilities by adding **Zstd** and **AVHuff** codec support.
+
+---
+
+## License
+
+This project is licensed under the **GNU General Public License v3.0** — see the [LICENSE](LICENSE) file for details.
+
+GPL-3.0 is a strong copyleft license. If you distribute modified versions of this software, you must make your source code available under the same license.
+
+---
+
+## Acknowledgments
+
+This project is a fork of **[RomVault/CHDSharp](https://github.com/RomVault/CHDSharp)**.
+
+Special thanks to **[Gordon Jefferyes (gjefferyes)](https://github.com/gjefferyes)** who built the original C# CHD reader foundation that this project extends.
+
+- **[MAME](https://www.mamedev.org/)** — original CHD format specification and `chdman` reference implementation
+- **[libchdr](https://github.com/rtissera/libchdr)** — C reference library by Romain Tisseraud (v0.3.0)
+- **[ZstdSharp.Port](https://github.com/oleg-st/ZstdSharp)** — pure C# Zstd decompressor by Oleg Stepanischev
+- **[CHDSharpReference](https://github.com/RomVault/CHDSharp)** — educational per-version reference implementation bundled in `References/`

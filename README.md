@@ -1,12 +1,13 @@
+[![.NET](https://img.shields.io/badge/.NET-10.0-blueviolet)](https://dotnet.microsoft.com/)
+[![License](https://img.shields.io/badge/license-GPL--3.0-green)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-38%20passed-brightgreen)](#testing)
+
 # CHDSharp
 
 **Pure C# CHD (Compressed Hunks of Data) reader — V1–V5, all codecs, parent/child chaining, 100% match with MAME chdman.**
 
 > A fork of [RomVault/CHDSharp](https://github.com/RomVault/CHDSharp) by [Gordon Jefferyes (gjefferyes)](https://github.com/gjefferyes), extended with Zstd, AVHuff, V5 compressed map, random-access API, parent/child chaining, parallel verification, and comprehensive chdman integration tests.
 
-[![.NET](https://img.shields.io/badge/.NET-10.0-blueviolet)](https://dotnet.microsoft.com/)
-[![License](https://img.shields.io/badge/license-GPL--3.0-green)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-38%20passed-brightgreen)](#testing)
 
 ---
 
@@ -306,3 +307,13 @@ Special thanks to **[Gordon Jefferyes (gjefferyes)](https://github.com/gjefferye
 - **[libchdr](https://github.com/rtissera/libchdr)** — C reference library by Romain Tisseraud (v0.3.0)
 - **[ZstdSharp.Port](https://github.com/oleg-st/ZstdSharp)** — pure C# Zstd decompressor by Oleg Stepanischev
 - **[CHDSharpReference](https://github.com/RomVault/CHDSharp)** — educational per-version reference implementation bundled in `References/`
+
+---
+
+## Support
+
+* **Donate:** If you find this project useful, consider [supporting the developer](https://www.purelogiccode.com/donate).
+
+**⭐ If you like this project, please give us a star on GitHub! ⭐**
+
+---

@@ -19,9 +19,9 @@ internal static class ChdMetaData
         while (chd.Metaoffset != 0)
         {
             file.Seek((long)chd.Metaoffset, SeekOrigin.Begin);
-            var metaTag = br.ReadUInt32BE();
-            var metaLength = br.ReadUInt32BE();
-            var metaNext = br.ReadUInt64BE();
+            var metaTag = br.ReadUInt32Be();
+            var metaLength = br.ReadUInt32Be();
+            var metaNext = br.ReadUInt64Be();
             var metaFlags = metaLength >> 24;
             metaLength &= 0x00ffffff;
 

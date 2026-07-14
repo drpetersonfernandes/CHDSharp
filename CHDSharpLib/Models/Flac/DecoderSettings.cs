@@ -12,12 +12,16 @@ public class DecoderSettings : IAudioDecoderSettings
 {
     #region IAudioDecoderSettings implementation
 
+    /// <summary>Gets the file extension associated with this decoder ("flac").</summary>
     [Browsable(false)] public string Extension => "flac";
 
+    /// <summary>Gets the human-readable name of this decoder ("cuetools").</summary>
     [Browsable(false)] public string Name => "cuetools";
 
+    /// <summary>Gets the <see cref="Type"/> of the decoder implementation (<see cref="AudioDecoder"/>).</summary>
     [Browsable(false)] public Type DecoderType => typeof(AudioDecoder);
 
+    /// <summary>Gets the priority of this decoder (2). Lower values indicate higher priority.</summary>
     [Browsable(false)] public int Priority => 2;
 
     /// <summary>

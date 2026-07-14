@@ -6,36 +6,65 @@ using System.Text.RegularExpressions;
 
 namespace CHDSharpTester.Services;
 
+/// <summary>Wraps the chdman.exe command-line tool to cross-check the C# CHD reader via info, verify, and extractraw operations.</summary>
 public class ChdmanWrapper : IDisposable
 {
     private readonly string _chdmanPath;
 
+    /// <summary>Initializes a new instance of the <see cref="ChdmanWrapper"/> class with the path to the chdman executable.</summary>
+    /// <param name="chdmanPath">The full path to chdman.exe.</param>
     public ChdmanWrapper(string chdmanPath)
     {
         _chdmanPath = chdmanPath;
     }
 
+    /// <summary>Gets whether the configured chdman executable exists on disk.</summary>
     public bool Available => File.Exists(_chdmanPath);
 
+    /// <summary>Represents parsed header information returned by chdman's info command.</summary>
     public sealed class Info
     {
+        /// <summary>The CHD file format version.</summary>
         public int Version;
+
+        /// <summary>The logical (decompressed) size of the CHD image, in bytes.</summary>
         public ulong LogicalBytes;
+
+        /// <summary>The size of each hunk, in bytes.</summary>
         public uint HunkBytes;
+
+        /// <summary>The total number of hunks in the image.</summary>
         public uint TotalHunks;
+
+        /// <summary>The compression codec(s) used by the CHD.</summary>
         public string Compression = null!;
+
+        /// <summary>The overall SHA1 hash (raw data + metadata), or null if not present.</summary>
         public string? Sha1;
+
+        /// <summary>The raw data SHA1 hash, or null if not present.</summary>
         public string? DataSha1;
     }
 
+    /// <summary>Represents the result of a chdman process execution.</summary>
     public sealed class Result
     {
+        /// <summary>The process exit code.</summary>
         public int ExitCode;
+
+        /// <summary>The captured standard output text.</summary>
         public string StdOut = null!;
+
+        /// <summary>The captured standard error text.</summary>
         public string StdErr = null!;
+
+        /// <summary>Gets the combined standard output and standard error text.</summary>
         public string All => StdOut + "\n" + StdErr;
     }
 
+    /// <summary>Runs chdman with the specified arguments and returns the captured process result.</summary>
+    /// <param name="args">The arguments to pass to chdman.</param>
+    /// <returns>A <see cref="Result"/> containing the exit code and output streams.</returns>
     public Result Run(params string[] args)
     {
         var psi = new ProcessStartInfo
@@ -58,6 +87,9 @@ public class ChdmanWrapper : IDisposable
         return new Result { ExitCode = p.ExitCode, StdOut = tOut.Result, StdErr = tErr.Result };
     }
 
+    /// <summary>Runs chmman info on a CHD file and parses key header fields. Returns null on failure.</summary>
+    /// <param name="file">The path to the CHD file.</param>
+    /// <returns>An <see cref="Info"/> instance with parsed fields, or null if chdman failed.</returns>
     public Info? GetInfo(string file)
     {
         var r = Run("info", "-i", file);
@@ -77,6 +109,10 @@ public class ChdmanWrapper : IDisposable
         };
     }
 
+    /// <summary>Runs chmman verify on a CHD file, optionally with a parent file.</summary>
+    /// <param name="file">The path to the CHD file to verify.</param>
+    /// <param name="parent">An optional parent CHD file for delta-CHD verification.</param>
+    /// <returns><c>true</c> if chdman exits with code 0; otherwise <c>false</c>.</returns>
     public bool Verify(string file, string? parent = null)
     {
         var psi = new ProcessStartInfo
@@ -99,6 +135,11 @@ public class ChdmanWrapper : IDisposable
         return p.ExitCode == 0;
     }
 
+    /// <summary>Extracts a raw byte range from a CHD file using chdman extractraw.</summary>
+    /// <param name="input">The path to the CHD file.</param>
+    /// <param name="startByte">The starting byte offset within the decompressed image.</param>
+    /// <param name="length">The number of bytes to extract.</param>
+    /// <returns>The extracted bytes, or null if chdman failed.</returns>
     public byte[]? ExtractRaw(string input, ulong startByte, ulong length)
     {
         var tempFile = Path.GetTempFileName();
@@ -158,5 +199,6 @@ public class ChdmanWrapper : IDisposable
         return m.Success ? m.Groups[1].Value.ToLowerInvariant() : null;
     }
 
+    /// <summary>Releases all resources used by this wrapper.</summary>
     public void Dispose() { }
 }

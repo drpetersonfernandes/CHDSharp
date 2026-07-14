@@ -8,6 +8,7 @@ namespace CHDSharp.Tests;
 /// </summary>
 public class ChecksumTests
 {
+    /// <summary>Verifies that CRC-32 of the well-known "123456789" vector matches 0xCBF43926.</summary>
     [Fact]
     public void Crc32KnownVectorMatchesStandard()
     {
@@ -17,6 +18,7 @@ public class ChecksumTests
         Assert.Equal(0xCBF43926u, digest);
     }
 
+    /// <summary>Verifies that CRC.VerifyDigest returns true for a matching digest and false for a mismatch.</summary>
     [Fact]
     public void Crc32VerifyDigestTrueForMatchFalseForMismatch()
     {
@@ -27,6 +29,7 @@ public class ChecksumTests
         Assert.False(CRC.VerifyDigest(digest ^ 0x1, data, 0, (uint)data.Length));
     }
 
+    /// <summary>Verifies that CRC calculates the same digest for a slice as for the inner data standalone.</summary>
     [Fact]
     public void Crc32RespectsOffsetAndSize()
     {
@@ -38,6 +41,7 @@ public class ChecksumTests
         Assert.Equal(0xCBF43926u, digestSlice);
     }
 
+    /// <summary>Verifies that CRC16 produces deterministic results and differs for different inputs.</summary>
     [Fact]
     public void Crc16EmptyAndKnownDataAreDeterministic()
     {

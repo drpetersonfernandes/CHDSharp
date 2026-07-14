@@ -76,7 +76,7 @@ public static class Chd
 
         if (chd != null)
         {
-            chdSha1 = chd.Sha1 ?? chd.Rawsha1;
+            chdSha1 = chd.Sha1;
             chdMd5 = chd.Md5;
             chdVersion = version;
 
@@ -189,7 +189,10 @@ public static class Chd
         }
     }
 
+    /// <summary>Expected header lengths in bytes for each CHD version (indexed by version number).</summary>
     private static readonly uint[] HeaderLengths = [0, 76, 80, 120, 108, 124];
+
+    /// <summary>The CHD file magic number ("MComprHD") used to identify the format.</summary>
     private static readonly byte[] Id = "MComprHD"u8.ToArray();
 
     /// <summary>Reads and validates the CHD file header signature and version.</summary>
@@ -211,12 +214,16 @@ public static class Chd
         }
 
         using var br = new BinaryReader(file, Encoding.UTF8, true);
-        length = br.ReadUInt32BE();
-        version = br.ReadUInt32BE();
+        length = br.ReadUInt32Be();
+        version = br.ReadUInt32Be();
         return HeaderLengths[version] == length;
     }
 
 
+    /// <summary>Reads and decompresses all hunk data from the CHD file in parallel, validating CRC and building SHA1/MD5 checksums.</summary>
+    /// <param name="file">The stream positioned at the start of the compressed data section.</param>
+    /// <param name="chd">The parsed CHD header containing compression and hunk information.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
     internal static ChdError DecompressDataParallel(Stream file, ChdHeader chd)
     {
         using var br = new BinaryReader(file, Encoding.UTF8, true);

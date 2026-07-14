@@ -2,19 +2,29 @@ using CHDSharp.Models;
 
 namespace CHDSharp.Tests;
 
-/// <summary>
-/// Builds Zstd (`zstd`) and CD-Zstd (`cdzs`) CHDs via chdman from a real source
+/// <summary>Builds Zstd (`zstd`) and CD-Zstd (`cdzs`) CHDs via chdman from a real source
 /// file, then verifies the C# decoder reproduces the original data byte-for-byte
 /// (SHA1 must be unchanged by recompression). Exercises Phase 1 codecs.
 /// Skips when chdman or a suitable source file is unavailable.
 /// </summary>
 public sealed class ZstdCodecFixture : IDisposable
 {
+    /// <summary>The temporary directory where generated CHD files are stored.</summary>
     public string? TempDir { get; }
-    public string? CdzsPath { get; } // CD source recompressed to cdzs
+
+    /// <summary>The path to the generated CD-Zstd test CHD file, or null if unavailable.</summary>
+    public string? CdzsPath { get; }
+
+    /// <summary>The expected raw-data SHA1 of the CD-Zstd source, or null.</summary>
     public string? CdzsExpectedSha1 { get; }
-    public string? ZstdPath { get; } // raw/HD source recompressed to zstd
+
+    /// <summary>The path to the generated Zstd test CHD file, or null if unavailable.</summary>
+    public string? ZstdPath { get; }
+
+    /// <summary>The expected raw-data SHA1 of the Zstd source, or null.</summary>
     public string? ZstdExpectedSha1 { get; }
+
+    /// <summary>A human-readable reason why this fixture is being skipped, or null if ready.</summary>
     public string? SkipReason { get; }
 
     public ZstdCodecFixture()
@@ -98,6 +108,7 @@ public sealed class ZstdCodecFixture : IDisposable
         }
     }
 
+    /// <summary>Releases the temporary directory and all generated files.</summary>
     public void Dispose()
     {
         try { if (TempDir != null && Directory.Exists(TempDir)) Directory.Delete(TempDir, true); }
@@ -108,6 +119,7 @@ public sealed class ZstdCodecFixture : IDisposable
     }
 }
 
+/// <summary>Tests that CD-Zstd and Zstd compressed CHDs decode to their original data using the C# reader.</summary>
 public class ZstdCodecTests : IClassFixture<ZstdCodecFixture>
 {
     private readonly ZstdCodecFixture _fx;
@@ -117,6 +129,7 @@ public class ZstdCodecTests : IClassFixture<ZstdCodecFixture>
         _fx = fx;
     }
 
+    /// <summary>Verifies that a CD-Zstd CHD decodes to produce the original source data SHA1.</summary>
     [Fact]
     public void CdzsDecodesToOriginalData()
     {
@@ -131,6 +144,7 @@ public class ZstdCodecTests : IClassFixture<ZstdCodecFixture>
         }
     }
 
+    /// <summary>Verifies that Chd.CheckFile passes on a CD-Zstd CHD.</summary>
     [Fact]
     public void CdzsCheckFileVerifies()
     {
@@ -142,6 +156,7 @@ public class ZstdCodecTests : IClassFixture<ZstdCodecFixture>
         Assert.Equal(ChdError.Chderrnone, err);
     }
 
+    /// <summary>Verifies that a Zstd CHD decodes to produce the original source data SHA1.</summary>
     [Fact]
     public void ZstdDecodesToOriginalData()
     {
@@ -156,6 +171,7 @@ public class ZstdCodecTests : IClassFixture<ZstdCodecFixture>
         }
     }
 
+    /// <summary>Verifies that Chd.CheckFile passes on a Zstd CHD.</summary>
     [Fact]
     public void ZstdCheckFileVerifies()
     {

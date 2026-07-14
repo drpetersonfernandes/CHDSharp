@@ -3,6 +3,7 @@ using CHDSharp.Models;
 
 namespace CHDSharp.Tests;
 
+/// <summary>Prevents parallel execution of integration tests that share chdman and file resources.</summary>
 [CollectionDefinition("ChdListIntegration", DisableParallelization = true)]
 public class ChdListIntegrationFixture;
 
@@ -16,15 +17,16 @@ public class ChdListIntegrationTests
 {
     private readonly ITestOutputHelper _out;
 
+    /// <summary>Initializes a new instance of the <see cref="ChdListIntegrationTests"/> class.</summary>
+    /// <param name="output">The xUnit test output helper for logging.</param>
     public ChdListIntegrationTests(ITestOutputHelper output)
     {
         _out = output;
     }
 
-    /// <summary>
-    /// Full verification of one CHD file: header info vs chdman, deep CheckFile,
-    /// chdman verify, and full-image read SHA1 comparison.
-    /// </summary>
+    /// <summary>Full verification of one CHD file: header info vs chdman, deep CheckFile,
+    /// chdman verify, and full-image read SHA1 comparison.</summary>
+    /// <param name="path">The path to the CHD file to verify.</param>
     [Theory]
     [MemberData(nameof(ChdListData.Paths), MemberType = typeof(ChdListData))]
     public void FullVerificationMatchesChdman(string path)
@@ -56,6 +58,7 @@ public class ChdListIntegrationTests
     /// compares byte-for-byte against chdman extractraw. Limited to files
     /// under 1 GB to keep runtime reasonable.
     /// </summary>
+    /// <param name="path">The path to the CHD file to test.</param>
     [Theory]
     [MemberData(nameof(ChdListData.SmallPaths), MemberType = typeof(ChdListData))]
     public void RandomAccessMatchesChdmanExtract(string path)

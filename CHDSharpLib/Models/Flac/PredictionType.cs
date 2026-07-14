@@ -9,14 +9,17 @@ public enum PredictionType
     /// Verbatim
     /// </summary>
     None = 0,
+
     /// <summary>
     /// Fixed prediction only
     /// </summary>
     Fixed = 1,
+
     /// <summary>
     /// Levinson-Durbin recursion
     /// </summary>
     Levinson = 2,
+
     /// <summary>
     /// Exhaustive search
     /// </summary>

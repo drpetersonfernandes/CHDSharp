@@ -1,12 +1,27 @@
 ﻿namespace CHDSharp.Utils;
 
+/// <summary>
+/// A simple thread-safe pool for reusing byte arrays of a fixed size,
+/// reducing GC pressure when many temporary buffers are needed.
+/// </summary>
 internal class ArrayPool
 {
+    /// <summary>Size in bytes of each array managed by this pool.</summary>
     private readonly uint _arraySize;
+
+    /// <summary>List of available arrays currently held in the pool.</summary>
     private readonly List<byte[]> _array;
+
+    /// <summary>Number of arrays currently in the pool.</summary>
     private int _count;
+
+    /// <summary>Total number of arrays issued by this pool since creation.</summary>
     private int _issuedArraysTotal;
 
+    /// <summary>
+    /// Initializes a new pool that manages byte arrays of the specified size.
+    /// </summary>
+    /// <param name="arraySize">The fixed size in bytes for each array in this pool.</param>
     internal ArrayPool(uint arraySize)
     {
         _array = new List<byte[]>();
@@ -15,6 +30,10 @@ internal class ArrayPool
         _issuedArraysTotal = 0;
     }
 
+    /// <summary>
+    /// Rents a byte array from the pool, allocating a new one if the pool is empty.
+    /// </summary>
+    /// <returns>A byte array of size <see cref="_arraySize"/>.</returns>
     internal byte[] Rent()
     {
         byte[] ret;
@@ -32,10 +51,14 @@ internal class ArrayPool
                 _array.RemoveAt(_count);
             }
         }
-        return ret;
 
+        return ret;
     }
 
+    /// <summary>
+    /// Returns a previously rented byte array back to the pool for reuse.
+    /// </summary>
+    /// <param name="ret">The byte array to return. Must have been originally obtained from <see cref="Rent"/>.</param>
     internal void Return(byte[] ret)
     {
         lock (_array)
@@ -45,6 +68,11 @@ internal class ArrayPool
         }
     }
 
+    /// <summary>
+    /// Reads statistics about array pool usage.
+    /// </summary>
+    /// <param name="issuedArraysTotal">Total number of arrays allocated since creation.</param>
+    /// <param name="returnedArraysTotal">Number of arrays currently held in the pool.</param>
     internal void ReadStats(out int issuedArraysTotal, out int returnedArraysTotal)
     {
         issuedArraysTotal = _issuedArraysTotal;

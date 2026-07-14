@@ -33,7 +33,7 @@ public enum MetadataType
     /// <summary>
     /// <A HREF="../format.html#metadata_block_cuesheet">CUESHEET</A> block
     /// </summary>
-    CUESheet = 5,
+    CueSheet = 5,
 
     /// <summary>
     /// <A HREF="../format.html#metadata_block_picture">PICTURE</A> block

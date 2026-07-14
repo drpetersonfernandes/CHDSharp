@@ -26,7 +26,6 @@
         <PackageProjectUrl>https://github.com/drpetersonfernandes/CHDSharp</PackageProjectUrl>
         <RepositoryUrl>https://github.com/drpetersonfernandes/CHDSharp</RepositoryUrl>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
-        <NoWarn>$(NoWarn);CS1591</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

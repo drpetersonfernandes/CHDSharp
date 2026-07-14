@@ -12,77 +12,146 @@ public class AudioPcmConfig
     public enum SpeakerConfig
     {
 #pragma warning disable CA1069 // Duplicate enum values are intentional flags aliases
+        /// <summary>Front left speaker.</summary>
         Speakerfrontleft = 0x1,
+        /// <summary>Front right speaker.</summary>
         Speakerfrontright = 0x2,
+        /// <summary>Front center speaker.</summary>
         Speakerfrontcenter = 0x4,
+        /// <summary>Low-frequency effects (subwoofer) channel.</summary>
         Speakerlowfrequency = 0x8,
+        /// <summary>Back left surround speaker.</summary>
         Speakerbackleft = 0x10,
+        /// <summary>Back right surround speaker.</summary>
         Speakerbackright = 0x20,
+        /// <summary>Front left of center speaker.</summary>
         Speakerfrontleftofcenter = 0x40,
+        /// <summary>Front right of center speaker.</summary>
         Speakerfrontrightofcenter = 0x80,
+        /// <summary>Back center surround speaker.</summary>
         Speakerbackcenter = 0x100,
+        /// <summary>Side left surround speaker.</summary>
         Speakersideleft = 0x200,
+        /// <summary>Side right surround speaker.</summary>
         Speakersideright = 0x400,
+        /// <summary>Top center overhead speaker.</summary>
         Speakertopcenter = 0x800,
+        /// <summary>Top front left overhead speaker.</summary>
         Speakertopfrontleft = 0x1000,
+        /// <summary>Top front center overhead speaker.</summary>
         Speakertopfrontcenter = 0x2000,
+        /// <summary>Top front right overhead speaker.</summary>
         Speakertopfrontright = 0x4000,
+        /// <summary>Top back left overhead speaker.</summary>
         Speakertopbackleft = 0x8000,
+        /// <summary>Top back center overhead speaker.</summary>
         Speakertopbackcenter = 0x10000,
+        /// <summary>Top back right overhead speaker.</summary>
         Speakertopbackright = 0x20000,
 
+        /// <summary>Direct output (no predefined speaker configuration).</summary>
         Directout = 0,
+        /// <summary>Mono speaker configuration (front center).</summary>
         Ksaudiospeakermono = Speakerfrontcenter,
+        /// <summary>Stereo speaker configuration (front left + front right).</summary>
         Ksaudiospeakerstereo = Speakerfrontleft | Speakerfrontright,
+        /// <summary>Quadraphonic speaker configuration (front left/right + back left/right).</summary>
         Ksaudiospeakerquad = Speakerfrontleft | Speakerfrontright | Speakerbackleft | Speakerbackright,
+        /// <summary>Surround speaker configuration (front left/right/center + back center).</summary>
         Ksaudiospeakersurround = Speakerfrontleft | Speakerfrontright | Speakerfrontcenter | Speakerbackcenter,
+        /// <summary>5.1 surround speaker configuration (front left/right/center + LFE + back left/right).</summary>
         Ksaudiospeaker5Point1 = Speakerfrontleft | Speakerfrontright | Speakerfrontcenter | Speakerlowfrequency | Speakerbackleft | Speakerbackright,
+        /// <summary>5.1 surround speaker configuration using side speakers (front left/right/center + LFE + side left/right).</summary>
         Ksaudiospeaker5Point1Surround = Speakerfrontleft | Speakerfrontright | Speakerfrontcenter | Speakerlowfrequency | Speakersideleft | Speakersideright,
+        /// <summary>7.1 surround speaker configuration (front left/right/center + LFE + back left/right + front left/right of center).</summary>
         Ksaudiospeaker7Point1 = Speakerfrontleft | Speakerfrontright | Speakerfrontcenter | Speakerlowfrequency | Speakerbackleft | Speakerbackright | Speakerfrontleftofcenter | Speakerfrontrightofcenter,
+        /// <summary>7.1 surround speaker configuration using side speakers (front left/right/center + LFE + back left/right + side left/right).</summary>
         Ksaudiospeaker7Point1Surround = Speakerfrontleft | Speakerfrontright | Speakerfrontcenter | Speakerlowfrequency | Speakerbackleft | Speakerbackright | Speakersideleft | Speakersideright,
 
+        /// <summary>DVD Audio channel group 1, channel 0 (front center).</summary>
         Dvdaudiogr10 = Speakerfrontcenter,
+        /// <summary>DVD Audio channel group 1, channel 1 (front left + front right).</summary>
         Dvdaudiogr11 = Speakerfrontleft | Speakerfrontright,
+        /// <summary>DVD Audio channel group 1, channel 2 (front left + front right).</summary>
         Dvdaudiogr12 = Speakerfrontleft | Speakerfrontright,
+        /// <summary>DVD Audio channel group 1, channel 3 (front left + front right).</summary>
         Dvdaudiogr13 = Speakerfrontleft | Speakerfrontright,
+        /// <summary>DVD Audio channel group 1, channel 4 (front left + front right).</summary>
         Dvdaudiogr14 = Speakerfrontleft | Speakerfrontright,
+        /// <summary>DVD Audio channel group 1, channel 5 (front left + front right).</summary>
         Dvdaudiogr15 = Speakerfrontleft | Speakerfrontright,
+        /// <summary>DVD Audio channel group 1, channel 6 (front left + front right).</summary>
         Dvdaudiogr16 = Speakerfrontleft | Speakerfrontright,
+        /// <summary>DVD Audio channel group 1, channel 7 (front left + front right).</summary>
         Dvdaudiogr17 = Speakerfrontleft | Speakerfrontright,
+        /// <summary>DVD Audio channel group 1, channel 8 (front left + front right).</summary>
         Dvdaudiogr18 = Speakerfrontleft | Speakerfrontright,
+        /// <summary>DVD Audio channel group 1, channel 9 (front left + front right).</summary>
         Dvdaudiogr19 = Speakerfrontleft | Speakerfrontright,
+        /// <summary>DVD Audio channel group 1, channel 10 (front left + front right).</summary>
         Dvdaudiogr110 = Speakerfrontleft | Speakerfrontright,
+        /// <summary>DVD Audio channel group 1, channel 11 (front left + front right).</summary>
         Dvdaudiogr111 = Speakerfrontleft | Speakerfrontright,
+        /// <summary>DVD Audio channel group 1, channel 12 (front left + front right).</summary>
         Dvdaudiogr112 = Speakerfrontleft | Speakerfrontright,
+        /// <summary>DVD Audio channel group 1, channel 13 (front left/right + front center).</summary>
         Dvdaudiogr113 = Speakerfrontleft | Speakerfrontright | Speakerfrontcenter,
+        /// <summary>DVD Audio channel group 1, channel 14 (front left/right + front center).</summary>
         Dvdaudiogr114 = Speakerfrontleft | Speakerfrontright | Speakerfrontcenter,
+        /// <summary>DVD Audio channel group 1, channel 15 (front left/right + front center).</summary>
         Dvdaudiogr115 = Speakerfrontleft | Speakerfrontright | Speakerfrontcenter,
+        /// <summary>DVD Audio channel group 1, channel 16 (front left/right + front center).</summary>
         Dvdaudiogr116 = Speakerfrontleft | Speakerfrontright | Speakerfrontcenter,
+        /// <summary>DVD Audio channel group 1, channel 17 (front left/right + front center).</summary>
         Dvdaudiogr117 = Speakerfrontleft | Speakerfrontright | Speakerfrontcenter,
+        /// <summary>DVD Audio channel group 1, channel 18 (front left/right + back left/right).</summary>
         Dvdaudiogr118 = Speakerfrontleft | Speakerfrontright | Speakerbackleft | Speakerbackright,
+        /// <summary>DVD Audio channel group 1, channel 19 (front left/right + back left/right).</summary>
         Dvdaudiogr119 = Speakerfrontleft | Speakerfrontright | Speakerbackleft | Speakerbackright,
+        /// <summary>DVD Audio channel group 1, channel 20 (front left/right + back left/right).</summary>
         Dvdaudiogr120 = Speakerfrontleft | Speakerfrontright | Speakerbackleft | Speakerbackright,
 
+        /// <summary>DVD Audio channel group 2, channel 0 (silent).</summary>
         Dvdaudiogr20 = 0,
+        /// <summary>DVD Audio channel group 2, channel 1 (silent).</summary>
         Dvdaudiogr21 = 0,
+        /// <summary>DVD Audio channel group 2, channel 2 (back center).</summary>
         Dvdaudiogr22 = Speakerbackcenter,
+        /// <summary>DVD Audio channel group 2, channel 3 (back left + back right).</summary>
         Dvdaudiogr23 = Speakerbackleft | Speakerbackright,
+        /// <summary>DVD Audio channel group 2, channel 4 (LFE).</summary>
         Dvdaudiogr24 = Speakerlowfrequency,
+        /// <summary>DVD Audio channel group 2, channel 5 (LFE + back center).</summary>
         Dvdaudiogr25 = Speakerlowfrequency | Speakerbackcenter,
+        /// <summary>DVD Audio channel group 2, channel 6 (LFE + back left/right).</summary>
         Dvdaudiogr26 = Speakerlowfrequency | Speakerbackleft | Speakerbackright,
+        /// <summary>DVD Audio channel group 2, channel 7 (front center).</summary>
         Dvdaudiogr27 = Speakerfrontcenter,
+        /// <summary>DVD Audio channel group 2, channel 8 (front center + back center).</summary>
         Dvdaudiogr28 = Speakerfrontcenter | Speakerbackcenter,
+        /// <summary>DVD Audio channel group 2, channel 9 (front center + back left/right).</summary>
         Dvdaudiogr29 = Speakerfrontcenter | Speakerbackleft | Speakerbackright,
+        /// <summary>DVD Audio channel group 2, channel 10 (front center + LFE).</summary>
         Dvdaudiogr210 = Speakerfrontcenter | Speakerlowfrequency,
+        /// <summary>DVD Audio channel group 2, channel 11 (front center + LFE + back center).</summary>
         Dvdaudiogr211 = Speakerfrontcenter | Speakerlowfrequency | Speakerbackcenter,
+        /// <summary>DVD Audio channel group 2, channel 12 (front center + LFE + back left/right).</summary>
         Dvdaudiogr212 = Speakerfrontcenter | Speakerlowfrequency | Speakerbackleft | Speakerbackright,
+        /// <summary>DVD Audio channel group 2, channel 13 (back center).</summary>
         Dvdaudiogr213 = Speakerbackcenter,
+        /// <summary>DVD Audio channel group 2, channel 14 (back left + back right).</summary>
         Dvdaudiogr214 = Speakerbackleft | Speakerbackright,
+        /// <summary>DVD Audio channel group 2, channel 15 (LFE).</summary>
         Dvdaudiogr215 = Speakerlowfrequency,
+        /// <summary>DVD Audio channel group 2, channel 16 (LFE + back center).</summary>
         Dvdaudiogr216 = Speakerlowfrequency | Speakerbackcenter,
+        /// <summary>DVD Audio channel group 2, channel 17 (LFE + back left/right).</summary>
         Dvdaudiogr217 = Speakerlowfrequency | Speakerbackleft | Speakerbackright,
+        /// <summary>DVD Audio channel group 2, channel 18 (LFE).</summary>
         Dvdaudiogr218 = Speakerlowfrequency,
+        /// <summary>DVD Audio channel group 2, channel 19 (front center).</summary>
         Dvdaudiogr219 = Speakerfrontcenter,
+        /// <summary>DVD Audio channel group 2, channel 20 (front center + LFE).</summary>
         Dvdaudiogr220 = Speakerfrontcenter | Speakerlowfrequency
 #pragma warning restore CA1069
     }

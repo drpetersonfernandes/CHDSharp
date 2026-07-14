@@ -14,13 +14,13 @@ public unsafe class FlacSubframeInfo
     /// </summary>
     public FlacSubframeInfo()
     {
-        best = new FlacSubframe();
-        sf = new LpcSubframeInfo();
-        best_fixed = new ulong[5];
-        lpc_ctx = new LpcContext[Lpc.MAXLPCWINDOWS];
+        Best = new FlacSubframe();
+        Sf = new LpcSubframeInfo();
+        BestFixed = new ulong[5];
+        LpcCtx = new LpcContext[Lpc.MAXLPCWINDOWS];
         for (var i = 0; i < Lpc.MAXLPCWINDOWS; i++)
         {
-            lpc_ctx[i] = new LpcContext();
+            LpcCtx[i] = new LpcContext();
         }
     }
 
@@ -36,54 +36,59 @@ public unsafe class FlacSubframeInfo
         if (w > bps)
             throw new Exception("internal error");
 
-        samples = s;
-        obits = bps - w;
-        wbits = w;
+        Samples = s;
+        Obits = bps - w;
+        Wbits = w;
         for (var o = 0; o <= 4; o++)
         {
-            best_fixed[o] = 0;
+            BestFixed[o] = 0;
         }
 
-        best.residual = r;
-        best.type = SubframeType.Verbatim;
-        best.size = AudioSamples.UINT32MAX;
-        sf.Reset();
+        Best.residual = r;
+        Best.type = SubframeType.Verbatim;
+        Best.size = AudioSamples.UINT32MAX;
+        Sf.Reset();
         for (var iWindow = 0; iWindow < Lpc.MAXLPCWINDOWS; iWindow++)
-            lpc_ctx[iWindow].Reset();
+            LpcCtx[iWindow].Reset();
         //sf.obits = obits;
-        done_fixed = 0;
+        DoneFixed = 0;
     }
 
     /// <summary>
     /// The best subframe encoding found so far.
     /// </summary>
-    public FlacSubframe best;
+    public FlacSubframe Best;
+
     /// <summary>
     /// Number of significant bits per sample (after removing wasted bits).
     /// </summary>
-    public int obits;
+    public int Obits;
+
     /// <summary>
     /// Number of wasted bits per sample.
     /// </summary>
-    public int wbits;
+    public int Wbits;
+
     /// <summary>
     /// Pointer to the input sample data.
     /// </summary>
-    public int* samples;
+    public int* Samples;
+
     /// <summary>
     /// Bitmask indicating which fixed prediction orders have been evaluated.
     /// </summary>
-    public uint done_fixed;
+    public uint DoneFixed;
+
     /// <summary>
     /// Estimated sizes for each fixed prediction order.
     /// </summary>
-    public ulong[] best_fixed;
+    public ulong[] BestFixed;
     /// <summary>
     /// LPC analysis contexts, one per window.
     /// </summary>
-    public LpcContext[] lpc_ctx;
+    public LpcContext[] LpcCtx;
     /// <summary>
     /// LPC subframe information for the current encoding pass.
     /// </summary>
-    public LpcSubframeInfo sf;
+    public LpcSubframeInfo Sf;
 }

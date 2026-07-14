@@ -13,26 +13,27 @@ public class RiceContext
     /// </summary>
     public RiceContext()
     {
-        rparams = new int[FlakeConstants.MAXPARTITIONS];
-        esc_bps = new int[FlakeConstants.MAXPARTITIONS];
+        Rparams = new int[FlakeConstants.MAXPARTITIONS];
+        EscBps = new int[FlakeConstants.MAXPARTITIONS];
     }
+
     /// <summary>
     /// partition order
     /// </summary>
-    public int porder;
+    public int Porder;
 
     /// <summary>
     /// coding method: rice parameters use 4 bits for coding_method 0 and 5 bits for coding_method 1
     /// </summary>
-    public int coding_method;
+    public int CodingMethod;
 
     /// <summary>
     /// Rice parameters
     /// </summary>
-    public int[] rparams;
+    public int[] Rparams;
 
     /// <summary>
     /// bps if using escape code
     /// </summary>
-    public int[] esc_bps;
+    public int[] EscBps;
 }

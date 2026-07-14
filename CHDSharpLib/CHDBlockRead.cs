@@ -4,13 +4,11 @@ using Serilog;
 
 namespace CHDSharp;
 
+/// <summary>Handles CHD block reading, deduplication of self-referencing blocks, and decompression caching.</summary>
 internal static class ChdBlockRead
 {
-    // search for all COMPRESSION_SELF block, and increase the counter of the block it is referencing.
-    // the first time the referenced block is decompressed a copy of its data is kept.
-    // this copy is then used (instead of re-decompressing.) until the use count returns to zero
-    // at which time the backup copy if removed.
-
+    /// <summary>Scans the map for <see cref="CompressionType.Compressionself"/> entries and builds usage counts for referenced source blocks.</summary>
+    /// <param name="chd">The parsed CHD header containing the block map.</param>
     internal static void FindRepeatedBlocks(ChdHeader chd)
     {
         var totalFound = 0;
@@ -72,6 +70,9 @@ internal static class ChdBlockRead
         }
     }
 
+    /// <summary>Retains the most frequently used blocks for caching, promoting them to keep their decompressed buffers, and flattens remaining self-references.</summary>
+    /// <param name="chd">The parsed CHD header containing the block map.</param>
+    /// <param name="blocksToKeep">The maximum number of blocks to keep cached in memory.</param>
     internal static void KeepMostRepeatedBlocks(ChdHeader chd, int blocksToKeep)
     {
         var mapentries = new List<MapEntry>();
@@ -124,6 +125,10 @@ internal static class ChdBlockRead
         });
     }
 
+    /// <summary>Computes a relative weight for a map entry based on its compression type, used to prioritize blocks for caching.</summary>
+    /// <param name="chd">The parsed CHD header.</param>
+    /// <param name="me">The map entry to evaluate.</param>
+    /// <returns>An integer weight where higher values indicate more expensive decompression.</returns>
     internal static int GetWeigth(ChdHeader chd, MapEntry me)
     {
         if (me.Comptype == CompressionType.Compressionnone)
@@ -145,6 +150,8 @@ internal static class ChdBlockRead
         }
     }
 
+    /// <summary>Resolves compression codecs to their corresponding reader delegates and stores them in the header.</summary>
+    /// <param name="chd">The parsed CHD header whose readers will be populated.</param>
     internal static void FindBlockReaders(ChdHeader chd)
     {
         chd.ChdReader = new ChdReader[chd.Compression.Length];
@@ -154,6 +161,9 @@ internal static class ChdBlockRead
         }
     }
 
+    /// <summary>Maps a <see cref="ChdCodec"/> value to its corresponding <see cref="ChdReader"/> decompression delegate.</summary>
+    /// <param name="chdCodec">The compression codec identifier.</param>
+    /// <returns>The matching reader delegate, or null if the codec is unrecognized.</returns>
     private static ChdReader GetReaderFromCodec(ChdCodec chdCodec)
     {
         switch (chdCodec)
@@ -172,6 +182,14 @@ internal static class ChdBlockRead
         }
     }
 
+    /// <summary>Decompresses a single map entry into the output buffer, handling compression, caching, self-references, and CRC validation.</summary>
+    /// <param name="mapEntry">The map entry describing the compressed block.</param>
+    /// <param name="arrPool">The array pool used for buffer rental and caching.</param>
+    /// <param name="compression">The array of decompression delegates indexed by compression type.</param>
+    /// <param name="codec">The codec-specific state and settings.</param>
+    /// <param name="buffOut">The pre-allocated output buffer to receive decompressed data.</param>
+    /// <param name="buffOutLength">The expected length of the decompressed data.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
     internal static ChdError ReadBlock(MapEntry mapEntry, ArrayPool arrPool, ChdReader[] compression, CHDCodec codec, byte[] buffOut, int buffOutLength)
     {
         var checkCrc = true;

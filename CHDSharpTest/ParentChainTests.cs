@@ -9,13 +9,28 @@ namespace CHDSharp.Tests;
 /// </summary>
 public sealed class ParentChainFixture : IDisposable
 {
+    /// <summary>The temporary directory where generated CHD files are stored.</summary>
     public string TempDir { get; } = null!;
+
+    /// <summary>The path to the generated parent CHD file.</summary>
     public string ParentPath { get; } = null!;
+
+    /// <summary>The path to the generated child (delta) CHD file.</summary>
     public string ChildPath { get; } = null!;
+
+    /// <summary>The path to a generated wrong-parent CHD file, or null if unavailable.</summary>
     public string WrongParentPath { get; } = null!;
+
+    /// <summary>Gets whether a wrong-parent CHD was successfully built.</summary>
     public bool HasWrongParent { get; private set; }
+
+    /// <summary>The raw-data SHA1 of the original source file for correctness comparison.</summary>
     public string SourceRawSha1 { get; } = null!;
+
+    /// <summary>Gets whether the fixture is ready with all required files present.</summary>
     public bool Ready { get; }
+
+    /// <summary>A human-readable reason why this fixture is being skipped, or null if ready.</summary>
     public string SkipReason { get; } = null!;
 
     public ParentChainFixture()
@@ -95,6 +110,7 @@ public sealed class ParentChainFixture : IDisposable
         Ready = true;
     }
 
+    /// <summary>Releases the temporary directory and all generated files.</summary>
     public void Dispose()
     {
         try { if (TempDir != null && Directory.Exists(TempDir)) Directory.Delete(TempDir, true); }
@@ -107,6 +123,7 @@ public sealed class ParentChainFixture : IDisposable
     }
 }
 
+/// <summary>Tests parent/child CHD relationships: child without parent, child with correct parent, child with wrong parent, and full-data verification through the parent chain.</summary>
 public class ParentChainTests : IClassFixture<ParentChainFixture>
 {
     private readonly ParentChainFixture _fx;
@@ -122,6 +139,7 @@ public class ParentChainTests : IClassFixture<ParentChainFixture>
             Assert.Skip(_fx.SkipReason);
     }
 
+    /// <summary>Verifies that opening a child without its parent returns Chderrrequiresparent.</summary>
     [Fact]
     public void ChildWithoutParentRequiresParent()
     {
@@ -131,6 +149,7 @@ public class ParentChainTests : IClassFixture<ParentChainFixture>
         Assert.Equal(ChdError.Chderrrequiresparent, err);
     }
 
+    /// <summary>Verifies that a child opens successfully when its correct parent is provided.</summary>
     [Fact]
     public void ChildWithCorrectParentOpens()
     {
@@ -142,6 +161,7 @@ public class ParentChainTests : IClassFixture<ParentChainFixture>
         }
     }
 
+    /// <summary>Verifies that opening a child with an incorrect parent returns Chderrinvalidparent.</summary>
     [Fact]
     public void ChildWithWrongParentReturnsInvalidParent()
     {
@@ -153,6 +173,7 @@ public class ParentChainTests : IClassFixture<ParentChainFixture>
         Assert.Equal(ChdError.Chderrinvalidparent, err);
     }
 
+    /// <summary>Verifies that fully reading a child via its parent produces the correct raw-data SHA1.</summary>
     [Fact]
     public void ChildFullReadMatchesSourceRawSha1()
     {
@@ -169,6 +190,7 @@ public class ParentChainTests : IClassFixture<ParentChainFixture>
         }
     }
 
+    /// <summary>Verifies that Chd.CheckFileWithParent succeeds on a valid parent/child pair.</summary>
     [Fact]
     public void ChildCheckFileWithParentSucceeds()
     {
@@ -179,6 +201,7 @@ public class ParentChainTests : IClassFixture<ParentChainFixture>
         Assert.NotNull(version);
     }
 
+    /// <summary>Verifies that chdman also agrees the child verifies correctly with its parent.</summary>
     [Fact]
     public void ChdmanAgreesChildVerifiesWithParent()
     {

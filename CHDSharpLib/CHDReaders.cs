@@ -5,7 +5,6 @@ using CHDSharp.Models;
 using CHDSharp.Models.Flac.FlacDeps;
 using CHDSharp.Models.Utils;
 using CHDSharp.Utils;
-using ZstdSharp;
 
 namespace CHDSharp;
 
@@ -118,7 +117,7 @@ internal static partial class ChdReaders
         var bitbuf = new BitStream(buffIn, 0, buffInLength);
         var hd = new HuffmanDecoder(256, 16, bitbuf, codec.BHuffman);
 
-        if (hd.ImportTreeHuffman() != huffman_error.HUFFERR_NONE)
+        if (hd.ImportTreeHuffman() != HuffmanError.HufferrNone)
             return ChdError.Chderrinvaliddata;
 
         for (var j = 0; j < buffOutLength; j++)

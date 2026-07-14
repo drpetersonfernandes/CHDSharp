@@ -8,12 +8,19 @@ using Serilog;
 
 namespace CHDSharpTester.Services;
 
+/// <summary>Executes a multi-test verification suite against a list of CHD files, cross-checking the C# reader against chdman when available.</summary>
 public class ChdTestRunner
 {
     private static string? _chdmanVersion;
 
+    /// <summary>Gets the detected chdman version string from the last run, or null if not yet detected.</summary>
     public string? ChdmanVersion => _chdmanVersion;
 
+    /// <summary>Runs the full test suite against the specified files asynchronously.</summary>
+    /// <param name="files">The list of CHD file entries to test.</param>
+    /// <param name="chdmanPath">The path to the chdman executable (can be empty if chdman is unavailable).</param>
+    /// <param name="progress">An optional progress reporter for UI updates.</param>
+    /// <returns>A <see cref="TestSessionResult"/> containing aggregated results for all files.</returns>
     public async Task<TestSessionResult> RunAsync(
         List<ChdFileEntry> files,
         string chdmanPath,

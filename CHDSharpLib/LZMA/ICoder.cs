@@ -5,6 +5,7 @@ namespace CHDSharp.LZMA;
 /// </summary>
 public class DataErrorException : Exception
 {
+    /// <summary>Initializes a new instance of the <see cref="DataErrorException"/> class with a default message.</summary>
     public DataErrorException() : base("Data Error") { }
 }
 

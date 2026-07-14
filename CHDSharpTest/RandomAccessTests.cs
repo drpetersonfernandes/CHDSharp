@@ -25,6 +25,7 @@ public class RandomAccessTests
         return chd!;
     }
 
+    /// <summary>Verifies that ReadHunk returns Chderrhunkoutofrange for an out-of-range hunk number.</summary>
     [Fact]
     public void ReadHunkOutOfRangeReturnsError()
     {
@@ -34,6 +35,7 @@ public class RandomAccessTests
         Assert.Equal(ChdError.Chderrhunkoutofrange, err);
     }
 
+    /// <summary>Verifies that ReadHunk returns Chderrinvalidparameter when the buffer is too small.</summary>
     [Fact]
     public void ReadHunkUndersizedBufferReturnsInvalidParameter()
     {
@@ -43,6 +45,7 @@ public class RandomAccessTests
         Assert.Equal(ChdError.Chderrinvalidparameter, err);
     }
 
+    /// <summary>Verifies that ReadHunk succeeds for the first, middle, and last hunk.</summary>
     [Fact]
     public void ReadHunkFirstMiddleLastSucceed()
     {
@@ -52,6 +55,7 @@ public class RandomAccessTests
             Assert.Equal(ChdError.Chderrnone, chd.ReadHunk(h, buf));
     }
 
+    /// <summary>Verifies that repeated ReadHunk calls for the same hunk return identical data.</summary>
     [Fact]
     public void ReadHunkIsDeterministic()
     {
@@ -63,6 +67,7 @@ public class RandomAccessTests
         Assert.Equal(a, b);
     }
 
+    /// <summary>Verifies that Read produces the same data as ReadHunk for the first hunk.</summary>
     [Fact]
     public void ReadMatchesReadHunkForFirstHunk()
     {
@@ -78,6 +83,7 @@ public class RandomAccessTests
             Assert.Equal(viaHunk[i], viaRead[i]);
     }
 
+    /// <summary>Verifies that Read across a hunk boundary produces the same data as concatenating individual hunks.</summary>
     [Fact]
     public void ReadAcrossHunkBoundaryMatchesConcatenatedHunks()
     {
@@ -103,6 +109,7 @@ public class RandomAccessTests
             Assert.Equal(h1[i], window[half + i]);
     }
 
+    /// <summary>Verifies that Read beyond the end of the image returns Chderrinvalidparameter.</summary>
     [Fact]
     public void ReadBeyondEndReturnsInvalidParameter()
     {
@@ -112,6 +119,7 @@ public class RandomAccessTests
         Assert.Equal(ChdError.Chderrinvalidparameter, err);
     }
 
+    /// <summary>Verifies that header properties (version, hunk bytes, hunk count, total bytes) are consistent.</summary>
     [Fact]
     public void HeaderPropertiesAreConsistent()
     {

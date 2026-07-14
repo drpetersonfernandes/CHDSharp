@@ -5,6 +5,7 @@ using QuestPDF.Infrastructure;
 
 namespace CHDSharpTester.Services;
 
+/// <summary>Generates a PDF report from a <see cref="TestSessionResult"/> using QuestPDF.</summary>
 public static class PdfExporter
 {
     static PdfExporter()
@@ -12,6 +13,10 @@ public static class PdfExporter
         QuestPDF.Settings.License = LicenseType.Community;
     }
 
+    /// <summary>Exports the test session results to a PDF file at the specified output path.</summary>
+    /// <param name="session">The test session results to export.</param>
+    /// <param name="chdmanVersion">The chdman version string to include in the report header, or null.</param>
+    /// <param name="outputPath">The full path where the PDF file will be written.</param>
     public static void Export(TestSessionResult session, string? chdmanVersion, string outputPath)
     {
         Document.Create(container =>

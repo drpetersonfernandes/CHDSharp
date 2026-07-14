@@ -44,9 +44,9 @@ internal static partial class ChdReaders
 
         uint metaDataLength = buffIn[0];
         uint audioChannels = buffIn[1];
-        uint audioSamplesPerBlock = buffIn.ReadUInt16BE(2);
-        uint videoWidth = buffIn.ReadUInt16BE(4);
-        uint videoHeight = buffIn.ReadUInt16BE(6);
+        uint audioSamplesPerBlock = buffIn.ReadUInt16Be(2);
+        uint videoWidth = buffIn.ReadUInt16Be(4);
+        uint videoHeight = buffIn.ReadUInt16Be(6);
 
         var sourceTotalSize = 10 + 2 * audioChannels;
         // validate that the sizes make sense
@@ -55,7 +55,7 @@ internal static partial class ChdReaders
 
         sourceTotalSize += metaDataLength;
 
-        uint audioHuffmanTreeSize = buffIn.ReadUInt16BE(8);
+        uint audioHuffmanTreeSize = buffIn.ReadUInt16Be(8);
         if (audioHuffmanTreeSize != 0xffff)
         {
             sourceTotalSize += audioHuffmanTreeSize;
@@ -64,7 +64,7 @@ internal static partial class ChdReaders
         var audioChannelCompressedSize = new uint?[16];
         for (var chnum = 0; chnum < audioChannels; chnum++)
         {
-            audioChannelCompressedSize[chnum] = buffIn.ReadUInt16BE(10 + 2 * chnum);
+            audioChannelCompressedSize[chnum] = buffIn.ReadUInt16Be(10 + 2 * chnum);
             sourceTotalSize += audioChannelCompressedSize[chnum]!.Value;
         }
 
@@ -226,13 +226,13 @@ internal static partial class ChdReaders
             mAudiohiDecoder = new HuffmanDecoder(256, 16, bitbuf, codec.BHuffmanHi);
             mAudioloDecoder = new HuffmanDecoder(256, 16, bitbuf, codec.BHuffmanLo);
 
-            var hufferr = mAudiohiDecoder.ImportTreeRLE();
-            if (hufferr != huffman_error.HUFFERR_NONE)
+            var hufferr = mAudiohiDecoder.ImportTreeRle();
+            if (hufferr != HuffmanError.HufferrNone)
                 return ChdError.Chderrinvaliddata;
 
             bitbuf.flush();
-            hufferr = mAudioloDecoder.ImportTreeRLE();
-            if (hufferr != huffman_error.HUFFERR_NONE || bitbuf.flush() != treesize)
+            hufferr = mAudioloDecoder.ImportTreeRle();
+            if (hufferr != HuffmanError.HufferrNone || bitbuf.flush() != treesize)
                 return ChdError.Chderrinvaliddata;
 
             buffInOffset += treesize;
@@ -332,18 +332,18 @@ internal static partial class ChdReaders
         var mCrcontext = new HuffmanDecoderRLE(256 + 16, 16, bitbuf, codec.BHuffmanCr);
 
         // import the tables
-        var hufferr = mYcontext.ImportTreeRLE();
-        if (hufferr != huffman_error.HUFFERR_NONE)
+        var hufferr = mYcontext.ImportTreeRle();
+        if (hufferr != HuffmanError.HufferrNone)
             return ChdError.Chderrinvaliddata;
 
         bitbuf.flush();
-        hufferr = mCbcontext.ImportTreeRLE();
-        if (hufferr != huffman_error.HUFFERR_NONE)
+        hufferr = mCbcontext.ImportTreeRle();
+        if (hufferr != HuffmanError.HufferrNone)
             return ChdError.Chderrinvaliddata;
 
         bitbuf.flush();
-        hufferr = mCrcontext.ImportTreeRLE();
-        if (hufferr != huffman_error.HUFFERR_NONE)
+        hufferr = mCrcontext.ImportTreeRle();
+        if (hufferr != HuffmanError.HufferrNone)
             return ChdError.Chderrinvaliddata;
 
         bitbuf.flush();

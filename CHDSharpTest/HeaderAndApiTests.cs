@@ -27,6 +27,7 @@ public class HeaderAndApiTests
         return ms;
     }
 
+    /// <summary>Verifies that CheckHeader returns true and correct values for a valid V5 header.</summary>
     [Fact]
     public void CheckHeaderValidV5ReturnsTrueWithVersion()
     {
@@ -37,6 +38,9 @@ public class HeaderAndApiTests
         Assert.Equal(5u, version);
     }
 
+    /// <summary>Verifies that each CHD version reports the expected header length.</summary>
+    /// <param name="version">The CHD format version.</param>
+    /// <param name="length">The expected header length for that version.</param>
     [Theory]
     [InlineData(1, 76)]
     [InlineData(2, 80)]
@@ -51,6 +55,7 @@ public class HeaderAndApiTests
         Assert.Equal(version, gotVer);
     }
 
+    /// <summary>Verifies that CheckHeader returns false for a stream with an incorrect magic value.</summary>
     [Fact]
     public void CheckHeaderWrongMagicReturnsFalse()
     {
@@ -58,6 +63,7 @@ public class HeaderAndApiTests
         Assert.False(Chd.CheckHeader(ms, out _, out _));
     }
 
+    /// <summary>Verifies that CheckHeader returns false when the declared length doesn't match the version.</summary>
     [Fact]
     public void CheckHeaderLengthMismatchReturnsFalse()
     {
@@ -66,6 +72,7 @@ public class HeaderAndApiTests
         Assert.False(Chd.CheckHeader(ms, out _, out _));
     }
 
+    /// <summary>Verifies that ChdFile.Open returns Chderrfilenotfound for a missing file.</summary>
     [Fact]
     public void ChdFileOpenMissingFileReturnsFileNotFound()
     {
@@ -74,6 +81,7 @@ public class HeaderAndApiTests
         Assert.Null(chd);
     }
 
+    /// <summary>Verifies that ChdFile.Open returns Chderrinvalidfile for a stream without a CHD magic.</summary>
     [Fact]
     public void ChdFileOpenNonChdStreamReturnsInvalidFile()
     {
@@ -83,6 +91,7 @@ public class HeaderAndApiTests
         Assert.Null(chd);
     }
 
+    /// <summary>Verifies that ChdFile.Open returns Chderrinvalidparameter for a non-seekable stream.</summary>
     [Fact]
     public void ChdFileOpenNonSeekableStreamReturnsInvalidParameter()
     {

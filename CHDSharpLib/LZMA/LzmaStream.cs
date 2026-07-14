@@ -246,7 +246,9 @@ public class LzmaStream : Stream
             outWindow.Reset();
         }
         else if (needDictReset)
+        {
             throw new DataErrorException();
+        }
 
         if (control >= 0x80)
         {
@@ -269,7 +271,9 @@ public class LzmaStream : Stream
                 decoder.SetDecoderProperties(props);
             }
             else if (needProps)
+            {
                 throw new DataErrorException();
+            }
             else if (control >= 0xA0)
             {
                 decoder = new Decoder();
@@ -279,7 +283,9 @@ public class LzmaStream : Stream
             rangeDecoder.Init(inputStream);
         }
         else if (control > 0x02)
+        {
             throw new DataErrorException();
+        }
         else
         {
             uncompressedChunk = true;

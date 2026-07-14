@@ -25,7 +25,9 @@ public static class Crc16
     public static unsafe ushort ComputeChecksum(ushort crc, byte[] bytes, int pos, int count)
     {
         fixed (byte* bs = bytes)
+        {
             return ComputeChecksum(crc, bs + pos, count);
+        }
     }
 
     /// <summary>
@@ -38,10 +40,13 @@ public static class Crc16
     public static unsafe ushort ComputeChecksum(ushort crc, byte* bytes, int count)
     {
         fixed (ushort* t = table)
+        {
             for (var i = count; i > 0; i--)
             {
                 crc = (ushort)((crc << 8) ^ t[(crc >> 8) ^ *bytes++]);
             }
+        }
+
         return crc;
     }
 

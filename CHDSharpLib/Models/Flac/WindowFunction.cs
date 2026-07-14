@@ -46,5 +46,5 @@ public enum WindowFunction
     /// <summary>Tukey window variant 3X.</summary>
     Tukey3X = (1 << 19),
     /// <summary>Tukey window variant 4X.</summary>
-    Tukey4X = (1 << 20),
+    Tukey4X = (1 << 20)
 }

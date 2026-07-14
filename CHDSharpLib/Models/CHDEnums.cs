@@ -1,32 +1,32 @@
 namespace CHDSharp.Models;
 
 /// <summary>Identifies the compression codec used in a CHD file.</summary>
-public enum chd_codec
+public enum chdCodec
 {
     /// <summary>No compression codec selected.</summary>
-    CHD_CODEC_NONE = 0,
+    CHDCODECNONE = 0,
     /// <summary>zlib (Deflate) compression.</summary>
-    CHD_CODEC_ZLIB = 0x7A6C6962, // zlib
+    CHDCODECZLIB = 0x7A6C6962, // zlib
     /// <summary>LZMA compression.</summary>
-    CHD_CODEC_LZMA = 0x6C7A6D61, // lzma
+    CHDCODECLZMA = 0x6C7A6D61, // lzma
     /// <summary>Huffman compression.</summary>
-    CHD_CODEC_HUFFMAN = 0x68756666, // huff
+    CHDCODECHUFFMAN = 0x68756666, // huff
     /// <summary>FLAC audio compression.</summary>
-    CHD_CODEC_FLAC = 0x666C6163, // flac
+    CHDCODECFLAC = 0x666C6163, // flac
     /// <summary>Zstandard compression.</summary>
-    CHD_CODEC_ZSTD = 0x7A737464, // zstd
+    CHDCODECZSTD = 0x7A737464, // zstd
     /// <summary>zlib compression variant for CD data.</summary>
-    CHD_CODEC_CD_ZLIB = 0x63647A6C, // cdzl
+    CHDCODECCDZLIB = 0x63647A6C, // cdzl
     /// <summary>LZMA compression variant for CD data.</summary>
-    CHD_CODEC_CD_LZMA = 0x63646C7A, // cdlz
+    CHDCODECCDLZMA = 0x63646C7A, // cdlz
     /// <summary>FLAC compression variant for CD data.</summary>
-    CHD_CODEC_CD_FLAC = 0x6364666C, // cdfl
+    CHDCODECCDFLAC = 0x6364666C, // cdfl
     /// <summary>Zstandard compression variant for CD data.</summary>
-    CHD_CODEC_CD_ZSTD = 0x63647A73, // cdzs
+    CHDCODECCDZSTD = 0x63647A73, // cdzs
     /// <summary>AV Huffman compression (V3/V4).</summary>
-    CHD_CODEC_AVHUFF = 0x61766875, // avhu
+    CHDCODECAVHUFF = 0x61766875, // avhu
     /// <summary>Error / unknown codec.</summary>
-    CHD_CODEC_ERROR = 0x0eeeeeee
+    CHDCODECERROR = 0x0eeeeeee
 }
 
 
@@ -36,142 +36,142 @@ public enum chd_codec
 public enum mapFlags
 {
     /// <summary>Mask to isolate the hunk type from a map entry.</summary>
-    MAP_ENTRY_FLAG_TYPE_MASK = 0x000f,      /* what type of hunk */
+    MAPENTRYFLAGTYPEMASK = 0x000f,      /* what type of hunk */
     /// <summary>Indicates no CRC is present for this entry.</summary>
-    MAP_ENTRY_FLAG_NO_CRC = 0x0010,         /* no CRC is present */
+    MAPENTRYFLAGNOCRC = 0x0010,         /* no CRC is present */
 
     /// <summary>Invalid or uninitialized entry.</summary>
-    MAP_ENTRY_TYPE_INVALID = 0x0000,        /* invalid type */
+    MAPENTRYTYPEINVALID = 0x0000,        /* invalid type */
     /// <summary>Standard compressed hunk.</summary>
-    MAP_ENTRY_TYPE_COMPRESSED = 0x0001,     /* standard compression */
+    MAPENTRYTYPECOMPRESSED = 0x0001,     /* standard compression */
     /// <summary>Uncompressed (raw) hunk.</summary>
-    MAP_ENTRY_TYPE_UNCOMPRESSED = 0x0002,   /* uncompressed data */
+    MAPENTRYTYPEUNCOMPRESSED = 0x0002,   /* uncompressed data */
     /// <summary>Mini hunk: the offset field stores the raw data inline.</summary>
-    MAP_ENTRY_TYPE_MINI = 0x0003,           /* mini: use offset as raw data */
+    MAPENTRYTYPEMINI = 0x0003,           /* mini: use offset as raw data */
     /// <summary>Self-reference: same data as another hunk in this file.</summary>
-    MAP_ENTRY_TYPE_SELF_HUNK = 0x0004,      /* same as another hunk in this file */
+    MAPENTRYTYPESELFHUNK = 0x0004,      /* same as another hunk in this file */
     /// <summary>Parent reference: same data as a hunk in the parent CHD.</summary>
-    MAP_ENTRY_TYPE_PARENT_HUNK = 0x0005     /* same as a hunk in the parent file */
+    MAPENTRYTYPEPARENTHUNK = 0x0005     /* same as a hunk in the parent file */
 }
 
 /// <summary>Represents the compression type for a hunk in the V5 CHD format.</summary>
-public enum compression_type
+public enum compressionType
 {
     /* codec #0
      * these types are live when running */
     /// <summary>Decompress using codec #0.</summary>
-    COMPRESSION_TYPE_0 = 0,
+    COMPRESSIONTYPE0 = 0,
     /* codec #1 */
     /// <summary>Decompress using codec #1.</summary>
-    COMPRESSION_TYPE_1 = 1,
+    COMPRESSIONTYPE1 = 1,
     /* codec #2 */
     /// <summary>Decompress using codec #2.</summary>
-    COMPRESSION_TYPE_2 = 2,
+    COMPRESSIONTYPE2 = 2,
     /* codec #3 */
     /// <summary>Decompress using codec #3.</summary>
-    COMPRESSION_TYPE_3 = 3,
+    COMPRESSIONTYPE3 = 3,
     /* no compression; implicit length = hunkbytes */
     /// <summary>No compression applied; implicit length equals the hunk size.</summary>
-    COMPRESSION_NONE = 4,
+    COMPRESSIONNONE = 4,
     /* same as another block in this chd */
     /// <summary>Data is identical to another block within the same CHD.</summary>
-    COMPRESSION_SELF = 5,
+    COMPRESSIONSELF = 5,
     /* same as a hunk's worth of units in the parent chd */
     /// <summary>Data is identical to the corresponding hunk in the parent CHD.</summary>
-    COMPRESSION_PARENT = 6,
+    COMPRESSIONPARENT = 6,
 
     /* start of small RLE run (4-bit length)
      * these additional pseudo-types are used for compressed encodings: */
     /// <summary>Start of a short RLE run (4-bit length prefix).</summary>
-    COMPRESSION_RLE_SMALL = 7,
+    COMPRESSIONRLESMALL = 7,
     /* start of large RLE run (8-bit length) */
     /// <summary>Start of a long RLE run (8-bit length prefix).</summary>
-    COMPRESSION_RLE_LARGE = 8,
+    COMPRESSIONRLELARGE = 8,
     /* same as the last COMPRESSION_SELF block */
     /// <summary>Same as the most recent <see cref="COMPRESSION_SELF"/> block.</summary>
-    COMPRESSION_SELF_0 = 9,
+    COMPRESSIONSELF0 = 9,
     /* same as the last COMPRESSION_SELF block + 1 */
     /// <summary>Same as the most recent <see cref="COMPRESSION_SELF"/> block plus one.</summary>
-    COMPRESSION_SELF_1 = 10,
+    COMPRESSIONSELF1 = 10,
     /* same block in the parent */
     /// <summary>Same block as in the parent CHD.</summary>
-    COMPRESSION_PARENT_SELF = 11,
+    COMPRESSIONPARENTSELF = 11,
     /* same as the last COMPRESSION_PARENT block */
     /// <summary>Same as the most recent <see cref="COMPRESSION_PARENT"/> block.</summary>
-    COMPRESSION_PARENT_0 = 12,
+    COMPRESSIONPARENT0 = 12,
     /* same as the last COMPRESSION_PARENT block + 1 */
     /// <summary>Same as the most recent <see cref="COMPRESSION_PARENT"/> block plus one.</summary>
-    COMPRESSION_PARENT_1 = 13,
+    COMPRESSIONPARENT1 = 13,
 
 
 
     /* ADDED HERE: used in CHD V3 and V4 */
     /// <summary>Mini compression type used in V3/V4 formats (offset stores raw data).</summary>
-    COMPRESSION_MINI = 100,
+    COMPRESSIONMINI = 100,
     /* ADDED HERE: as an internal error state */
     /// <summary>Internal error state indicating an unknown or invalid compression type.</summary>
-    COMPRESSION_ERROR = 101
+    COMPRESSIONERROR = 101
 };
 
 /// <summary>Error codes returned by CHD operations.</summary>
-public enum chd_error
+public enum chdError
 {
     /// <summary>No error - operation completed successfully.</summary>
-    CHDERR_NONE,
+    CHDERRNONE,
     /// <summary>No interface available for the requested operation.</summary>
-    CHDERR_NO_INTERFACE,
+    CHDERRNOINTERFACE,
     /// <summary>Out of memory.</summary>
-    CHDERR_OUT_OF_MEMORY,
+    CHDERROUTOFMEMORY,
     /// <summary>The file does not appear to be a valid CHD.</summary>
-    CHDERR_INVALID_FILE,
+    CHDERRINVALIDFILE,
     /// <summary>An invalid parameter was supplied.</summary>
-    CHDERR_INVALID_PARAMETER,
+    CHDERRINVALIDPARAMETER,
     /// <summary>Invalid or corrupt data was encountered.</summary>
-    CHDERR_INVALID_DATA,
+    CHDERRINVALIDDATA,
     /// <summary>The specified file was not found.</summary>
-    CHDERR_FILE_NOT_FOUND,
+    CHDERRFILENOTFOUND,
     /// <summary>The CHD is a child (differential) and requires a parent.</summary>
-    CHDERR_REQUIRES_PARENT,
+    CHDERRREQUIRESPARENT,
     /// <summary>The file is not writable.</summary>
-    CHDERR_FILE_NOT_WRITEABLE,
+    CHDERRFILENOTWRITEABLE,
     /// <summary>A read error occurred.</summary>
-    CHDERR_READ_ERROR,
+    CHDERRREADERROR,
     /// <summary>A write error occurred.</summary>
-    CHDERR_WRITE_ERROR,
+    CHDERRWRITEERROR,
     /// <summary>An error occurred in the compression/decompression codec.</summary>
-    CHDERR_CODEC_ERROR,
+    CHDERRCODECERROR,
     /// <summary>The parent CHD is invalid or incompatible.</summary>
-    CHDERR_INVALID_PARENT,
+    CHDERRINVALIDPARENT,
     /// <summary>The requested hunk index is out of range.</summary>
-    CHDERR_HUNK_OUT_OF_RANGE,
+    CHDERRHUNKOUTOFRANGE,
     /// <summary>Decompression of a hunk failed.</summary>
-    CHDERR_DECOMPRESSION_ERROR,
+    CHDERRDECOMPRESSIONERROR,
     /// <summary>Compression of a hunk failed.</summary>
-    CHDERR_COMPRESSION_ERROR,
+    CHDERRCOMPRESSIONERROR,
     /// <summary>Unable to create the output file.</summary>
-    CHDERR_CANT_CREATE_FILE,
+    CHDERRCANTCREATEFILE,
     /// <summary>Unable to verify the CHD (hash mismatch or missing data).</summary>
-    CHDERR_CANT_VERIFY,
+    CHDERRCANTVERIFY,
     /// <summary>The requested feature is not supported.</summary>
-    CHDERR_NOT_SUPPORTED,
+    CHDERRNOTSUPPORTED,
     /// <summary>The requested metadata entry was not found.</summary>
-    CHDERR_METADATA_NOT_FOUND,
+    CHDERRMETADATANOTFOUND,
     /// <summary>The metadata size is invalid.</summary>
-    CHDERR_INVALID_METADATA_SIZE,
+    CHDERRINVALIDMETADATASIZE,
     /// <summary>The CHD version is not supported by this library.</summary>
-    CHDERR_UNSUPPORTED_VERSION,
+    CHDERRUNSUPPORTEDVERSION,
     /// <summary>The verification was incomplete.</summary>
-    CHDERR_VERIFY_INCOMPLETE,
+    CHDERRVERIFYINCOMPLETE,
     /// <summary>The metadata is invalid or corrupt.</summary>
-    CHDERR_INVALID_METADATA,
+    CHDERRINVALIDMETADATA,
     /// <summary>The CHD is in an invalid state for the requested operation.</summary>
-    CHDERR_INVALID_STATE,
+    CHDERRINVALIDSTATE,
     /// <summary>An operation is already pending.</summary>
-    CHDERR_OPERATION_PENDING,
+    CHDERROPERATIONPENDING,
     /// <summary>No asynchronous operation is in progress.</summary>
-    CHDERR_NO_ASYNC_OPERATION,
+    CHDERRNOASYNCOPERATION,
     /// <summary>The CHD format is not supported.</summary>
-    CHDERR_UNSUPPORTED_FORMAT,
+    CHDERRUNSUPPORTEDFORMAT,
     /// <summary>Unable to open the specified file.</summary>
-    CHDERR_CANNOT_OPEN_FILE
+    CHDERRCANNOTOPENFILE
 };

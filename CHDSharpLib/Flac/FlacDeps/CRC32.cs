@@ -32,10 +32,12 @@ public static class Crc32
     public static unsafe uint ComputeChecksum(uint crc, byte* bytes, int count)
     {
         fixed (uint* t = table)
+        {
             for (var i = 0; i < count; i++)
             {
                 crc = (crc >> 8) ^ t[(crc ^ bytes[i]) & 0xff];
             }
+        }
 
         return crc;
     }
@@ -51,7 +53,9 @@ public static class Crc32
     public static unsafe uint ComputeChecksum(uint crc, byte[] bytes, int pos, int count)
     {
         fixed (byte* pbytes = &bytes[pos])
+        {
             return ComputeChecksum(crc, pbytes, count);
+        }
     }
 
     /// <summary>

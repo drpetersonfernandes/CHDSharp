@@ -29,37 +29,37 @@ public class FlakeConstants
     /// <summary>
     /// Maximum block size in samples (65535).
     /// </summary>
-    public const int MAX_BLOCKSIZE = 65535;
+    public const int MAXBLOCKSIZE = 65535;
     /// <summary>
     /// Maximum Rice coding parameter (14).
     /// </summary>
-    public const int MAX_RICE_PARAM = 14;
+    public const int MAXRICEPARAM = 14;
     /// <summary>
     /// Maximum partition order for Rice coding (8).
     /// </summary>
-    public const int MAX_PARTITION_ORDER = 8;
+    public const int MAXPARTITIONORDER = 8;
     /// <summary>
     /// Maximum number of Rice coding partitions (256).
     /// </summary>
-    public const int MAX_PARTITIONS = 1 << MAX_PARTITION_ORDER;
+    public const int MAXPARTITIONS = 1 << MAXPARTITIONORDER;
 
     /// <summary>
     /// Length in bits of the sample number field in a seekpoint.
     /// </summary>
-    public const int FLAC__STREAM_METADATA_SEEKPOINT_SAMPLE_NUMBER_LEN = 64; /* bits */
+    public const int FLACSTREAMMETADATASEEKPOINTSAMPLENUMBERLEN = 64; /* bits */
     /// <summary>
     /// Length in bits of the stream offset field in a seekpoint.
     /// </summary>
-    public const int FLAC__STREAM_METADATA_SEEKPOINT_STREAM_OFFSET_LEN = 64; /* bits */
+    public const int FLACSTREAMMETADATASEEKPOINTSTREAMOFFSETLEN = 64; /* bits */
     /// <summary>
     /// Length in bits of the frame samples field in a seekpoint.
     /// </summary>
-    public const int FLAC__STREAM_METADATA_SEEKPOINT_FRAME_SAMPLES_LEN = 16; /* bits */
+    public const int FLACSTREAMMETADATASEEKPOINTFRAMESAMPLESLEN = 16; /* bits */
 
     /// <summary>
     /// Table of FLAC sample rates indexed by the sample rate code from the stream info header.
     /// </summary>
-    public static readonly int[] flac_samplerates =
+    public static readonly int[] flacSamplerates =
     [
         0, 88200, 176400, 192000,
         8000, 16000, 22050, 24000, 32000, 44100, 48000, 96000,
@@ -71,11 +71,11 @@ public class FlakeConstants
     /// <summary>
     /// Table of FLAC block sizes indexed by the block size code from the frame header.
     /// </summary>
-    public static readonly int[] flac_blocksizes = [0, 192, 576, 1152, 2304, 4608, 0, 0, 256, 512, 1024, 2048, 4096, 8192, 16384];
+    public static readonly int[] flacBlocksizes = [0, 192, 576, 1152, 2304, 4608, 0, 0, 256, 512, 1024, 2048, 4096, 8192, 16384];
     //0110 : get 8 bit (blocksize-1) from end of header
     //0111 : get 16 bit (blocksize-1) from end of header
     /// <summary>
     /// Table of FLAC bit depths indexed by the bits-per-sample code from the stream info header.
     /// </summary>
-    public static readonly int[] flac_bitdepths = [0, 8, 12, 0, 16, 20, 24, 0];
+    public static readonly int[] flacBitdepths = [0, 8, 12, 0, 16, 20, 24, 0];
 }

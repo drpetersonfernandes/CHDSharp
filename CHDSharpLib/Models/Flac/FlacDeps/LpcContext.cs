@@ -13,8 +13,8 @@ unsafe public class LpcSubframeInfo
     /// </summary>
     public LpcSubframeInfo()
     {
-        autocorr_section_values = new double[Lpc.MAX_LPC_SECTIONS, Lpc.MAX_LPC_ORDER + 1];
-        autocorr_section_orders = new int[Lpc.MAX_LPC_SECTIONS];
+        autocorr_section_values = new double[Lpc.MAXLPCSECTIONS, Lpc.MAXLPCORDER + 1];
+        autocorr_section_orders = new int[Lpc.MAXLPCSECTIONS];
     }
 
     /// <summary>
@@ -141,60 +141,60 @@ unsafe public struct LpcWindowSection
     /// </summary>
     /// <param name="data">Pointer to sample data.</param>
     /// <param name="window">Pointer to the window function values.</param>
-    /// <param name="min_order">Minimum lag order.</param>
+    /// <param name="minOrder">Minimum lag order.</param>
     /// <param name="order">Maximum lag order.</param>
     /// <param name="blocksize">Total block size.</param>
     /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
-    unsafe public void compute_autocorr(/*const*/ int* data, float* window, int min_order, int order, int blocksize, double* autoc)
+    unsafe public void computeAutocorr(/*const*/ int* data, float* window, int minOrder, int order, int blocksize, double* autoc)
     {
         if (m_type == SectionType.OneLarge)
-            Lpc.compute_autocorr_windowless_large(data + m_start, m_end - m_start, min_order, order, autoc);
+            Lpc.computeAutocorrWindowlessLarge(data + m_start, m_end - m_start, minOrder, order, autoc);
         else if (m_type == SectionType.One)
-            Lpc.compute_autocorr_windowless(data + m_start, m_end - m_start, min_order, order, autoc);
+            Lpc.computeAutocorrWindowless(data + m_start, m_end - m_start, minOrder, order, autoc);
         else if (m_type == SectionType.Data)
-            Lpc.compute_autocorr(data + m_start, window + m_start, m_end - m_start, min_order, order, autoc);
+            Lpc.computeAutocorr(data + m_start, window + m_start, m_end - m_start, minOrder, order, autoc);
         else if (m_type == SectionType.Glue)
-            Lpc.compute_autocorr_glue(data, window, m_start, m_end, min_order, order, autoc);
+            Lpc.computeAutocorrGlue(data, window, m_start, m_end, minOrder, order, autoc);
         else if (m_type == SectionType.OneGlue)
-            Lpc.compute_autocorr_glue(data + m_start, min_order, order, autoc);
+            Lpc.computeAutocorrGlue(data + m_start, minOrder, order, autoc);
     }
 
     /// <summary>
     /// Detects window sections by analyzing the window function values and partitioning into sections of uniform computation type. Operates on raw pointers.
     /// </summary>
-    /// <param name="_windowcount">Number of windows.</param>
-    /// <param name="window_segment">Pointer to window function values, interleaved by window.</param>
+    /// <param name="Windowcount">Number of windows.</param>
+    /// <param name="windowSegment">Pointer to window function values, interleaved by window.</param>
     /// <param name="stride">Stride between window values.</param>
     /// <param name="sz">Size of each window segment.</param>
     /// <param name="bps">Bits per sample.</param>
     /// <param name="sections">Destination buffer for detected sections, sized for all windows.</param>
-    unsafe public static void Detect(int _windowcount, float* window_segment, int stride, int sz, int bps, LpcWindowSection* sections)
+    unsafe public static void Detect(int Windowcount, float* windowSegment, int stride, int sz, int bps, LpcWindowSection* sections)
     {
         var section_id = 0;
         var boundaries = new List<int>();
-        var types = new SectionType[_windowcount, Lpc.MAX_LPC_SECTIONS * 2];
-        var alias = new int[_windowcount, Lpc.MAX_LPC_SECTIONS * 2];
-        var alias_set = new int[_windowcount, Lpc.MAX_LPC_SECTIONS * 2];
+        var types = new SectionType[Windowcount, Lpc.MAXLPCSECTIONS * 2];
+        var alias = new int[Windowcount, Lpc.MAXLPCSECTIONS * 2];
+        var alias_set = new int[Windowcount, Lpc.MAXLPCSECTIONS * 2];
         for (var x = 0; x < sz; x++)
         {
-            for (var i = 0; i < _windowcount; i++)
+            for (var i = 0; i < Windowcount; i++)
             {
                 var a = alias[i, boundaries.Count];
-                var w = window_segment[i * stride + x];
-                var wa = window_segment[a * stride + x];
+                var w = windowSegment[i * stride + x];
+                var wa = windowSegment[a * stride + x];
                 if (wa != w)
                 {
-                    for (var i1 = i; i1 < _windowcount; i1++)
+                    for (var i1 = i; i1 < Windowcount; i1++)
                         if (alias[i1, boundaries.Count] == a
-                            && w == window_segment[i1 * stride + x])
+                            && w == windowSegment[i1 * stride + x])
                         {
                             alias[i1, boundaries.Count] = i;
                         }
                 }
-                if (boundaries.Count >= Lpc.MAX_LPC_SECTIONS * 2) throw new IndexOutOfRangeException();
+                if (boundaries.Count >= Lpc.MAXLPCSECTIONS * 2) throw new IndexOutOfRangeException();
 
                 types[i, boundaries.Count] =
-                    boundaries.Count >= Lpc.MAX_LPC_SECTIONS * 2 - 2 ?
+                    boundaries.Count >= Lpc.MAXLPCSECTIONS * 2 - 2 ?
                         SectionType.Data : w == 0.0 ?
                             SectionType.Zero : w != 1.0 ?
                                 SectionType.Data : bps * 2 + BitReader.log2i(sz) >= 61 ?
@@ -202,15 +202,15 @@ unsafe public struct LpcWindowSection
                                     SectionType.One;
             }
             var isBoundary = false;
-            for (var i = 0; i < _windowcount; i++)
+            for (var i = 0; i < Windowcount; i++)
             {
                 isBoundary |= boundaries.Count == 0 ||
                               types[i, boundaries.Count - 1] != types[i, boundaries.Count];
             }
             if (isBoundary)
             {
-                for (var i = 0; i < _windowcount; i++)
-                for (var i1 = 0; i1 < _windowcount; i1++)
+                for (var i = 0; i < Windowcount; i++)
+                for (var i1 = 0; i1 < Windowcount; i1++)
                     if (i != i1 && alias[i, boundaries.Count] == alias[i1, boundaries.Count])
                     {
                         alias_set[i, boundaries.Count] |= 1 << i1;
@@ -220,15 +220,15 @@ unsafe public struct LpcWindowSection
             }
         }
         boundaries.Add(sz);
-        var secs = new int[_windowcount];
+        var secs = new int[Windowcount];
         // Reconstruct segments list.
         for (var j = 0; j < boundaries.Count - 1; j++)
         {
-            for (var i = 0; i < _windowcount; i++)
+            for (var i = 0; i < Windowcount; i++)
             {
-                var window_sections = sections + i * Lpc.MAX_LPC_SECTIONS;
+                var window_sections = sections + i * Lpc.MAXLPCSECTIONS;
                 // leave room for glue
-                if (secs[i] >= Lpc.MAX_LPC_SECTIONS - 1)
+                if (secs[i] >= Lpc.MAXLPCSECTIONS - 1)
                 {
                     throw new IndexOutOfRangeException();
                     //window_sections[secs[i] - 1].m_type = LpcWindowSection.SectionType.Data;
@@ -238,9 +238,9 @@ unsafe public struct LpcWindowSection
                 window_sections[secs[i]].setData(boundaries[j], boundaries[j + 1]);
                 window_sections[secs[i]++].m_type = types[i, j];
             }
-            for (var i = 0; i < _windowcount; i++)
+            for (var i = 0; i < Windowcount; i++)
             {
-                var window_sections = sections + i * Lpc.MAX_LPC_SECTIONS;
+                var window_sections = sections + i * Lpc.MAXLPCSECTIONS;
                 var sec = secs[i] - 1;
                 if (sec > 0
                     && j > 0 && (alias_set[i, j] == alias_set[i, j - 1] || window_sections[sec].m_type == SectionType.Zero)
@@ -253,16 +253,16 @@ unsafe public struct LpcWindowSection
                     secs[i]--;
                     continue;
                 }
-                if (section_id >= Lpc.MAX_LPC_SECTIONS) throw new IndexOutOfRangeException();
+                if (section_id >= Lpc.MAXLPCSECTIONS) throw new IndexOutOfRangeException();
 
                 if (alias_set[i, j] != 0
                     && types[i, j] != SectionType.Zero
-                    && section_id < Lpc.MAX_LPC_SECTIONS)
+                    && section_id < Lpc.MAXLPCSECTIONS)
                 {
-                    for (var i1 = i; i1 < _windowcount; i1++)
+                    for (var i1 = i; i1 < Windowcount; i1++)
                         if (alias[i1, j] == i && secs[i1] > 0)
                         {
-                            sections[i1 * Lpc.MAX_LPC_SECTIONS + secs[i1] - 1].m_id = section_id;
+                            sections[i1 * Lpc.MAXLPCSECTIONS + secs[i1] - 1].m_id = section_id;
                         }
 
                     section_id++;
@@ -270,9 +270,9 @@ unsafe public struct LpcWindowSection
                 // section_id for glue? nontrivial, must be sure next sections are the same size
                 if (sec > 0
                     && (window_sections[sec].m_type == SectionType.One || window_sections[sec].m_type == SectionType.OneLarge)
-                    && window_sections[sec].m_end - window_sections[sec].m_start >= Lpc.MAX_LPC_ORDER
+                    && window_sections[sec].m_end - window_sections[sec].m_start >= Lpc.MAXLPCORDER
                     && (window_sections[sec - 1].m_type == SectionType.One || window_sections[sec - 1].m_type == SectionType.OneLarge)
-                    && window_sections[sec - 1].m_end - window_sections[sec - 1].m_start >= Lpc.MAX_LPC_ORDER)
+                    && window_sections[sec - 1].m_end - window_sections[sec - 1].m_start >= Lpc.MAXLPCORDER)
                 {
                     window_sections[sec + 1] = window_sections[sec];
                     window_sections[sec].m_end = window_sections[sec].m_start;
@@ -294,20 +294,20 @@ unsafe public struct LpcWindowSection
                 }
             }
         }
-        for (var i = 0; i < _windowcount; i++)
+        for (var i = 0; i < Windowcount; i++)
         {
             for (var s = 0; s < secs[i]; s++)
             {
-                var window_sections = sections + i * Lpc.MAX_LPC_SECTIONS;
+                var window_sections = sections + i * Lpc.MAXLPCSECTIONS;
                 if (window_sections[s].m_type == SectionType.Glue
                     || window_sections[s].m_type == SectionType.OneGlue)
                 {
                     window_sections[s].m_end = window_sections[s + 1].m_end;
                 }
             }
-            while (secs[i] < Lpc.MAX_LPC_SECTIONS)
+            while (secs[i] < Lpc.MAXLPCSECTIONS)
             {
-                var window_sections = sections + i * Lpc.MAX_LPC_SECTIONS;
+                var window_sections = sections + i * Lpc.MAXLPCSECTIONS;
                 window_sections[secs[i]++].setZero(sz, sz);
             }
         }
@@ -324,12 +324,12 @@ unsafe public class LpcContext
     /// </summary>
     public LpcContext()
     {
-        coefs = new int[Lpc.MAX_LPC_ORDER];
-        reflection_coeffs = new double[Lpc.MAX_LPC_ORDER];
-        prediction_error = new double[Lpc.MAX_LPC_ORDER];
-        autocorr_values = new double[Lpc.MAX_LPC_ORDER + 1];
-        best_orders = new int[Lpc.MAX_LPC_ORDER];
-        done_lpcs = new uint[Lpc.MAX_LPC_PRECISIONS];
+        coefs = new int[Lpc.MAXLPCORDER];
+        reflection_coeffs = new double[Lpc.MAXLPCORDER];
+        prediction_error = new double[Lpc.MAXLPCORDER];
+        autocorr_values = new double[Lpc.MAXLPCORDER + 1];
+        best_orders = new int[Lpc.MAXLPCORDER];
+        done_lpcs = new uint[Lpc.MAXLPCPRECISIONS];
     }
 
     /// <summary>
@@ -338,7 +338,7 @@ unsafe public class LpcContext
     public void Reset()
     {
         autocorr_order = 0;
-        for (var iPrecision = 0; iPrecision < Lpc.MAX_LPC_PRECISIONS; iPrecision++)
+        for (var iPrecision = 0; iPrecision < Lpc.MAXLPCPRECISIONS; iPrecision++)
         {
             done_lpcs[iPrecision] = 0;
         }
@@ -365,7 +365,7 @@ unsafe public class LpcContext
                 autoc[i] = 0;
             }
 
-            for (var section = 0; section < Lpc.MAX_LPC_SECTIONS; section++)
+            for (var section = 0; section < Lpc.MAXLPCSECTIONS; section++)
             {
                 if (sections[section].m_type == LpcWindowSection.SectionType.Zero)
                 {
@@ -383,7 +383,7 @@ unsafe public class LpcContext
                                 autocsec[i] = 0;
                             }
 
-                            sections[section].compute_autocorr(samples, window, min_order, order, blocksize, autocsec);
+                            sections[section].computeAutocorr(samples, window, min_order, order, blocksize, autocsec);
                         }
                         subframe.autocorr_section_orders[sections[section].m_id] = order + 1;
                     }
@@ -394,10 +394,10 @@ unsafe public class LpcContext
                 }
                 else
                 {
-                    sections[section].compute_autocorr(samples, window, autocorr_order, order, blocksize, autoc);
+                    sections[section].computeAutocorr(samples, window, autocorr_order, order, blocksize, autoc);
                 }
             }
-            Lpc.compute_schur_reflection(autoc, (uint)order, reff, err);
+            Lpc.computeSchurReflection(autoc, (uint)order, reff, err);
             autocorr_order = order + 1;
         }
     }
@@ -420,14 +420,14 @@ unsafe public class LpcContext
     /// Sorts orders based on Akaike's criteria
     /// </summary>
     /// <param name="blocksize">Frame size</param>
-    public void SortOrdersAkaike(int blocksize, int count, int min_order, int max_order, double alpha, double beta)
+    public void SortOrdersAkaike(int blocksize, int count, int minOrder, int maxOrder, double alpha, double beta)
     {
-        for (var i = min_order; i <= max_order; i++)
+        for (var i = minOrder; i <= maxOrder; i++)
         {
-            best_orders[i - min_order] = i;
+            best_orders[i - minOrder] = i;
         }
 
-        var lim = max_order - min_order + 1;
+        var lim = maxOrder - minOrder + 1;
         for (var i = 0; i < lim && i < count; i++)
         {
             for (var j = i + 1; j < lim; j++)
@@ -447,7 +447,9 @@ unsafe public class LpcContext
     public void ComputeLPC(float* lpcs)
     {
         fixed (double* reff = reflection_coeffs)
-            Lpc.compute_lpc_coefs((uint)autocorr_order - 1, reff, lpcs);
+        {
+            Lpc.computeLpcCoefs((uint)autocorr_order - 1, reff, lpcs);
+        }
     }
 
     /// <summary>

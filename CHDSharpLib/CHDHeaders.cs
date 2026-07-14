@@ -7,15 +7,15 @@ namespace CHDSharp;
 
 internal static class ChdHeaders
 {
-    public static chd_error ReadHeaderV1(Stream file, out ChdHeader chd)
+    public static chdError ReadHeaderV1(Stream file, out ChdHeader chd)
     {
         chd = new ChdHeader();
 
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
-        chd.Compression = [chd_codec.CHD_CODEC_ZLIB];
-        _ = br.ReadUInt32BE();
-        _ = br.ReadUInt32BE();
+        chd.Compression = [chdCodec.CHDCODECZLIB];
+        var flags = br.ReadUInt32BE();
+        var compression = br.ReadUInt32BE();
         chd.Blocksize = br.ReadUInt32BE();
         chd.Totalblocks = br.ReadUInt32BE();
         var cylinders = br.ReadUInt32BE();
@@ -43,7 +43,7 @@ internal static class ChdHeaders
             {
                 chd.Map[i].Offset = (uint)v;
                 chd.Map[i].Length = 0;
-                chd.Map[i].Comptype = compression_type.COMPRESSION_SELF;
+                chd.Map[i].Comptype = compressionType.COMPRESSIONSELF;
                 continue;
             }
 
@@ -52,23 +52,23 @@ internal static class ChdHeaders
             chd.Map[i].Offset = tmpu & 0xfffffffffff;
             chd.Map[i].Length = (uint)(tmpu >> 44);
             chd.Map[i].Comptype = (chd.Map[i].Length == chd.Blocksize)
-                           ? compression_type.COMPRESSION_NONE
-                           : compression_type.COMPRESSION_TYPE_0;
+                           ? compressionType.COMPRESSIONNONE
+                           : compressionType.COMPRESSIONTYPE0;
         }
 
-        return chd_error.CHDERR_NONE;
+        return chdError.CHDERRNONE;
     }
 
-    public static chd_error ReadHeaderV2(Stream file, out ChdHeader chd)
+    public static chdError ReadHeaderV2(Stream file, out ChdHeader chd)
     {
         chd = new ChdHeader();
 
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
-        chd.Compression = [chd_codec.CHD_CODEC_ZLIB];
-        _ = br.ReadUInt32BE();
-        _ = br.ReadUInt32BE();
-        _ = br.ReadUInt32BE(); // blocksizeOld is now unused
+        chd.Compression = [chdCodec.CHDCODECZLIB];
+        var flags = br.ReadUInt32BE();
+        var compression = br.ReadUInt32BE();
+        var blocksizeOld = br.ReadUInt32BE(); // this is now unused
         chd.Totalblocks = br.ReadUInt32BE();
         var cylinders = br.ReadUInt32BE();
         var heads = br.ReadUInt32BE();
@@ -95,7 +95,7 @@ internal static class ChdHeaders
             {
                 chd.Map[i].Offset = (uint)v;
                 chd.Map[i].Length = 0;
-                chd.Map[i].Comptype = compression_type.COMPRESSION_SELF;
+                chd.Map[i].Comptype = compressionType.COMPRESSIONSELF;
                 continue;
             }
 
@@ -104,20 +104,20 @@ internal static class ChdHeaders
             chd.Map[i].Offset = tmpu & 0xfffffffffff;
             chd.Map[i].Length = (uint)(tmpu >> 44);
             chd.Map[i].Comptype = (chd.Map[i].Length == chd.Blocksize)
-                           ? compression_type.COMPRESSION_NONE
-                           : compression_type.COMPRESSION_TYPE_0;
+                           ? compressionType.COMPRESSIONNONE
+                           : compressionType.COMPRESSIONTYPE0;
         }
 
 
-        return chd_error.CHDERR_NONE;
+        return chdError.CHDERRNONE;
     }
 
-    public static chd_error ReadHeaderV3(Stream file, out ChdHeader chd)
+    public static chdError ReadHeaderV3(Stream file, out ChdHeader chd)
     {
         chd = new ChdHeader();
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
-        _ = br.ReadUInt32BE();
+        var flags = br.ReadUInt32BE();
 
         chd.Compression = [ChdCommon.CompTypeConv(br.ReadUInt32BE())];
         chd.Totalblocks = br.ReadUInt32BE(); // total number of CHD Blocks
@@ -144,21 +144,21 @@ internal static class ChdHeaders
             };
             var mapflag = (mapFlags)br.ReadByte();
             chd.Map[i].Comptype = ChdCommon.ConvMapFlagstoCompressionType(mapflag);
-            if ((mapflag & mapFlags.MAP_ENTRY_FLAG_NO_CRC) != 0)
+            if ((mapflag & mapFlags.MAPENTRYFLAGNOCRC) != 0)
             {
                 chd.Map[i].Crc = null;
             }
         }
 
-        return chd_error.CHDERR_NONE;
+        return chdError.CHDERRNONE;
     }
 
-    public static chd_error ReadHeaderV4(Stream file, out ChdHeader chd)
+    public static chdError ReadHeaderV4(Stream file, out ChdHeader chd)
     {
         chd = new ChdHeader();
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
-        _ = br.ReadUInt32BE();
+        var flags = br.ReadUInt32BE();
 
         chd.Compression = [ChdCommon.CompTypeConv(br.ReadUInt32BE())];
         chd.Totalblocks = br.ReadUInt32BE(); // total number of CHD Blocks
@@ -187,19 +187,19 @@ internal static class ChdHeaders
             chd.Map[i].Crc = null;
         }
 
-        return chd_error.CHDERR_NONE;
+        return chdError.CHDERRNONE;
     }
 
 
-    public static chd_error ReadHeaderV5(Stream file, out ChdHeader chd)
+    public static chdError ReadHeaderV5(Stream file, out ChdHeader chd)
     {
         chd = new ChdHeader();
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
-        chd.Compression = new chd_codec[4];
+        chd.Compression = new chdCodec[4];
         for (var i = 0; i < 4; i++)
         {
-            chd.Compression[i] = (chd_codec)br.ReadUInt32BE();
+            chd.Compression[i] = (chdCodec)br.ReadUInt32BE();
         }
 
         chd.Totalbytes = br.ReadUInt64BE(); // total byte size of the image
@@ -215,7 +215,7 @@ internal static class ChdHeaders
 
         chd.Totalblocks = (uint)((chd.Totalbytes + chd.Blocksize - 1) / chd.Blocksize);
 
-        var chdCompressed = chd.Compression[0] != chd_codec.CHD_CODEC_NONE;
+        var chdCompressed = chd.Compression[0] != chdCodec.CHDCODECNONE;
         chd.UncompressedMap = !chdCompressed;
 
         var err = chdCompressed ? compressed_v5_map(br, mapoffset, chd.Totalblocks, chd.Blocksize, unitbytes, out chd.Map) : uncompressed_v5_map(br, mapoffset, chd.Totalblocks, chd.Blocksize, out chd.Map);
@@ -224,7 +224,7 @@ internal static class ChdHeaders
     }
 
 
-    private static chd_error uncompressed_v5_map(BinaryReader br, ulong mapoffset, uint totalblocks, uint blocksize, out MapEntry[] map)
+    private static chdError uncompressed_v5_map(BinaryReader br, ulong mapoffset, uint totalblocks, uint blocksize, out MapEntry[] map)
     {
         br.BaseStream.Seek((long)mapoffset, SeekOrigin.Begin);
 
@@ -238,22 +238,22 @@ internal static class ChdHeaders
                 // Offset word 0 in an uncompressed V5 map means: take this hunk
                 // from the parent (same hunk index), or zero-fill if no parent.
                 // Mark as PARENT; the read path resolves same-hunk from parent.
-                map[blockIndex].Comptype = compression_type.COMPRESSION_PARENT;
+                map[blockIndex].Comptype = compressionType.COMPRESSIONPARENT;
                 map[blockIndex].Length = blocksize;
                 map[blockIndex].Offset = (ulong)blockIndex; // direct parent hunk index
             }
             else
             {
-                map[blockIndex].Comptype = compression_type.COMPRESSION_NONE;
+                map[blockIndex].Comptype = compressionType.COMPRESSIONNONE;
                 map[blockIndex].Length = blocksize;
                 map[blockIndex].Offset = (ulong)offsetWord * blocksize;
             }
         }
 
-        return chd_error.CHDERR_NONE;
+        return chdError.CHDERRNONE;
     }
 
-    private static chd_error compressed_v5_map(BinaryReader br, ulong mapoffset, uint totalBlocks, uint blocksize, uint unitbytes, out MapEntry[] map)
+    private static chdError compressed_v5_map(BinaryReader br, ulong mapoffset, uint totalBlocks, uint blocksize, uint unitbytes, out MapEntry[] map)
     {
         map = new MapEntry[totalBlocks];
 
@@ -278,11 +278,11 @@ internal static class ChdHeaders
         var err = decoder.ImportTreeRLE();
         if (err != huffman_error.HUFFERR_NONE)
         {
-            return chd_error.CHDERR_DECOMPRESSION_ERROR;
+            return chdError.CHDERRDECOMPRESSIONERROR;
         }
 
         var repcount = 0;
-        compression_type lastcomp = 0;
+        compressionType lastcomp = 0;
         for (uint blockIndex = 0; blockIndex < totalBlocks; blockIndex++)
         {
             map[blockIndex] = new MapEntry();
@@ -293,14 +293,14 @@ internal static class ChdHeaders
             }
             else
             {
-                var val = (compression_type)decoder.DecodeOne();
+                var val = (compressionType)decoder.DecodeOne();
                 switch (val)
                 {
-                    case compression_type.COMPRESSION_RLE_SMALL:
+                    case compressionType.COMPRESSIONRLESMALL:
                         map[blockIndex].Comptype = lastcomp;
                         repcount = 2 + (int)decoder.DecodeOne();
                         break;
-                    case compression_type.COMPRESSION_RLE_LARGE:
+                    case compressionType.COMPRESSIONRLELARGE:
                         map[blockIndex].Comptype = lastcomp;
                         repcount = 2 + 16 + ((int)decoder.DecodeOne() << 4);
                         repcount += (int)decoder.DecodeOne();
@@ -324,48 +324,48 @@ internal static class ChdHeaders
             switch (map[blockIndex].Comptype)
             {
                 /* base types */
-                case compression_type.COMPRESSION_TYPE_0:
-                case compression_type.COMPRESSION_TYPE_1:
-                case compression_type.COMPRESSION_TYPE_2:
-                case compression_type.COMPRESSION_TYPE_3:
+                case compressionType.COMPRESSIONTYPE0:
+                case compressionType.COMPRESSIONTYPE1:
+                case compressionType.COMPRESSIONTYPE2:
+                case compressionType.COMPRESSIONTYPE3:
                     curoffset += length = bitbuf.read(lengthbits);
                     crc16 = (ushort)bitbuf.read(16);
                     break;
 
-                case compression_type.COMPRESSION_NONE:
+                case compressionType.COMPRESSIONNONE:
                     curoffset += length = blocksize;
                     crc16 = (ushort)bitbuf.read(16);
                     break;
 
-                case compression_type.COMPRESSION_SELF:
+                case compressionType.COMPRESSIONSELF:
                     lastSelf = (uint)(offset = bitbuf.read(selfbits));
                     break;
 
                 /* pseudo-types; convert into base types */
-                case compression_type.COMPRESSION_SELF_1:
+                case compressionType.COMPRESSIONSELF1:
                     lastSelf++;
-                    goto case compression_type.COMPRESSION_SELF_0;
+                    goto case compressionType.COMPRESSIONSELF0;
 
-                case compression_type.COMPRESSION_SELF_0:
-                    map[blockIndex].Comptype = compression_type.COMPRESSION_SELF;
+                case compressionType.COMPRESSIONSELF0:
+                    map[blockIndex].Comptype = compressionType.COMPRESSIONSELF;
                     offset = lastSelf;
                     break;
 
-                case compression_type.COMPRESSION_PARENT_SELF:
-                    map[blockIndex].Comptype = compression_type.COMPRESSION_PARENT;
+                case compressionType.COMPRESSIONPARENTSELF:
+                    map[blockIndex].Comptype = compressionType.COMPRESSIONPARENT;
                     lastParent = offset = (((ulong)blockIndex) * ((ulong)blocksize)) / unitbytes;
                     break;
 
-                case compression_type.COMPRESSION_PARENT:
+                case compressionType.COMPRESSIONPARENT:
                     offset = bitbuf.read(parentbits);
                     lastParent = offset;
                     break;
 
-                case compression_type.COMPRESSION_PARENT_1:
+                case compressionType.COMPRESSIONPARENT1:
                     lastParent += blocksize / unitbytes;
-                    goto case compression_type.COMPRESSION_PARENT_0;
-                case compression_type.COMPRESSION_PARENT_0:
-                    map[blockIndex].Comptype = compression_type.COMPRESSION_PARENT;
+                    goto case compressionType.COMPRESSIONPARENT0;
+                case compressionType.COMPRESSIONPARENT0:
+                    map[blockIndex].Comptype = compressionType.COMPRESSIONPARENT;
                     offset = lastParent;
                     break;
             }
@@ -388,8 +388,8 @@ internal static class ChdHeaders
         }
 
         if (CRC16.calc(rawmap, (int)totalBlocks * 12) != mapcrc)
-            return chd_error.CHDERR_DECOMPRESSION_ERROR;
+            return chdError.CHDERRDECOMPRESSIONERROR;
 
-        return chd_error.CHDERR_NONE;
+        return chdError.CHDERRNONE;
     }
 }

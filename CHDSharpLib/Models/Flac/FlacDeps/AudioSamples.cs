@@ -8,7 +8,7 @@ public class AudioSamples
     /// <summary>
     /// Represents the maximum unsigned 32-bit integer value.
     /// </summary>
-    public const uint UINT32_MAX = 0xffffffff;
+    public const uint UINT32MAX = 0xffffffff;
 
     /// <summary>
     /// Interlaces two source sample arrays into a single destination array (S1[0], S2[0], S1[1], S2[1], ...).
@@ -204,7 +204,9 @@ public class AudioSamples
     unsafe public static void MemSet(byte[] res, byte smp, int offs, int n)
     {
         fixed (byte* pres = &res[offs])
+        {
             MemSet(pres, smp, n);
+        }
     }
 
     /// <summary>
@@ -217,7 +219,9 @@ public class AudioSamples
     unsafe public static void MemSet(int[] res, int smp, int offs, int n)
     {
         fixed (int* pres = &res[offs])
+        {
             MemSet(pres, smp, n);
+        }
     }
 
     /// <summary>
@@ -230,6 +234,8 @@ public class AudioSamples
     unsafe public static void MemSet(long[] res, long smp, int offs, int n)
     {
         fixed (long* pres = &res[offs])
+        {
             MemSet(pres, smp, n);
+        }
     }
 }

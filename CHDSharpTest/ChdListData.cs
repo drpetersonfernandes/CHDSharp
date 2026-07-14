@@ -23,8 +23,8 @@ internal static class ChdListData
             return [];
 
         return File.ReadAllLines(listFile)
-            .Select(l => l.Trim().Trim('"'))
-            .Where(l => l.Length > 0)
+            .Select(static l => l.Trim().Trim('"'))
+            .Where(static l => l.Length > 0)
             .ToList();
     }
 
@@ -36,10 +36,11 @@ internal static class ChdListData
         {
             // Yield a single sentinel so the theory shows up (and skips) even
             // when the list file itself is absent.
-            yield return [null];
+            yield return [ (string)null! ];
 
             yield break;
         }
+
         foreach (var p in paths)
             yield return [p];
     }
@@ -47,15 +48,16 @@ internal static class ChdListData
     /// <summary>xUnit MemberData source: only files under 1 GB (for expensive per-range tests).</summary>
     public static IEnumerable<object[]> SmallPaths()
     {
-        IReadOnlyList<string> paths = AllPaths()
-            .Where(p => new FileInfo(p).Length < 1_000_000_000L)
+        List<string> paths = AllPaths()
+            .Where(static p => new FileInfo(p).Length < 1_000_000_000L)
             .ToList();
         if (paths.Count == 0)
         {
-            yield return [null];
+            yield return [ (string)null! ];
 
             yield break;
         }
+
         foreach (var p in paths)
             yield return [p];
     }

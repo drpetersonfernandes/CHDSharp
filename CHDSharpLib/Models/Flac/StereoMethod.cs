@@ -20,5 +20,5 @@ public enum StereoMethod
     /// <summary>Evaluate methods including left-side and right-side.</summary>
     EvaluateX,
     /// <summary>Estimate with fixed prediction order.</summary>
-    EstimateFixed,
+    EstimateFixed
 }

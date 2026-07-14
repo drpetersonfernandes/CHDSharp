@@ -14,7 +14,7 @@ unsafe public class FlacSubframe
     public FlacSubframe()
     {
         rc = new RiceContext();
-        coefs = new int[Lpc.MAX_LPC_ORDER];
+        coefs = new int[Lpc.MAXLPCORDER];
     }
     /// <summary>
     /// The type of subframe encoding used.

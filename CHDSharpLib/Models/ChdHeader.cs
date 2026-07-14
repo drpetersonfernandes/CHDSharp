@@ -2,7 +2,7 @@ namespace CHDSharp.Models;
 
 internal class ChdHeader
 {
-    public chd_codec[] Compression = null!;
+    public chdCodec[] Compression = null!;
     public ChdReader[] ChdReader = null!;
 
     public ulong Totalbytes;

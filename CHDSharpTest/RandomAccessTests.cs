@@ -21,65 +21,65 @@ public class RandomAccessTests
             Assert.Skip("No CHD files from the list are present on this machine");
 
         var err = ChdFile.Open(path, out var chd);
-        Assert.Equal(chd_error.CHDERR_NONE, err);
+        Assert.Equal(chdError.CHDERRNONE, err);
         return chd;
     }
 
     [Fact]
-    public void ReadHunk_OutOfRange_ReturnsError()
+    public void ReadHunkOutOfRangeReturnsError()
     {
         using var chd = OpenFirstAvailable();
         var buf = new byte[chd.HunkBytes];
         var err = chd.ReadHunk(chd.HunkCount, buf); // one past the end
-        Assert.Equal(chd_error.CHDERR_HUNK_OUT_OF_RANGE, err);
+        Assert.Equal(chdError.CHDERRHUNKOUTOFRANGE, err);
     }
 
     [Fact]
-    public void ReadHunk_UndersizedBuffer_ReturnsInvalidParameter()
+    public void ReadHunkUndersizedBufferReturnsInvalidParameter()
     {
         using var chd = OpenFirstAvailable();
         var tooSmall = new byte[chd.HunkBytes - 1];
         var err = chd.ReadHunk(0, tooSmall);
-        Assert.Equal(chd_error.CHDERR_INVALID_PARAMETER, err);
+        Assert.Equal(chdError.CHDERRINVALIDPARAMETER, err);
     }
 
     [Fact]
-    public void ReadHunk_FirstMiddleLast_Succeed()
+    public void ReadHunkFirstMiddleLastSucceed()
     {
         using var chd = OpenFirstAvailable();
         var buf = new byte[chd.HunkBytes];
         foreach (var h in new[] { 0u, chd.HunkCount / 2, chd.HunkCount - 1 })
-            Assert.Equal(chd_error.CHDERR_NONE, chd.ReadHunk(h, buf));
+            Assert.Equal(chdError.CHDERRNONE, chd.ReadHunk(h, buf));
     }
 
     [Fact]
-    public void ReadHunk_IsDeterministic()
+    public void ReadHunkIsDeterministic()
     {
         using var chd = OpenFirstAvailable();
         var a = new byte[chd.HunkBytes];
         var b = new byte[chd.HunkBytes];
-        Assert.Equal(chd_error.CHDERR_NONE, chd.ReadHunk(0, a));
-        Assert.Equal(chd_error.CHDERR_NONE, chd.ReadHunk(0, b));
+        Assert.Equal(chdError.CHDERRNONE, chd.ReadHunk(0, a));
+        Assert.Equal(chdError.CHDERRNONE, chd.ReadHunk(0, b));
         Assert.Equal(a, b);
     }
 
     [Fact]
-    public void Read_MatchesReadHunk_ForFirstHunk()
+    public void ReadMatchesReadHunkForFirstHunk()
     {
         using var chd = OpenFirstAvailable();
         var viaHunk = new byte[chd.HunkBytes];
-        Assert.Equal(chd_error.CHDERR_NONE, chd.ReadHunk(0, viaHunk));
+        Assert.Equal(chdError.CHDERRNONE, chd.ReadHunk(0, viaHunk));
 
         var firstLen = (int)Math.Min(chd.HunkBytes, chd.TotalBytes);
         var viaRead = new byte[firstLen];
-        Assert.Equal(chd_error.CHDERR_NONE, chd.Read(0, viaRead, 0, firstLen));
+        Assert.Equal(chdError.CHDERRNONE, chd.Read(0, viaRead, 0, firstLen));
 
         for (var i = 0; i < firstLen; i++)
             Assert.Equal(viaHunk[i], viaRead[i]);
     }
 
     [Fact]
-    public void Read_AcrossHunkBoundary_MatchesConcatenatedHunks()
+    public void ReadAcrossHunkBoundaryMatchesConcatenatedHunks()
     {
         using var chd = OpenFirstAvailable();
         if (chd.HunkCount < 2 || chd.TotalBytes < (ulong)chd.HunkBytes * 2)
@@ -88,14 +88,14 @@ public class RandomAccessTests
         var hb = chd.HunkBytes;
         var h0 = new byte[hb];
         var h1 = new byte[hb];
-        Assert.Equal(chd_error.CHDERR_NONE, chd.ReadHunk(0, h0));
-        Assert.Equal(chd_error.CHDERR_NONE, chd.ReadHunk(1, h1));
+        Assert.Equal(chdError.CHDERRNONE, chd.ReadHunk(0, h0));
+        Assert.Equal(chdError.CHDERRNONE, chd.ReadHunk(1, h1));
 
         // Read a window straddling the hunk 0/1 boundary.
         var half = (int)(hb / 2);
         var len = (int)hb; // spans [half .. half+hb) => last half of h0 + first half of h1
         var window = new byte[len];
-        Assert.Equal(chd_error.CHDERR_NONE, chd.Read((ulong)half, window, 0, len));
+        Assert.Equal(chdError.CHDERRNONE, chd.Read((ulong)half, window, 0, len));
 
         for (var i = 0; i < half; i++)
             Assert.Equal(h0[half + i], window[i]);
@@ -104,16 +104,16 @@ public class RandomAccessTests
     }
 
     [Fact]
-    public void Read_BeyondEnd_ReturnsInvalidParameter()
+    public void ReadBeyondEndReturnsInvalidParameter()
     {
         using var chd = OpenFirstAvailable();
         var buf = new byte[16];
         var err = chd.Read(chd.TotalBytes - 8, buf, 0, 16); // 8 past the end
-        Assert.Equal(chd_error.CHDERR_INVALID_PARAMETER, err);
+        Assert.Equal(chdError.CHDERRINVALIDPARAMETER, err);
     }
 
     [Fact]
-    public void HeaderProperties_AreConsistent()
+    public void HeaderPropertiesAreConsistent()
     {
         using var chd = OpenFirstAvailable();
         Assert.InRange(chd.Version, 1u, 5u);

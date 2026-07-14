@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -15,16 +16,16 @@ internal static class Chdman
         public ulong LogicalBytes;
         public uint HunkBytes;
         public uint TotalHunks;
-        public string Compression;
-        public string Sha1;      // overall SHA1 (raw + metadata)
-        public string DataSha1;  // raw data SHA1 only
+        public string Compression = null!;
+        public string Sha1 = null!; // overall SHA1 (raw + metadata)
+        public string DataSha1 = null!; // raw data SHA1 only
     }
 
     public sealed class Result
     {
         public int ExitCode;
-        public string StdOut;
-        public string StdErr;
+        public string StdOut = null!;
+        public string StdErr = null!;
         public string All => StdOut + "\n" + StdErr;
     }
 
@@ -38,12 +39,12 @@ internal static class Chdman
             UseShellExecute = false,
             CreateNoWindow = true,
             StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8,
+            StandardErrorEncoding = Encoding.UTF8
         };
         foreach (var a in args)
             psi.ArgumentList.Add(a);
 
-        using var p = Process.Start(psi);
+        using var p = Process.Start(psi)!;
         var tOut = p.StandardOutput.ReadToEndAsync();
         var tErr = p.StandardError.ReadToEndAsync();
         p.WaitForExit();
@@ -51,7 +52,7 @@ internal static class Chdman
     }
 
     /// <summary>Runs `chdman info -i file` and parses key fields. Returns null on failure.</summary>
-    public static Info GetInfo(string file)
+    public static Info? GetInfo(string file)
     {
         var r = Run("info", "-i", file);
         if (r.ExitCode != 0)
@@ -64,21 +65,21 @@ internal static class Chdman
             LogicalBytes = ParseULongField(text, @"Logical size:\s*([\d,]+)"),
             HunkBytes = (uint)ParseULongField(text, @"Hunk Size:\s*([\d,]+)"),
             TotalHunks = (uint)ParseULongField(text, @"Total Hunks:\s*([\d,]+)"),
-            Compression = ParseStringField(text, @"Compression:\s*(.+)"),
-            Sha1 = ParseHexField(text, @"(?<!Data )SHA1:\s*([0-9a-fA-F]{40})"),
-            DataSha1 = ParseHexField(text, @"Data SHA1:\s*([0-9a-fA-F]{40})"),
+            Compression = ParseStringField(text, @"Compression:\s*(.+)")!,
+            Sha1 = ParseHexField(text, @"(?<!Data )SHA1:\s*([0-9a-fA-F]{40})")!,
+            DataSha1 = ParseHexField(text, @"Data SHA1:\s*([0-9a-fA-F]{40})")!
         };
         return info;
     }
 
     /// <summary>Runs `chdman verify` (optionally with a parent) and returns true on success.</summary>
-    public static bool Verify(string file, string parent = null)
+    public static bool Verify(string file, string? parent = null)
     {
         var psi = new ProcessStartInfo
         {
             FileName = TestPaths.ChdmanExe,
             UseShellExecute = false,
-            CreateNoWindow = true,
+            CreateNoWindow = true
         };
         psi.ArgumentList.Add("verify");
         psi.ArgumentList.Add("-i");
@@ -88,13 +89,14 @@ internal static class Chdman
             psi.ArgumentList.Add("-ip");
             psi.ArgumentList.Add(parent);
         }
-        using var p = Process.Start(psi);
+
+        using var p = Process.Start(psi)!;
         p.WaitForExit();
         return p.ExitCode == 0;
     }
 
     /// <summary>Creates a re-compressed copy with the given codec list (e.g. "cdzs" or "zstd").</summary>
-    public static bool Copy(string input, string output, string compression, string parentOut = null)
+    public static bool Copy(string input, string output, string compression, string? parentOut = null)
     {
         var args = new List<string> { "copy", "-i", input, "-o", output, "-c", compression, "-f" };
         if (parentOut != null)
@@ -102,22 +104,23 @@ internal static class Chdman
             args.Add("-op");
             args.Add(parentOut);
         }
+
         var psi = new ProcessStartInfo
         {
             FileName = TestPaths.ChdmanExe,
             UseShellExecute = false,
-            CreateNoWindow = true,
+            CreateNoWindow = true
         };
         foreach (var a in args)
             psi.ArgumentList.Add(a);
 
-        using var p = Process.Start(psi);
+        using var p = Process.Start(psi)!;
         p.WaitForExit();
         return p.ExitCode == 0 && File.Exists(output);
     }
 
     /// <summary>Same as <see cref="Copy"/> but returns the full chdman result for diagnostics.</summary>
-    public static Result CopyVerbose(string input, string output, string compression, string parentOut = null)
+    public static Result CopyVerbose(string input, string output, string compression, string? parentOut = null)
     {
         var args = new List<string> { "copy", "-i", input, "-o", output, "-c", compression, "-f" };
         if (parentOut != null)
@@ -125,6 +128,7 @@ internal static class Chdman
             args.Add("-op");
             args.Add(parentOut);
         }
+
         return Run(args.ToArray());
     }
 
@@ -132,7 +136,7 @@ internal static class Chdman
     /// Extracts a byte range from a CHD via `chdman extractraw -isb -ib`.
     /// Returns the raw bytes or null on failure.
     /// </summary>
-    public static byte[] ExtractRaw(string input, ulong startByte, ulong length)
+    public static byte[]? ExtractRaw(string input, ulong startByte, ulong length)
     {
         var tempFile = Path.GetTempFileName();
         try
@@ -141,7 +145,7 @@ internal static class Chdman
             {
                 FileName = TestPaths.ChdmanExe,
                 UseShellExecute = false,
-                CreateNoWindow = true,
+                CreateNoWindow = true
             };
             psi.ArgumentList.Add("extractraw");
             psi.ArgumentList.Add("-i");
@@ -149,12 +153,12 @@ internal static class Chdman
             psi.ArgumentList.Add("-o");
             psi.ArgumentList.Add(tempFile);
             psi.ArgumentList.Add("-isb");
-            psi.ArgumentList.Add(startByte.ToString());
+            psi.ArgumentList.Add(startByte.ToString(CultureInfo.InvariantCulture));
             psi.ArgumentList.Add("-ib");
-            psi.ArgumentList.Add(length.ToString());
+            psi.ArgumentList.Add(length.ToString(CultureInfo.InvariantCulture));
             psi.ArgumentList.Add("-f");
 
-            using var p = Process.Start(psi);
+            using var p = Process.Start(psi)!;
             p.WaitForExit();
             if (p.ExitCode != 0)
                 return null;
@@ -163,29 +167,33 @@ internal static class Chdman
         }
         finally
         {
-            try { File.Delete(tempFile); } catch { }
+            try { File.Delete(tempFile); }
+            catch
+            {
+                // ignored
+            }
         }
     }
 
     private static int ParseIntField(string text, string pattern)
     {
         var m = Regex.Match(text, pattern);
-        return m.Success ? int.Parse(m.Groups[1].Value) : 0;
+        return m.Success ? int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture) : 0;
     }
 
     private static ulong ParseULongField(string text, string pattern)
     {
         var m = Regex.Match(text, pattern);
-        return m.Success ? ulong.Parse(m.Groups[1].Value.Replace(",", "")) : 0;
+        return m.Success ? ulong.Parse(m.Groups[1].Value.Replace(",", ""), CultureInfo.InvariantCulture) : 0;
     }
 
-    private static string ParseStringField(string text, string pattern)
+    private static string? ParseStringField(string text, string pattern)
     {
         var m = Regex.Match(text, pattern);
         return m.Success ? m.Groups[1].Value.Trim() : null;
     }
 
-    private static string ParseHexField(string text, string pattern)
+    private static string? ParseHexField(string text, string pattern)
     {
         var m = Regex.Match(text, pattern);
         return m.Success ? m.Groups[1].Value.ToLowerInvariant() : null;

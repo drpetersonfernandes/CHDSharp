@@ -9,14 +9,14 @@ namespace CHDSharp.Tests;
 /// </summary>
 public sealed class ParentChainFixture : IDisposable
 {
-    public string TempDir { get; }
-    public string ParentPath { get; }
-    public string ChildPath { get; }
-    public string WrongParentPath { get; }
+    public string TempDir { get; } = null!;
+    public string ParentPath { get; } = null!;
+    public string ChildPath { get; } = null!;
+    public string WrongParentPath { get; } = null!;
     public bool HasWrongParent { get; private set; }
-    public string SourceRawSha1 { get; }
+    public string SourceRawSha1 { get; } = null!;
     public bool Ready { get; }
-    public string SkipReason { get; }
+    public string SkipReason { get; } = null!;
 
     public ParentChainFixture()
     {
@@ -30,16 +30,20 @@ public sealed class ParentChainFixture : IDisposable
         // CD frame size) so parent/child creation is quick and cdzs-compatible.
         var candidates = ChdListData.AllPaths()
             .Where(File.Exists)
-            .Select(p => new FileInfo(p))
-            .OrderBy(fi => fi.Length)
-            .Select(fi => fi.FullName)
+            .Select(static p => new FileInfo(p))
+            .OrderBy(static fi => fi.Length)
+            .Select(static fi => fi.FullName)
             .ToList();
 
-        var source = candidates.FirstOrDefault(p =>
+        var source = candidates.FirstOrDefault(static p =>
         {
             var e = ChdFile.Open(p, out var c);
-            if (e != chd_error.CHDERR_NONE) return false;
-            using (c) return c.HunkBytes % 2448 == 0; // CD frame multiple
+            if (e != chdError.CHDERRNONE) return false;
+
+            using (c)
+            {
+                return c != null && c.HunkBytes % 2448 == 0; // CD frame multiple
+            }
         });
 
         if (source == null)
@@ -55,7 +59,7 @@ public sealed class ParentChainFixture : IDisposable
 
         // Parent = recompressed copy of source; child = same source referencing parent.
         var rParent = Chdman.CopyVerbose(source, ParentPath, "cdzl,cdfl");
-        var rChild = Chdman.CopyVerbose(source, ChildPath, "cdzl,cdfl", parentOut: ParentPath);
+        var rChild = Chdman.CopyVerbose(source, ChildPath, "cdzl,cdfl", ParentPath);
         if (!File.Exists(ParentPath) || !File.Exists(ChildPath))
         {
             SkipReason = "chdman failed to build the parent/child set. " +
@@ -77,11 +81,14 @@ public sealed class ParentChainFixture : IDisposable
         }
 
         // Capture the source's raw SHA1 for correctness comparison.
-        if (ChdFile.Open(source, out var src) == chd_error.CHDERR_NONE)
+        if (ChdFile.Open(source, out var src) == chdError.CHDERRNONE)
         {
             using (src)
             {
-                SourceRawSha1 = HashUtil.ToHex(src.RawSha1);
+                if (src != null)
+                {
+                    SourceRawSha1 = HashUtil.ToHex(src.RawSha1);
+                }
             }
         }
 
@@ -103,6 +110,7 @@ public sealed class ParentChainFixture : IDisposable
 public class ParentChainTests : IClassFixture<ParentChainFixture>
 {
     private readonly ParentChainFixture _fx;
+
     public ParentChainTests(ParentChainFixture fx)
     {
         _fx = fx;
@@ -111,63 +119,68 @@ public class ParentChainTests : IClassFixture<ParentChainFixture>
     private void RequireReady()
     {
         if (!_fx.Ready)
-            Assert.Skip(_fx.SkipReason ?? "parent/child fixture not ready");
+            Assert.Skip(_fx.SkipReason);
     }
 
     [Fact]
-    public void Child_WithoutParent_RequiresParent()
+    public void ChildWithoutParentRequiresParent()
     {
         RequireReady();
         var err = ChdFile.Open(_fx.ChildPath, out var chd);
         chd?.Dispose();
-        Assert.Equal(chd_error.CHDERR_REQUIRES_PARENT, err);
+        Assert.Equal(chdError.CHDERRREQUIRESPARENT, err);
     }
 
     [Fact]
-    public void Child_WithCorrectParent_Opens()
+    public void ChildWithCorrectParentOpens()
     {
         RequireReady();
         var err = ChdFile.Open(_fx.ChildPath, _fx.ParentPath, out var chd);
         using (chd)
-            Assert.Equal(chd_error.CHDERR_NONE, err);
+        {
+            Assert.Equal(chdError.CHDERRNONE, err);
+        }
     }
 
     [Fact]
-    public void Child_WithWrongParent_ReturnsInvalidParent()
+    public void ChildWithWrongParentReturnsInvalidParent()
     {
         RequireReady();
         if (!_fx.HasWrongParent)
             Assert.Skip("no alternate CHD available to use as a wrong parent");
         var err = ChdFile.Open(_fx.ChildPath, _fx.WrongParentPath, out var chd);
         chd?.Dispose();
-        Assert.Equal(chd_error.CHDERR_INVALID_PARENT, err);
+        Assert.Equal(chdError.CHDERRINVALIDPARENT, err);
     }
 
     [Fact]
-    public void Child_FullRead_MatchesSourceRawSha1()
+    public void ChildFullReadMatchesSourceRawSha1()
     {
         RequireReady();
         var err = ChdFile.Open(_fx.ChildPath, _fx.ParentPath, out var chd);
-        Assert.Equal(chd_error.CHDERR_NONE, err);
+        Assert.Equal(chdError.CHDERRNONE, err);
         using (chd)
         {
-            var computed = ChdListIntegrationTests.ComputeFullImageSha1(chd);
-            Assert.Equal(_fx.SourceRawSha1, computed);
+            if (chd != null)
+            {
+                var computed = ChdListIntegrationTests.ComputeFullImageSha1(chd);
+                Assert.Equal(_fx.SourceRawSha1, computed);
+            }
         }
     }
 
     [Fact]
-    public void Child_CheckFileWithParent_Succeeds()
+    public void ChildCheckFileWithParentSucceeds()
     {
         RequireReady();
         var err = Chd.CheckFileWithParent(_fx.ChildPath, _fx.ParentPath,
             out var version, out _, out _);
-        Assert.Equal(chd_error.CHDERR_NONE, err);
+        Assert.Equal(chdError.CHDERRNONE, err);
         Assert.NotNull(version);
     }
 
     [Fact]
-    public void Chdman_Agrees_ChildVerifiesWithParent()
+    public void ChdmanAgreesChildVerifiesWithParent()
     {
         RequireReady();
         Assert.True(Chdman.Verify(_fx.ChildPath, _fx.ParentPath));

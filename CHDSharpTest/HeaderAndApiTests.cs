@@ -28,7 +28,7 @@ public class HeaderAndApiTests
     }
 
     [Fact]
-    public void CheckHeader_ValidV5_ReturnsTrueWithVersion()
+    public void CheckHeaderValidV5ReturnsTrueWithVersion()
     {
         using var ms = BuildHeader(124, 5); // 124 is the correct V5 header length
         var ok = Chd.CheckHeader(ms, out var length, out var version);
@@ -43,7 +43,7 @@ public class HeaderAndApiTests
     [InlineData(3, 120)]
     [InlineData(4, 108)]
     [InlineData(5, 124)]
-    public void CheckHeader_MatchesExpectedLengthPerVersion(uint version, uint length)
+    public void CheckHeaderMatchesExpectedLengthPerVersion(uint version, uint length)
     {
         using var ms = BuildHeader(length, version);
         Assert.True(Chd.CheckHeader(ms, out var gotLen, out var gotVer));
@@ -52,14 +52,14 @@ public class HeaderAndApiTests
     }
 
     [Fact]
-    public void CheckHeader_WrongMagic_ReturnsFalse()
+    public void CheckHeaderWrongMagicReturnsFalse()
     {
         var ms = new MemoryStream(new byte[128]); // all zeros, no magic
         Assert.False(Chd.CheckHeader(ms, out _, out _));
     }
 
     [Fact]
-    public void CheckHeader_LengthMismatch_ReturnsFalse()
+    public void CheckHeaderLengthMismatchReturnsFalse()
     {
         // Correct magic + version 5 but wrong declared length.
         using var ms = BuildHeader(999, 5);
@@ -67,28 +67,28 @@ public class HeaderAndApiTests
     }
 
     [Fact]
-    public void CHDFile_Open_MissingFile_ReturnsFileNotFound()
+    public void ChdFileOpenMissingFileReturnsFileNotFound()
     {
         var err = ChdFile.Open(@"Z:\definitely\does\not\exist.chd", out var chd);
-        Assert.Equal(chd_error.CHDERR_FILE_NOT_FOUND, err);
+        Assert.Equal(chdError.CHDERRFILENOTFOUND, err);
         Assert.Null(chd);
     }
 
     [Fact]
-    public void CHDFile_Open_NonChdStream_ReturnsInvalidFile()
+    public void ChdFileOpenNonChdStreamReturnsInvalidFile()
     {
         using var ms = new MemoryStream(new byte[256]); // no magic
-        var err = ChdFile.Open(ms, leaveOpen: true, out var chd);
-        Assert.Equal(chd_error.CHDERR_INVALID_FILE, err);
+        var err = ChdFile.Open(ms, true, out var chd);
+        Assert.Equal(chdError.CHDERRINVALIDFILE, err);
         Assert.Null(chd);
     }
 
     [Fact]
-    public void CHDFile_Open_NonSeekableStream_ReturnsInvalidParameter()
+    public void ChdFileOpenNonSeekableStreamReturnsInvalidParameter()
     {
         using var ns = new NonSeekableStream();
-        var err = ChdFile.Open(ns, leaveOpen: true, out var chd);
-        Assert.Equal(chd_error.CHDERR_INVALID_PARAMETER, err);
+        var err = ChdFile.Open(ns, true, out var chd);
+        Assert.Equal(chdError.CHDERRINVALIDPARAMETER, err);
         Assert.Null(chd);
     }
 
@@ -98,8 +98,16 @@ public class HeaderAndApiTests
         public override bool CanSeek => false;
         public override bool CanWrite => false;
         public override long Length => throw new NotSupportedException();
-        public override long Position { get => 0; set => throw new NotSupportedException(); }
-        public override void Flush() { }
+
+        public override long Position
+        {
+            get => 0; set => throw new NotSupportedException();
+        }
+
+        public override void Flush()
+        {
+        }
+
         public override int Read(byte[] buffer, int offset, int count)
         {
             return 0;

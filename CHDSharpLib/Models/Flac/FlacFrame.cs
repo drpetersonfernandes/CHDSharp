@@ -47,11 +47,11 @@ unsafe public class FlacFrame
     /// <summary>
     /// Initializes a new instance of the <see cref="FlacFrame"/> class with the specified number of subframes.
     /// </summary>
-    /// <param name="subframes_count">Number of audio channels (subframes) in this frame.</param>
-    public FlacFrame(int subframes_count)
+    /// <param name="subframesCount">Number of audio channels (subframes) in this frame.</param>
+    public FlacFrame(int subframesCount)
     {
-        subframes = new FlacSubframeInfo[subframes_count];
-        for (var ch = 0; ch < subframes_count; ch++)
+        subframes = new FlacSubframeInfo[subframesCount];
+        for (var ch = 0; ch < subframesCount; ch++)
         {
             subframes[ch] = new FlacSubframeInfo();
         }

@@ -13,8 +13,8 @@ unsafe public class RiceContext
     /// </summary>
     public RiceContext()
     {
-        rparams = new int[FlakeConstants.MAX_PARTITIONS];
-        esc_bps = new int[FlakeConstants.MAX_PARTITIONS];
+        rparams = new int[FlakeConstants.MAXPARTITIONS];
+        esc_bps = new int[FlakeConstants.MAXPARTITIONS];
     }
     /// <summary>
     /// partition order

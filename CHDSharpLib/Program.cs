@@ -78,7 +78,7 @@ internal class Program
         Log.Information("Parent: {Name}", Path.GetFileName(parentPath));
 
         var err = ChdFile.Open(childPath, parentPath, out var chd);
-        if (err != chd_error.CHDERR_NONE)
+        if (err != chdError.CHDERRNONE)
         {
             Log.Information("  Open(child, parent) => {Error}", err);
             return;
@@ -92,7 +92,7 @@ internal class Program
             {
                 err = chd.ReadHunk(h, hbuf);
                 Log.Information("  ReadHunk({Hunk}) => {Error}", h, err);
-                if (err != chd_error.CHDERR_NONE)
+                if (err != chdError.CHDERRNONE)
                     return;
             }
         }
@@ -132,7 +132,7 @@ internal class Program
             }
 
             var fileSw = Stopwatch.StartNew();
-            chd_error result;
+            chdError result;
             uint? version = null;
             byte[] sha1 = null;
             try
@@ -142,13 +142,13 @@ internal class Program
             }
             catch (Exception ex)
             {
-                result = chd_error.CHDERR_DECOMPRESSION_ERROR;
+                result = chdError.CHDERRDECOMPRESSIONERROR;
                 Log.Information("       exception: {Message}", ex.Message);
             }
             fileSw.Stop();
 
             var sha1Str = sha1 != null ? ToHex(sha1) : "(none)";
-            if (result == chd_error.CHDERR_NONE)
+            if (result == chdError.CHDERRNONE)
             {
                 Log.Information("[PASS] V{Version} {Name}  sha1={Sha1}  ({Time:N1}s)", version, name, sha1Str, fileSw.Elapsed.TotalSeconds);
                 pass++;
@@ -170,7 +170,7 @@ internal class Program
     static void RandomAccessTest(string file)
     {
         var err = ChdFile.Open(file, out var chd);
-        if (err != chd_error.CHDERR_NONE)
+        if (err != chdError.CHDERRNONE)
         {
             Log.Information("Open failed: {Error}", err);
             return;
@@ -188,7 +188,7 @@ internal class Program
             {
                 err = chd.ReadHunk(h, hbuf);
                 Log.Information("  ReadHunk({Hunk}) => {Error}", h, err);
-                if (err != chd_error.CHDERR_NONE)
+                if (err != chdError.CHDERRNONE)
                     return;
             }
 
@@ -212,7 +212,7 @@ internal class Program
             {
                 var chunk = (int)Math.Min((ulong)buf.Length, remaining);
                 err = chd.Read(offset, buf, 0, chunk);
-                if (err != chd_error.CHDERR_NONE)
+                if (err != chdError.CHDERRNONE)
                 {
                     Log.Information("  Read(offset={Offset}) => {Error}", offset, err);
                     return;

@@ -40,7 +40,9 @@ internal class Decoder
         public uint Decode(RangeCoder.Decoder rangeDecoder, uint posState)
         {
             if (m_Choice.Decode(rangeDecoder) == 0)
+            {
                 return m_LowCoder[posState].Decode(rangeDecoder);
+            }
             else
             {
                 var symbol = Base.kNumLowLenSymbols;

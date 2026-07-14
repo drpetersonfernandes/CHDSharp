@@ -4,31 +4,31 @@ namespace CHDSharp;
 
 internal static class ChdCommon
 {
-    internal static chd_codec CompTypeConv(uint ct)
+    internal static chdCodec CompTypeConv(uint ct)
     {
         switch (ct)
         {
             case 1:
-            case 2: return chd_codec.CHD_CODEC_ZLIB;
-            case 3: return chd_codec.CHD_CODEC_AVHUFF;
+            case 2: return chdCodec.CHDCODECZLIB;
+            case 3: return chdCodec.CHDCODECAVHUFF;
             default:
-                return chd_codec.CHD_CODEC_ERROR;
+                return chdCodec.CHDCODECERROR;
         }
     }
 
     /* Converts V3 & V4 mapFlags to V5 compression_type */
-    internal static compression_type ConvMapFlagstoCompressionType(mapFlags mapFlags)
+    internal static compressionType ConvMapFlagstoCompressionType(mapFlags mapFlags)
     {
-        switch (mapFlags & mapFlags.MAP_ENTRY_FLAG_TYPE_MASK)
+        switch (mapFlags & mapFlags.MAPENTRYFLAGTYPEMASK)
         {
-            case mapFlags.MAP_ENTRY_TYPE_INVALID: return compression_type.COMPRESSION_ERROR;
-            case mapFlags.MAP_ENTRY_TYPE_COMPRESSED: return compression_type.COMPRESSION_TYPE_0;
-            case mapFlags.MAP_ENTRY_TYPE_UNCOMPRESSED: return compression_type.COMPRESSION_NONE;
-            case mapFlags.MAP_ENTRY_TYPE_MINI: return compression_type.COMPRESSION_MINI;
-            case mapFlags.MAP_ENTRY_TYPE_SELF_HUNK: return compression_type.COMPRESSION_SELF;
-            case mapFlags.MAP_ENTRY_TYPE_PARENT_HUNK: return compression_type.COMPRESSION_PARENT;
+            case mapFlags.MAPENTRYTYPEINVALID: return compressionType.COMPRESSIONERROR;
+            case mapFlags.MAPENTRYTYPECOMPRESSED: return compressionType.COMPRESSIONTYPE0;
+            case mapFlags.MAPENTRYTYPEUNCOMPRESSED: return compressionType.COMPRESSIONNONE;
+            case mapFlags.MAPENTRYTYPEMINI: return compressionType.COMPRESSIONMINI;
+            case mapFlags.MAPENTRYTYPESELFHUNK: return compressionType.COMPRESSIONSELF;
+            case mapFlags.MAPENTRYTYPEPARENTHUNK: return compressionType.COMPRESSIONPARENT;
             default:
-                return compression_type.COMPRESSION_ERROR;
+                return compressionType.COMPRESSIONERROR;
         }
     }
 }

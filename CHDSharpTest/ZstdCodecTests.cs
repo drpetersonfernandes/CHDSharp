@@ -43,8 +43,12 @@ public sealed class ZstdCodecFixture : IDisposable
         // A CD-type file (hunk size multiple of the CD frame) for cdzs.
         var cdSource = present.FirstOrDefault(p =>
         {
-            if (ChdFile.Open(p, out var c) != chd_error.CHDERR_NONE) return false;
-            using (c) return c.HunkBytes % 2448 == 0;
+            if (ChdFile.Open(p, out var c) != chdError.CHDERRNONE) return false;
+
+            using (c)
+            {
+                return c.HunkBytes % 2448 == 0;
+            }
         });
         if (cdSource != null)
         {
@@ -59,7 +63,7 @@ public sealed class ZstdCodecFixture : IDisposable
         // Any openable file recompressed to raw zstd (chdman picks a valid unit size).
         var rawSource = present.FirstOrDefault(p =>
         {
-            if (ChdFile.Open(p, out var c) != chd_error.CHDERR_NONE) return false;
+            if (ChdFile.Open(p, out var c) != chdError.CHDERRNONE) return false;
 
             c.Dispose();
             return true;
@@ -82,9 +86,13 @@ public sealed class ZstdCodecFixture : IDisposable
 
     private static string RawSha1(string path)
     {
-        if (ChdFile.Open(path, out var c) != chd_error.CHDERR_NONE)
+        if (ChdFile.Open(path, out var c) != chdError.CHDERRNONE)
             return null;
-        using (c) return HashUtil.ToHex(c.RawSha1);
+
+        using (c)
+        {
+            return HashUtil.ToHex(c.RawSha1);
+        }
     }
 
     public void Dispose()
@@ -103,13 +111,13 @@ public class ZstdCodecTests : IClassFixture<ZstdCodecFixture>
     }
 
     [Fact]
-    public void Cdzs_DecodesToOriginalData()
+    public void CdzsDecodesToOriginalData()
     {
         if (_fx.CdzsPath == null)
             Assert.Skip(_fx.SkipReason ?? "cdzs test file unavailable");
 
         var err = ChdFile.Open(_fx.CdzsPath, out var chd);
-        Assert.Equal(chd_error.CHDERR_NONE, err);
+        Assert.Equal(chdError.CHDERRNONE, err);
         using (chd)
         {
             Assert.Equal(_fx.CdzsExpectedSha1, ChdListIntegrationTests.ComputeFullImageSha1(chd));
@@ -117,24 +125,24 @@ public class ZstdCodecTests : IClassFixture<ZstdCodecFixture>
     }
 
     [Fact]
-    public void Cdzs_CheckFileVerifies()
+    public void CdzsCheckFileVerifies()
     {
         if (_fx.CdzsPath == null)
             Assert.Skip(_fx.SkipReason ?? "cdzs test file unavailable");
 
         using Stream s = File.OpenRead(_fx.CdzsPath);
         var err = Chd.CheckFile(s, "cdzs.chd", true, out _, out _, out _);
-        Assert.Equal(chd_error.CHDERR_NONE, err);
+        Assert.Equal(chdError.CHDERRNONE, err);
     }
 
     [Fact]
-    public void Zstd_DecodesToOriginalData()
+    public void ZstdDecodesToOriginalData()
     {
         if (_fx.ZstdPath == null)
             Assert.Skip(_fx.SkipReason ?? "zstd test file unavailable");
 
         var err = ChdFile.Open(_fx.ZstdPath, out var chd);
-        Assert.Equal(chd_error.CHDERR_NONE, err);
+        Assert.Equal(chdError.CHDERRNONE, err);
         using (chd)
         {
             Assert.Equal(_fx.ZstdExpectedSha1, ChdListIntegrationTests.ComputeFullImageSha1(chd));
@@ -142,13 +150,13 @@ public class ZstdCodecTests : IClassFixture<ZstdCodecFixture>
     }
 
     [Fact]
-    public void Zstd_CheckFileVerifies()
+    public void ZstdCheckFileVerifies()
     {
         if (_fx.ZstdPath == null)
             Assert.Skip(_fx.SkipReason ?? "zstd test file unavailable");
 
         using Stream s = File.OpenRead(_fx.ZstdPath);
         var err = Chd.CheckFile(s, "zstd.chd", true, out _, out _, out _);
-        Assert.Equal(chd_error.CHDERR_NONE, err);
+        Assert.Equal(chdError.CHDERRNONE, err);
     }
 }

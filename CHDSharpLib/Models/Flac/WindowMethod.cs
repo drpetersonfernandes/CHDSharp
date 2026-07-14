@@ -28,5 +28,5 @@ public enum WindowMethod
     /// <summary>Evaluate variant 3 with variable N.</summary>
     Evaluate3N,
     /// <summary>Evaluate with variable N.</summary>
-    EvaluateN,
+    EvaluateN
 }

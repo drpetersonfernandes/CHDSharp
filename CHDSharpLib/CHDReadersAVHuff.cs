@@ -6,6 +6,7 @@ using CHDSharp.Utils;
 
 namespace CHDSharp;
 
+/// <summary>Provides AVHuff decompression support: combined Huffman/RLE-compressed audio and video interleaved in a single CHD hunk.</summary>
 internal static partial class ChdReaders
 {
     /*
@@ -36,6 +37,13 @@ internal static partial class ChdReaders
 
     */
 
+    /// <summary>Decompresses an AVHuff-encoded hunk: parses the interleaved header, decodes Huffman (or FLAC) audio channels, then decodes delta-RLE Huffman video into the output buffer.</summary>
+    /// <param name="buffIn">The input buffer containing compressed AVHuff data.</param>
+    /// <param name="buffInLength">The length of valid data in <paramref name="buffIn"/>.</param>
+    /// <param name="buffOut">The output buffer to receive decompressed data.</param>
+    /// <param name="buffOutLength">The expected decompressed output length.</param>
+    /// <param name="codec">The codec state holding FLAC decoder settings and scratch buffers.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
     internal static ChdError AvHuff(byte[] buffIn, int buffInLength, byte[] buffOut, int buffOutLength, CHDCodec codec)
     {
         // extract info from the header
@@ -149,6 +157,17 @@ internal static partial class ChdReaders
     }
 
 
+    /// <summary>Decodes AVHuff audio channels: either Huffman-decoded PCM or FLAC-encoded streams, written to <paramref name="buffOut"/> at their respective destination offsets.</summary>
+    /// <param name="channels">The number of audio channels.</param>
+    /// <param name="samples">The number of samples per channel in this block.</param>
+    /// <param name="buffIn">The input buffer containing compressed audio data.</param>
+    /// <param name="buffInOffset">The byte offset within <paramref name="buffIn"/> where audio data begins.</param>
+    /// <param name="treesize">The size of the Huffman tree data, or 0xffff to indicate FLAC encoding.</param>
+    /// <param name="audioChannelCompressedSize">The compressed size per channel, indexed by channel number.</param>
+    /// <param name="buffOut">The output buffer to receive decompressed audio samples.</param>
+    /// <param name="audioChannelDestStart">The destination start offset within <paramref name="buffOut"/> per channel.</param>
+    /// <param name="codec">The codec state holding FLAC decoder settings.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
     private static ChdError DecodeAudio(uint channels, uint samples, byte[] buffIn, uint buffInOffset, uint treesize, uint?[] audioChannelCompressedSize, byte[] buffOut, uint?[] audioChannelDestStart, CHDCodec codec)
     {
         // if the tree size is 0xffff, the streams are FLAC-encoded
@@ -296,6 +315,17 @@ internal static partial class ChdReaders
         return ChdError.Chderrnone;
     }
 
+    /// <summary>Decodes AVHuff delta-RLE Huffman-compressed video frames into the output buffer.</summary>
+    /// <param name="width">The frame width in pixels.</param>
+    /// <param name="height">The frame height in pixels.</param>
+    /// <param name="buffIn">The input buffer containing compressed video data.</param>
+    /// <param name="buffInOffset">The byte offset within <paramref name="buffIn"/> where video data begins.</param>
+    /// <param name="buffInLength">The length of compressed video data in bytes.</param>
+    /// <param name="buffOut">The output buffer to receive decompressed pixel data.</param>
+    /// <param name="buffOutOffset">The byte offset in <paramref name="buffOut"/> where the video frame begins.</param>
+    /// <param name="dstride">The destination stride (bytes per row of pixels).</param>
+    /// <param name="codec">The codec state.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
     private static ChdError DecodeVideo(uint width, uint height, byte[] buffIn, uint buffInOffset, uint buffInLength, byte[] buffOut, uint buffOutOffset, uint dstride, CHDCodec codec)
     {
         // The first video byte is MAME AVHuff's video-encoding marker. The high

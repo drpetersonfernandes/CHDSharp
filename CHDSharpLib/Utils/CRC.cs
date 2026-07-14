@@ -5,7 +5,9 @@ public class CRC
 {
     /// <summary>Precomputed CRC-32 lookup tables (8 tables, 256 entries each) for fast slicing.</summary>
     public static readonly uint[] CRC32Lookup;
+    /// <summary>The running CRC-32 state value.</summary>
     private uint _crc;
+    /// <summary>The total number of bytes processed since the last reset.</summary>
     private long _totalBytesRead;
 
     static CRC()
@@ -51,6 +53,8 @@ public class CRC
     }
 
 
+    /// <summary>Updates the CRC-32 state with a single byte value.</summary>
+    /// <param name="inCh">The byte value to process.</param>
     internal void UpdateCRC(int inCh)
     {
         _crc = (_crc >> 8) ^ CRC32Lookup[(byte)_crc ^ ((byte)inCh)];

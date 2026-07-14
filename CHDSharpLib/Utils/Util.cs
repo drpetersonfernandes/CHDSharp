@@ -1,7 +1,11 @@
 ﻿namespace CHDSharp.Utils;
 
+/// <summary>General-purpose utility methods for byte array comparisons, hashing, and ASCII detection used throughout the CHD reader.</summary>
 internal static class Util
 {
+    /// <summary>Determines whether every byte in the array is zero (or the array is null).</summary>
+    /// <param name="b">The byte array to check.</param>
+    /// <returns><c>true</c> if the array is null or all bytes are zero; otherwise <c>false</c>.</returns>
     internal static bool IsAllZeroArray(byte[] b)
     {
         if (b == null) return true;
@@ -12,6 +16,8 @@ internal static class Util
         return true;
     }
 
+    /// <summary>Compares two byte arrays for exact equality.</summary>
+    /// <returns><c>true</c> if both arrays are non-null and contain identical bytes; otherwise <c>false</c>.</returns>
     internal static bool ByteArrEquals(byte[] b0, byte[] b1)
     {
         if ((b0 == null) || (b1 == null))
@@ -34,6 +40,8 @@ internal static class Util
     }
 
 
+    /// <summary>Lexicographically compares two byte arrays for use in sorting.</summary>
+    /// <returns>A negative value if <paramref name="x"/> is less than <paramref name="y"/>, zero if equal, or positive if greater.</returns>
     internal static int ByteArrCompare(byte[] x, byte[] y)
     {
         for (var i = 0; i < x.Length; i++)
@@ -45,6 +53,7 @@ internal static class Util
         return 0;
     }
 
+    /// <summary>Checks whether the byte array contains only printable ASCII characters (including null bytes).</summary>
     internal static bool isAscii(byte[] bytes)
     {
         foreach (var b in bytes)

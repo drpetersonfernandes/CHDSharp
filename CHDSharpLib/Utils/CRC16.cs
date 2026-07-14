@@ -3,6 +3,7 @@
 /// <summary>A CCITT-style CRC-16 calculator used by the CHD format.</summary>
 public static class CRC16
 {
+    /// <summary>Precomputed CRC-16 lookup table.</summary>
     private static readonly ushort[] s_table =
     [
         0x0000, 0x1021, 0x2042, 0x3063, 0x4084, 0x50a5, 0x60c6, 0x70e7,

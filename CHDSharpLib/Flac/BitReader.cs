@@ -1,4 +1,3 @@
-using System.IO;
 using CHDSharp.Flac.FlacDeps;
 
 namespace CHDSharp.Flac;

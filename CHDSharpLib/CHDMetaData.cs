@@ -6,10 +6,16 @@ using Serilog;
 
 namespace CHDSharp;
 
+/// <summary>Reads and validates CHD metadata blocks, computing SHA1 hashes over the concatenation of raw data SHA1 and sorted per-entry hashes.</summary>
 internal static class ChdMetaData
 {
-    internal static readonly uint ChdMdflagsChecksum = 0x01; // indicates data is checksummed
+    /// <summary>Flag indicating the metadata entry has an associated checksum.</summary>
+    internal static readonly uint ChdMdflagsChecksum = 0x01;
 
+    /// <summary>Reads all metadata entries from the CHD file header chain and validates the combined SHA1 against the stored header value.</summary>
+    /// <param name="file">The stream positioned at the CHD file data.</param>
+    /// <param name="chd">The parsed header containing the metadata offset and expected SHA1.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; <see cref="ChdError.Chderrinvalidmetadata"/> if the SHA1 does not match.</returns>
     internal static ChdError ReadMetaData(Stream file, ChdHeader chd)
     {
         using var br = new BinaryReader(file, Encoding.UTF8, true);
@@ -71,6 +77,10 @@ internal static class ChdMetaData
         return ChdError.Chderrnone;
     }
 
+    /// <summary>Builds a 24-byte metadata hash entry: 4-byte tag followed by a 20-byte SHA1 of the metadata data.</summary>
+    /// <param name="metaTag">The 4-character metadata tag.</param>
+    /// <param name="metaData">The raw metadata content.</param>
+    /// <returns>A 24-byte array containing the tag and SHA1 hash.</returns>
     private static byte[] metadata_hash(uint metaTag, byte[] metaData)
     {
         // make 24 byte metadata hash

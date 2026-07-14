@@ -5,6 +5,7 @@ using CHDSharp.Models.LZMA;
 
 namespace CHDSharp.LZMA;
 
+/// <summary>Core LZMA range-coder decoder, ported from the LZMA SDK. Decodes a raw LZMA stream using adaptive probability models.</summary>
 internal class Decoder
 {
     private class LenDecoder

@@ -2,7 +2,6 @@
 
 public class AudioPCMConfig
 {
-    public static readonly AudioPCMConfig RedBook = new AudioPCMConfig(16, 2, 44100);
     public enum SpeakerConfig
     {
         SPEAKER_FRONT_LEFT = 0x1,

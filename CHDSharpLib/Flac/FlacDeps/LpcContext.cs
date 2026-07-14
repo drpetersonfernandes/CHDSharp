@@ -8,10 +8,8 @@ unsafe public class LpcSubframeInfo
         autocorr_section_orders = new int[Lpc.MAX_LPC_SECTIONS];
     }
 
-    // public LpcContext[] lpc_ctx;
     public double[,] autocorr_section_values;
     public int[] autocorr_section_orders;
-    //public int obits;
 
     public void Reset()
     {
@@ -317,43 +315,6 @@ unsafe public class LpcContext
             autocorr_order = order + 1;
         }
     }
-#if XXX
-        public void GetReflection1(int order, int* samples, int blocksize, float* window)
-        {
-            if (autocorr_order > order)
-                return;
-            fixed (double* reff = reflection_coeffs, autoc = autocorr_values, err = prediction_error)
-            {
-                Lpc.compute_autocorr(samples, blocksize, 0, order + 1, autoc, window);
-                for (int i = 1; i <= order; i++)
-                    autoc[i] = autoc[i + 1];
-                Lpc.compute_schur_reflection(autoc, (uint)order, reff, err);
-                autocorr_order = order + 1;
-            }
-        }
-
-        public void ComputeReflection(int order, float* autocorr)
-        {
-            fixed (double* reff = reflection_coeffs, autoc = autocorr_values, err = prediction_error)
-            {
-                for (int i = 0; i <= order; i++)
-                    autoc[i] = autocorr[i];
-                Lpc.compute_schur_reflection(autoc, (uint)order, reff, err);
-                autocorr_order = order + 1;
-            }
-        }
-
-        public void ComputeReflection(int order, double* autocorr)
-        {
-            fixed (double* reff = reflection_coeffs, autoc = autocorr_values, err = prediction_error)
-            {
-                for (int i = 0; i <= order; i++)
-                    autoc[i] = autocorr[i];
-                Lpc.compute_schur_reflection(autoc, (uint)order, reff, err);
-                autocorr_order = order + 1;
-            }
-        }
-#endif
     public double Akaike(int blocksize, int order, double alpha, double beta)
     {
         //return (blocksize - order) * (Math.Log(prediction_error[order - 1]) - Math.Log(1.0)) + Math.Log(blocksize) * order * (alpha + beta * order);

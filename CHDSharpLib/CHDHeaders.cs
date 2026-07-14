@@ -11,7 +11,7 @@ internal static class CHDHeaders
 
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
-        chd.Compression = chd.Compression = [chd_codec.CHD_CODEC_ZLIB];
+        chd.Compression = [chd_codec.CHD_CODEC_ZLIB];
         var flags = br.ReadUInt32BE();
         var compression = br.ReadUInt32BE();
         chd.Blocksize = br.ReadUInt32BE();
@@ -21,7 +21,6 @@ internal static class CHDHeaders
         var sectors = br.ReadUInt32BE();
         chd.Md5 = br.ReadBytes(16);
         chd.Parentmd5 = br.ReadBytes(16);
-
 
         const int HARD_DISK_SECTOR_SIZE = 512;
         chd.Totalbytes = cylinders * heads * sectors * HARD_DISK_SECTOR_SIZE;
@@ -64,7 +63,7 @@ internal static class CHDHeaders
 
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
-        chd.Compression = chd.Compression = [chd_codec.CHD_CODEC_ZLIB];
+        chd.Compression = [chd_codec.CHD_CODEC_ZLIB];
         var flags = br.ReadUInt32BE();
         var compression = br.ReadUInt32BE();
         var blocksizeOld = br.ReadUInt32BE(); // this is now unused

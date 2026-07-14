@@ -26,9 +26,7 @@ public class LzmaStream : Stream
     private bool needProps = true;
     private byte[] props = new byte[5];
 
-    private Encoder encoder;
-
-    public LzmaStream(byte[] properties, Stream inputStream)
+	public LzmaStream(byte[] properties, Stream inputStream)
         : this(properties, inputStream, -1, -1, null, properties.Length < 5)
     {
     }
@@ -84,78 +82,23 @@ public class LzmaStream : Stream
         }
     }
 
-    public LzmaStream(LzmaEncoderProperties properties, bool isLZMA2, Stream outputStream)
-        : this(properties, isLZMA2, null, outputStream)
-    {
-    }
+	public override bool CanRead => true;
 
-    public LzmaStream(LzmaEncoderProperties properties, bool isLZMA2, Stream presetDictionary, Stream outputStream)
-    {
-        this.isLZMA2 = isLZMA2;
-        availableBytes = 0;
-        endReached = true;
+	public override bool CanSeek => false;
 
-        if (isLZMA2)
-            throw new NotImplementedException();
+	public override bool CanWrite => false;
 
-        encoder = new Encoder();
-        encoder.SetCoderProperties(properties.propIDs, properties.properties);
-        var propStream = new MemoryStream(5);
-        encoder.WriteCoderProperties(propStream);
-        props = propStream.ToArray();
+	public override void Flush()
+	{
+	}
 
-        encoder.SetStreams(null, outputStream, -1, -1);
-        if (presetDictionary != null)
-            encoder.Train(presetDictionary);
-    }
+	public override long Length => position + availableBytes;
 
-    public override bool CanRead
-    {
-        get { return encoder == null; }
-    }
-
-    public override bool CanSeek
-    {
-        get { return false; }
-    }
-
-    public override bool CanWrite
-    {
-        get { return encoder != null; }
-    }
-
-    public override void Flush()
-    {
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
-        {
-            if (encoder != null)
-            {
-                position = encoder.Code(null, true);
-            }
-        }
-        base.Dispose(disposing);
-    }
-
-    public override long Length
-    {
-        get { return position + availableBytes; }
-    }
-
-    public override long Position
-    {
-        get
-        {
-            return position;
-        }
-        set
-        {
-            throw new NotImplementedException();
-        }
-    }
+	public override long Position
+	{
+		get => position;
+		set => throw new NotSupportedException();
+	}
 
     public override int Read(byte[] buffer, int offset, int count)
     {
@@ -284,40 +227,31 @@ public class LzmaStream : Stream
         }
     }
 
-    public override long Seek(long offset, SeekOrigin origin)
-    {
-        if (origin != SeekOrigin.Current)
-            throw new NotImplementedException();
+	public override long Seek(long offset, SeekOrigin origin)
+	{
+		if (origin != SeekOrigin.Current)
+			throw new NotSupportedException();
 
-        var tmpBuff = new byte[1024];
-        var sizeToGo = offset;
-        while (sizeToGo > 0)
-        {
-            var sizenow = sizeToGo > 1024 ? 1024 : (int)sizeToGo;
-            var read = Read(tmpBuff, 0, sizenow);
-            if (read == 0)
-                break;
+		var tmpBuff = new byte[1024];
+		var sizeToGo = offset;
+		while (sizeToGo > 0)
+		{
+			var sizenow = sizeToGo > 1024 ? 1024 : (int)sizeToGo;
+			var read = Read(tmpBuff, 0, sizenow);
+			if (read == 0)
+				break;
 
-            sizeToGo -= read;
-        }
+			sizeToGo -= read;
+		}
 
-        return offset;
-    }
+		return offset;
+	}
 
-    public override void SetLength(long value)
-    {
-        throw new NotImplementedException();
-    }
+	public override void SetLength(long value) => throw new NotSupportedException();
 
-    public override void Write(byte[] buffer, int offset, int count)
-    {
-        if (encoder != null)
-        {
-            position = encoder.Code(new MemoryStream(buffer, offset, count), false);
-        }
-    }
+	public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 
-    public byte[] Properties
+	public byte[] Properties
     {
         get
         {

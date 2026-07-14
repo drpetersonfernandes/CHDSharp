@@ -14,9 +14,6 @@ internal enum huffman_error
 
 internal class node_t
 {
-    //internal node_t parent;       /* pointer to parent node */
-    //internal uint count;          /* number of hits on this node */
-    //internal uint weight;         /* assigned weight of this node */
     internal uint bits;             /* bits used to encode the node */
     internal byte numbits;          /* number of bits needed for this node */
 };
@@ -27,11 +24,8 @@ internal class HuffmanDecoder
     /* internal state */
     uint numcodes;                  /* number of total codes being processed */
     byte maxbits;                   /* maximum bits per code */
-    //uint prevdata;                /* value of the previous data (for delta-RLE encoding) */
-    //int rleremaining;             /* number of RLE bytes remaining (for delta-RLE encoding) */
     ushort[] lookup;                /* pointer to the lookup table */
     node_t[] huffnode;              /* array of nodes */
-    //uint[] datahisto;             /* histogram of data values */
 
     BitStream bitbuf;
 
@@ -55,9 +49,6 @@ internal class HuffmanDecoder
         lookup = buffLookup == null ? (new ushort[(1 << maxbits)]) : buffLookup;
 
         huffnode = new node_t[numcodes];
-        //decoder.datahisto = null;
-        //decoder.prevdata = 0;
-        //decoder.rleremaining = 0;
 
         for (var i = 0; i < numcodes; i++)
         {

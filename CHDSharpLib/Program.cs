@@ -66,7 +66,7 @@ internal class Program
         {
             var sDir = arg.Replace("\"", "");
             var di = new DirectoryInfo(sDir);
-            checkdir(di, true);
+            checkdir(di);
         }
         Log.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
     }
@@ -264,7 +264,7 @@ internal class Program
         return Convert.ToHexString(a).ToLowerInvariant();
     }
 
-    static void checkdir(DirectoryInfo di, bool verify)
+    static void checkdir(DirectoryInfo di)
     {
         var fi = di.GetFiles("*.chd");
         foreach (var f in fi)
@@ -276,7 +276,7 @@ internal class Program
         var arrdi = di.GetDirectories();
         foreach (var d in arrdi)
         {
-            checkdir(d, verify);
+            checkdir(d);
         }
     }
 }

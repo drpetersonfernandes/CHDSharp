@@ -5,11 +5,6 @@ internal abstract class Base
     public const uint kNumRepDistances = 4;
     public const uint kNumStates = 12;
 
-    // static byte []kLiteralNextStates  = {0, 0, 0, 0, 1, 2, 3, 4,  5,  6,   4, 5};
-    // static byte []kMatchNextStates    = {7, 7, 7, 7, 7, 7, 7, 10, 10, 10, 10, 10};
-    // static byte []kRepNextStates      = {8, 8, 8, 8, 8, 8, 8, 11, 11, 11, 11, 11};
-    // static byte []kShortRepNextStates = {9, 9, 9, 9, 9, 9, 9, 11, 11, 11, 11, 11};
-
     public struct State
     {
         public uint Index;
@@ -37,8 +32,6 @@ internal abstract class Base
 
     public const int kNumPosSlotBits = 6;
     public const int kDicLogSizeMin = 0;
-    // public const int kDicLogSizeMax = 30;
-    // public const uint kDistTableSizeMax = kDicLogSizeMax * 2;
 
     public const int kNumLenToPosStatesBits = 2; // it's for speed optimization
     public const uint kNumLenToPosStates = 1 << kNumLenToPosStatesBits;

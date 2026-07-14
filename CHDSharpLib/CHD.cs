@@ -253,85 +253,6 @@ public static class Chd
     }
 
 
-    internal static chd_error DecompressData(Stream file, ChdHeader chd)
-    {
-        // stores the FLAC decompression classes for this instance.
-        var codec = new CHDCodec();
-
-        using var br = new BinaryReader(file, Encoding.UTF8, true);
-
-        using var md5Check = chd.Md5 != null ? MD5.Create() : null;
-        using var sha1Check = chd.Rawsha1 != null ? SHA1.Create() : null;
-
-        var arrPool = new ArrayPool(chd.Blocksize);
-
-        var buffer = new byte[chd.Blocksize];
-
-        try
-        {
-            var block = 0;
-            var sizetoGo = chd.Totalbytes;
-            while (sizetoGo > 0)
-            {
-                /* progress */
-                if ((block % 1000) == 0)
-                    Log.Debug("Verifying, {Percent:N1}% complete", 100 - sizetoGo * 100 / chd.Totalbytes);
-
-                var mapEntry = chd.Map[block];
-                if (mapEntry.Length > 0)
-                {
-                    mapEntry.BuffIn = arrPool.Rent();
-                    file.Seek((long)mapEntry.Offset, SeekOrigin.Begin);
-                    file.ReadExactly(mapEntry.BuffIn, 0, (int)mapEntry.Length);
-                }
-
-                /* read the block into the cache */
-                var err = ChdBlockRead.ReadBlock(mapEntry, arrPool, chd.ChdReader, codec, buffer, (int)chd.Blocksize);
-                if (err != chd_error.CHDERR_NONE)
-                    return err;
-
-                if (mapEntry.Length > 0)
-                {
-                    arrPool.Return(mapEntry.BuffIn);
-                    mapEntry.BuffIn = null!;
-                }
-
-                var sizenext = sizetoGo > (ulong)chd.Blocksize ? (int)chd.Blocksize : (int)sizetoGo;
-
-                md5Check?.TransformBlock(buffer, 0, sizenext, null, 0);
-                sha1Check?.TransformBlock(buffer, 0, sizenext, null, 0);
-
-                /* prepare for the next block */
-                block++;
-                sizetoGo -= (ulong)sizenext;
-            }
-
-            Log.Debug("Verifying, 100.0% complete");
-        }
-        catch (Exception e)
-        {
-            Log.Error(e, "Data Decompress Failed");
-            return chd_error.CHDERR_DECOMPRESSION_ERROR;
-        }
-
-        var tmp = Array.Empty<byte>();
-        md5Check?.TransformFinalBlock(tmp, 0, 0);
-        sha1Check?.TransformFinalBlock(tmp, 0, 0);
-
-        // here it is now using the rawsha1 value from the header to validate the raw binary data.
-        if (chd.Md5 != null && !Util.IsAllZeroArray(chd.Md5) && md5Check is { Hash: not null } && !Util.ByteArrEquals(chd.Md5, md5Check.Hash))
-        {
-            return chd_error.CHDERR_DECOMPRESSION_ERROR;
-        }
-
-        if (chd.Rawsha1 != null && !Util.IsAllZeroArray(chd.Rawsha1) && sha1Check is { Hash: not null } && !Util.ByteArrEquals(chd.Rawsha1, sha1Check.Hash))
-        {
-            return chd_error.CHDERR_DECOMPRESSION_ERROR;
-        }
-
-        return chd_error.CHDERR_NONE;
-    }
-
     internal static chd_error DecompressDataParallel(Stream file, ChdHeader chd)
     {
         using var br = new BinaryReader(file, Encoding.UTF8, true);
@@ -527,9 +448,7 @@ public static class Chd
         Log.Debug("Cache: Issued Arrays Total {Issued}, returned Arrays Total {Returned}, block size {BlockSize}", issuedArraysTotal, returnedArraysTotal, chd.Blocksize);
 
         if (errMaster != chd_error.CHDERR_NONE)
-
-            if (errMaster != chd_error.CHDERR_NONE)
-                return errMaster;
+            return errMaster;
 
         var tmp = Array.Empty<byte>();
         md5Check?.TransformFinalBlock(tmp, 0, 0);

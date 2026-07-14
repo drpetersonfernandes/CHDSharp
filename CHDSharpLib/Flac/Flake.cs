@@ -45,29 +45,4 @@ public class FlakeConstants
     //0110 : get 8 bit (blocksize-1) from end of header
     //0111 : get 16 bit (blocksize-1) from end of header
     public static readonly int[] flac_bitdepths = [0, 8, 12, 0, 16, 20, 24, 0];
-
-    public static PredictionType LookupPredictionType(string name)
-    {
-        return (PredictionType)(Enum.Parse(typeof(PredictionType), name, true));
-    }
-
-    public static StereoMethod LookupStereoMethod(string name)
-    {
-        return (StereoMethod)(Enum.Parse(typeof(StereoMethod), name, true));
-    }
-
-    public static WindowMethod LookupWindowMethod(string name)
-    {
-        return (WindowMethod)(Enum.Parse(typeof(WindowMethod), name, true));
-    }
-
-    public static OrderMethod LookupOrderMethod(string name)
-    {
-        return (OrderMethod)(Enum.Parse(typeof(OrderMethod), name, true));
-    }
-
-    public static WindowFunction LookupWindowFunction(string name)
-    {
-        return (WindowFunction)(Enum.Parse(typeof(WindowFunction), name, true));
-    }
 }

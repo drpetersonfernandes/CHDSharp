@@ -1,16 +1,31 @@
 namespace CHDSharp.Flac.FlacDeps;
 
+/// <summary>
+/// Stores per-window autocorrelation data for LPC subframe analysis.
+/// </summary>
 unsafe public class LpcSubframeInfo
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LpcSubframeInfo"/> class with empty autocorrelation buffers.
+    /// </summary>
     public LpcSubframeInfo()
     {
         autocorr_section_values = new double[Lpc.MAX_LPC_SECTIONS, Lpc.MAX_LPC_ORDER + 1];
         autocorr_section_orders = new int[Lpc.MAX_LPC_SECTIONS];
     }
 
+    /// <summary>
+    /// Cached autocorrelation values for each section and order.
+    /// </summary>
     public double[,] autocorr_section_values;
+    /// <summary>
+    /// The maximum order computed for each section.
+    /// </summary>
     public int[] autocorr_section_orders;
 
+    /// <summary>
+    /// Resets all section orders to zero, invalidating cached autocorrelation data.
+    /// </summary>
     public void Reset()
     {
         for (var sec = 0; sec < autocorr_section_orders.Length; sec++)
@@ -20,21 +35,49 @@ unsafe public class LpcSubframeInfo
     }
 }
 
+/// <summary>
+/// Represents a section of a window for LPC analysis, defining boundaries and the type of autocorrelation computation to use.
+/// </summary>
 unsafe public struct LpcWindowSection
 {
+    /// <summary>
+    /// Specifies the type of autocorrelation computation for a window section.
+    /// </summary>
     public enum SectionType
     {
+        /// <summary>Section of zeros (no autocorrelation computed).</summary>
         Zero,
+        /// <summary>Unwindowed section using 32-bit accumulation.</summary>
         One,
+        /// <summary>Unwindowed section using 64-bit accumulation for large samples.</summary>
         OneLarge,
+        /// <summary>Windowed data section.</summary>
         Data,
+        /// <summary>Glue section between unwindowed regions.</summary>
         OneGlue,
+        /// <summary>Glue section between windowed regions.</summary>
         Glue
     };
+    /// <summary>
+    /// The start offset of this section in samples.
+    /// </summary>
     public int m_start;
+    /// <summary>
+    /// The end offset of this section in samples.
+    /// </summary>
     public int m_end;
+    /// <summary>
+    /// The type of autocorrelation computation for this section.
+    /// </summary>
     public SectionType m_type;
+    /// <summary>
+    /// Identifier for cached section data (-1 if not cached).
+    /// </summary>
     public int m_id;
+    /// <summary>
+    /// Initializes a new data section with the given end boundary.
+    /// </summary>
+    /// <param name="end">The end offset of the section.</param>
     public LpcWindowSection(int end)
     {
         m_id = -1;
@@ -42,6 +85,11 @@ unsafe public struct LpcWindowSection
         m_end = end;
         m_type = SectionType.Data;
     }
+    /// <summary>
+    /// Configures the section as a windowed data region.
+    /// </summary>
+    /// <param name="start">Start offset in samples.</param>
+    /// <param name="end">End offset in samples.</param>
     public void setData(int start, int end)
     {
         m_id = -1;
@@ -49,6 +97,11 @@ unsafe public struct LpcWindowSection
         m_end = end;
         m_type = SectionType.Data;
     }
+    /// <summary>
+    /// Configures the section as an unwindowed (One) region.
+    /// </summary>
+    /// <param name="start">Start offset in samples.</param>
+    /// <param name="end">End offset in samples.</param>
     public void setOne(int start, int end)
     {
         m_id = -1;
@@ -56,6 +109,10 @@ unsafe public struct LpcWindowSection
         m_end = end;
         m_type = SectionType.One;
     }
+    /// <summary>
+    /// Configures the section as a glue section at the given position.
+    /// </summary>
+    /// <param name="start">Position of the glue point.</param>
     public void setGlue(int start)
     {
         m_id = -1;
@@ -63,6 +120,11 @@ unsafe public struct LpcWindowSection
         m_end = start;
         m_type = SectionType.Glue;
     }
+    /// <summary>
+    /// Configures the section as a zero region (no autocorrelation).
+    /// </summary>
+    /// <param name="start">Start offset in samples.</param>
+    /// <param name="end">End offset in samples.</param>
     public void setZero(int start, int end)
     {
         m_id = -1;
@@ -71,6 +133,15 @@ unsafe public struct LpcWindowSection
         m_type = SectionType.Zero;
     }
 
+    /// <summary>
+    /// Computes autocorrelation for this section, delegating to the appropriate <see cref="Lpc"/> method based on <see cref="m_type"/>. Operates on raw pointers.
+    /// </summary>
+    /// <param name="data">Pointer to sample data.</param>
+    /// <param name="window">Pointer to the window function values.</param>
+    /// <param name="min_order">Minimum lag order.</param>
+    /// <param name="order">Maximum lag order.</param>
+    /// <param name="blocksize">Total block size.</param>
+    /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
     unsafe public void compute_autocorr(/*const*/ int* data, float* window, int min_order, int order, int blocksize, double* autoc)
     {
         if (m_type == SectionType.OneLarge)
@@ -85,6 +156,15 @@ unsafe public struct LpcWindowSection
             Lpc.compute_autocorr_glue(data + m_start, min_order, order, autoc);
     }
 
+    /// <summary>
+    /// Detects window sections by analyzing the window function values and partitioning into sections of uniform computation type. Operates on raw pointers.
+    /// </summary>
+    /// <param name="_windowcount">Number of windows.</param>
+    /// <param name="window_segment">Pointer to window function values, interleaved by window.</param>
+    /// <param name="stride">Stride between window values.</param>
+    /// <param name="sz">Size of each window segment.</param>
+    /// <param name="bps">Bits per sample.</param>
+    /// <param name="sections">Destination buffer for detected sections, sized for all windows.</param>
     unsafe public static void Detect(int _windowcount, float* window_segment, int stride, int sz, int bps, LpcWindowSection* sections)
     {
         var section_id = 0;
@@ -236,6 +316,9 @@ unsafe public struct LpcWindowSection
 /// </summary>
 unsafe public class LpcContext
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LpcContext"/> class with default buffer sizes.
+    /// </summary>
     public LpcContext()
     {
         coefs = new int[Lpc.MAX_LPC_ORDER];
@@ -315,6 +398,14 @@ unsafe public class LpcContext
             autocorr_order = order + 1;
         }
     }
+    /// <summary>
+    /// Computes the Akaike Information Criterion score for a given LPC order.
+    /// </summary>
+    /// <param name="blocksize">The frame size in samples.</param>
+    /// <param name="order">The LPC order to evaluate.</param>
+    /// <param name="alpha">Alpha tuning parameter.</param>
+    /// <param name="beta">Beta tuning parameter.</param>
+    /// <returns>The Akaike score (lower is better).</returns>
     public double Akaike(int blocksize, int order, double alpha, double beta)
     {
         //return (blocksize - order) * (Math.Log(prediction_error[order - 1]) - Math.Log(1.0)) + Math.Log(blocksize) * order * (alpha + beta * order);
@@ -358,14 +449,32 @@ unsafe public class LpcContext
             Lpc.compute_lpc_coefs((uint)autocorr_order - 1, reff, lpcs);
     }
 
+    /// <summary>
+    /// Autocorrelation values for the current frame.
+    /// </summary>
     public double[] autocorr_values;
     double[] reflection_coeffs;
+    /// <summary>
+    /// Prediction error values for each order.
+    /// </summary>
     public double[] prediction_error;
+    /// <summary>
+    /// Best LPC orders sorted by Akaike criterion.
+    /// </summary>
     public int[] best_orders;
+    /// <summary>
+    /// Quantized LPC coefficients for the current frame.
+    /// </summary>
     public int[] coefs;
     int autocorr_order;
+    /// <summary>
+    /// Right-shift amount for quantized coefficients.
+    /// </summary>
     public int shift;
 
+    /// <summary>
+    /// Gets the reflection coefficients computed during LPC analysis.
+    /// </summary>
     public double[] Reflection
     {
         get
@@ -374,5 +483,8 @@ unsafe public class LpcContext
         }
     }
 
+    /// <summary>
+    /// Bitmask tracking which precision/order combinations have been computed.
+    /// </summary>
     public uint[] done_lpcs;
 }

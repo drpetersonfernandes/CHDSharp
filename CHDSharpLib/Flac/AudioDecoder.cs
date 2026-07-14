@@ -23,6 +23,10 @@ using CHDSharp.Flac.FlacDeps;
 
 namespace CHDSharp.Flac;
 
+/// <summary>
+/// FLAC audio decoder that reads and decodes FLAC streams into PCM audio samples.
+/// Implements <see cref="IAudioSource"/> for integration with the audio pipeline.
+/// </summary>
 public class AudioDecoder: IAudioSource
 {
     int[] samplesBuffer;
@@ -52,6 +56,9 @@ public class AudioDecoder: IAudioSource
     string _path;
     Stream _IO;
 
+    /// <summary>
+    /// Gets or sets whether CRC verification is performed during decoding.
+    /// </summary>
     public bool DoCRC
     {
         get
@@ -64,6 +71,9 @@ public class AudioDecoder: IAudioSource
         }
     }
 
+    /// <summary>
+    /// Gets the decoded sample buffer containing the current frame's audio data.
+    /// </summary>
     public int[] Samples
     {
         get
@@ -72,6 +82,12 @@ public class AudioDecoder: IAudioSource
         }
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AudioDecoder"/> class from a file path or stream.
+    /// </summary>
+    /// <param name="settings">Decoder configuration settings.</param>
+    /// <param name="path">Path to the FLAC file, or null if reading from a stream.</param>
+    /// <param name="IO">Input stream. If null and path is provided, a <see cref="FileStream"/> is opened.</param>
     public AudioDecoder(DecoderSettings settings, string path, Stream IO = null)
     {
         m_settings = settings;
@@ -112,6 +128,10 @@ public class AudioDecoder: IAudioSource
         residualBuffer = new int[FlakeConstants.MAX_BLOCKSIZE * PCM.ChannelCount];
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AudioDecoder"/> class with a given PCM configuration.
+    /// </summary>
+    /// <param name="_pcm">PCM audio configuration specifying sample rate, bit depth, and channel count.</param>
     public AudioDecoder(AudioPCMConfig _pcm)
     {
         pcm = _pcm;
@@ -124,15 +144,27 @@ public class AudioDecoder: IAudioSource
     }
 
     private DecoderSettings m_settings;
+    /// <summary>
+    /// Gets the decoder settings used by this instance.
+    /// </summary>
     public IAudioDecoderSettings Settings => m_settings;
 
+    /// <summary>
+    /// Closes the underlying input stream.
+    /// </summary>
     public void Close()
     {
         _IO.Close();
     }
 
+    /// <summary>
+    /// Gets the total duration of the audio stream.
+    /// </summary>
     public TimeSpan Duration => Length < 0 ? TimeSpan.Zero : TimeSpan.FromSeconds((double)Length / PCM.SampleRate);
 
+    /// <summary>
+    /// Gets the total number of samples in the stream.
+    /// </summary>
     public long Length
     {
         get
@@ -141,6 +173,9 @@ public class AudioDecoder: IAudioSource
         }
     }
 
+    /// <summary>
+    /// Gets the number of samples remaining from the current position to the end of the stream.
+    /// </summary>
     public long Remaining
     {
         get
@@ -149,6 +184,9 @@ public class AudioDecoder: IAudioSource
         }
     }
 
+    /// <summary>
+    /// Gets or sets the current sample position within the stream. Setting the position seeks using the seek table if available.
+    /// </summary>
     public long Position
     {
         get
@@ -206,6 +244,9 @@ public class AudioDecoder: IAudioSource
         }
     }
 
+    /// <summary>
+    /// Gets the PCM audio configuration for this stream.
+    /// </summary>
     public AudioPCMConfig PCM
     {
         get
@@ -214,6 +255,9 @@ public class AudioDecoder: IAudioSource
         }
     }
 
+    /// <summary>
+    /// Gets the file path of the FLAC source, or null if reading from a stream.
+    /// </summary>
     public string Path
     {
         get
@@ -243,6 +287,12 @@ public class AudioDecoder: IAudioSource
         }
     }
 
+    /// <summary>
+    /// Reads audio samples into the specified buffer, decoding FLAC frames as needed.
+    /// </summary>
+    /// <param name="buff">The audio buffer to fill with decoded samples.</param>
+    /// <param name="maxLength">The maximum number of samples to read.</param>
+    /// <returns>The actual number of samples read.</returns>
     public int Read(AudioBuffer buff, int maxLength)
     {
         buff.Prepare(this, maxLength);
@@ -675,6 +725,13 @@ public class AudioDecoder: IAudioSource
         }
     }
 
+    /// <summary>
+    /// Decodes a single FLAC frame from the provided buffer.
+    /// </summary>
+    /// <param name="buffer">Byte array containing the encoded frame data.</param>
+    /// <param name="pos">Starting position within the buffer.</param>
+    /// <param name="len">Length of data available in the buffer.</param>
+    /// <returns>The number of bytes consumed from the buffer.</returns>
     public unsafe int DecodeFrame(byte[] buffer, int pos, int len)
     {
         fixed (byte* buf = buffer)

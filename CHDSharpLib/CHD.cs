@@ -62,10 +62,24 @@ internal class MapEntry
     public bool KeepBufferCopy;
 }
 
+/// <summary>Provides methods for validating and inspecting CHD files using parallel decompression.</summary>
 public static class Chd
 {
+    /// <summary>Number of parallel decompression tasks used during verification.</summary>
     public const int TaskCount = 8;
 
+    /// <summary>
+    /// Validates a CHD file from a <see cref="Stream"/> using parallel decompression and hash verification.
+    /// Returns the CHD version, SHA1, and MD5 hashes.
+    /// </summary>
+    /// <param name="s">The stream to read the CHD from.</param>
+    /// <param name="filename">The filename associated with the stream, used for logging.</param>
+    /// <param name="deepCheck">If <c>true</c>, performs full decompression and hash verification; otherwise only validates the header.</param>
+    /// <param name="chdVersion">When this method returns, contains the CHD version number, or <c>null</c> if invalid.</param>
+    /// <param name="chdSha1">When this method returns, contains the SHA1 hash from the header, or <c>null</c> if invalid.</param>
+    /// <param name="chdMd5">When this method returns, contains the MD5 hash from the header, or <c>null</c> if invalid.</param>
+    /// <returns><see cref="chd_error.CHDERR_NONE"/> on success; otherwise an error code.</returns>
+    /// <remarks>This method does not handle differential (parent/child) CHDs. Use <see cref="CheckFileWithParent"/> for those.</remarks>
     public static chd_error CheckFile(Stream s, string filename, bool deepCheck, out uint? chdVersion, out byte[]? chdSha1, out byte[]? chdMd5)
     {
         chdSha1 = null;
@@ -233,6 +247,11 @@ public static class Chd
     private static readonly uint[] HeaderLengths = [0, 76, 80, 120, 108, 124];
     private static readonly byte[] Id = "MComprHD"u8.ToArray();
 
+    /// <summary>Reads and validates the CHD file header signature and version.</summary>
+    /// <param name="file">The stream positioned at the start of the CHD file.</param>
+    /// <param name="length">When this method returns, contains the header length in bytes.</param>
+    /// <param name="version">When this method returns, contains the CHD version number.</param>
+    /// <returns><c>true</c> if the header signature is valid and the version is recognized; otherwise <c>false</c>.</returns>
     public static bool CheckHeader(Stream file, out uint length, out uint version)
     {
         foreach (var t in Id)

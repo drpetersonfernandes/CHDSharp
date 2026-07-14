@@ -21,17 +21,44 @@
 
 namespace CHDSharp.Flac;
 
+/// <summary>
+/// FLAC encoding constants as defined by the FLAC specification.
+/// </summary>
 public class FlakeConstants
 {
+    /// <summary>
+    /// Maximum block size in samples (65535).
+    /// </summary>
     public const int MAX_BLOCKSIZE = 65535;
+    /// <summary>
+    /// Maximum Rice coding parameter (14).
+    /// </summary>
     public const int MAX_RICE_PARAM = 14;
+    /// <summary>
+    /// Maximum partition order for Rice coding (8).
+    /// </summary>
     public const int MAX_PARTITION_ORDER = 8;
+    /// <summary>
+    /// Maximum number of Rice coding partitions (256).
+    /// </summary>
     public const int MAX_PARTITIONS = 1 << MAX_PARTITION_ORDER;
 
+    /// <summary>
+    /// Length in bits of the sample number field in a seekpoint.
+    /// </summary>
     public const int FLAC__STREAM_METADATA_SEEKPOINT_SAMPLE_NUMBER_LEN = 64; /* bits */
+    /// <summary>
+    /// Length in bits of the stream offset field in a seekpoint.
+    /// </summary>
     public const int FLAC__STREAM_METADATA_SEEKPOINT_STREAM_OFFSET_LEN = 64; /* bits */
+    /// <summary>
+    /// Length in bits of the frame samples field in a seekpoint.
+    /// </summary>
     public const int FLAC__STREAM_METADATA_SEEKPOINT_FRAME_SAMPLES_LEN = 16; /* bits */
 
+    /// <summary>
+    /// Table of FLAC sample rates indexed by the sample rate code from the stream info header.
+    /// </summary>
     public static readonly int[] flac_samplerates =
     [
         0, 88200, 176400, 192000,
@@ -41,8 +68,14 @@ public class FlakeConstants
     //1100 : get 8 bit sample rate (in kHz) from end of header
     //1101 : get 16 bit sample rate (in Hz) from end of header
     //1110 : get 16 bit sample rate (in tens of Hz) from end of header
+    /// <summary>
+    /// Table of FLAC block sizes indexed by the block size code from the frame header.
+    /// </summary>
     public static readonly int[] flac_blocksizes = [0, 192, 576, 1152, 2304, 4608, 0, 0, 256, 512, 1024, 2048, 4096, 8192, 16384];
     //0110 : get 8 bit (blocksize-1) from end of header
     //0111 : get 16 bit (blocksize-1) from end of header
+    /// <summary>
+    /// Table of FLAC bit depths indexed by the bits-per-sample code from the stream info header.
+    /// </summary>
     public static readonly int[] flac_bitdepths = [0, 8, 12, 0, 16, 20, 24, 0];
 }

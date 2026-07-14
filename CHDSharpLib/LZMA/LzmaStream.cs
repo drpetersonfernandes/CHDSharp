@@ -2,6 +2,12 @@
 
 namespace CHDSharp.LZMA;
 
+/// <summary>
+/// Provides a read-only decompression <see cref="Stream"/> backed by LZMA or LZMA2 compressed data.
+/// </summary>
+/// <remarks>
+/// Supports forward-only reading. Seeking is limited to <see cref="SeekOrigin.Current"/>.
+/// </remarks>
 public class LzmaStream : Stream
 {
     private Stream inputStream;
@@ -26,21 +32,49 @@ public class LzmaStream : Stream
     private bool needProps = true;
     private byte[] props = new byte[5];
 
+    /// <summary>
+    /// Initializes a new LZMA decompression stream with unknown input and output sizes.
+    /// </summary>
+    /// <param name="properties">LZMA properties header (5 bytes).</param>
+    /// <param name="inputStream">The compressed source stream.</param>
 	public LzmaStream(byte[] properties, Stream inputStream)
         : this(properties, inputStream, -1, -1, null, properties.Length < 5)
     {
     }
 
+    /// <summary>
+    /// Initializes a new LZMA decompression stream with a known input size.
+    /// </summary>
+    /// <param name="properties">LZMA properties header (5 bytes).</param>
+    /// <param name="inputStream">The compressed source stream.</param>
+    /// <param name="inputSize">Exact size in bytes of the compressed data, or -1 if unknown.</param>
     public LzmaStream(byte[] properties, Stream inputStream, long inputSize)
         : this(properties, inputStream, inputSize, -1, null, properties.Length < 5)
     {
     }
 
+    /// <summary>
+    /// Initializes a new LZMA decompression stream with known input and output sizes.
+    /// </summary>
+    /// <param name="properties">LZMA properties header (5 bytes).</param>
+    /// <param name="inputStream">The compressed source stream.</param>
+    /// <param name="inputSize">Exact size in bytes of the compressed data, or -1 if unknown.</param>
+    /// <param name="outputSize">Exact size in bytes of the decompressed data, or -1 if unknown.</param>
     public LzmaStream(byte[] properties, Stream inputStream, long inputSize, long outputSize)
         : this(properties, inputStream, inputSize, outputSize, null, properties.Length < 5)
     {
     }
 
+    /// <summary>
+    /// Initializes a new LZMA or LZMA2 decompression stream with full configuration.
+    /// </summary>
+    /// <param name="properties">Properties header (5 bytes for LZMA, 1 byte for LZMA2).</param>
+    /// <param name="inputStream">The compressed source stream.</param>
+    /// <param name="inputSize">Exact size in bytes of the compressed data, or -1 if unknown.</param>
+    /// <param name="outputSize">Exact size in bytes of the decompressed data, or -1 if unknown.</param>
+    /// <param name="presetDictionary">Optional preset dictionary stream for training the decoder, or <c>null</c>.</param>
+    /// <param name="isLZMA2"><c>true</c> to use LZMA2 format; <c>false</c> for LZMA.</param>
+    /// <param name="outWindowBuff">Optional pre-allocated buffer for the output window, or <c>null</c>.</param>
     public LzmaStream(byte[] properties, Stream inputStream, long inputSize, long outputSize,
         Stream presetDictionary, bool isLZMA2, byte[] outWindowBuff = null)
     {
@@ -82,24 +116,51 @@ public class LzmaStream : Stream
         }
     }
 
+    /// <summary>
+    /// Gets a value indicating whether the stream supports reading. Always <c>true</c>.
+    /// </summary>
 	public override bool CanRead => true;
 
+    /// <summary>
+    /// Gets a value indicating whether the stream supports seeking. Always <c>false</c>.
+    /// </summary>
 	public override bool CanSeek => false;
 
+    /// <summary>
+    /// Gets a value indicating whether the stream supports writing. Always <c>false</c>.
+    /// </summary>
 	public override bool CanWrite => false;
 
+    /// <summary>
+    /// Does nothing. The stream has no buffers to flush.
+    /// </summary>
 	public override void Flush()
 	{
 	}
 
+    /// <summary>
+    /// Gets the total length of the decompressed stream, or the current position plus remaining available bytes if unknown.
+    /// </summary>
 	public override long Length => position + availableBytes;
 
+    /// <summary>
+    /// Gets or sets the current position within the decompressed stream.
+    /// </summary>
+    /// <exception cref="NotSupportedException">The setter always throws. Use <see cref="Seek"/> to advance.</exception>
 	public override long Position
 	{
 		get => position;
 		set => throw new NotSupportedException();
 	}
 
+    /// <summary>
+    /// Reads a sequence of decompressed bytes from the stream and advances the position.
+    /// </summary>
+    /// <param name="buffer">The buffer to write decompressed data into.</param>
+    /// <param name="offset">The zero-based byte offset in <paramref name="buffer"/> at which to begin writing.</param>
+    /// <param name="count">The maximum number of bytes to read.</param>
+    /// <returns>The total number of bytes read into the buffer, or 0 if the end of the stream has been reached.</returns>
+    /// <exception cref="DataErrorException">Thrown when the compressed data is corrupt or truncated.</exception>
     public override int Read(byte[] buffer, int offset, int count)
     {
         if (endReached)
@@ -227,6 +288,14 @@ public class LzmaStream : Stream
         }
     }
 
+    /// <summary>
+    /// Advances the current position by <paramref name="offset"/> bytes from <see cref="SeekOrigin.Current"/>.
+    /// Other origins are not supported.
+    /// </summary>
+    /// <param name="offset">The number of bytes to skip forward.</param>
+    /// <param name="origin">Must be <see cref="SeekOrigin.Current"/>.</param>
+    /// <returns>The new position in the stream.</returns>
+    /// <exception cref="NotSupportedException"><paramref name="origin"/> is not <see cref="SeekOrigin.Current"/>.</exception>
 	public override long Seek(long offset, SeekOrigin origin)
 	{
 		if (origin != SeekOrigin.Current)
@@ -247,10 +316,25 @@ public class LzmaStream : Stream
 		return offset;
 	}
 
+    /// <summary>
+    /// Not supported. The stream is read-only.
+    /// </summary>
+    /// <param name="value">Ignored.</param>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
 	public override void SetLength(long value) => throw new NotSupportedException();
 
+    /// <summary>
+    /// Not supported. The stream is read-only.
+    /// </summary>
+    /// <param name="buffer">Ignored.</param>
+    /// <param name="offset">Ignored.</param>
+    /// <param name="count">Ignored.</param>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
 	public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
 
+    /// <summary>
+    /// Gets the current LZMA/LZMA2 properties used for decompressing subsequent chunks.
+    /// </summary>
 	public byte[] Properties
     {
         get

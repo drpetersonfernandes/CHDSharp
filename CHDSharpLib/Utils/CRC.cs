@@ -1,7 +1,9 @@
 ﻿namespace CHDSharp.Utils;
 
+/// <summary>A CRC-32 calculator using the ISO 3309 / ITU-T V.42 polynomial, with an 8-table slicing implementation for performance.</summary>
 public class CRC
 {
+    /// <summary>Precomputed CRC-32 lookup tables (8 tables, 256 entries each) for fast slicing.</summary>
     public static readonly uint[] CRC32Lookup;
     private uint _crc;
     private long _totalBytesRead;
@@ -35,11 +37,13 @@ public class CRC
     }
 
 
+    /// <summary>Initializes a new instance of the <see cref="CRC"/> class and resets the internal state.</summary>
     public CRC()
     {
         Reset();
     }
 
+    /// <summary>Resets the CRC-32 state to its initial value and clears the byte count.</summary>
     public void Reset()
     {
         _totalBytesRead = 0;
@@ -52,6 +56,10 @@ public class CRC
         _crc = (_crc >> 8) ^ CRC32Lookup[(byte)_crc ^ ((byte)inCh)];
     }
 
+    /// <summary>Processes a block of data through the CRC-32 algorithm using 8-byte slicing where possible.</summary>
+    /// <param name="block">The byte array containing the data to process.</param>
+    /// <param name="offset">The zero-based offset in <paramref name="block"/> at which to begin processing.</param>
+    /// <param name="count">The number of bytes to process.</param>
     public void SlurpBlock(byte[] block, int offset, int count)
     {
         _totalBytesRead += count;
@@ -94,6 +102,7 @@ public class CRC
 
     }
 
+    /// <summary>Gets the CRC-32 result as a big-endian byte array.</summary>
     public byte[] Crc32ResultB
     {
         get
@@ -103,12 +112,20 @@ public class CRC
             return result;
         }
     }
+    /// <summary>Gets the CRC-32 result as a signed 32-bit integer.</summary>
     public Int32 Crc32Result => unchecked((Int32)(~_crc));
 
+    /// <summary>Gets the CRC-32 result as an unsigned 32-bit integer.</summary>
     public uint Crc32ResultU => ~_crc;
 
+    /// <summary>Gets the total number of bytes processed since the last <see cref="Reset"/>.</summary>
     public Int64 TotalBytesRead => _totalBytesRead;
 
+    /// <summary>Calculates the CRC-32 digest of a data range without mutating instance state.</summary>
+    /// <param name="data">The byte array containing the data.</param>
+    /// <param name="offset">The zero-based offset in <paramref name="data"/> at which to start.</param>
+    /// <param name="size">The number of bytes to process.</param>
+    /// <returns>The CRC-32 digest as an unsigned 32-bit integer.</returns>
     public static uint CalculateDigest(byte[] data, uint offset, uint size)
     {
         var crc = new CRC();
@@ -117,6 +134,12 @@ public class CRC
         return crc.Crc32ResultU;
     }
 
+    /// <summary>Verifies that a CRC-32 digest matches the computed digest of a data range.</summary>
+    /// <param name="digest">The expected CRC-32 digest.</param>
+    /// <param name="data">The byte array containing the data.</param>
+    /// <param name="offset">The zero-based offset in <paramref name="data"/> at which to start.</param>
+    /// <param name="size">The number of bytes to process.</param>
+    /// <returns><c>true</c> if the computed digest matches <paramref name="digest"/>; otherwise <c>false</c>.</returns>
     public static bool VerifyDigest(uint digest, byte[] data, uint offset, uint size)
     {
         return (CalculateDigest(data, offset, size) == digest);

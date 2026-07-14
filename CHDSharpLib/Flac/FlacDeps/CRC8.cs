@@ -1,11 +1,17 @@
 namespace CHDSharp.Flac.FlacDeps;
 
+/// <summary>
+/// 8-bit CRC calculator used for FLAC frame headers.
+/// </summary>
 public class Crc8
 {
     private const ushort poly8 = 0x07;
 
     private static ushort[] table = null;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Crc8"/> class and builds the CRC lookup table on first initialization.
+    /// </summary>
     public Crc8()
     {
         if (table != null)
@@ -32,6 +38,13 @@ public class Crc8
         }
     }
 
+    /// <summary>
+    /// Computes an 8-bit CRC checksum over a portion of a byte array.
+    /// </summary>
+    /// <param name="bytes">The source byte array.</param>
+    /// <param name="pos">The starting position in the array.</param>
+    /// <param name="count">The number of bytes to process.</param>
+    /// <returns>The 8-bit CRC checksum.</returns>
     public byte ComputeChecksum(byte[] bytes, int pos, int count)
     {
         ushort crc = 0;
@@ -43,6 +56,13 @@ public class Crc8
         return (byte)crc;
     }
 
+    /// <summary>
+    /// Computes an 8-bit CRC checksum over a raw byte buffer. Operates on raw pointers.
+    /// </summary>
+    /// <param name="bytes">The source byte pointer.</param>
+    /// <param name="pos">The starting offset from the pointer.</param>
+    /// <param name="count">The number of bytes to process.</param>
+    /// <returns>The 8-bit CRC checksum.</returns>
     public unsafe byte ComputeChecksum(byte* bytes, int pos, int count)
     {
         ushort crc = 0;

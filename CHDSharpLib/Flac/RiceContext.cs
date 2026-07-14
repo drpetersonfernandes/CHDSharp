@@ -1,7 +1,14 @@
 ﻿namespace CHDSharp.Flac;
 
+/// <summary>
+/// Rice coding context for encoding/decoding residual values in FLAC subframes.
+/// Uses unsafe pointers.
+/// </summary>
 unsafe public class RiceContext
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RiceContext"/> class, allocating partition arrays.
+    /// </summary>
     public RiceContext()
     {
         rparams = new int[FlakeConstants.MAX_PARTITIONS];

@@ -1,16 +1,40 @@
 namespace CHDSharp.Flac.FlacDeps;
 
+/// <summary>
+/// Provides static methods for Linear Predictive Coding (LPC) analysis and residual decoding used in FLAC encoding and decoding.
+/// </summary>
 public class Lpc
 {
+    /// <summary>
+    /// Maximum LPC order.
+    /// </summary>
     public const int MAX_LPC_ORDER = 32;
+    /// <summary>
+    /// Maximum number of LPC windows.
+    /// </summary>
     public const int MAX_LPC_WINDOWS = 16;
+    /// <summary>
+    /// Maximum number of LPC precisions.
+    /// </summary>
     public const int MAX_LPC_PRECISIONS = 4;
+    /// <summary>
+    /// Maximum number of LPC sections.
+    /// </summary>
     public const int MAX_LPC_SECTIONS = 128;
 
     /**
      * Calculates autocorrelation data from audio samples
      * A window function is applied before calculation.
      */
+    /// <summary>
+    /// Calculates autocorrelation data from audio samples. A window function is applied before calculation. Operates on raw pointers.
+    /// </summary>
+    /// <param name="data">Pointer to sample data.</param>
+    /// <param name="window">Pointer to the window function values.</param>
+    /// <param name="len">Number of samples.</param>
+    /// <param name="min">Minimum lag to compute.</param>
+    /// <param name="lag">Maximum lag to compute.</param>
+    /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
     static public unsafe void
         compute_autocorr(/*const*/ int* data, float* window, int len, int min, int lag, double* autoc)
     {
@@ -43,6 +67,14 @@ public class Lpc
         }
     }
 
+    /// <summary>
+    /// Calculates autocorrelation data from audio samples without applying a window function. Operates on raw pointers.
+    /// </summary>
+    /// <param name="data">Pointer to sample data.</param>
+    /// <param name="len">Number of samples.</param>
+    /// <param name="min">Minimum lag to compute.</param>
+    /// <param name="lag">Maximum lag to compute.</param>
+    /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
     static public unsafe void
         compute_autocorr_windowless(/*const*/ int* data, int len, int min, int lag, double* autoc)
     {
@@ -66,6 +98,14 @@ public class Lpc
         }
     }
 
+    /// <summary>
+    /// Calculates autocorrelation data from audio samples without a window, using double-precision accumulation for large sample values. Operates on raw pointers.
+    /// </summary>
+    /// <param name="data">Pointer to sample data.</param>
+    /// <param name="len">Number of samples.</param>
+    /// <param name="min">Minimum lag to compute.</param>
+    /// <param name="lag">Maximum lag to compute.</param>
+    /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
     static public unsafe void
         compute_autocorr_windowless_large(/*const*/ int* data, int len, int min, int lag, double* autoc)
     {
@@ -89,6 +129,16 @@ public class Lpc
         }
     }
 
+    /// <summary>
+    /// Calculates autocorrelation across a boundary between two windowed sections using the window function. Operates on raw pointers.
+    /// </summary>
+    /// <param name="data">Pointer to sample data.</param>
+    /// <param name="window">Pointer to the window function values.</param>
+    /// <param name="offs">Start offset of the first section.</param>
+    /// <param name="offs1">End offset of the first section (start of second section).</param>
+    /// <param name="min">Minimum lag to compute.</param>
+    /// <param name="lag">Maximum lag to compute.</param>
+    /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
     static public unsafe void
         compute_autocorr_glue(/*const*/ int* data, float* window, int offs, int offs1, int min, int lag, double* autoc)
     {
@@ -112,6 +162,13 @@ public class Lpc
         }
     }
 
+    /// <summary>
+    /// Calculates autocorrelation across a boundary between two unwindowed sections. Operates on raw pointers.
+    /// </summary>
+    /// <param name="data">Pointer to sample data, positioned at the boundary.</param>
+    /// <param name="min">Minimum lag to compute.</param>
+    /// <param name="lag">Maximum lag to compute.</param>
+    /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
     static public unsafe void
         compute_autocorr_glue(/*const*/ int* data, int min, int lag, double* autoc)
     {
@@ -133,6 +190,13 @@ public class Lpc
      * Levinson-Durbin recursion.
      * Produces LPC coefficients from autocorrelation data.
      */
+    /// <summary>
+    /// Produces LPC coefficients from reflection coefficients using the Levinson-Durbin recursion. Operates on raw pointers.
+    /// </summary>
+    /// <param name="max_order">Maximum LPC order.</param>
+    /// <param name="reff">Pointer to reflection coefficients.</param>
+    /// <param name="lpc">Destination buffer for LPC coefficients, stored as a flat array indexed by [order * MAX_LPC_ORDER + coefficient].</param>
+    /// <exception cref="Exception">Thrown if <paramref name="max_order"/> exceeds <see cref="MAX_LPC_ORDER"/>.</exception>
     public static unsafe void
         compute_lpc_coefs(uint max_order, double* reff, float* lpc/*[][MAX_LPC_ORDER]*/)
     {
@@ -170,6 +234,13 @@ public class Lpc
         }
     }
 
+    /// <summary>
+    /// Computes Schur recursion to produce reflection coefficients and prediction errors from autocorrelation data. Operates on raw pointers.
+    /// </summary>
+    /// <param name="autoc">Pointer to autocorrelation values.</param>
+    /// <param name="max_order">Maximum LPC order to compute.</param>
+    /// <param name="reff">Destination buffer for reflection coefficients.</param>
+    /// <param name="err">Destination buffer for prediction errors.</param>
     public static unsafe void
         compute_schur_reflection(/*const*/ double* autoc, uint max_order,
             double* reff/*[][MAX_LPC_ORDER]*/, double* err)
@@ -200,6 +271,15 @@ public class Lpc
         }
     }
 
+    /// <summary>
+    /// Decodes an LPC residual back into audio samples using the given coefficients and shift. Operates on raw pointers.
+    /// </summary>
+    /// <param name="res">Pointer to the residual samples.</param>
+    /// <param name="smp">Destination buffer for decoded samples.</param>
+    /// <param name="n">Total number of samples.</param>
+    /// <param name="order">LPC order used for prediction.</param>
+    /// <param name="coefs">Pointer to quantized LPC coefficients.</param>
+    /// <param name="shift">Right-shift amount applied to the prediction value.</param>
     public static unsafe void
         decode_residual(int* res, int* smp, int n, int order,
             int* coefs, int shift)
@@ -384,6 +464,15 @@ public class Lpc
                 break;
         }
     }
+    /// <summary>
+    /// Decodes an LPC residual into audio samples using 64-bit intermediate prediction values to avoid overflow. Operates on raw pointers.
+    /// </summary>
+    /// <param name="res">Pointer to the residual samples.</param>
+    /// <param name="smp">Destination buffer for decoded samples.</param>
+    /// <param name="n">Total number of samples.</param>
+    /// <param name="order">LPC order used for prediction.</param>
+    /// <param name="coefs">Pointer to quantized LPC coefficients.</param>
+    /// <param name="shift">Right-shift amount applied to the prediction value.</param>
     public static unsafe void
         decode_residual_long(int* res, int* smp, int n, int order,
             int* coefs, int shift)

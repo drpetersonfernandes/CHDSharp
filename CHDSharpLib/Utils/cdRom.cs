@@ -1,5 +1,6 @@
 ﻿namespace CHDSharp.Utils; 
 
+/// <summary>Provides CD-ROM ECC (Error Correction Code) generation for CHD sector data, producing P and Q parity bytes.</summary>
 public static class cdRom
 {
 
@@ -291,6 +292,9 @@ public static class cdRom
      * @param [in,out]  sector  If non-null, the sector.
      */
 
+    /// <summary>Generates P and Q ECC codes for a CD-ROM sector, overwriting any existing ECC data in place.</summary>
+    /// <param name="data">The byte array containing the sector data (must be at least 2352 bytes per sector).</param>
+    /// <param name="sectorOffset">The zero-based offset within <paramref name="data"/> where the sector begins.</param>
     public static void ecc_generate(byte[] data, int sectorOffset)
     {
         /* first verify P is */

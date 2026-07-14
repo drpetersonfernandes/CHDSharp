@@ -1,18 +1,40 @@
 namespace CHDSharp.Flac.FlacDeps;
 
+/// <summary>
+/// Static class for computing 16-bit CRC checksums used in FLAC audio frames.
+/// Supports combining and subtracting CRCs for efficient multi-block operations.
+/// </summary>
 public static class Crc16
 {
     const int GF2_DIM = 16;
+    /// <summary>
+    /// Precomputed CRC-16 lookup table (256 entries).
+    /// </summary>
     public static ushort[] table = new ushort[256];
     private static readonly ushort[,] combineTable = new ushort[GF2_DIM, GF2_DIM];
     private static readonly ushort[,] substractTable = new ushort[GF2_DIM, GF2_DIM];
 
+    /// <summary>
+    /// Computes a 16-bit CRC checksum over a portion of a byte array, continuing from a previous CRC value.
+    /// </summary>
+    /// <param name="crc">The initial CRC value.</param>
+    /// <param name="bytes">The source byte array.</param>
+    /// <param name="pos">The starting position in the array.</param>
+    /// <param name="count">The number of bytes to process.</param>
+    /// <returns>The updated 16-bit CRC checksum.</returns>
     public static unsafe ushort ComputeChecksum(ushort crc, byte[] bytes, int pos, int count)
     {
         fixed (byte* bs = bytes)
             return ComputeChecksum(crc, bs + pos, count);
     }
 
+    /// <summary>
+    /// Computes a 16-bit CRC checksum over a raw byte buffer, continuing from a previous CRC value. Operates on raw pointers.
+    /// </summary>
+    /// <param name="crc">The initial CRC value.</param>
+    /// <param name="bytes">The source byte pointer.</param>
+    /// <param name="count">The number of bytes to process.</param>
+    /// <returns>The updated 16-bit CRC checksum.</returns>
     public static unsafe ushort ComputeChecksum(ushort crc, byte* bytes, int count)
     {
         fixed (ushort* t = table)
@@ -97,11 +119,24 @@ public static class Crc16
         }
     }
 
+    /// <summary>
+    /// Reflects the lower 16 bits of a CRC value (used for reversing bit order).
+    /// </summary>
+    /// <param name="crc">The CRC value to reflect.</param>
+    /// <returns>The reflected 16-bit value.</returns>
     public static ushort Reflect(ushort crc)
     {
         return (ushort)Crc32.Reflect(crc, 16);
     }
 
+    /// <summary>
+    /// Combines two 16-bit CRC checksums as if the data was concatenated.
+    /// </summary>
+    /// <param name="crc1">The CRC of the first data block.</param>
+    /// <param name="crc2">The CRC of the second data block.</param>
+    /// <param name="len2">The length of the second data block in bytes.</param>
+    /// <returns>The combined CRC value.</returns>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="len2"/> is negative.</exception>
     public static unsafe ushort Combine(ushort crc1, ushort crc2, long len2)
     {
         crc1 = Reflect(crc1);
@@ -139,6 +174,14 @@ public static class Crc16
         return crc1;
     }
 
+    /// <summary>
+    /// Subtracts a 16-bit CRC checksum as if a block of data was removed.
+    /// </summary>
+    /// <param name="crc1">The CRC of the combined data.</param>
+    /// <param name="crc2">The CRC of the data block to subtract.</param>
+    /// <param name="len2">The length of the data block to subtract in bytes.</param>
+    /// <returns>The resulting CRC value after subtraction.</returns>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="len2"/> is negative.</exception>
     public static unsafe ushort Subtract(ushort crc1, ushort crc2, long len2)
     {
         crc1 = Reflect(crc1);

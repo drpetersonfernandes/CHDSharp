@@ -1,9 +1,21 @@
 ﻿namespace CHDSharp.Flac.FlacDeps;
 
+/// <summary>
+/// Represents a buffer for audio sample data, supporting conversion between byte, sample, and float representations across multiple bit depths.
+/// </summary>
 public class AudioBuffer
 {
     #region Static Methods
 
+    /// <summary>
+    /// Converts FLAC samples to 16-bit interleaved bytes. Operates on raw pointers.
+    /// </summary>
+    /// <param name="inSamples">2D array of samples [sampleIndex, channel].</param>
+    /// <param name="inSampleOffset">Offset into the samples array to start reading.</param>
+    /// <param name="outSamples">Destination byte buffer pointer.</param>
+    /// <param name="sampleCount">Number of samples (per channel) to convert.</param>
+    /// <param name="channelCount">Number of channels.</param>
+    /// <exception cref="IndexOutOfRangeException">Thrown if the sample offset exceeds the array bounds.</exception>
     public static unsafe void FLACSamplesToBytes_16(int[,] inSamples, int inSampleOffset,
         byte* outSamples, int sampleCount, int channelCount)
     {
@@ -24,6 +36,16 @@ public class AudioBuffer
         }
     }
 
+    /// <summary>
+    /// Converts FLAC samples to 16-bit interleaved bytes into a managed byte array.
+    /// </summary>
+    /// <param name="inSamples">2D array of samples [sampleIndex, channel].</param>
+    /// <param name="inSampleOffset">Offset into the samples array to start reading.</param>
+    /// <param name="outSamples">Destination byte array.</param>
+    /// <param name="outByteOffset">Offset into the byte array to start writing.</param>
+    /// <param name="sampleCount">Number of samples (per channel) to convert.</param>
+    /// <param name="channelCount">Number of channels.</param>
+    /// <exception cref="IndexOutOfRangeException">Thrown if array bounds are exceeded.</exception>
     public static unsafe void FLACSamplesToBytes_16(int[,] inSamples, int inSampleOffset,
         byte[] outSamples, int outByteOffset, int sampleCount, int channelCount)
     {
@@ -39,6 +61,17 @@ public class AudioBuffer
             FLACSamplesToBytes_16(inSamples, inSampleOffset, pOutSamplesFixed, sampleCount, channelCount);
     }
 
+    /// <summary>
+    /// Converts FLAC samples to 24-bit interleaved bytes into a managed byte array.
+    /// </summary>
+    /// <param name="inSamples">2D array of samples.</param>
+    /// <param name="inSampleOffset">Offset into the samples array.</param>
+    /// <param name="outSamples">Destination byte array.</param>
+    /// <param name="outByteOffset">Offset into the byte array.</param>
+    /// <param name="sampleCount">Number of samples per channel.</param>
+    /// <param name="channelCount">Number of channels.</param>
+    /// <param name="wastedBits">Number of wasted bits to shift the samples left before conversion.</param>
+    /// <exception cref="IndexOutOfRangeException">Thrown if array bounds are exceeded.</exception>
     public static unsafe void FLACSamplesToBytes_24(int[,] inSamples, int inSampleOffset,
         byte[] outSamples, int outByteOffset, int sampleCount, int channelCount, int wastedBits)
     {
@@ -70,6 +103,16 @@ public class AudioBuffer
         }
     }
 
+    /// <summary>
+    /// Converts floating-point samples to 16-bit integer bytes.
+    /// </summary>
+    /// <param name="inSamples">2D array of float samples.</param>
+    /// <param name="inSampleOffset">Offset into the samples array.</param>
+    /// <param name="outSamples">Destination byte array.</param>
+    /// <param name="outByteOffset">Offset into the byte array.</param>
+    /// <param name="sampleCount">Number of samples per channel.</param>
+    /// <param name="channelCount">Number of channels.</param>
+    /// <exception cref="IndexOutOfRangeException">Thrown if array bounds are exceeded.</exception>
     public static unsafe void FloatToBytes_16(float[,] inSamples, int inSampleOffset,
         byte[] outSamples, int outByteOffset, int sampleCount, int channelCount)
     {
@@ -96,6 +139,17 @@ public class AudioBuffer
         }
     }
 
+    /// <summary>
+    /// Converts floating-point samples to bytes at the specified bit depth.
+    /// </summary>
+    /// <param name="inSamples">2D array of float samples.</param>
+    /// <param name="inSampleOffset">Offset into the samples array.</param>
+    /// <param name="outSamples">Destination byte array.</param>
+    /// <param name="outByteOffset">Offset into the byte array.</param>
+    /// <param name="sampleCount">Number of samples per channel.</param>
+    /// <param name="channelCount">Number of channels.</param>
+    /// <param name="bitsPerSample">Target bits per sample (16 or 32).</param>
+    /// <exception cref="Exception">Thrown if <paramref name="bitsPerSample"/> is not 16 or 32.</exception>
     public static unsafe void FloatToBytes(float[,] inSamples, int inSampleOffset,
         byte[] outSamples, int outByteOffset, int sampleCount, int channelCount, int bitsPerSample)
     {
@@ -109,6 +163,17 @@ public class AudioBuffer
             throw new Exception("Unsupported bitsPerSample value");
     }
 
+    /// <summary>
+    /// Converts FLAC samples to bytes at the specified bit depth into a managed byte array.
+    /// </summary>
+    /// <param name="inSamples">2D array of samples.</param>
+    /// <param name="inSampleOffset">Offset into the samples array.</param>
+    /// <param name="outSamples">Destination byte array.</param>
+    /// <param name="outByteOffset">Offset into the byte array.</param>
+    /// <param name="sampleCount">Number of samples per channel.</param>
+    /// <param name="channelCount">Number of channels.</param>
+    /// <param name="bitsPerSample">Bits per sample (16 or up to 24).</param>
+    /// <exception cref="Exception">Thrown if <paramref name="bitsPerSample"/> is not supported.</exception>
     public static unsafe void FLACSamplesToBytes(int[,] inSamples, int inSampleOffset,
         byte[] outSamples, int outByteOffset, int sampleCount, int channelCount, int bitsPerSample)
     {
@@ -120,6 +185,16 @@ public class AudioBuffer
             throw new Exception("Unsupported bitsPerSample value");
     }
 
+    /// <summary>
+    /// Converts FLAC samples to bytes at the specified bit depth. Operates on raw pointers.
+    /// </summary>
+    /// <param name="inSamples">2D array of samples.</param>
+    /// <param name="inSampleOffset">Offset into the samples array.</param>
+    /// <param name="outSamples">Destination byte buffer pointer.</param>
+    /// <param name="sampleCount">Number of samples per channel.</param>
+    /// <param name="channelCount">Number of channels.</param>
+    /// <param name="bitsPerSample">Bits per sample (must be 16).</param>
+    /// <exception cref="Exception">Thrown if <paramref name="bitsPerSample"/> is not 16.</exception>
     public static unsafe void FLACSamplesToBytes(int[,] inSamples, int inSampleOffset,
         byte* outSamples, int sampleCount, int channelCount, int bitsPerSample)
     {
@@ -129,6 +204,16 @@ public class AudioBuffer
             throw new Exception("Unsupported bitsPerSample value");
     }
 
+    /// <summary>
+    /// Converts 16-bit integer bytes to floating-point samples.
+    /// </summary>
+    /// <param name="inSamples">Source byte array containing 16-bit PCM data.</param>
+    /// <param name="inByteOffset">Offset into the byte array.</param>
+    /// <param name="outSamples">Destination 2D float array.</param>
+    /// <param name="outSampleOffset">Offset into the float array.</param>
+    /// <param name="sampleCount">Number of samples per channel.</param>
+    /// <param name="channelCount">Number of channels.</param>
+    /// <exception cref="IndexOutOfRangeException">Thrown if array bounds are exceeded.</exception>
     public static unsafe void Bytes16ToFloat(byte[] inSamples, int inByteOffset,
         float[,] outSamples, int outSampleOffset, int sampleCount, int channelCount)
     {
@@ -152,6 +237,16 @@ public class AudioBuffer
         }
     }
 
+    /// <summary>
+    /// Converts 16-bit integer bytes to FLAC integer samples.
+    /// </summary>
+    /// <param name="inSamples">Source byte array containing 16-bit PCM data.</param>
+    /// <param name="inByteOffset">Offset into the byte array.</param>
+    /// <param name="outSamples">Destination 2D int sample array.</param>
+    /// <param name="outSampleOffset">Offset into the sample array.</param>
+    /// <param name="sampleCount">Number of samples per channel.</param>
+    /// <param name="channelCount">Number of channels.</param>
+    /// <exception cref="IndexOutOfRangeException">Thrown if array bounds are exceeded.</exception>
     public static unsafe void BytesToFLACSamples_16(byte[] inSamples, int inByteOffset,
         int[,] outSamples, int outSampleOffset, int sampleCount, int channelCount)
     {
@@ -178,6 +273,17 @@ public class AudioBuffer
         }
     }
 
+    /// <summary>
+    /// Converts 24-bit integer bytes to FLAC integer samples.
+    /// </summary>
+    /// <param name="inSamples">Source byte array containing 24-bit PCM data.</param>
+    /// <param name="inByteOffset">Offset into the byte array.</param>
+    /// <param name="outSamples">Destination 2D int sample array.</param>
+    /// <param name="outSampleOffset">Offset into the sample array.</param>
+    /// <param name="sampleCount">Number of samples per channel.</param>
+    /// <param name="channelCount">Number of channels.</param>
+    /// <param name="wastedBits">Number of wasted bits to shift right after conversion.</param>
+    /// <exception cref="IndexOutOfRangeException">Thrown if array bounds are exceeded.</exception>
     public static unsafe void BytesToFLACSamples_24(byte[] inSamples, int inByteOffset,
         int[,] outSamples, int outSampleOffset, int sampleCount, int channelCount, int wastedBits)
     {
@@ -204,6 +310,17 @@ public class AudioBuffer
         }
     }
 
+    /// <summary>
+    /// Converts integer bytes to FLAC integer samples at the specified bit depth.
+    /// </summary>
+    /// <param name="inSamples">Source byte array.</param>
+    /// <param name="inByteOffset">Offset into the byte array.</param>
+    /// <param name="outSamples">Destination 2D int sample array.</param>
+    /// <param name="outSampleOffset">Offset into the sample array.</param>
+    /// <param name="sampleCount">Number of samples per channel.</param>
+    /// <param name="channelCount">Number of channels.</param>
+    /// <param name="bitsPerSample">Bits per sample (16 or up to 24).</param>
+    /// <exception cref="Exception">Thrown if <paramref name="bitsPerSample"/> is not supported.</exception>
     public static unsafe void BytesToFLACSamples(byte[] inSamples, int inByteOffset,
         int[,] outSamples, int outSampleOffset, int sampleCount, int channelCount, int bitsPerSample)
     {
@@ -227,19 +344,31 @@ public class AudioBuffer
     private bool dataInBytes = false;
     private bool dataInFloat = false;
 
+    /// <summary>
+    /// Gets or sets the number of valid samples in the buffer.
+    /// </summary>
     public int Length
     {
         get { return length; }
         set { length = value; }
     }
 
+    /// <summary>
+    /// Gets the total capacity of the buffer in samples.
+    /// </summary>
     public int Size
     {
         get { return size; }
     }
 
+    /// <summary>
+    /// Gets the PCM configuration for this buffer.
+    /// </summary>
     public AudioPCMConfig PCM { get { return pcm; } }
 
+    /// <summary>
+    /// Gets the length of valid data in bytes.
+    /// </summary>
     public int ByteLength
     {
         get
@@ -248,6 +377,9 @@ public class AudioBuffer
         }
     }
 
+    /// <summary>
+    /// Gets the sample data as a 2D integer array. Converts from bytes on first access if necessary.
+    /// </summary>
     public int[,] Samples
     {
         get
@@ -264,6 +396,9 @@ public class AudioBuffer
         }
     }
 
+    /// <summary>
+    /// Gets the sample data as a 2D floating-point array. Converts from bytes on first access if necessary.
+    /// </summary>
     public float[,] Float
     {
         get
@@ -289,6 +424,9 @@ public class AudioBuffer
         }
     }
 
+    /// <summary>
+    /// Gets the raw byte representation of the sample data. Converts from samples or floats on first access if necessary.
+    /// </summary>
     public byte[] Bytes
     {
         get
@@ -310,6 +448,11 @@ public class AudioBuffer
         }
     }
 
+    /// <summary>
+    /// Initializes a new empty <see cref="AudioBuffer"/> with the given PCM configuration and capacity.
+    /// </summary>
+    /// <param name="_pcm">The PCM configuration.</param>
+    /// <param name="_size">The buffer capacity in samples.</param>
     public AudioBuffer(AudioPCMConfig _pcm, int _size)
     {
         pcm = _pcm;
@@ -317,6 +460,12 @@ public class AudioBuffer
         length = 0;
     }
 
+    /// <summary>
+    /// Initializes a new <see cref="AudioBuffer"/> from an existing integer sample array.
+    /// </summary>
+    /// <param name="_pcm">The PCM configuration.</param>
+    /// <param name="_samples">The 2D sample array.</param>
+    /// <param name="_length">The number of valid samples in the array.</param>
     public AudioBuffer(AudioPCMConfig _pcm, int[,] _samples, int _length)
     {
         pcm = _pcm;
@@ -324,24 +473,45 @@ public class AudioBuffer
         Prepare(_samples, _length);
     }
 
+    /// <summary>
+    /// Initializes a new <see cref="AudioBuffer"/> from an existing byte array.
+    /// </summary>
+    /// <param name="_pcm">The PCM configuration.</param>
+    /// <param name="_bytes">The byte array containing PCM data.</param>
+    /// <param name="_length">The number of valid samples.</param>
     public AudioBuffer(AudioPCMConfig _pcm, byte[] _bytes, int _length)
     {
         pcm = _pcm;
         Prepare(_bytes, _length);
     }
 
+    /// <summary>
+    /// Initializes a new empty <see cref="AudioBuffer"/> from a source's PCM configuration.
+    /// </summary>
+    /// <param name="source">The audio source whose PCM configuration to use.</param>
+    /// <param name="_size">The buffer capacity in samples.</param>
     public AudioBuffer(IAudioSource source, int _size)
     {
         pcm = source.PCM;
         size = _size;
     }
 
+    /// <summary>
+    /// Prepares the buffer for writing to a destination (no-op, reserved for future format validation).
+    /// </summary>
+    /// <param name="dest">The output destination.</param>
     public void Prepare(IAudioDest dest)
     {
         //if (dest.Settings.PCM.ChannelCount != pcm.ChannelCount || dest.Settings.PCM.BitsPerSample != pcm.BitsPerSample)
         //    throw new Exception("AudioBuffer format mismatch");
     }
 
+    /// <summary>
+    /// Prepares the buffer for reading from a source, validating format compatibility and clamping length.
+    /// </summary>
+    /// <param name="source">The audio source.</param>
+    /// <param name="maxLength">The maximum number of samples to read.</param>
+    /// <exception cref="Exception">Thrown if the source PCM format does not match.</exception>
     public void Prepare(IAudioSource source, int maxLength)
     {
         if (source.PCM.ChannelCount != pcm.ChannelCount || source.PCM.BitsPerSample != pcm.BitsPerSample)
@@ -363,6 +533,10 @@ public class AudioBuffer
         dataInFloat = false;
     }
 
+    /// <summary>
+    /// Prepares the buffer by resetting the length and invalidating cached data representations.
+    /// </summary>
+    /// <param name="maxLength">The maximum number of samples to read.</param>
     public void Prepare(int maxLength)
     {
         length = size;
@@ -376,6 +550,12 @@ public class AudioBuffer
         dataInFloat = false;
     }
 
+    /// <summary>
+    /// Prepares the buffer with existing integer sample data.
+    /// </summary>
+    /// <param name="_samples">The 2D sample array.</param>
+    /// <param name="_length">The number of valid samples.</param>
+    /// <exception cref="Exception">Thrown if <paramref name="_length"/> exceeds the array capacity.</exception>
     public void Prepare(int[,] _samples, int _length)
     {
         length = _length;
@@ -388,6 +568,12 @@ public class AudioBuffer
             throw new Exception("Invalid length");
     }
 
+    /// <summary>
+    /// Prepares the buffer with existing byte data.
+    /// </summary>
+    /// <param name="_bytes">The byte array containing PCM data.</param>
+    /// <param name="_length">The number of valid samples.</param>
+    /// <exception cref="Exception">Thrown if <paramref name="_length"/> exceeds the computed capacity.</exception>
     public void Prepare(byte[] _bytes, int _length)
     {
         length = _length;
@@ -410,6 +596,12 @@ public class AudioBuffer
             Buffer.BlockCopy(src.Float, srcOffset * pcm.ChannelCount * 4, Float, dstOffset * pcm.ChannelCount * 4, copyLength * pcm.ChannelCount * 4);
     }
 
+    /// <summary>
+    /// Prepares the buffer by copying a segment from another buffer.
+    /// </summary>
+    /// <param name="_src">The source audio buffer.</param>
+    /// <param name="_offset">The offset in the source buffer.</param>
+    /// <param name="_length">The maximum number of samples to copy.</param>
     public unsafe void Prepare(AudioBuffer _src, int _offset, int _length)
     {
         length = Math.Min(size, _src.Length - _offset);
@@ -437,6 +629,11 @@ public class AudioBuffer
         Load(0, _src, _offset, length);
     }
 
+    /// <summary>
+    /// Swaps the internal data of this buffer with another, resetting the other buffer to empty.
+    /// </summary>
+    /// <param name="buffer">The buffer to swap with.</param>
+    /// <exception cref="Exception">Thrown if the PCM formats do not match.</exception>
     public void Swap(AudioBuffer buffer)
     {
         if (pcm.BitsPerSample != buffer.PCM.BitsPerSample || pcm.ChannelCount != buffer.PCM.ChannelCount)
@@ -464,6 +661,14 @@ public class AudioBuffer
         buffer.dataInFloat = false;
     }
 
+    /// <summary>
+    /// Interlaces two mono sample buffers into the stereo byte buffer at the specified position. Operates on raw pointers.
+    /// </summary>
+    /// <param name="pos">The sample position in the output buffer to start writing.</param>
+    /// <param name="src1">Pointer to the left channel samples.</param>
+    /// <param name="src2">Pointer to the right channel samples.</param>
+    /// <param name="n">Number of sample pairs to interlace.</param>
+    /// <exception cref="Exception">Thrown if the PCM is not stereo or the bit depth is not 16 or 24.</exception>
     unsafe public void Interlace(int pos, int* src1, int* src2, int n)
     {
         if (PCM.ChannelCount != 2)

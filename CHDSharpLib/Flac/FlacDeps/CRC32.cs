@@ -1,14 +1,34 @@
 namespace CHDSharp.Flac.FlacDeps;
 
+/// <summary>
+/// Static class for computing 32-bit CRC checksums used in FLAC streams.
+/// Supports combining and subtracting CRCs for efficient multi-block operations.
+/// </summary>
 public static class Crc32
 {
+    /// <summary>
+    /// Precomputed CRC-32 lookup table (256 entries).
+    /// </summary>
     public static readonly uint[] table;
 
+    /// <summary>
+    /// Computes a 32-bit CRC checksum for a single byte, continuing from a previous CRC value.
+    /// </summary>
+    /// <param name="crc">The initial CRC value.</param>
+    /// <param name="val">The byte value to process.</param>
+    /// <returns>The updated 32-bit CRC checksum.</returns>
     public static uint ComputeChecksum(uint crc, byte val)
     {
         return (crc >> 8) ^ table[(crc & 0xff) ^ val];
     }
 
+    /// <summary>
+    /// Computes a 32-bit CRC checksum over a raw byte buffer, continuing from a previous CRC value. Operates on raw pointers.
+    /// </summary>
+    /// <param name="crc">The initial CRC value.</param>
+    /// <param name="bytes">The source byte pointer.</param>
+    /// <param name="count">The number of bytes to process.</param>
+    /// <returns>The updated 32-bit CRC checksum.</returns>
     public static unsafe uint ComputeChecksum(uint crc, byte* bytes, int count)
     {
         fixed (uint* t = table)
@@ -20,18 +40,39 @@ public static class Crc32
         return crc;
     }
 
+    /// <summary>
+    /// Computes a 32-bit CRC checksum over a portion of a byte array, continuing from a previous CRC value.
+    /// </summary>
+    /// <param name="crc">The initial CRC value.</param>
+    /// <param name="bytes">The source byte array.</param>
+    /// <param name="pos">The starting position in the array.</param>
+    /// <param name="count">The number of bytes to process.</param>
+    /// <returns>The updated 32-bit CRC checksum.</returns>
     public static unsafe uint ComputeChecksum(uint crc, byte[] bytes, int pos, int count)
     {
         fixed (byte* pbytes = &bytes[pos])
             return ComputeChecksum(crc, pbytes, count);
     }
 
+    /// <summary>
+    /// Computes a 32-bit CRC checksum for a 32-bit unsigned integer value (processed byte-by-byte in little-endian order).
+    /// </summary>
+    /// <param name="crc">The initial CRC value.</param>
+    /// <param name="s">The unsigned integer to process.</param>
+    /// <returns>The updated 32-bit CRC checksum.</returns>
     public static uint ComputeChecksum(uint crc, uint s)
     {
         return ComputeChecksum(ComputeChecksum(ComputeChecksum(ComputeChecksum(
             crc, (byte)s), (byte)(s >> 8)), (byte)(s >> 16)), (byte)(s >> 24));
     }
 
+    /// <summary>
+    /// Computes a 32-bit CRC checksum over an array of interleaved stereo samples. Operates on raw pointers.
+    /// </summary>
+    /// <param name="crc">The initial CRC value.</param>
+    /// <param name="samples">Pointer to interleaved stereo sample pairs.</param>
+    /// <param name="count">The number of stereo sample pairs to process.</param>
+    /// <returns>The updated 32-bit CRC checksum.</returns>
     public static unsafe uint ComputeChecksum(uint crc, int* samples, int count)
     {
         for (var i = 0; i < count; i++)
@@ -208,6 +249,14 @@ public static class Crc32
         }
     }
 
+    /// <summary>
+    /// Combines two 32-bit CRC checksums as if the data was concatenated.
+    /// </summary>
+    /// <param name="crc1">The CRC of the first data block.</param>
+    /// <param name="crc2">The CRC of the second data block.</param>
+    /// <param name="len2">The length of the second data block in bytes.</param>
+    /// <returns>The combined CRC value.</returns>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="len2"/> is negative.</exception>
     public static unsafe uint Combine(uint crc1, uint crc2, long len2)
     {
         /* degenerate case */
@@ -241,6 +290,14 @@ public static class Crc32
         return crc1;
     }
 
+    /// <summary>
+    /// Subtracts a 32-bit CRC checksum as if a block of data was removed.
+    /// </summary>
+    /// <param name="crc1">The CRC of the combined data.</param>
+    /// <param name="crc2">The CRC of the data block to subtract.</param>
+    /// <param name="len2">The length of the data block to subtract in bytes.</param>
+    /// <returns>The resulting CRC value after subtraction.</returns>
+    /// <exception cref="ArgumentException">Thrown if <paramref name="len2"/> is negative.</exception>
     public static unsafe uint Subtract(uint crc1, uint crc2, long len2)
     {
         /* degenerate case */

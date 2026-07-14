@@ -1,5 +1,8 @@
 ﻿namespace CHDSharp.Flac;
 
+/// <summary>
+/// Method for selecting the LPC order.
+/// </summary>
 public enum OrderMethod
 {
     /// <summary>

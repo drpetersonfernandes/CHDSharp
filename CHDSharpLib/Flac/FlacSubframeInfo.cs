@@ -2,8 +2,15 @@ using CHDSharp.Flac.FlacDeps;
 
 namespace CHDSharp.Flac;
 
+/// <summary>
+/// Tracks encoding and decoding state for a single subframe within a FLAC frame.
+/// Uses unsafe pointers for sample data.
+/// </summary>
 unsafe public class FlacSubframeInfo
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FlacSubframeInfo"/> class.
+    /// </summary>
     public FlacSubframeInfo()
     {
         best = new FlacSubframe();
@@ -16,6 +23,13 @@ unsafe public class FlacSubframeInfo
         }
     }
 
+    /// <summary>
+    /// Initializes the subframe info for encoding a new block of samples.
+    /// </summary>
+    /// <param name="s">Pointer to sample data.</param>
+    /// <param name="r">Pointer to residual buffer.</param>
+    /// <param name="bps">Bits per sample of the source audio.</param>
+    /// <param name="w">Wasted bits per sample.</param>
     public void Init(int* s, int* r, int bps, int w)
     {
         if (w > bps)
@@ -39,12 +53,36 @@ unsafe public class FlacSubframeInfo
         done_fixed = 0;
     }
 
+    /// <summary>
+    /// The best subframe encoding found so far.
+    /// </summary>
     public FlacSubframe best;
+    /// <summary>
+    /// Number of significant bits per sample (after removing wasted bits).
+    /// </summary>
     public int obits;
+    /// <summary>
+    /// Number of wasted bits per sample.
+    /// </summary>
     public int wbits;
+    /// <summary>
+    /// Pointer to the input sample data.
+    /// </summary>
     public int* samples;
+    /// <summary>
+    /// Bitmask indicating which fixed prediction orders have been evaluated.
+    /// </summary>
     public uint done_fixed;
+    /// <summary>
+    /// Estimated sizes for each fixed prediction order.
+    /// </summary>
     public ulong[] best_fixed;
+    /// <summary>
+    /// LPC analysis contexts, one per window.
+    /// </summary>
     public LpcContext[] lpc_ctx;
+    /// <summary>
+    /// LPC subframe information for the current encoding pass.
+    /// </summary>
     public LpcSubframeInfo sf;
 };

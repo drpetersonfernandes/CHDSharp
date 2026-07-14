@@ -16,6 +16,9 @@ internal class InvalidParamException : Exception
     public InvalidParamException() : base("Invalid Parameter") { }
 }
 
+/// <summary>
+/// Provides callback for reporting progress during compression or decompression.
+/// </summary>
 public interface ICodeProgress
 {
     /// <summary>

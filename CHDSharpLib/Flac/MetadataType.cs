@@ -1,5 +1,8 @@
 ﻿namespace CHDSharp.Flac;
 
+/// <summary>
+/// Type of metadata block in a FLAC stream.
+/// </summary>
 public enum MetadataType
 {
     /// <summary>

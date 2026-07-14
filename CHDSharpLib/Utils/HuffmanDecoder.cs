@@ -1,4 +1,4 @@
-﻿namespace CHDSharpLib.Utils;
+﻿namespace CHDSharp.Utils;
 
 internal enum huffman_error
 {
@@ -35,7 +35,7 @@ internal class HuffmanDecoder
 
     BitStream bitbuf;
 
-    private static uint MAKE_LOOKUP(uint code, uint bits) { return code << 5 | bits & 0x1f; }
+    private static uint MAKE_LOOKUP(uint code, uint bits) { return (code << 5) | (bits & 0x1f); }
 
 
     /*-------------------------------------------------
@@ -59,8 +59,10 @@ internal class HuffmanDecoder
         //decoder.prevdata = 0;
         //decoder.rleremaining = 0;
 
-        for (int i = 0; i < numcodes; i++)
+        for (var i = 0; i < numcodes; i++)
+        {
             huffnode[i] = new node_t();
+        }
 
         this.bitbuf = bitbuf;
     }
@@ -78,7 +80,7 @@ internal class HuffmanDecoder
     public uint DecodeOne()
     {
         /* peek ahead to get maxbits worth of data */
-        uint bits = bitbuf.peek(maxbits);
+        var bits = bitbuf.peek(maxbits);
 
         /* look it up, then remove the actual number of bits for this code */
         uint lookup = this.lookup[bits];
@@ -102,36 +104,47 @@ internal class HuffmanDecoder
 
         /* bits per entry depends on the maxbits */
         if (maxbits >= 16)
+        {
             numbits = 5;
+        }
         else if (maxbits >= 8)
+        {
             numbits = 4;
+        }
         else
+        {
             numbits = 3;
+        }
 
         /* loop until we read all the nodes */
         for (curnode = 0; curnode < numcodes;)
         {
             /* a non-one value is just raw */
-            int nodebits = (int)bitbuf.read(numbits);
+            var nodebits = (int)bitbuf.read(numbits);
             if (nodebits != 1)
+            {
                 huffnode[curnode++].numbits = (byte)nodebits;
-
+            }
             /* a one value is an escape code */
             else
             {
                 /* a double 1 is just a single 1 */
                 nodebits = (int)bitbuf.read(numbits);
                 if (nodebits == 1)
+                {
                     huffnode[curnode++].numbits = (byte)nodebits;
-
+                }
                 /* otherwise, we need one for value for the repeat count */
                 else
                 {
-                    int repcount = (int)bitbuf.read(numbits) + 3;
+                    var repcount = (int)bitbuf.read(numbits) + 3;
                     if (repcount + curnode > numcodes)
                         return huffman_error.HUFFERR_INVALID_DATA;
+
                     while (repcount-- != 0)
+                    {
                         huffnode[curnode++].numbits = (byte)nodebits;
+                    }
                 }
             }
         }
@@ -161,8 +174,8 @@ internal class HuffmanDecoder
     public huffman_error ImportTreeHuffman()
     {
         int start;
-        int last = 0;
-        int count = 0;
+        var last = 0;
+        var count = 0;
         int index;
         uint curcode;
         byte rlefullbits = 0;
@@ -170,14 +183,16 @@ internal class HuffmanDecoder
 
         huffman_error error;
         /* start by parsing the lengths for the small tree */
-        HuffmanDecoder smallhuff = new HuffmanDecoder(24, 6, bitbuf);
+        var smallhuff = new HuffmanDecoder(24, 6, bitbuf);
         smallhuff.huffnode[0].numbits = (byte)bitbuf.read(3);
         start = (int)bitbuf.read(3) + 1;
         for (index = 1; index < 24; index++)
         {
             if (index < start || count == 7)
 
+            {
                 smallhuff.huffnode[index].numbits = 0;
+            }
             else
             {
                 count = (int)bitbuf.read(3);
@@ -189,6 +204,7 @@ internal class HuffmanDecoder
         error = smallhuff.AssignCanonicalCodes();
         if (error != huffman_error.HUFFERR_NONE)
             return error;
+
         smallhuff.BuildLookupTable();
 
         /* determine the maximum length of an RLE count */
@@ -201,16 +217,23 @@ internal class HuffmanDecoder
         /* now process the rest of the data */
         for (curcode = 0; curcode < numcodes;)
         {
-            int value = (int)smallhuff.DecodeOne();
+            var value = (int)smallhuff.DecodeOne();
             if (value != 0)
+            {
                 huffnode[curcode++].numbits = (byte)(last = value - 1);
+            }
             else
             {
                 count = (int)bitbuf.read(3) + 2;
                 if (count == 7 + 2)
+                {
                     count += (int)bitbuf.read(rlefullbits);
+                }
+
                 for (; count != 0 && curcode < numcodes; count--)
+                {
                     huffnode[curcode++].numbits = (byte)last;
+                }
             }
         }
 
@@ -243,23 +266,27 @@ internal class HuffmanDecoder
         int codelen;
         uint curstart = 0;
         /* build up a histogram of bit lengths */
-        uint[] bithisto = new uint[33];
+        var bithisto = new uint[33];
         for (curcode = 0; curcode < numcodes; curcode++)
         {
 
-            node_t node = huffnode[curcode];
+            var node = huffnode[curcode];
             if (node.numbits > maxbits)
                 return huffman_error.HUFFERR_INTERNAL_INCONSISTENCY;
+
             if (node.numbits <= 32)
+            {
                 bithisto[node.numbits]++;
+            }
         }
 
         /* for each code length, determine the starting code number */
         for (codelen = 32; codelen > 0; codelen--)
         {
-            uint nextstart = curstart + bithisto[codelen] >> 1;
+            var nextstart = (curstart + bithisto[codelen]) >> 1;
             if (codelen != 1 && nextstart * 2 != curstart + bithisto[codelen])
                 return huffman_error.HUFFERR_INTERNAL_INCONSISTENCY;
+
             bithisto[codelen] = curstart;
             curstart = nextstart;
         }
@@ -268,9 +295,11 @@ internal class HuffmanDecoder
         /* now assign canonical codes */
         for (curcode = 0; curcode < numcodes; curcode++)
         {
-            node_t node = huffnode[curcode];
+            var node = huffnode[curcode];
             if (node.numbits > 0)
+            {
                 node.bits = bithisto[node.numbits]++;
+            }
         }
         return huffman_error.HUFFERR_NONE;
     }
@@ -287,20 +316,22 @@ internal class HuffmanDecoder
         for (curcode = 0; curcode < numcodes; curcode++)
         {
             /* process all nodes which have non-zero bits */
-            node_t node = huffnode[curcode];
+            var node = huffnode[curcode];
             if (node.numbits > 0)
             {
                 int shift;
                 uint dest;
                 uint destend;
                 /* set up the entry */
-                uint value = MAKE_LOOKUP(curcode, node.numbits);
+                var value = MAKE_LOOKUP(curcode, node.numbits);
                 /* fill all matching entries */
                 shift = maxbits - node.numbits;
                 dest = node.bits << shift;
-                destend = (node.bits + 1 << shift) - 1;
+                destend = ((node.bits + 1) << shift) - 1;
                 while (dest <= destend)
+                {
                     lookup[dest++] = (ushort)value;
+                }
             }
         }
     }

@@ -32,7 +32,7 @@ internal static class TestPaths
     /// <summary>A writable temp directory for building parent/child CHD pairs.</summary>
     public static string CreateTempDir()
     {
-        string dir = Path.Combine(Path.GetTempPath(), "CHDSharpTests_" + Guid.NewGuid().ToString("N"));
+        var dir = Path.Combine(Path.GetTempPath(), "CHDSharpTests_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         return dir;
     }
@@ -40,14 +40,16 @@ internal static class TestPaths
     private static string FindRepoRoot()
     {
         // Walk up from the test assembly location looking for the solution file.
-        string dir = AppContext.BaseDirectory;
+        var dir = AppContext.BaseDirectory;
         while (!string.IsNullOrEmpty(dir))
         {
             if (File.Exists(Path.Combine(dir, "CSharp_CHDSharp.sln")))
                 return dir;
-            DirectoryInfo parent = Directory.GetParent(dir);
+
+            var parent = Directory.GetParent(dir);
             if (parent == null)
                 break;
+
             dir = parent.FullName;
         }
         return null;

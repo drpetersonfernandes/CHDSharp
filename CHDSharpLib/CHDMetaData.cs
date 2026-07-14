@@ -1,33 +1,30 @@
-﻿using CHDSharpLib.Utils;
-using Serilog;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
+using CHDSharp.Utils;
+using Serilog;
 
-namespace CHDSharpLib;
+namespace CHDSharp;
 
 internal static class CHDMetaData
 {
     internal static uint CHD_MDFLAGS_CHECKSUM = 0x01;        // indicates data is checksummed
 
-    internal static chd_error ReadMetaData(Stream file, CHDHeader chd)
+    internal static chd_error ReadMetaData(Stream file, ChdHeader chd)
     {
-        using BinaryReader br = new BinaryReader(file, Encoding.UTF8, true);
+        using var br = new BinaryReader(file, Encoding.UTF8, true);
 
-        List<byte[]> metaHashes = new List<byte[]>();
+        var metaHashes = new List<byte[]>();
 
-        while (chd.metaoffset != 0)
+        while (chd.Metaoffset != 0)
         {
-            file.Seek((long)chd.metaoffset, SeekOrigin.Begin);
-            uint metaTag = br.ReadUInt32BE();
-            uint metaLength = br.ReadUInt32BE();
-            ulong metaNext = br.ReadUInt64BE();
-            uint metaFlags = metaLength >> 24;
+            file.Seek((long)chd.Metaoffset, SeekOrigin.Begin);
+            var metaTag = br.ReadUInt32BE();
+            var metaLength = br.ReadUInt32BE();
+            var metaNext = br.ReadUInt64BE();
+            var metaFlags = metaLength >> 24;
             metaLength &= 0x00ffffff;
 
-            byte[] metaData = new byte[metaLength];
+            var metaData = new byte[metaLength];
             file.ReadExactly(metaData, 0, metaData.Length);
 
             Log.Debug("{MetaTag}  Length: {MetaLength}",
@@ -45,10 +42,10 @@ internal static class CHDMetaData
                 metaHashes.Add(metadata_hash(metaTag, metaData));
 
             // set location of next meta data entry in the CHD (set to 0 if finished.)
-            chd.metaoffset = metaNext;
+            chd.Metaoffset = metaNext;
         }
 
-        if (chd.sha1 == null)
+        if (chd.Sha1 == null)
             return chd_error.CHDERR_NONE;
 
         // binary sort the metaHashes
@@ -57,17 +54,17 @@ internal static class CHDMetaData
         // build the final SHA1
         // starting with the 20 byte rawsha1 from the main CHD data
         // then add the 24 byte for each meta data entry
-        using SHA1 sha1Total = SHA1.Create();
-        sha1Total.TransformBlock(chd.rawsha1, 0, chd.rawsha1.Length, null, 0);
+        using var sha1Total = SHA1.Create();
+        sha1Total.TransformBlock(chd.Rawsha1, 0, chd.Rawsha1.Length, null, 0);
 
-        for (int i = 0; i < metaHashes.Count; i++)
+        for (var i = 0; i < metaHashes.Count; i++)
             sha1Total.TransformBlock(metaHashes[i], 0, metaHashes[i].Length, null, 0);
 
-        byte[] tmp = new byte[0];
+        var tmp = Array.Empty<byte>();
         sha1Total.TransformFinalBlock(tmp, 0, 0);
 
         // compare the calculated metaData + rawData SHA1 with sha1 from the CHD header
-        if (!Util.IsAllZeroArray(chd.sha1) && !Util.ByteArrEquals(chd.sha1, sha1Total.Hash))
+        if (!Util.IsAllZeroArray(chd.Sha1) && !Util.ByteArrEquals(chd.Sha1, sha1Total.Hash!))
             return chd_error.CHDERR_INVALID_METADATA;
 
         return chd_error.CHDERR_NONE;
@@ -78,16 +75,18 @@ internal static class CHDMetaData
         // 0-3  :  metaTag
         // 4-23 :  sha1 of the metaData
 
-        byte[] metaHash = new byte[24];
+        var metaHash = new byte[24];
         metaHash[0] = (byte)((metaTag >> 24) & 0xff);
         metaHash[1] = (byte)((metaTag >> 16) & 0xff);
         metaHash[2] = (byte)((metaTag >> 8) & 0xff);
         metaHash[3] = (byte)((metaTag >> 0) & 0xff);
-        using SHA1 sha1 = SHA1.Create();
-        byte[] metaDataHash = sha1.ComputeHash(metaData);
+        using var sha1 = SHA1.Create();
+        var metaDataHash = sha1.ComputeHash(metaData);
 
-        for (int i = 0; i < 20; i++)
+        for (var i = 0; i < 20; i++)
+        {
             metaHash[4 + i] = metaDataHash[i];
+        }
 
         return metaHash;
     }

@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using CHDSharpLib;
 using Xunit;
 
 namespace CHDSharp.Tests;
@@ -18,7 +17,10 @@ public class ChdListIntegrationTests
 {
     private readonly ITestOutputHelper _out;
 
-    public ChdListIntegrationTests(ITestOutputHelper output) => _out = output;
+    public ChdListIntegrationTests(ITestOutputHelper output)
+    {
+        _out = output;
+    }
 
     /// <summary>
     /// Full verification of one CHD file: header info vs chdman, deep CheckFile,
@@ -33,7 +35,7 @@ public class ChdListIntegrationTests
         if (!File.Exists(path))
             Assert.Skip($"CHD file not present: {path}");
 
-        string name = Path.GetFileName(path);
+        var name = Path.GetFileName(path);
         _out.WriteLine(string.Empty);
         _out.WriteLine($"=== {name} ===");
 
@@ -66,17 +68,17 @@ public class ChdListIntegrationTests
         if (!TestPaths.ChdmanAvailable)
             Assert.Skip("chdman.exe not available");
 
-        string name = Path.GetFileName(path);
+        var name = Path.GetFileName(path);
         _out.WriteLine(string.Empty);
         _out.WriteLine($"=== RandomAccess: {name} ===");
 
-        chd_error open = CHDFile.Open(path, out CHDFile chd);
+        var open = CHDFile.Open(path, out var chd);
         Assert.Equal(chd_error.CHDERR_NONE, open);
         using (chd)
         {
             ulong hb = chd.HunkBytes;
-            ulong total = chd.TotalBytes;
-            uint hunkCount = chd.HunkCount;
+            var total = chd.TotalBytes;
+            var hunkCount = chd.HunkCount;
 
             if (hunkCount < 2)
                 Assert.Skip("Need at least 2 hunks");
@@ -98,12 +100,12 @@ public class ChdListIntegrationTests
                 if (offset + (ulong)length > total)
                     continue;
 
-                byte[] chdmanBytes = Chdman.ExtractRaw(path, offset, (ulong)length);
+                var chdmanBytes = Chdman.ExtractRaw(path, offset, (ulong)length);
                 Assert.NotNull(chdmanBytes);
                 Assert.Equal(length, chdmanBytes.Length);
 
-                byte[] csharpBytes = new byte[length];
-                chd_error err = chd.Read(offset, csharpBytes, 0, length);
+                var csharpBytes = new byte[length];
+                var err = chd.Read(offset, csharpBytes, 0, length);
                 Assert.Equal(chd_error.CHDERR_NONE, err);
 
                 Assert.True(chdmanBytes.AsSpan().SequenceEqual(csharpBytes),
@@ -118,11 +120,11 @@ public class ChdListIntegrationTests
 
     private void VerifyHeaderInfo(string path, string name)
     {
-        Chdman.Info info = Chdman.GetInfo(path);
+        var info = Chdman.GetInfo(path);
         if (info == null)
             Assert.Skip("chdman info failed");
 
-        chd_error open = CHDFile.Open(path, out CHDFile chd);
+        var open = CHDFile.Open(path, out var chd);
         Assert.Equal(chd_error.CHDERR_NONE, open);
         using (chd)
         {
@@ -142,26 +144,26 @@ public class ChdListIntegrationTests
     private static void VerifyCheckFile(string path, string name)
     {
         using Stream s = File.OpenRead(path);
-        chd_error err = CHD.CheckFile(s, name, deepCheck: true,
-            out uint? version, out byte[] sha1, out byte[] md5);
+        var err = Chd.CheckFile(s, name, deepCheck: true,
+            out var version, out var sha1, out var md5);
         Assert.Equal(chd_error.CHDERR_NONE, err);
         Assert.NotNull(version);
     }
 
     private void VerifyChdmanAgrees(string path, string name)
     {
-        bool chdmanOk = Chdman.Verify(path);
+        var chdmanOk = Chdman.Verify(path);
         Assert.True(chdmanOk, $"chdman verify failed for {name}");
         _out.WriteLine("  chdman verify: OK");
     }
 
     private void VerifyFullReadSha1(string path, string name)
     {
-        chd_error open = CHDFile.Open(path, out CHDFile chd);
+        var open = CHDFile.Open(path, out var chd);
         Assert.Equal(chd_error.CHDERR_NONE, open);
         using (chd)
         {
-            byte[] rawSha1 = chd.RawSHA1;
+            var rawSha1 = chd.RawSHA1;
             if (rawSha1 == null || HashUtil.IsAllZero(rawSha1))
             {
                 _out.WriteLine("  FullRead SHA1: skipped (no raw SHA1 in V1/V2 header)");
@@ -169,7 +171,7 @@ public class ChdListIntegrationTests
             }
 
             _out.WriteLine($"  FullRead SHA1 ({chd.TotalBytes} bytes)...");
-            string computed = ComputeFullImageSha1(chd, _out);
+            var computed = ComputeFullImageSha1(chd, _out);
             _out.WriteLine($"  FullRead SHA1: expected={HashUtil.ToHex(rawSha1)} computed={computed}");
             Assert.Equal(HashUtil.ToHex(rawSha1), computed);
         }
@@ -178,15 +180,15 @@ public class ChdListIntegrationTests
     internal static string ComputeFullImageSha1(CHDFile chd, ITestOutputHelper out_ = null)
     {
         using var sha1 = System.Security.Cryptography.SHA1.Create();
-        byte[] buf = new byte[chd.HunkBytes];
-        ulong remaining = chd.TotalBytes;
+        var buf = new byte[chd.HunkBytes];
+        var remaining = chd.TotalBytes;
         ulong offset = 0;
-        ulong nextReport = chd.TotalBytes > 0 ? chd.TotalBytes / 10 : 0;
+        var nextReport = chd.TotalBytes > 0 ? chd.TotalBytes / 10 : 0;
 
         while (remaining > 0)
         {
-            int chunk = (int)Math.Min((ulong)buf.Length, remaining);
-            chd_error err = chd.Read(offset, buf, 0, chunk);
+            var chunk = (int)Math.Min((ulong)buf.Length, remaining);
+            var err = chd.Read(offset, buf, 0, chunk);
             Assert.Equal(chd_error.CHDERR_NONE, err);
             sha1.TransformBlock(buf, 0, chunk, null, 0);
             offset += (ulong)chunk;
@@ -194,12 +196,12 @@ public class ChdListIntegrationTests
 
             if (out_ != null && offset >= nextReport)
             {
-                int pct = chd.TotalBytes > 0 ? (int)(offset * 100 / chd.TotalBytes) : 100;
+                var pct = chd.TotalBytes > 0 ? (int)(offset * 100 / chd.TotalBytes) : 100;
                 out_.WriteLine($"    {pct}% ({offset}/{chd.TotalBytes} bytes)");
                 nextReport = offset + (chd.TotalBytes / 10);
             }
         }
-        sha1.TransformFinalBlock(System.Array.Empty<byte>(), 0, 0);
+        sha1.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
         return HashUtil.ToHex(sha1.Hash);
     }
 }

@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace CHDSharpLib.Utils;
+﻿namespace CHDSharp.Utils;
 
 internal class ArrayPool
 {

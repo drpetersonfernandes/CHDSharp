@@ -1,50 +1,47 @@
-﻿using System;
-using System.ComponentModel;
-using System.IO;
+﻿using System.ComponentModel;
 
-namespace CHDReaderTest.Flac.FlacDeps
+namespace CHDSharp.Flac.FlacDeps;
+
+public interface IAudioDecoderSettings
 {
-    public interface IAudioDecoderSettings
+    string Name { get; }
+
+    string Extension { get; }
+
+    Type DecoderType { get; }
+
+    int Priority { get; }
+
+    IAudioDecoderSettings Clone();
+}
+
+public static class IAudioDecoderSettingsExtensions
+{
+    public static bool HasBrowsableAttributes(this IAudioDecoderSettings settings)
     {
-        string Name { get; }
-
-        string Extension { get; }
-
-        Type DecoderType { get; }
-
-        int Priority { get; }
-
-        IAudioDecoderSettings Clone();
+        var hasBrowsable = false;
+        foreach (PropertyDescriptor property in TypeDescriptor.GetProperties(settings))
+        {
+            var isBrowsable = true;
+            foreach (var attribute in property.Attributes)
+            {
+                var browsable = attribute as BrowsableAttribute;
+                isBrowsable &= browsable == null || browsable.Browsable;
+            }
+            hasBrowsable |= isBrowsable;
+        }
+        return hasBrowsable;
     }
 
-    public static class IAudioDecoderSettingsExtensions
+    public static void Init(this IAudioDecoderSettings settings)
     {
-        public static bool HasBrowsableAttributes(this IAudioDecoderSettings settings)
-        {
-            bool hasBrowsable = false;
-            foreach (PropertyDescriptor property in TypeDescriptor.GetProperties(settings))
-            {
-                bool isBrowsable = true;
-                foreach (var attribute in property.Attributes)
-                {
-                    var browsable = attribute as BrowsableAttribute;
-                    isBrowsable &= browsable == null || browsable.Browsable;
-                }
-                hasBrowsable |= isBrowsable;
-            }
-            return hasBrowsable;
-        }
+        // Iterate through each property and call ResetValue()
+        foreach (PropertyDescriptor property in TypeDescriptor.GetProperties(settings))
+            property.ResetValue(settings);
+    }
 
-        public static void Init(this IAudioDecoderSettings settings)
-        {
-            // Iterate through each property and call ResetValue()
-            foreach (PropertyDescriptor property in TypeDescriptor.GetProperties(settings))
-                property.ResetValue(settings);
-        }
-
-        public static IAudioSource Open(this IAudioDecoderSettings settings, string path, Stream IO = null)
-        {
-            return Activator.CreateInstance(settings.DecoderType, settings, path, IO) as IAudioSource;
-        }
+    public static IAudioSource Open(this IAudioDecoderSettings settings, string path, Stream IO = null)
+    {
+        return Activator.CreateInstance(settings.DecoderType, settings, path, IO) as IAudioSource;
     }
 }

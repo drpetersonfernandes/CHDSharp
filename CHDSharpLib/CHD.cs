@@ -1,89 +1,83 @@
-using CHDSharpLib.Utils;
-using Serilog;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+using CHDSharp.Utils;
+using Serilog;
 
-namespace CHDSharpLib;
+namespace CHDSharp;
 
-internal class CHDHeader
+internal class ChdHeader
 {
-    public chd_codec[] compression;
-    public CHDReader[] chdReader;
+    public chd_codec[] Compression = null!;
+    public CHDReader[] ChdReader = null!;
 
-    public ulong totalbytes;
-    public uint blocksize;
-    public uint totalblocks;
+    public ulong Totalbytes;
+    public uint Blocksize;
+    public uint Totalblocks;
 
     // V5: size of a "unit" used for parent block address translation.
     // For V1-V4 parent entries the offset is a direct hunk index, so unitbytes
     // is only meaningful for V5 (set to blocksize as a harmless default otherwise).
-    public uint unitbytes;
+    public uint Unitbytes;
 
     // True when the V5 map is the uncompressed variant. In that map an offset
     // word of 0 means "read this hunk from the parent" (or zero-fill if none).
-    public bool uncompressedMap;
+    public bool UncompressedMap;
 
-    public MapEntry[] map;
+    public MapEntry[] Map = null!;
 
-    public byte[] md5; // just compressed data
-    public byte[] rawsha1; // just compressed data
-    public byte[] sha1; // includes the meta data
+    public byte[] Md5 = null!; // just compressed data
+    public byte[] Rawsha1 = null!; // just compressed data
+    public byte[] Sha1 = null!; // includes the meta data
 
-    public byte[] parentmd5;
-    public byte[] parentsha1;
+    public byte[] Parentmd5 = null!;
+    public byte[] Parentsha1 = null!;
 
-    public ulong metaoffset;
+    public ulong Metaoffset;
 }
 
 internal class MapEntry
 {
-    public compression_type comptype;
-    public uint length; // length of compressed data
-    public ulong offset; // offset of compressed data in file. Also index of source block for COMPRESSION_SELF 
-    public uint? crc = null; // V3 & V4
-    public ushort? crc16 = null; // V5
+    public compression_type Comptype;
+    public uint Length; // length of compressed data
+    public ulong Offset; // offset of compressed data in file. Also index of source block for COMPRESSION_SELF
+    public uint? Crc; // V3 & V4
+    public ushort? Crc16; // V5
 
-    public MapEntry selfMapEntry; // link to self MapEntry data used in COMPRESSION_SELF (replaces offset index)
+    public MapEntry SelfMapEntry = null!; // link to self MapEntry data used in COMPRESSION_SELF (replaces offset index)
 
     //Used to optimmize block reading so that any block in only decompressed once.
     public int UseCount;
 
-    public byte[] buffIn = null;
-    public byte[] buffOutCache = null;
-    public byte[] buffOut = null;
+    public byte[] BuffIn = null!;
+    public byte[] BuffOutCache = null!;
+    public byte[] BuffOut = null!;
 
     // Used in Parallel decompress to keep the blocks in order when hashing.
-    public bool Processed = false;
+    public bool Processed;
 
 
     // Used to calculate which blocks should have buffered copies kept.
     public int UsageWeight;
-    public bool KeepBufferCopy = false;
+    public bool KeepBufferCopy;
 }
 
-
-public static class CHD
+public static class Chd
 {
-    public static int taskCount = 8;
+    public const int TaskCount = 8;
 
-    public static chd_error CheckFile(Stream s, string filename, bool deepCheck, out uint? chdVersion, out byte[] chdSHA1, out byte[] chdMD5)
+    public static chd_error CheckFile(Stream s, string filename, bool deepCheck, out uint? chdVersion, out byte[]? chdSha1, out byte[]? chdMd5)
     {
-        chdSHA1 = null;
-        chdMD5 = null;
+        chdSha1 = null;
+        chdMd5 = null;
         chdVersion = null;
 
-        if (!CheckHeader(s, out uint length, out uint version))
+        if (!CheckHeader(s, out _, out var version))
             return chd_error.CHDERR_INVALID_FILE;
 
         Log.Information("CHD Version {Version}", version);
-        chd_error valid = chd_error.CHDERR_INVALID_DATA;
-        CHDHeader chd = null;
+        var valid = chd_error.CHDERR_INVALID_DATA;
+        ChdHeader? chd = null;
         try
         {
             switch (version)
@@ -121,46 +115,49 @@ public static class CHD
             return valid;
         }
 
-        chdSHA1 = chd.sha1 ?? chd.rawsha1;
-        chdMD5 = chd.md5;
-        chdVersion = version;
-
-        if (!Util.IsAllZeroArray(chd.parentmd5) || !Util.IsAllZeroArray(chd.parentsha1))
+        if (chd != null)
         {
-            Log.Warning("Child CHD found, cannot be processed");
-            return chd_error.CHDERR_REQUIRES_PARENT;
+            chdSha1 = chd.Sha1;
+            chdMd5 = chd.Md5;
+            chdVersion = version;
+
+            if (!Util.IsAllZeroArray(chd.Parentmd5) || !Util.IsAllZeroArray(chd.Parentsha1))
+            {
+                Log.Warning("Child CHD found, cannot be processed");
+                return chd_error.CHDERR_REQUIRES_PARENT;
+            }
+
+            if (!deepCheck)
+                return chd_error.CHDERR_NONE;
+
+            if (((ulong)chd.Totalblocks * (ulong)chd.Blocksize) != chd.Totalbytes)
+            {
+                Log.Debug("{BlocksXSize} != {TotalBytes}", (ulong)chd.Totalblocks * (ulong)chd.Blocksize, chd.Totalbytes);
+            }
+
+            var strComp = "";
+            foreach (var t in chd.Compression)
+            {
+                strComp += $", {t.ToString().Substring(10)}";
+            }
+
+            Log.Information("{Filename}, V:{Version} {Compression}", Path.GetFileName(filename), version, strComp);
+
+            ChdBlockRead.FindBlockReaders(chd);
+            ChdBlockRead.FindRepeatedBlocks(chd);
+            var blocksToKeep = (1024 * 1024 * 512) / (int)chd.Blocksize;
+            ChdBlockRead.KeepMostRepeatedBlocks(chd, blocksToKeep);
+
+            valid = DecompressDataParallel(s, chd);
+
+            if (valid != chd_error.CHDERR_NONE)
+            {
+                Log.Error("Data Decompress Failed: {Error}", valid);
+                return valid;
+            }
+
+            valid = CHDMetaData.ReadMetaData(s, chd);
         }
-
-        if (!deepCheck)
-            return chd_error.CHDERR_NONE;
-
-        if (((ulong)chd.totalblocks * (ulong)chd.blocksize) != chd.totalbytes)
-        {
-            Log.Debug("{BlocksXSize} != {TotalBytes}", (ulong)chd.totalblocks * (ulong)chd.blocksize, chd.totalbytes);
-        }
-
-
-        string strComp = "";
-        for (int i = 0; i < chd.compression.Length; i++)
-        {
-            strComp += $", {chd.compression[i].ToString().Substring(10)}";
-        }
-        Log.Information("{Filename}, V:{Version} {Compression}", Path.GetFileName(filename), version, strComp);
-
-        CHDBlockRead.FindBlockReaders(chd);
-        CHDBlockRead.FindRepeatedBlocks(chd);
-        int blocksToKeep = (1024 * 1024 * 512) / (int)chd.blocksize;
-        CHDBlockRead.KeepMostRepeatedBlocks(chd, blocksToKeep);
-
-        valid = taskCount == 0 ? DecompressData(s, chd) : DecompressDataParallel(s, chd);
-
-        if (valid != chd_error.CHDERR_NONE)
-        {
-            Log.Error("Data Decompress Failed: {Error}", valid);
-            return valid;
-        }
-
-        valid = CHDMetaData.ReadMetaData(s, chd);
 
         if (valid != chd_error.CHDERR_NONE)
         {
@@ -182,67 +179,66 @@ public static class CHD
     /// use <see cref="CheckFile"/> for the fast parallel path on standalone CHDs.
     /// </summary>
     public static chd_error CheckFileWithParent(string filename, string parentFilename,
-        out uint? chdVersion, out byte[] chdSHA1, out byte[] chdMD5)
+        out uint? chdVersion, out byte[]? chdSha1, out byte[]? chdMd5)
     {
         chdVersion = null;
-        chdSHA1 = null;
-        chdMD5 = null;
+        chdSha1 = null;
+        chdMd5 = null;
 
-        chd_error err = CHDFile.Open(filename, parentFilename, out CHDFile chd);
+        var err = CHDFile.Open(filename, parentFilename, out var chd);
         if (err != chd_error.CHDERR_NONE)
             return err;
 
         using (chd)
         {
-            chdVersion = chd.Version;
-            chdSHA1 = chd.SHA1;
-            chdMD5 = chd.MD5;
+            chdVersion = chd!.Version;
+            chdSha1 = chd!.SHA1;
+            chdMd5 = chd!.MD5;
 
-            byte[] expectedSha1 = chd.RawSHA1;
-            byte[] expectedMd5 = chd.MD5;
-            bool haveSha1 = expectedSha1 != null && !Util.IsAllZeroArray(expectedSha1);
-            bool haveMd5 = expectedMd5 != null && !Util.IsAllZeroArray(expectedMd5);
+            var expectedSha1 = chd.RawSHA1;
+            var expectedMd5 = chd.MD5;
+            var haveSha1 = expectedSha1 != null && !Util.IsAllZeroArray(expectedSha1);
+            var haveMd5 = expectedMd5 != null && !Util.IsAllZeroArray(expectedMd5);
 
-            using MD5 md5Check = haveMd5 ? MD5.Create() : null;
-            using SHA1 sha1Check = haveSha1 ? SHA1.Create() : null;
+            using var md5Check = haveMd5 ? MD5.Create() : null;
+            using var sha1Check = haveSha1 ? SHA1.Create() : null;
 
-            byte[] buffer = new byte[chd.HunkBytes];
-            ulong sizetoGo = chd.TotalBytes;
+            var buffer = new byte[chd.HunkBytes];
+            var sizetoGo = chd.TotalBytes;
             ulong offset = 0;
             while (sizetoGo > 0)
             {
-                int chunk = (int)Math.Min((ulong)buffer.Length, sizetoGo);
+                var chunk = (int)Math.Min((ulong)buffer.Length, sizetoGo);
                 err = chd.Read(offset, buffer, 0, chunk);
                 if (err != chd_error.CHDERR_NONE)
                     return err;
+
                 md5Check?.TransformBlock(buffer, 0, chunk, null, 0);
                 sha1Check?.TransformBlock(buffer, 0, chunk, null, 0);
                 offset += (ulong)chunk;
                 sizetoGo -= (ulong)chunk;
             }
 
-            byte[] tmp = new byte[0];
+            var tmp = Array.Empty<byte>();
             md5Check?.TransformFinalBlock(tmp, 0, 0);
             sha1Check?.TransformFinalBlock(tmp, 0, 0);
 
-            if (haveMd5 && !Util.ByteArrEquals(expectedMd5, md5Check.Hash))
-                return chd_error.CHDERR_DECOMPRESSION_ERROR;
-            if (haveSha1 && !Util.ByteArrEquals(expectedSha1, sha1Check.Hash))
+            if (expectedMd5 != null && md5Check != null && sha1Check != null && md5Check.Hash != null && sha1Check.Hash != null && expectedSha1 != null && ((haveMd5 && !Util.ByteArrEquals(expectedMd5, md5Check.Hash)) || (haveSha1 && !Util.ByteArrEquals(expectedSha1, sha1Check.Hash))))
                 return chd_error.CHDERR_DECOMPRESSION_ERROR;
 
             return chd_error.CHDERR_NONE;
         }
     }
 
-    private static readonly uint[] HeaderLengths = new uint[] { 0, 76, 80, 120, 108, 124 };
-    private static readonly byte[] id = { (byte)'M', (byte)'C', (byte)'o', (byte)'m', (byte)'p', (byte)'r', (byte)'H', (byte)'D' };
+    private static readonly uint[] HeaderLengths = [0, 76, 80, 120, 108, 124];
+    private static readonly byte[] Id = "MComprHD"u8.ToArray();
 
     public static bool CheckHeader(Stream file, out uint length, out uint version)
     {
-        for (int i = 0; i < id.Length; i++)
+        foreach (var t in Id)
         {
-            byte b = (byte)file.ReadByte();
-            if (b != id[i])
+            var b = (byte)file.ReadByte();
+            if (b != t)
             {
                 length = 0;
                 version = 0;
@@ -250,59 +246,57 @@ public static class CHD
             }
         }
 
-        using (BinaryReader br = new BinaryReader(file, Encoding.UTF8, true))
-        {
-            length = br.ReadUInt32BE();
-            version = br.ReadUInt32BE();
-            return HeaderLengths[version] == length;
-        }
+        using var br = new BinaryReader(file, Encoding.UTF8, true);
+        length = br.ReadUInt32BE();
+        version = br.ReadUInt32BE();
+        return HeaderLengths[version] == length;
     }
 
 
-    internal static chd_error DecompressData(Stream file, CHDHeader chd)
+    internal static chd_error DecompressData(Stream file, ChdHeader chd)
     {
         // stores the FLAC decompression classes for this instance.
-        CHDCodec codec = new CHDCodec();
+        var codec = new CHDCodec();
 
-        using BinaryReader br = new BinaryReader(file, Encoding.UTF8, true);
+        using var br = new BinaryReader(file, Encoding.UTF8, true);
 
-        using MD5 md5Check = chd.md5 != null ? MD5.Create() : null;
-        using SHA1 sha1Check = chd.rawsha1 != null ? SHA1.Create() : null;
+        using var md5Check = chd.Md5 != null ? MD5.Create() : null;
+        using var sha1Check = chd.Rawsha1 != null ? SHA1.Create() : null;
 
-        ArrayPool arrPool = new ArrayPool(chd.blocksize);
+        var arrPool = new ArrayPool(chd.Blocksize);
 
-        byte[] buffer = new byte[chd.blocksize];
+        var buffer = new byte[chd.Blocksize];
 
         try
         {
-            int block = 0;
-            ulong sizetoGo = chd.totalbytes;
+            var block = 0;
+            var sizetoGo = chd.Totalbytes;
             while (sizetoGo > 0)
             {
                 /* progress */
                 if ((block % 1000) == 0)
-                    Log.Debug("Verifying, {Percent:N1}% complete", 100 - sizetoGo * 100 / chd.totalbytes);
+                    Log.Debug("Verifying, {Percent:N1}% complete", 100 - sizetoGo * 100 / chd.Totalbytes);
 
-                MapEntry mapEntry = chd.map[block];
-                if (mapEntry.length > 0)
+                var mapEntry = chd.Map[block];
+                if (mapEntry.Length > 0)
                 {
-                    mapEntry.buffIn = arrPool.Rent();
-                    file.Seek((long)mapEntry.offset, System.IO.SeekOrigin.Begin);
-                    file.ReadExactly(mapEntry.buffIn, 0, (int)mapEntry.length);
+                    mapEntry.BuffIn = arrPool.Rent();
+                    file.Seek((long)mapEntry.Offset, SeekOrigin.Begin);
+                    file.ReadExactly(mapEntry.BuffIn, 0, (int)mapEntry.Length);
                 }
 
                 /* read the block into the cache */
-                chd_error err = CHDBlockRead.ReadBlock(mapEntry, arrPool, chd.chdReader, codec, buffer, (int)chd.blocksize);
+                var err = ChdBlockRead.ReadBlock(mapEntry, arrPool, chd.ChdReader, codec, buffer, (int)chd.Blocksize);
                 if (err != chd_error.CHDERR_NONE)
                     return err;
 
-                if (mapEntry.length > 0)
+                if (mapEntry.Length > 0)
                 {
-                    arrPool.Return(mapEntry.buffIn);
-                    mapEntry.buffIn = null;
+                    arrPool.Return(mapEntry.BuffIn);
+                    mapEntry.BuffIn = null!;
                 }
 
-                int sizenext = sizetoGo > (ulong)chd.blocksize ? (int)chd.blocksize : (int)sizetoGo;
+                var sizenext = sizetoGo > (ulong)chd.Blocksize ? (int)chd.Blocksize : (int)sizetoGo;
 
                 md5Check?.TransformBlock(buffer, 0, sizenext, null, 0);
                 sha1Check?.TransformBlock(buffer, 0, sizenext, null, 0);
@@ -310,8 +304,8 @@ public static class CHD
                 /* prepare for the next block */
                 block++;
                 sizetoGo -= (ulong)sizenext;
-
             }
+
             Log.Debug("Verifying, 100.0% complete");
         }
         catch (Exception e)
@@ -320,16 +314,17 @@ public static class CHD
             return chd_error.CHDERR_DECOMPRESSION_ERROR;
         }
 
-        byte[] tmp = new byte[0];
+        var tmp = Array.Empty<byte>();
         md5Check?.TransformFinalBlock(tmp, 0, 0);
         sha1Check?.TransformFinalBlock(tmp, 0, 0);
 
         // here it is now using the rawsha1 value from the header to validate the raw binary data.
-        if (chd.md5 != null && !Util.IsAllZeroArray(chd.md5) && !Util.ByteArrEquals(chd.md5, md5Check.Hash))
+        if (chd.Md5 != null && !Util.IsAllZeroArray(chd.Md5) && md5Check is { Hash: not null } && !Util.ByteArrEquals(chd.Md5, md5Check.Hash))
         {
             return chd_error.CHDERR_DECOMPRESSION_ERROR;
         }
-        if (chd.rawsha1 != null && !Util.IsAllZeroArray(chd.rawsha1) && !Util.ByteArrEquals(chd.rawsha1, sha1Check.Hash))
+
+        if (chd.Rawsha1 != null && !Util.IsAllZeroArray(chd.Rawsha1) && sha1Check is { Hash: not null } && !Util.ByteArrEquals(chd.Rawsha1, sha1Check.Hash))
         {
             return chd_error.CHDERR_DECOMPRESSION_ERROR;
         }
@@ -337,40 +332,40 @@ public static class CHD
         return chd_error.CHDERR_NONE;
     }
 
-
-
-    internal static chd_error DecompressDataParallel(Stream file, CHDHeader chd)
+    internal static chd_error DecompressDataParallel(Stream file, ChdHeader chd)
     {
-        using BinaryReader br = new BinaryReader(file, Encoding.UTF8, true);
+        using var br = new BinaryReader(file, Encoding.UTF8, true);
 
-        using MD5 md5Check = chd.md5 != null ? MD5.Create() : null;
-        using SHA1 sha1Check = chd.rawsha1 != null ? SHA1.Create() : null;
+        using var md5Check = chd.Md5 != null ? MD5.Create() : null;
+        using var sha1Check = chd.Rawsha1 != null ? SHA1.Create() : null;
 
-        using BlockingCollection<int> blocksToDecompress = new BlockingCollection<int>(taskCount * 100);
-        using BlockingCollection<int> blocksToHash = new BlockingCollection<int>(taskCount * 100);
-        chd_error errMaster = chd_error.CHDERR_NONE;
+        using var blocksToDecompress = new BlockingCollection<int>(TaskCount * 100);
+        using var blocksToHash = new BlockingCollection<int>(TaskCount * 100);
+        var errMaster = chd_error.CHDERR_NONE;
 
-        List<Task> allTasks = new List<Task>();
+        var allTasks = new List<Task>();
 
         var ts = new CancellationTokenSource();
-        CancellationToken ct = ts.Token;
+        var ct = ts.Token;
 
-        ArrayPool arrPoolIn = new ArrayPool(chd.blocksize);
-        ArrayPool arrPoolOut = new ArrayPool(chd.blocksize);
-        ArrayPool arrPoolCache = new ArrayPool(chd.blocksize);
+        var arrPoolIn = new ArrayPool(chd.Blocksize);
+        var arrPoolOut = new ArrayPool(chd.Blocksize);
+        var arrPoolCache = new ArrayPool(chd.Blocksize);
 
-        int blocksToKeep = (1024 * 1024 * 512) / (int)chd.blocksize;
-        SemaphoreSlim aheadLock = new SemaphoreSlim(blocksToKeep, blocksToKeep);
+        var blocksToKeep = (1024 * 1024 * 512) / (int)chd.Blocksize;
+        var aheadLock = new SemaphoreSlim(blocksToKeep, blocksToKeep);
 
-        Task producerThread = Task.Factory.StartNew(() =>
+        var producerThread = Task.Factory.StartNew(() =>
         {
             try
             {
-                uint blockPercent = chd.totalblocks / 100;
+                var blockPercent = chd.Totalblocks / 100;
                 if (blockPercent == 0)
+                {
                     blockPercent = 1;
+                }
 
-                for (int block = 0; block < chd.totalblocks; block++)
+                for (var block = 0; block < chd.Totalblocks; block++)
                 {
                     if (ct.IsCancellationRequested)
                         break;
@@ -385,25 +380,26 @@ public static class CHD
 
                         //progress?.Invoke($"Verifying: {(long)block * 100 / chd.totalblocks:N0}%     Load buffer: {blocksToDecompress.Count}    Hash buffer: {blocksToHash.Count}");;
 
-                        Log.Debug("Verifying: {Percent:N0}%", (long)block * 100 / chd.totalblocks);
+                        Log.Debug("Verifying: {Percent:N0}%", (long)block * 100 / chd.Totalblocks);
                     }
-                    MapEntry mapEntry = chd.map[block];
 
-                    if (mapEntry.length > 0)
+                    var mapEntry = chd.Map[block];
+
+                    if (mapEntry.Length > 0)
                     {
-                        if (file.Position != (long)mapEntry.offset)
-                            file.Seek((long)mapEntry.offset, System.IO.SeekOrigin.Begin);
+                        if (file.Position != (long)mapEntry.Offset)
+                            file.Seek((long)mapEntry.Offset, SeekOrigin.Begin);
 
-                        mapEntry.buffIn = arrPoolIn.Rent();
-                        file.ReadExactly(mapEntry.buffIn, 0, (int)mapEntry.length);
+                        mapEntry.BuffIn = arrPoolIn.Rent();
+                        file.ReadExactly(mapEntry.BuffIn, 0, (int)mapEntry.Length);
                     }
 
                     blocksToDecompress.Add(block, ct);
                 }
-                // this must be done to tell all the decompression threads to stop working and return.
-                for (int i = 0; i < taskCount; i++)
-                    blocksToDecompress.Add(-1);
 
+                // this must be done to tell all the decompression threads to stop working and return.
+                for (var i = 0; i < TaskCount; i++)
+                    blocksToDecompress.Add(-1);
             }
             catch
             {
@@ -411,43 +407,45 @@ public static class CHD
                     return;
 
                 if (errMaster == chd_error.CHDERR_NONE)
+                {
                     errMaster = chd_error.CHDERR_INVALID_FILE;
+                }
+
                 ts.Cancel();
             }
         });
         allTasks.Add(producerThread);
 
-
-
-
-        for (int i = 0; i < taskCount; i++)
+        for (var i = 0; i < TaskCount; i++)
         {
-            Task decompressionThread = Task.Factory.StartNew(() =>
+            var decompressionThread = Task.Factory.StartNew(() =>
             {
                 try
                 {
-                    CHDCodec codec = new CHDCodec();
+                    var codec = new CHDCodec();
                     while (true)
                     {
                         aheadLock.Wait(ct);
-                        int block = blocksToDecompress.Take(ct);
+                        var block = blocksToDecompress.Take(ct);
                         if (block == -1)
                             return;
-                        MapEntry mapEntry = chd.map[block];
-                        mapEntry.buffOut = arrPoolOut.Rent();
-                        chd_error err = CHDBlockRead.ReadBlock(mapEntry, arrPoolCache, chd.chdReader, codec, mapEntry.buffOut, (int)chd.blocksize);
+
+                        var mapEntry = chd.Map[block];
+                        mapEntry.BuffOut = arrPoolOut.Rent();
+                        var err = ChdBlockRead.ReadBlock(mapEntry, arrPoolCache, chd.ChdReader, codec, mapEntry.BuffOut, (int)chd.Blocksize);
                         if (err != chd_error.CHDERR_NONE)
                         {
                             ts.Cancel();
                             errMaster = err;
                             return;
                         }
+
                         blocksToHash.Add(block, ct);
 
-                        if (mapEntry.length > 0)
+                        if (mapEntry.Length > 0)
                         {
-                            arrPoolIn.Return(mapEntry.buffIn);
-                            mapEntry.buffIn = null;
+                            arrPoolIn.Return(mapEntry.BuffIn);
+                            mapEntry.BuffIn = null!;
                         }
                     }
                 }
@@ -455,45 +453,48 @@ public static class CHD
                 {
                     if (ct.IsCancellationRequested)
                         return;
+
                     if (errMaster == chd_error.CHDERR_NONE)
+                    {
                         errMaster = chd_error.CHDERR_DECOMPRESSION_ERROR;
+                    }
+
                     ts.Cancel();
                 }
             });
 
             allTasks.Add(decompressionThread);
-
         }
 
-        ulong sizetoGo = chd.totalbytes;
-        int proc = 0;
-        Task hashingThread = Task.Factory.StartNew(() =>
+        var sizetoGo = chd.Totalbytes;
+        var proc = 0;
+        var hashingThread = Task.Factory.StartNew(() =>
         {
             try
             {
                 while (true)
                 {
-                    int item = blocksToHash.Take(ct);
+                    var item = blocksToHash.Take(ct);
 
-                    chd.map[item].Processed = true;
-                    while (chd.map[proc].Processed == true)
+                    chd.Map[item].Processed = true;
+                    while (chd.Map[proc].Processed)
                     {
-                        int sizenext = sizetoGo > (ulong)chd.blocksize ? (int)chd.blocksize : (int)sizetoGo;
+                        var sizenext = sizetoGo > (ulong)chd.Blocksize ? (int)chd.Blocksize : (int)sizetoGo;
 
-                        MapEntry mapEntry = chd.map[proc];
+                        var mapEntry = chd.Map[proc];
 
-                        md5Check?.TransformBlock(mapEntry.buffOut, 0, sizenext, null, 0);
-                        sha1Check?.TransformBlock(mapEntry.buffOut, 0, sizenext, null, 0);
+                        md5Check?.TransformBlock(mapEntry.BuffOut, 0, sizenext, null, 0);
+                        sha1Check?.TransformBlock(mapEntry.BuffOut, 0, sizenext, null, 0);
 
-                        arrPoolOut.Return(mapEntry.buffOut);
-                        mapEntry.buffOut = null;
+                        arrPoolOut.Return(mapEntry.BuffOut);
+                        mapEntry.BuffOut = null!;
                         aheadLock.Release();
 
                         /* prepare for the next block */
                         sizetoGo -= (ulong)sizenext;
 
                         proc++;
-                        if (proc == chd.totalblocks)
+                        if (proc == chd.Totalblocks)
                             return;
                     }
                 }
@@ -504,10 +505,12 @@ public static class CHD
                     return;
 
                 if (errMaster == chd_error.CHDERR_NONE)
+                {
                     errMaster = chd_error.CHDERR_DECOMPRESSION_ERROR;
+                }
+
                 ts.Cancel();
             }
-
         });
         allTasks.Add(hashingThread);
 
@@ -516,33 +519,33 @@ public static class CHD
 
         Log.Debug("Verifying, 100% complete");
 
-        arrPoolIn.ReadStats(out int issuedArraysTotal, out int returnedArraysTotal);
-        Log.Debug("In: Issued Arrays Total {Issued}, returned Arrays Total {Returned}, block size {BlockSize}", issuedArraysTotal, returnedArraysTotal, chd.blocksize);
+        arrPoolIn.ReadStats(out var issuedArraysTotal, out var returnedArraysTotal);
+        Log.Debug("In: Issued Arrays Total {Issued}, returned Arrays Total {Returned}, block size {BlockSize}", issuedArraysTotal, returnedArraysTotal, chd.Blocksize);
         arrPoolOut.ReadStats(out issuedArraysTotal, out returnedArraysTotal);
-        Log.Debug("Out: Issued Arrays Total {Issued}, returned Arrays Total {Returned}, block size {BlockSize}", issuedArraysTotal, returnedArraysTotal, chd.blocksize);
+        Log.Debug("Out: Issued Arrays Total {Issued}, returned Arrays Total {Returned}, block size {BlockSize}", issuedArraysTotal, returnedArraysTotal, chd.Blocksize);
         arrPoolCache.ReadStats(out issuedArraysTotal, out returnedArraysTotal);
-        Log.Debug("Cache: Issued Arrays Total {Issued}, returned Arrays Total {Returned}, block size {BlockSize}", issuedArraysTotal, returnedArraysTotal, chd.blocksize);
+        Log.Debug("Cache: Issued Arrays Total {Issued}, returned Arrays Total {Returned}, block size {BlockSize}", issuedArraysTotal, returnedArraysTotal, chd.Blocksize);
 
         if (errMaster != chd_error.CHDERR_NONE)
 
             if (errMaster != chd_error.CHDERR_NONE)
                 return errMaster;
 
-        byte[] tmp = new byte[0];
+        var tmp = Array.Empty<byte>();
         md5Check?.TransformFinalBlock(tmp, 0, 0);
         sha1Check?.TransformFinalBlock(tmp, 0, 0);
 
         // here it is now using the rawsha1 value from the header to validate the raw binary data.
-        if (chd.md5 != null && !Util.IsAllZeroArray(chd.md5) && !Util.ByteArrEquals(chd.md5, md5Check.Hash))
+        if (chd.Md5 != null && !Util.IsAllZeroArray(chd.Md5) && md5Check is { Hash: not null } && !Util.ByteArrEquals(chd.Md5, md5Check.Hash))
         {
             return chd_error.CHDERR_DECOMPRESSION_ERROR;
         }
-        if (chd.rawsha1 != null && !Util.IsAllZeroArray(chd.rawsha1) && !Util.ByteArrEquals(chd.rawsha1, sha1Check.Hash))
+
+        if (chd.Rawsha1 != null && !Util.IsAllZeroArray(chd.Rawsha1) && sha1Check is { Hash: not null } && !Util.ByteArrEquals(chd.Rawsha1, sha1Check.Hash))
         {
             return chd_error.CHDERR_DECOMPRESSION_ERROR;
         }
 
         return chd_error.CHDERR_NONE;
     }
-
 }

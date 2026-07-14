@@ -1,32 +1,31 @@
-﻿using CHDReaderTest.Flac.FlacDeps;
-using CUETools.Codecs.Flake;
+﻿using CHDSharp.Flac;
+using CHDSharp.Flac.FlacDeps;
 
-namespace CHDSharpLib
+namespace CHDSharp;
+
+internal class CHDCodec
 {
-    internal class CHDCodec
-    {
-        internal AudioPCMConfig FLAC_settings = null;
-        internal AudioDecoder FLAC_audioDecoder = null;
-        internal AudioBuffer FLAC_audioBuffer = null;
+    internal AudioPCMConfig FLAC_settings = null!;
+    internal AudioDecoder FLAC_audioDecoder = null!;
+    internal AudioBuffer FLAC_audioBuffer = null!;
 
 
-        internal AudioPCMConfig AVHUFF_settings = null;
-        internal AudioDecoder AVHUFF_audioDecoder = null;
+    internal AudioPCMConfig AVHUFF_settings = null!;
+    internal AudioDecoder AVHUFF_audioDecoder = null!;
 
 
-        internal byte[] bSector = null;
-        internal byte[] bSubcode = null;
+    internal byte[] bSector = null!;
+    internal byte[] bSubcode = null!;
 
-        internal byte[] blzma = null;
+    internal byte[] blzma = null!;
 
-        internal ZstdSharp.Decompressor bZstd = null;
+    internal ZstdSharp.Decompressor bZstd = null!;
 
-        internal ushort[] bHuffman = null;
-        internal ushort[] bHuffmanHi = null;
-        internal ushort[] bHuffmanLo = null;
+    internal ushort[] bHuffman = null!;
+    internal ushort[] bHuffmanHi = null!;
+    internal ushort[] bHuffmanLo = null!;
 
-        internal ushort[] bHuffmanY = null;
-        internal ushort[] bHuffmanCB = null;
-        internal ushort[] bHuffmanCR = null;
-    }
+    internal ushort[] bHuffmanY = null!;
+    internal ushort[] bHuffmanCB = null!;
+    internal ushort[] bHuffmanCR = null!;
 }

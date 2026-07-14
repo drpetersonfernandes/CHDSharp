@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace CHDSharpLib;
+﻿namespace CHDSharp;
 
 internal static class CHDCommon
 {

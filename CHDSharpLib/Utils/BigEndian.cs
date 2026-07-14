@@ -1,7 +1,4 @@
-﻿using System;
-using System.IO;
-
-namespace CHDSharpLib.Utils;
+﻿namespace CHDSharp.Utils;
 
 
 public static class BigEndian
@@ -29,7 +26,7 @@ public static class BigEndian
     }
     public static UInt64 ReadUInt48BE(this BinaryReader binRdr)
     {
-        return (UInt64)(binRdr.ReadByte() << 40 | binRdr.ReadByte() << 32 | binRdr.ReadByte() << 24 | binRdr.ReadByte() << 16 | binRdr.ReadByte() << 8 | binRdr.ReadByte() << 0);
+        return (UInt64)((binRdr.ReadByte() << 40) | (binRdr.ReadByte() << 32) | (binRdr.ReadByte() << 24) | (binRdr.ReadByte() << 16) | (binRdr.ReadByte() << 8) | (binRdr.ReadByte() << 0));
     }
 
     public static UInt64 ReadUInt64BE(this BinaryReader binRdr)
@@ -44,7 +41,7 @@ public static class BigEndian
 
     public static byte[] ReadBytesRequired(this BinaryReader binRdr, int byteCount)
     {
-        byte[] result = binRdr.ReadBytes(byteCount);
+        var result = binRdr.ReadBytes(byteCount);
 
         if (result.Length != byteCount)
             throw new EndOfStreamException(string.Format("{0} bytes required from stream, but only {1} returned.", byteCount, result.Length));

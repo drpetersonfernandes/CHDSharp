@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using CHDSharpLib;
 using Xunit;
 
 namespace CHDSharp.Tests;
@@ -11,9 +10,9 @@ namespace CHDSharp.Tests;
 /// </summary>
 public class HeaderAndApiTests
 {
-    private static readonly byte[] Magic = { (byte)'M', (byte)'C', (byte)'o', (byte)'m', (byte)'p', (byte)'r', (byte)'H', (byte)'D' };
+    private static readonly byte[] Magic = "MComprHD"u8.ToArray();
 
-    private static byte[] BigEndian(uint v) => new[] { (byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v };
+    private static byte[] BigEndian(uint v) => [(byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v];
 
     private static MemoryStream BuildHeader(uint length, uint version)
     {
@@ -31,7 +30,7 @@ public class HeaderAndApiTests
     public void CheckHeader_ValidV5_ReturnsTrueWithVersion()
     {
         using var ms = BuildHeader(124, 5); // 124 is the correct V5 header length
-        bool ok = CHD.CheckHeader(ms, out uint length, out uint version);
+        var ok = Chd.CheckHeader(ms, out var length, out var version);
         Assert.True(ok);
         Assert.Equal(124u, length);
         Assert.Equal(5u, version);
@@ -46,7 +45,7 @@ public class HeaderAndApiTests
     public void CheckHeader_MatchesExpectedLengthPerVersion(uint version, uint length)
     {
         using var ms = BuildHeader(length, version);
-        Assert.True(CHD.CheckHeader(ms, out uint gotLen, out uint gotVer));
+        Assert.True(Chd.CheckHeader(ms, out var gotLen, out var gotVer));
         Assert.Equal(length, gotLen);
         Assert.Equal(version, gotVer);
     }
@@ -55,7 +54,7 @@ public class HeaderAndApiTests
     public void CheckHeader_WrongMagic_ReturnsFalse()
     {
         var ms = new MemoryStream(new byte[128]); // all zeros, no magic
-        Assert.False(CHD.CheckHeader(ms, out _, out _));
+        Assert.False(Chd.CheckHeader(ms, out _, out _));
     }
 
     [Fact]
@@ -63,13 +62,13 @@ public class HeaderAndApiTests
     {
         // Correct magic + version 5 but wrong declared length.
         using var ms = BuildHeader(999, 5);
-        Assert.False(CHD.CheckHeader(ms, out _, out _));
+        Assert.False(Chd.CheckHeader(ms, out _, out _));
     }
 
     [Fact]
     public void CHDFile_Open_MissingFile_ReturnsFileNotFound()
     {
-        chd_error err = CHDFile.Open(@"Z:\definitely\does\not\exist.chd", out CHDFile chd);
+        var err = CHDFile.Open(@"Z:\definitely\does\not\exist.chd", out var chd);
         Assert.Equal(chd_error.CHDERR_FILE_NOT_FOUND, err);
         Assert.Null(chd);
     }
@@ -78,7 +77,7 @@ public class HeaderAndApiTests
     public void CHDFile_Open_NonChdStream_ReturnsInvalidFile()
     {
         using var ms = new MemoryStream(new byte[256]); // no magic
-        chd_error err = CHDFile.Open(ms, leaveOpen: true, out CHDFile chd);
+        var err = CHDFile.Open(ms, leaveOpen: true, out var chd);
         Assert.Equal(chd_error.CHDERR_INVALID_FILE, err);
         Assert.Null(chd);
     }
@@ -87,7 +86,7 @@ public class HeaderAndApiTests
     public void CHDFile_Open_NonSeekableStream_ReturnsInvalidParameter()
     {
         using var ns = new NonSeekableStream();
-        chd_error err = CHDFile.Open(ns, leaveOpen: true, out CHDFile chd);
+        var err = CHDFile.Open(ns, leaveOpen: true, out var chd);
         Assert.Equal(chd_error.CHDERR_INVALID_PARAMETER, err);
         Assert.Null(chd);
     }

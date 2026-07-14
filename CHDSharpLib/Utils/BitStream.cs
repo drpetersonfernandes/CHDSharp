@@ -1,4 +1,4 @@
-﻿namespace CHDSharpLib.Utils;
+﻿namespace CHDSharp.Utils;
 
 internal class BitStream
 {
@@ -44,14 +44,17 @@ internal class BitStream
             while (bits <= 24)
             {
                 if (doffset < dlength)
-                    buffer |= (uint)readBuffer[doffset] << 24 - bits;
+                {
+                    buffer |= (uint)readBuffer[doffset] << (24 - bits);
+                }
+
                 doffset++;
                 bits += 8;
             }
         }
 
         /* return the data */
-        return buffer >> 32 - numbits;
+        return buffer >> (32 - numbits);
     }
 
     /*-----------------------------------------------------
@@ -72,7 +75,7 @@ internal class BitStream
     */
     public uint read(int numbits)
     {
-        uint result = peek(numbits);
+        var result = peek(numbits);
         remove(numbits);
         return result;
     }

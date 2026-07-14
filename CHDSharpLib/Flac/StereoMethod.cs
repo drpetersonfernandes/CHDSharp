@@ -1,15 +1,14 @@
 ﻿
-namespace CUETools.Codecs.Flake
+namespace CHDSharp.Flac;
+
+public enum StereoMethod
 {
-	public enum StereoMethod
-	{
-        Invalid,
-		Independent,
-		Estimate,
-		Evaluate,
-        Search,
-        EstimateX,
-        EvaluateX,
-        EstimateFixed,
-    }
+    Invalid,
+    Independent,
+    Estimate,
+    Evaluate,
+    Search,
+    EstimateX,
+    EvaluateX,
+    EstimateFixed,
 }

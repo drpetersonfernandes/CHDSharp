@@ -1,9 +1,8 @@
-﻿namespace CUETools.Codecs.Flake
+﻿namespace CHDSharp.Flac;
+
+public struct SeekPoint
 {
-    public struct SeekPoint
-    {
-        public long number;
-        public long offset;
-        public int framesize;
-    }
+    public long number;
+    public long offset;
+    public int framesize;
 }

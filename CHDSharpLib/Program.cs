@@ -1,5 +1,4 @@
-﻿using CHDSharpLib;
-using Serilog;
+﻿using Serilog;
 using System.Diagnostics;
 using System.Security.Cryptography;
 
@@ -14,7 +13,7 @@ internal class Program
             .WriteTo.Console(outputTemplate: "{Message:lj}{NewLine}{Exception}")
             .CreateLogger();
 
-        Stopwatch sw = new Stopwatch();
+        var sw = new Stopwatch();
         sw.Start();
 
         if (args.Length == 0)
@@ -63,10 +62,10 @@ internal class Program
             return;
         }
 
-        foreach (string arg in args)
+        foreach (var arg in args)
         {
-            string sDir = arg.Replace("\"", "");
-            DirectoryInfo di = new DirectoryInfo(sDir);
+            var sDir = arg.Replace("\"", "");
+            var di = new DirectoryInfo(sDir);
             checkdir(di, true);
         }
         Log.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
@@ -77,7 +76,7 @@ internal class Program
         Log.Information("Child:  {Name}", Path.GetFileName(childPath));
         Log.Information("Parent: {Name}", Path.GetFileName(parentPath));
 
-        chd_error err = CHDFile.Open(childPath, parentPath, out CHDFile chd);
+        var err = CHDFile.Open(childPath, parentPath, out var chd);
         if (err != chd_error.CHDERR_NONE)
         {
             Log.Information("  Open(child, parent) => {Error}", err);
@@ -86,9 +85,9 @@ internal class Program
         using (chd)
         {
             Log.Information("  Opened V{Version}: {TotalBytes} bytes, {HunkCount} hunks x {HunkBytes}", chd.Version, chd.TotalBytes, chd.HunkCount, chd.HunkBytes);
-            byte[] hbuf = new byte[chd.HunkBytes];
-            uint[] probes = chd.HunkCount <= 1 ? new uint[] { 0 } : new uint[] { 0, chd.HunkCount / 2, chd.HunkCount - 1 };
-            foreach (uint h in probes)
+            var hbuf = new byte[chd.HunkBytes];
+            var probes = chd.HunkCount <= 1 ? new uint[] { 0 } : new uint[] { 0, chd.HunkCount / 2, chd.HunkCount - 1 };
+            foreach (var h in probes)
             {
                 err = chd.ReadHunk(h, hbuf);
                 Log.Information("  ReadHunk({Hunk}) => {Error}", h, err);
@@ -97,10 +96,10 @@ internal class Program
             }
         }
 
-        err = CHD.CheckFileWithParent(childPath, parentPath, out uint? ver, out byte[] sha1, out _);
+        err = Chd.CheckFileWithParent(childPath, parentPath, out var ver, out var sha1, out _);
         Log.Information("  CheckFileWithParent => {Error}  (V{Version}, sha1={Sha1})", err, ver, sha1 != null ? ToHex(sha1) : "(none)");
 
-        chd_error noParent = CHDFile.Open(childPath, out CHDFile tmp);
+        var noParent = CHDFile.Open(childPath, out var tmp);
         tmp?.Dispose();
         Log.Information("  Open(child, no parent) => {Error}  (expected CHDERR_REQUIRES_PARENT if this is a child)", noParent);
     }
@@ -113,17 +112,17 @@ internal class Program
             return;
         }
 
-        string[] lines = File.ReadAllLines(listFile);
+        var lines = File.ReadAllLines(listFile);
         int pass = 0, fail = 0, skip = 0;
         var failures = new List<string>();
 
-        foreach (string raw in lines)
+        foreach (var raw in lines)
         {
-            string path = raw.Trim().Trim('"');
+            var path = raw.Trim().Trim('"');
             if (path.Length == 0)
                 continue;
 
-            string name = Path.GetFileName(path);
+            var name = Path.GetFileName(path);
             if (!File.Exists(path))
             {
                 Log.Information("[SKIP] {Name}  (not found)", name);
@@ -138,7 +137,7 @@ internal class Program
             try
             {
                 using Stream s = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 4096);
-                result = CHD.CheckFile(s, name, true, out version, out sha1, out _);
+                result = Chd.CheckFile(s, name, true, out version, out sha1, out _);
             }
             catch (Exception ex)
             {
@@ -147,7 +146,7 @@ internal class Program
             }
             fileSw.Stop();
 
-            string sha1Str = sha1 != null ? ToHex(sha1) : "(none)";
+            var sha1Str = sha1 != null ? ToHex(sha1) : "(none)";
             if (result == chd_error.CHDERR_NONE)
             {
                 Log.Information("[PASS] V{Version} {Name}  sha1={Sha1}  ({Time:N1}s)", version, name, sha1Str, fileSw.Elapsed.TotalSeconds);
@@ -163,13 +162,13 @@ internal class Program
 
         Log.Information("");
         Log.Information("==== Summary: {Pass} passed, {Fail} failed, {Skip} skipped, {Total} total ====", pass, fail, skip, pass + fail + skip);
-        foreach (string f in failures)
+        foreach (var f in failures)
             Log.Information("  FAIL: {Failure}", f);
     }
 
     static void RandomAccessTest(string file)
     {
-        chd_error err = CHDFile.Open(file, out CHDFile chd);
+        var err = CHDFile.Open(file, out var chd);
         if (err != chd_error.CHDERR_NONE)
         {
             Log.Information("Open failed: {Error}", err);
@@ -180,11 +179,11 @@ internal class Program
         {
             Log.Information("Opened V{Version}: {TotalBytes} bytes, {HunkCount} hunks x {HunkBytes} bytes", chd.Version, chd.TotalBytes, chd.HunkCount, chd.HunkBytes);
 
-            byte[] hbuf = new byte[chd.HunkBytes];
-            uint[] probes = chd.HunkCount <= 1
+            var hbuf = new byte[chd.HunkBytes];
+            var probes = chd.HunkCount <= 1
                 ? new uint[] { 0 }
                 : new uint[] { 0, chd.HunkCount / 2, chd.HunkCount - 1 };
-            foreach (uint h in probes)
+            foreach (var h in probes)
             {
                 err = chd.ReadHunk(h, hbuf);
                 Log.Information("  ReadHunk({Hunk}) => {Error}", h, err);
@@ -192,10 +191,10 @@ internal class Program
                     return;
             }
 
-            byte[] expectedSha1 = chd.RawSHA1;
-            byte[] expectedMd5 = chd.MD5;
-            bool haveSha1 = expectedSha1 != null && !IsAllZero(expectedSha1);
-            bool haveMd5 = expectedMd5 != null && !IsAllZero(expectedMd5);
+            var expectedSha1 = chd.RawSHA1;
+            var expectedMd5 = chd.MD5;
+            var haveSha1 = expectedSha1 != null && !IsAllZero(expectedSha1);
+            var haveMd5 = expectedMd5 != null && !IsAllZero(expectedMd5);
 
             if (!haveSha1 && !haveMd5)
             {
@@ -203,14 +202,14 @@ internal class Program
                 return;
             }
 
-            using SHA1 sha1 = haveSha1 ? SHA1.Create() : null;
-            using MD5 md5 = haveMd5 ? MD5.Create() : null;
-            byte[] buf = new byte[chd.HunkBytes];
-            ulong remaining = chd.TotalBytes;
+            using var sha1 = haveSha1 ? SHA1.Create() : null;
+            using var md5 = haveMd5 ? MD5.Create() : null;
+            var buf = new byte[chd.HunkBytes];
+            var remaining = chd.TotalBytes;
             ulong offset = 0;
             while (remaining > 0)
             {
-                int chunk = (int)Math.Min((ulong)buf.Length, remaining);
+                var chunk = (int)Math.Min((ulong)buf.Length, remaining);
                 err = chd.Read(offset, buf, 0, chunk);
                 if (err != chd_error.CHDERR_NONE)
                 {
@@ -227,14 +226,14 @@ internal class Program
 
             if (haveSha1)
             {
-                bool match = ByteEquals(sha1.Hash, expectedSha1);
+                var match = ByteEquals(sha1.Hash, expectedSha1);
                 Log.Information("  Full-image raw SHA1 {Result} header raw SHA1", match ? "MATCHES" : "DIFFERS from");
                 Log.Information("    computed: {Hash}", ToHex(sha1.Hash));
                 Log.Information("    header:   {Hash}", ToHex(expectedSha1));
             }
             if (haveMd5)
             {
-                bool match = ByteEquals(md5.Hash, expectedMd5);
+                var match = ByteEquals(md5.Hash, expectedMd5);
                 Log.Information("  Full-image MD5 {Result} header MD5", match ? "MATCHES" : "DIFFERS from");
                 Log.Information("    computed: {Hash}", ToHex(md5.Hash));
                 Log.Information("    header:   {Hash}", ToHex(expectedMd5));
@@ -244,36 +243,38 @@ internal class Program
 
     private static bool IsAllZero(byte[] a)
     {
-        foreach (byte b in a) if (b != 0) return false;
+        foreach (var b in a) if (b != 0) return false;
+
         return true;
     }
 
     private static bool ByteEquals(byte[] a, byte[] b)
     {
         if (a == null || b == null || a.Length != b.Length) return false;
-        for (int i = 0; i < a.Length; i++) if (a[i] != b[i]) return false;
+
+        for (var i = 0; i < a.Length; i++) if (a[i] != b[i]) return false;
+
         return true;
     }
 
     private static string ToHex(byte[] a)
     {
         if (a == null) return "(null)";
+
         return Convert.ToHexString(a).ToLowerInvariant();
     }
 
     static void checkdir(DirectoryInfo di, bool verify)
     {
-        FileInfo[] fi = di.GetFiles("*.chd");
-        foreach (FileInfo f in fi)
+        var fi = di.GetFiles("*.chd");
+        foreach (var f in fi)
         {
-            using (Stream s = new FileStream(f.FullName, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 4096))
-            {
-                CHD.CheckFile(s, f.Name, true, out uint? chdVersion, out byte[] chdSHA1, out byte[] chdMD5);
-            }
+            using Stream s = new FileStream(f.FullName, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 4096);
+            Chd.CheckFile(s, f.Name, true, out var chdVersion, out var chdSHA1, out var chdMD5);
         }
 
-        DirectoryInfo[] arrdi = di.GetDirectories();
-        foreach (DirectoryInfo d in arrdi)
+        var arrdi = di.GetDirectories();
+        foreach (var d in arrdi)
         {
             checkdir(d, verify);
         }

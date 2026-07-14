@@ -1,11 +1,12 @@
-﻿namespace CHDSharpLib.Utils;
+﻿namespace CHDSharp.Utils;
 
 internal static class Util
 {
     internal static bool IsAllZeroArray(byte[] b)
     {
         if (b == null) return true;
-        for (int i = 0; i < b.Length; i++)
+
+        for (var i = 0; i < b.Length; i++)
             if (b[i] != 0) return false;
 
         return true;
@@ -22,7 +23,7 @@ internal static class Util
             return false;
         }
 
-        for (int i = 0; i < b0.Length; i++)
+        for (var i = 0; i < b0.Length; i++)
         {
             if (b0[i] != b1[i])
             {
@@ -35,9 +36,9 @@ internal static class Util
 
     internal static int ByteArrCompare(byte[] x, byte[] y)
     {
-        for (int i = 0; i < x.Length; i++)
+        for (var i = 0; i < x.Length; i++)
         {
-            int v = x[i].CompareTo(y[i]);
+            var v = x[i].CompareTo(y[i]);
             if (v != 0)
                 return v;
         }
@@ -46,7 +47,7 @@ internal static class Util
 
     internal static bool isAscii(byte[] bytes)
     {
-        foreach (byte b in bytes)
+        foreach (var b in bytes)
         {
             if (b != 0 && b < 32)
                 return false;

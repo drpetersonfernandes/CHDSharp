@@ -1,14 +1,13 @@
-﻿namespace CHDReaderTest.Flac.FlacDeps
+﻿namespace CHDSharp.Flac.FlacDeps;
+
+public interface IAudioDest
 {
-    public interface IAudioDest
-    {
-        //IAudioEncoderSettings Settings { get; }
+    //IAudioEncoderSettings Settings { get; }
 
-        string Path { get; }
-        long FinalSampleCount { set; }
+    string Path { get; }
+    long FinalSampleCount { set; }
 
-        void Write(AudioBuffer buffer);
-        void Close();
-        void Delete();
-    }
+    void Write(AudioBuffer buffer);
+    void Close();
+    void Delete();
 }

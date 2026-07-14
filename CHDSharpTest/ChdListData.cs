@@ -14,7 +14,7 @@ internal static class ChdListData
     /// <summary>All CHD files found in the test folder, or from the list file as fallback.</summary>
     public static IReadOnlyList<string> AllPaths()
     {
-        string folder = TestPaths.ChdFolder;
+        var folder = TestPaths.ChdFolder;
         if (folder != null && Directory.Exists(folder))
             return Directory.GetFiles(folder, "*.chd", SearchOption.TopDirectoryOnly)
                 .Select(f => new FileInfo(f))
@@ -22,9 +22,9 @@ internal static class ChdListData
                 .Select(fi => fi.FullName)
                 .ToList();
 
-        string listFile = TestPaths.ChdListFile;
+        var listFile = TestPaths.ChdListFile;
         if (listFile == null || !File.Exists(listFile))
-            return System.Array.Empty<string>();
+            return [];
 
         return File.ReadAllLines(listFile)
             .Select(l => l.Trim().Trim('"'))
@@ -35,16 +35,17 @@ internal static class ChdListData
     /// <summary>xUnit MemberData source: one object[] per listed path.</summary>
     public static IEnumerable<object[]> Paths()
     {
-        IReadOnlyList<string> paths = AllPaths();
+        var paths = AllPaths();
         if (paths.Count == 0)
         {
             // Yield a single sentinel so the theory shows up (and skips) even
             // when the list file itself is absent.
-            yield return new object[] { null };
+            yield return [null];
+
             yield break;
         }
-        foreach (string p in paths)
-            yield return new object[] { p };
+        foreach (var p in paths)
+            yield return [p];
     }
 
     /// <summary>xUnit MemberData source: only files under 1 GB (for expensive per-range tests).</summary>
@@ -55,10 +56,11 @@ internal static class ChdListData
             .ToList();
         if (paths.Count == 0)
         {
-            yield return new object[] { null };
+            yield return [null];
+
             yield break;
         }
-        foreach (string p in paths)
-            yield return new object[] { p };
+        foreach (var p in paths)
+            yield return [p];
     }
 }

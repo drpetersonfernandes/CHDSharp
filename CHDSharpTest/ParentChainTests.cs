@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using CHDSharpLib;
 using Xunit;
 
 namespace CHDSharp.Tests;
@@ -39,9 +38,9 @@ public sealed class ParentChainFixture : IDisposable
             .Select(fi => fi.FullName)
             .ToList();
 
-        string source = candidates.FirstOrDefault(p =>
+        var source = candidates.FirstOrDefault(p =>
         {
-            chd_error e = CHDFile.Open(p, out CHDFile c);
+            var e = CHDFile.Open(p, out var c);
             if (e != chd_error.CHDERR_NONE) return false;
             using (c) return c.HunkBytes % 2448 == 0; // CD frame multiple
         });
@@ -58,8 +57,8 @@ public sealed class ParentChainFixture : IDisposable
         WrongParentPath = Path.Combine(TempDir, "wrongparent.chd");
 
         // Parent = recompressed copy of source; child = same source referencing parent.
-        Chdman.Result rParent = Chdman.CopyVerbose(source, ParentPath, "cdzl,cdfl");
-        Chdman.Result rChild = Chdman.CopyVerbose(source, ChildPath, "cdzl,cdfl", parentOut: ParentPath);
+        var rParent = Chdman.CopyVerbose(source, ParentPath, "cdzl,cdfl");
+        var rChild = Chdman.CopyVerbose(source, ChildPath, "cdzl,cdfl", parentOut: ParentPath);
         if (!File.Exists(ParentPath) || !File.Exists(ChildPath))
         {
             SkipReason = "chdman failed to build the parent/child set. " +
@@ -71,7 +70,7 @@ public sealed class ParentChainFixture : IDisposable
 
         // A "wrong parent" is any other source that recompresses successfully.
         // Best-effort only: the wrong-parent test skips if this could not be built.
-        foreach (string other in candidates.Where(p => p != source))
+        foreach (var other in candidates.Where(p => p != source))
         {
             if (Chdman.Copy(other, WrongParentPath, "cdzl,cdfl"))
             {
@@ -81,10 +80,12 @@ public sealed class ParentChainFixture : IDisposable
         }
 
         // Capture the source's raw SHA1 for correctness comparison.
-        if (CHDFile.Open(source, out CHDFile src) == chd_error.CHDERR_NONE)
+        if (CHDFile.Open(source, out var src) == chd_error.CHDERR_NONE)
         {
             using (src)
+            {
                 SourceRawSha1 = HashUtil.ToHex(src.RawSHA1);
+            }
         }
 
         Ready = true;
@@ -103,7 +104,10 @@ public sealed class ParentChainFixture : IDisposable
 public class ParentChainTests : IClassFixture<ParentChainFixture>
 {
     private readonly ParentChainFixture _fx;
-    public ParentChainTests(ParentChainFixture fx) => _fx = fx;
+    public ParentChainTests(ParentChainFixture fx)
+    {
+        _fx = fx;
+    }
 
     private void RequireReady()
     {
@@ -115,7 +119,7 @@ public class ParentChainTests : IClassFixture<ParentChainFixture>
     public void Child_WithoutParent_RequiresParent()
     {
         RequireReady();
-        chd_error err = CHDFile.Open(_fx.ChildPath, out CHDFile chd);
+        var err = CHDFile.Open(_fx.ChildPath, out var chd);
         chd?.Dispose();
         Assert.Equal(chd_error.CHDERR_REQUIRES_PARENT, err);
     }
@@ -124,7 +128,7 @@ public class ParentChainTests : IClassFixture<ParentChainFixture>
     public void Child_WithCorrectParent_Opens()
     {
         RequireReady();
-        chd_error err = CHDFile.Open(_fx.ChildPath, _fx.ParentPath, out CHDFile chd);
+        var err = CHDFile.Open(_fx.ChildPath, _fx.ParentPath, out var chd);
         using (chd)
             Assert.Equal(chd_error.CHDERR_NONE, err);
     }
@@ -135,7 +139,7 @@ public class ParentChainTests : IClassFixture<ParentChainFixture>
         RequireReady();
         if (!_fx.HasWrongParent)
             Assert.Skip("no alternate CHD available to use as a wrong parent");
-        chd_error err = CHDFile.Open(_fx.ChildPath, _fx.WrongParentPath, out CHDFile chd);
+        var err = CHDFile.Open(_fx.ChildPath, _fx.WrongParentPath, out var chd);
         chd?.Dispose();
         Assert.Equal(chd_error.CHDERR_INVALID_PARENT, err);
     }
@@ -144,11 +148,11 @@ public class ParentChainTests : IClassFixture<ParentChainFixture>
     public void Child_FullRead_MatchesSourceRawSha1()
     {
         RequireReady();
-        chd_error err = CHDFile.Open(_fx.ChildPath, _fx.ParentPath, out CHDFile chd);
+        var err = CHDFile.Open(_fx.ChildPath, _fx.ParentPath, out var chd);
         Assert.Equal(chd_error.CHDERR_NONE, err);
         using (chd)
         {
-            string computed = ChdListIntegrationTests.ComputeFullImageSha1(chd);
+            var computed = ChdListIntegrationTests.ComputeFullImageSha1(chd);
             Assert.Equal(_fx.SourceRawSha1, computed);
         }
     }
@@ -157,8 +161,8 @@ public class ParentChainTests : IClassFixture<ParentChainFixture>
     public void Child_CheckFileWithParent_Succeeds()
     {
         RequireReady();
-        chd_error err = CHD.CheckFileWithParent(_fx.ChildPath, _fx.ParentPath,
-            out uint? version, out _, out _);
+        var err = Chd.CheckFileWithParent(_fx.ChildPath, _fx.ParentPath,
+            out var version, out _, out _);
         Assert.Equal(chd_error.CHDERR_NONE, err);
         Assert.NotNull(version);
     }

@@ -43,7 +43,7 @@ internal static class Chdman
             StandardOutputEncoding = Encoding.UTF8,
             StandardErrorEncoding = Encoding.UTF8,
         };
-        foreach (string a in args)
+        foreach (var a in args)
             psi.ArgumentList.Add(a);
 
         using var p = Process.Start(psi);
@@ -56,11 +56,11 @@ internal static class Chdman
     /// <summary>Runs `chdman info -i file` and parses key fields. Returns null on failure.</summary>
     public static Info GetInfo(string file)
     {
-        Result r = Run("info", "-i", file);
+        var r = Run("info", "-i", file);
         if (r.ExitCode != 0)
             return null;
 
-        string text = r.All;
+        var text = r.All;
         var info = new Info
         {
             Version = ParseIntField(text, @"File Version:\s*(\d+)"),
@@ -99,7 +99,7 @@ internal static class Chdman
     /// <summary>Creates a re-compressed copy with the given codec list (e.g. "cdzs" or "zstd").</summary>
     public static bool Copy(string input, string output, string compression, string parentOut = null)
     {
-        var args = new System.Collections.Generic.List<string> { "copy", "-i", input, "-o", output, "-c", compression, "-f" };
+        var args = new List<string> { "copy", "-i", input, "-o", output, "-c", compression, "-f" };
         if (parentOut != null)
         {
             args.Add("-op");
@@ -111,7 +111,7 @@ internal static class Chdman
             UseShellExecute = false,
             CreateNoWindow = true,
         };
-        foreach (string a in args)
+        foreach (var a in args)
             psi.ArgumentList.Add(a);
 
         using var p = Process.Start(psi);
@@ -122,7 +122,7 @@ internal static class Chdman
     /// <summary>Same as <see cref="Copy"/> but returns the full chdman result for diagnostics.</summary>
     public static Result CopyVerbose(string input, string output, string compression, string parentOut = null)
     {
-        var args = new System.Collections.Generic.List<string> { "copy", "-i", input, "-o", output, "-c", compression, "-f" };
+        var args = new List<string> { "copy", "-i", input, "-o", output, "-c", compression, "-f" };
         if (parentOut != null)
         {
             args.Add("-op");
@@ -137,7 +137,7 @@ internal static class Chdman
     /// </summary>
     public static byte[] ExtractRaw(string input, ulong startByte, ulong length)
     {
-        string tempFile = Path.GetTempFileName();
+        var tempFile = Path.GetTempFileName();
         try
         {
             var psi = new ProcessStartInfo
@@ -161,6 +161,7 @@ internal static class Chdman
             p.WaitForExit();
             if (p.ExitCode != 0)
                 return null;
+
             return File.ReadAllBytes(tempFile);
         }
         finally
@@ -171,25 +172,25 @@ internal static class Chdman
 
     private static int ParseIntField(string text, string pattern)
     {
-        Match m = Regex.Match(text, pattern);
+        var m = Regex.Match(text, pattern);
         return m.Success ? int.Parse(m.Groups[1].Value) : 0;
     }
 
     private static ulong ParseULongField(string text, string pattern)
     {
-        Match m = Regex.Match(text, pattern);
+        var m = Regex.Match(text, pattern);
         return m.Success ? ulong.Parse(m.Groups[1].Value.Replace(",", "")) : 0;
     }
 
     private static string ParseStringField(string text, string pattern)
     {
-        Match m = Regex.Match(text, pattern);
+        var m = Regex.Match(text, pattern);
         return m.Success ? m.Groups[1].Value.Trim() : null;
     }
 
     private static string ParseHexField(string text, string pattern)
     {
-        Match m = Regex.Match(text, pattern);
+        var m = Regex.Match(text, pattern);
         return m.Success ? m.Groups[1].Value.ToLowerInvariant() : null;
     }
 }

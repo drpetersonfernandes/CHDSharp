@@ -321,7 +321,10 @@ public class LzmaStream : Stream
     /// </summary>
     /// <param name="value">Ignored.</param>
     /// <exception cref="NotSupportedException">Always thrown.</exception>
-	public override void SetLength(long value) => throw new NotSupportedException();
+	public override void SetLength(long value)
+    {
+        throw new NotSupportedException();
+    }
 
     /// <summary>
     /// Not supported. The stream is read-only.
@@ -330,16 +333,13 @@ public class LzmaStream : Stream
     /// <param name="offset">Ignored.</param>
     /// <param name="count">Ignored.</param>
     /// <exception cref="NotSupportedException">Always thrown.</exception>
-	public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+	public override void Write(byte[] buffer, int offset, int count)
+    {
+        throw new NotSupportedException();
+    }
 
     /// <summary>
     /// Gets the current LZMA/LZMA2 properties used for decompressing subsequent chunks.
     /// </summary>
-	public byte[] Properties
-    {
-        get
-        {
-            return props;
-        }
-    }
+	public byte[] Properties => props;
 }

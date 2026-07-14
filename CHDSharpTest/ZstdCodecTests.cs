@@ -46,7 +46,7 @@ public sealed class ZstdCodecFixture : IDisposable
         // A CD-type file (hunk size multiple of the CD frame) for cdzs.
         var cdSource = present.FirstOrDefault(p =>
         {
-            if (CHDFile.Open(p, out var c) != chd_error.CHDERR_NONE) return false;
+            if (ChdFile.Open(p, out var c) != chd_error.CHDERR_NONE) return false;
             using (c) return c.HunkBytes % 2448 == 0;
         });
         if (cdSource != null)
@@ -62,7 +62,7 @@ public sealed class ZstdCodecFixture : IDisposable
         // Any openable file recompressed to raw zstd (chdman picks a valid unit size).
         var rawSource = present.FirstOrDefault(p =>
         {
-            if (CHDFile.Open(p, out var c) != chd_error.CHDERR_NONE) return false;
+            if (ChdFile.Open(p, out var c) != chd_error.CHDERR_NONE) return false;
 
             c.Dispose();
             return true;
@@ -85,9 +85,9 @@ public sealed class ZstdCodecFixture : IDisposable
 
     private static string RawSha1(string path)
     {
-        if (CHDFile.Open(path, out var c) != chd_error.CHDERR_NONE)
+        if (ChdFile.Open(path, out var c) != chd_error.CHDERR_NONE)
             return null;
-        using (c) return HashUtil.ToHex(c.RawSHA1);
+        using (c) return HashUtil.ToHex(c.RawSha1);
     }
 
     public void Dispose()
@@ -111,7 +111,7 @@ public class ZstdCodecTests : IClassFixture<ZstdCodecFixture>
         if (_fx.CdzsPath == null)
             Assert.Skip(_fx.SkipReason ?? "cdzs test file unavailable");
 
-        var err = CHDFile.Open(_fx.CdzsPath, out var chd);
+        var err = ChdFile.Open(_fx.CdzsPath, out var chd);
         Assert.Equal(chd_error.CHDERR_NONE, err);
         using (chd)
         {
@@ -136,7 +136,7 @@ public class ZstdCodecTests : IClassFixture<ZstdCodecFixture>
         if (_fx.ZstdPath == null)
             Assert.Skip(_fx.SkipReason ?? "zstd test file unavailable");
 
-        var err = CHDFile.Open(_fx.ZstdPath, out var chd);
+        var err = ChdFile.Open(_fx.ZstdPath, out var chd);
         Assert.Equal(chd_error.CHDERR_NONE, err);
         using (chd)
         {

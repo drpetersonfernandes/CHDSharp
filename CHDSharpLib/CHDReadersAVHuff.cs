@@ -6,7 +6,7 @@ using CHDSharp.Models.Utils;
 using CHDSharp.Utils;
 
 namespace CHDSharp;
-internal static partial class CHDReaders
+internal static partial class ChdReaders
 {
     /*
      Source input buffer structure:
@@ -278,8 +278,8 @@ internal static partial class CHDReaders
                     m_audiolo_decoder!.AssignBitStream(bitbuf);
                     for (var sampnum = 0; sampnum < samples; sampnum++)
                     {
-                        var delta = (short)(m_audiohi_decoder!.DecodeOne() << 8);
-                        delta |= (short)m_audiolo_decoder!.DecodeOne();
+                        var delta = (short)(m_audiohi_decoder.DecodeOne() << 8);
+                        delta |= (short)m_audiolo_decoder.DecodeOne();
 
                         var newsample = prevsample + delta;
                         prevsample = newsample;

@@ -149,11 +149,5 @@ internal class InWindow
         _streamPos -= (UInt32)subValue;
     }
 
-    public bool IsDataStarved
-    {
-        get
-        {
-            return _streamPos - _pos < _keepSizeAfter;
-        }
-    }
+    public bool IsDataStarved => _streamPos - _pos < _keepSizeAfter;
 }

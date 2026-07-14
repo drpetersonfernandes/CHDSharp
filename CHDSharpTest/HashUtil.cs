@@ -6,7 +6,9 @@ namespace CHDSharp.Tests;
 internal static class HashUtil
 {
     public static string ToHex(byte[] data)
-        => data == null ? null : Convert.ToHexString(data).ToLowerInvariant();
+    {
+        return data == null ? null : Convert.ToHexString(data).ToLowerInvariant();
+    }
 
     public static bool IsAllZero(byte[] data)
     {

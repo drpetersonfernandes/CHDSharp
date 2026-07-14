@@ -351,33 +351,24 @@ public class AudioBuffer
     /// </summary>
     public int Length
     {
-        get { return length; }
-        set { length = value; }
+        get => length;
+        set => length = value;
     }
 
     /// <summary>
     /// Gets the total capacity of the buffer in samples.
     /// </summary>
-    public int Size
-    {
-        get { return size; }
-    }
+    public int Size => size;
 
     /// <summary>
     /// Gets the PCM configuration for this buffer.
     /// </summary>
-    public AudioPCMConfig PCM { get { return pcm; } }
+    public AudioPCMConfig PCM => pcm;
 
     /// <summary>
     /// Gets the length of valid data in bytes.
     /// </summary>
-    public int ByteLength
-    {
-        get
-        {
-            return length * pcm.BlockAlign;
-        }
-    }
+    public int ByteLength => length * pcm.BlockAlign;
 
     /// <summary>
     /// Gets the sample data as a 2D integer array. Converts from bytes on first access if necessary.

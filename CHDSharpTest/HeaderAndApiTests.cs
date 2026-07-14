@@ -13,7 +13,10 @@ public class HeaderAndApiTests
 {
     private static readonly byte[] Magic = "MComprHD"u8.ToArray();
 
-    private static byte[] BigEndian(uint v) => [(byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v];
+    private static byte[] BigEndian(uint v)
+    {
+        return [(byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v];
+    }
 
     private static MemoryStream BuildHeader(uint length, uint version)
     {
@@ -69,7 +72,7 @@ public class HeaderAndApiTests
     [Fact]
     public void CHDFile_Open_MissingFile_ReturnsFileNotFound()
     {
-        var err = CHDFile.Open(@"Z:\definitely\does\not\exist.chd", out var chd);
+        var err = ChdFile.Open(@"Z:\definitely\does\not\exist.chd", out var chd);
         Assert.Equal(chd_error.CHDERR_FILE_NOT_FOUND, err);
         Assert.Null(chd);
     }
@@ -78,7 +81,7 @@ public class HeaderAndApiTests
     public void CHDFile_Open_NonChdStream_ReturnsInvalidFile()
     {
         using var ms = new MemoryStream(new byte[256]); // no magic
-        var err = CHDFile.Open(ms, leaveOpen: true, out var chd);
+        var err = ChdFile.Open(ms, leaveOpen: true, out var chd);
         Assert.Equal(chd_error.CHDERR_INVALID_FILE, err);
         Assert.Null(chd);
     }
@@ -87,7 +90,7 @@ public class HeaderAndApiTests
     public void CHDFile_Open_NonSeekableStream_ReturnsInvalidParameter()
     {
         using var ns = new NonSeekableStream();
-        var err = CHDFile.Open(ns, leaveOpen: true, out var chd);
+        var err = ChdFile.Open(ns, leaveOpen: true, out var chd);
         Assert.Equal(chd_error.CHDERR_INVALID_PARAMETER, err);
         Assert.Null(chd);
     }
@@ -100,9 +103,24 @@ public class HeaderAndApiTests
         public override long Length => throw new NotSupportedException();
         public override long Position { get => 0; set => throw new NotSupportedException(); }
         public override void Flush() { }
-        public override int Read(byte[] buffer, int offset, int count) => 0;
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-        public override void SetLength(long value) => throw new NotSupportedException();
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            return 0;
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override void SetLength(long value)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            throw new NotSupportedException();
+        }
     }
 }

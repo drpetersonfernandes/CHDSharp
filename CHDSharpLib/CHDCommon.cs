@@ -2,14 +2,13 @@
 
 namespace CHDSharp;
 
-internal static class CHDCommon
+internal static class ChdCommon
 {
-
-    internal static chd_codec compTypeConv(uint ct)
+    internal static chd_codec CompTypeConv(uint ct)
     {
         switch (ct)
         {
-            case 1: return chd_codec.CHD_CODEC_ZLIB;
+            case 1:
             case 2: return chd_codec.CHD_CODEC_ZLIB;
             case 3: return chd_codec.CHD_CODEC_AVHUFF;
             default:
@@ -32,5 +31,4 @@ internal static class CHDCommon
                 return compression_type.COMPRESSION_ERROR;
         }
     }
-
 }

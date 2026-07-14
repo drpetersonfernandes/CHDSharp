@@ -73,7 +73,7 @@ public class ChdListIntegrationTests
         _out.WriteLine(string.Empty);
         _out.WriteLine($"=== RandomAccess: {name} ===");
 
-        var open = CHDFile.Open(path, out var chd);
+        var open = ChdFile.Open(path, out var chd);
         Assert.Equal(chd_error.CHDERR_NONE, open);
         using (chd)
         {
@@ -125,7 +125,7 @@ public class ChdListIntegrationTests
         if (info == null)
             Assert.Skip("chdman info failed");
 
-        var open = CHDFile.Open(path, out var chd);
+        var open = ChdFile.Open(path, out var chd);
         Assert.Equal(chd_error.CHDERR_NONE, open);
         using (chd)
         {
@@ -135,9 +135,9 @@ public class ChdListIntegrationTests
             Assert.Equal(info.TotalHunks, chd.HunkCount);
 
             if (info.Sha1 != null)
-                Assert.Equal(info.Sha1, HashUtil.ToHex(chd.SHA1));
+                Assert.Equal(info.Sha1, HashUtil.ToHex(chd.Sha1));
             if (info.DataSha1 != null)
-                Assert.Equal(info.DataSha1, HashUtil.ToHex(chd.RawSHA1));
+                Assert.Equal(info.DataSha1, HashUtil.ToHex(chd.RawSha1));
         }
         _out.WriteLine($"  Header: V{info.Version}, {info.LogicalBytes} bytes, SHA1={info.Sha1}, DataSHA1={info.DataSha1}");
     }
@@ -160,11 +160,11 @@ public class ChdListIntegrationTests
 
     private void VerifyFullReadSha1(string path, string name)
     {
-        var open = CHDFile.Open(path, out var chd);
+        var open = ChdFile.Open(path, out var chd);
         Assert.Equal(chd_error.CHDERR_NONE, open);
         using (chd)
         {
-            var rawSha1 = chd.RawSHA1;
+            var rawSha1 = chd.RawSha1;
             if (rawSha1 == null || HashUtil.IsAllZero(rawSha1))
             {
                 _out.WriteLine("  FullRead SHA1: skipped (no raw SHA1 in V1/V2 header)");
@@ -178,7 +178,7 @@ public class ChdListIntegrationTests
         }
     }
 
-    internal static string ComputeFullImageSha1(CHDFile chd, ITestOutputHelper out_ = null)
+    internal static string ComputeFullImageSha1(ChdFile chd, ITestOutputHelper out_ = null)
     {
         using var sha1 = System.Security.Cryptography.SHA1.Create();
         var buf = new byte[chd.HunkBytes];

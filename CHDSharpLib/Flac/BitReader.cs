@@ -97,21 +97,12 @@ unsafe public class BitReader
     /// <summary>
     /// Gets the current read position in bytes from the start of the buffer.
     /// </summary>
-    public int Position
-    {
-        get { return (int)(bptr_m - buffer_m - (have_bits_m >> 3)); }
-    }
+    public int Position => (int)(bptr_m - buffer_m - (have_bits_m >> 3));
 
     /// <summary>
     /// Gets a pointer to the underlying byte buffer.
     /// </summary>
-    public byte* Buffer
-    {
-        get
-        {
-            return buffer_m;
-        }
-    }
+    public byte* Buffer => buffer_m;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BitReader"/> class with default values.

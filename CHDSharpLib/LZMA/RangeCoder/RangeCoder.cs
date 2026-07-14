@@ -240,13 +240,7 @@ internal class Decoder
         return symbol;
     }
 
-    public bool IsFinished
-    {
-        get
-        {
-            return Code == 0;
-        }
-    }
+    public bool IsFinished => Code == 0;
 
     // ulong GetProcessedSize() {return Stream.GetProcessedSize(); }
 }

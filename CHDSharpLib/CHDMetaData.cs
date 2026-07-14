@@ -6,9 +6,9 @@ using Serilog;
 
 namespace CHDSharp;
 
-internal static class CHDMetaData
+internal static class ChdMetaData
 {
-    internal static uint CHD_MDFLAGS_CHECKSUM = 0x01;        // indicates data is checksummed
+    internal static readonly uint ChdMdflagsChecksum = 0x01; // indicates data is checksummed
 
     internal static chd_error ReadMetaData(Stream file, ChdHeader chd)
     {
@@ -39,7 +39,7 @@ internal static class CHDMetaData
             // take the 4 byte metaTag, and the metaData
             // SHA1 the metaData to 20 byte SHA1
             // metadata_hash return these 24 bytes in a byte[24]
-            if ((metaFlags & CHD_MDFLAGS_CHECKSUM) != 0)
+            if ((metaFlags & ChdMdflagsChecksum) != 0)
                 metaHashes.Add(metadata_hash(metaTag, metaData));
 
             // set location of next meta data entry in the CHD (set to 0 if finished.)
@@ -58,8 +58,8 @@ internal static class CHDMetaData
         using var sha1Total = SHA1.Create();
         sha1Total.TransformBlock(chd.Rawsha1, 0, chd.Rawsha1.Length, null, 0);
 
-        for (var i = 0; i < metaHashes.Count; i++)
-            sha1Total.TransformBlock(metaHashes[i], 0, metaHashes[i].Length, null, 0);
+        foreach (var t in metaHashes)
+            sha1Total.TransformBlock(t, 0, t.Length, null, 0);
 
         var tmp = Array.Empty<byte>();
         sha1Total.TransformFinalBlock(tmp, 0, 0);
@@ -70,6 +70,7 @@ internal static class CHDMetaData
 
         return chd_error.CHDERR_NONE;
     }
+
     private static byte[] metadata_hash(uint metaTag, byte[] metaData)
     {
         // make 24 byte metadata hash
@@ -81,8 +82,7 @@ internal static class CHDMetaData
         metaHash[1] = (byte)((metaTag >> 16) & 0xff);
         metaHash[2] = (byte)((metaTag >> 8) & 0xff);
         metaHash[3] = (byte)((metaTag >> 0) & 0xff);
-        using var sha1 = SHA1.Create();
-        var metaDataHash = sha1.ComputeHash(metaData);
+        var metaDataHash = SHA1.HashData(metaData);
 
         for (var i = 0; i < 20; i++)
         {

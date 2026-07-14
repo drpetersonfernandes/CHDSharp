@@ -64,26 +64,14 @@ public class AudioDecoder: IAudioSource
     /// </summary>
     public bool DoCRC
     {
-        get
-        {
-            return do_crc;
-        }
-        set
-        {
-            do_crc = value;
-        }
+        get => do_crc;
+        set => do_crc = value;
     }
 
     /// <summary>
     /// Gets the decoded sample buffer containing the current frame's audio data.
     /// </summary>
-    public int[] Samples
-    {
-        get
-        {
-            return samplesBuffer;
-        }
-    }
+    public int[] Samples => samplesBuffer;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AudioDecoder"/> class from a file path or stream.
@@ -168,34 +156,19 @@ public class AudioDecoder: IAudioSource
     /// <summary>
     /// Gets the total number of samples in the stream.
     /// </summary>
-    public long Length
-    {
-        get
-        {
-            return _sampleCount;
-        }
-    }
+    public long Length => _sampleCount;
 
     /// <summary>
     /// Gets the number of samples remaining from the current position to the end of the stream.
     /// </summary>
-    public long Remaining
-    {
-        get
-        {
-            return Length - Position;
-        }
-    }
+    public long Remaining => Length - Position;
 
     /// <summary>
     /// Gets or sets the current sample position within the stream. Setting the position seeks using the seek table if available.
     /// </summary>
     public long Position
     {
-        get
-        {
-            return _sampleOffset - _samplesInBuffer;
-        }
+        get => _sampleOffset - _samplesInBuffer;
         set
         {
             if (value > _sampleCount)
@@ -250,24 +223,12 @@ public class AudioDecoder: IAudioSource
     /// <summary>
     /// Gets the PCM audio configuration for this stream.
     /// </summary>
-    public AudioPCMConfig PCM
-    {
-        get
-        {
-            return pcm;
-        }
-    }
+    public AudioPCMConfig PCM => pcm;
 
     /// <summary>
     /// Gets the file path of the FLAC source, or null if reading from a stream.
     /// </summary>
-    public string Path
-    {
-        get
-        {
-            return _path;
-        }
-    }
+    public string Path => _path;
 
     unsafe void interlace(AudioBuffer buff, int offset, int count)
     {

@@ -478,13 +478,7 @@ unsafe public class LpcContext
     /// <summary>
     /// Gets the reflection coefficients computed during LPC analysis.
     /// </summary>
-    public double[] Reflection
-    {
-        get
-        {
-            return reflection_coeffs;
-        }
-    }
+    public double[] Reflection => reflection_coeffs;
 
     /// <summary>
     /// Bitmask tracking which precision/order combinations have been computed.

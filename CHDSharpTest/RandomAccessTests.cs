@@ -14,15 +14,17 @@ namespace CHDSharp.Tests;
 public class RandomAccessTests
 {
     private static string FirstAvailable()
-        => ChdListData.AllPaths().FirstOrDefault(File.Exists);
+    {
+        return ChdListData.AllPaths().FirstOrDefault(File.Exists);
+    }
 
-    private static CHDFile OpenFirstAvailable()
+    private static ChdFile OpenFirstAvailable()
     {
         var path = FirstAvailable();
         if (path == null)
             Assert.Skip("No CHD files from the list are present on this machine");
 
-        var err = CHDFile.Open(path, out var chd);
+        var err = ChdFile.Open(path, out var chd);
         Assert.Equal(chd_error.CHDERR_NONE, err);
         return chd;
     }

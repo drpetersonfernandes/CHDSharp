@@ -77,7 +77,7 @@ internal class Program
         Log.Information("Child:  {Name}", Path.GetFileName(childPath));
         Log.Information("Parent: {Name}", Path.GetFileName(parentPath));
 
-        var err = CHDFile.Open(childPath, parentPath, out var chd);
+        var err = ChdFile.Open(childPath, parentPath, out var chd);
         if (err != chd_error.CHDERR_NONE)
         {
             Log.Information("  Open(child, parent) => {Error}", err);
@@ -100,7 +100,7 @@ internal class Program
         err = Chd.CheckFileWithParent(childPath, parentPath, out var ver, out var sha1, out _);
         Log.Information("  CheckFileWithParent => {Error}  (V{Version}, sha1={Sha1})", err, ver, sha1 != null ? ToHex(sha1) : "(none)");
 
-        var noParent = CHDFile.Open(childPath, out var tmp);
+        var noParent = ChdFile.Open(childPath, out var tmp);
         tmp?.Dispose();
         Log.Information("  Open(child, no parent) => {Error}  (expected CHDERR_REQUIRES_PARENT if this is a child)", noParent);
     }
@@ -169,7 +169,7 @@ internal class Program
 
     static void RandomAccessTest(string file)
     {
-        var err = CHDFile.Open(file, out var chd);
+        var err = ChdFile.Open(file, out var chd);
         if (err != chd_error.CHDERR_NONE)
         {
             Log.Information("Open failed: {Error}", err);
@@ -192,8 +192,8 @@ internal class Program
                     return;
             }
 
-            var expectedSha1 = chd.RawSHA1;
-            var expectedMd5 = chd.MD5;
+            var expectedSha1 = chd.RawSha1;
+            var expectedMd5 = chd.Md5;
             var haveSha1 = expectedSha1 != null && !IsAllZero(expectedSha1);
             var haveMd5 = expectedMd5 != null && !IsAllZero(expectedMd5);
 

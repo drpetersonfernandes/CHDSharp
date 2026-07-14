@@ -7,17 +7,17 @@ namespace CHDSharp;
 /// Provides read-only random access to a CHD file (V1-V5), including parent /
 /// child differential CHD chains.
 ///
-/// Open a standalone CHD with <see cref="Open(string, out CHDFile)"/>. For a
+/// Open a standalone CHD with <see cref="Open(string, out ChdFile)"/>. For a
 /// child (differential) CHD, supply its parent with
-/// <see cref="Open(string, string, out CHDFile)"/> or
-/// <see cref="Open(string, CHDFile, out CHDFile)"/>. Then decompress individual
+/// <see cref="Open(string, string, out ChdFile)"/> or
+/// <see cref="Open(string, ChdFile, out ChdFile)"/>. Then decompress individual
 /// hunks with <see cref="ReadHunk"/> or read arbitrary byte ranges with
 /// <see cref="Read"/>.
 ///
 /// NOTE: an instance is NOT thread-safe. It seeks a shared stream and mutates
 /// shared per-hunk buffers, so all calls must be serialized by the caller.
 /// </summary>
-public sealed class CHDFile : IDisposable
+public sealed class ChdFile : IDisposable
 {
     private readonly Stream _stream;
     private readonly bool _leaveOpen;
@@ -25,7 +25,7 @@ public sealed class CHDFile : IDisposable
     private readonly CHDCodec _codec;
 
     // Parent CHD for differential (child) files. Null for standalone CHDs.
-    private CHDFile? _parent;
+    private ChdFile? _parent;
     private bool _ownsParent;
 
     // Reusable buffer + cache for byte-range reads.
@@ -36,7 +36,7 @@ public sealed class CHDFile : IDisposable
     // V5 COMPRESSION_PARENT reference.
     private byte[]? _parentScratch;
 
-    private CHDFile(Stream stream, bool leaveOpen, ChdHeader chd, uint version)
+    private ChdFile(Stream stream, bool leaveOpen, ChdHeader chd, uint version)
     {
         _stream = stream;
         _leaveOpen = leaveOpen;
@@ -58,13 +58,13 @@ public sealed class CHDFile : IDisposable
     public uint HunkCount => _chd.Totalblocks;
 
     /// <summary>SHA1 of the full image (including metadata for V4/V5), or the raw SHA1 when that is all that is available. May be null for V1/V2.</summary>
-    public byte[] SHA1 => _chd.Sha1 ?? _chd.Rawsha1;
+    public byte[] Sha1 => _chd.Sha1;
 
     /// <summary>SHA1 of ONLY the raw (decompressed) image data, excluding metadata. This is what a full sequential read of the image hashes to. Null for V1/V2.</summary>
-    public byte[] RawSHA1 => _chd.Rawsha1;
+    public byte[] RawSha1 => _chd.Rawsha1;
 
     /// <summary>MD5 of the raw image data (V1-V3). Null for V4/V5.</summary>
-    public byte[] MD5 => _chd.Md5;
+    public byte[] Md5 => _chd.Md5;
 
     /// <summary>True if this CHD is a differential child that requires a parent CHD to read.</summary>
     public bool RequiresParent => !Util.IsAllZeroArray(_chd.Parentmd5) || !Util.IsAllZeroArray(_chd.Parentsha1);
@@ -73,22 +73,24 @@ public sealed class CHDFile : IDisposable
     /// Opens a standalone CHD file from disk for random access. Fails with
     /// <see cref="chd_error.CHDERR_REQUIRES_PARENT"/> if the file is a child CHD.
     /// </summary>
-    public static chd_error Open(string filename, out CHDFile? chdFile)
-        => Open(filename, (CHDFile?)null, out chdFile);
+    public static chd_error Open(string filename, out ChdFile? chdFile)
+    {
+        return Open(filename, (ChdFile?)null, out chdFile);
+    }
 
     /// <summary>
     /// Opens a (possibly child) CHD from disk, resolving parent references
     /// against the parent CHD at <paramref name="parentFilename"/>. The parent is
     /// opened internally and disposed together with the returned instance.
     /// </summary>
-    public static chd_error Open(string filename, string parentFilename, out CHDFile? chdFile)
+    public static chd_error Open(string filename, string parentFilename, out ChdFile? chdFile)
     {
         chdFile = null;
 
-        CHDFile? parent = null;
+        ChdFile? parent = null;
         if (!string.IsNullOrEmpty(parentFilename))
         {
-            var perr = Open(parentFilename, (CHDFile?)null, out parent);
+            var perr = Open(parentFilename, (ChdFile?)null, out parent);
             if (perr != chd_error.CHDERR_NONE)
                 return perr;
         }
@@ -115,7 +117,7 @@ public sealed class CHDFile : IDisposable
     /// ownership of <paramref name="parent"/> (it is not disposed by this
     /// instance). Pass null for a standalone CHD.
     /// </summary>
-    public static chd_error Open(string filename, CHDFile? parent, out CHDFile? chdFile)
+    public static chd_error Open(string filename, ChdFile? parent, out ChdFile? chdFile)
     {
         chdFile = null;
         if (!File.Exists(filename))
@@ -142,17 +144,19 @@ public sealed class CHDFile : IDisposable
     /// </summary>
     /// <param name="stream">Seekable, readable stream positioned anywhere; it will be seeked as needed.</param>
     /// <param name="leaveOpen">If false, the stream is disposed when this instance is disposed.</param>
-    public static chd_error Open(Stream stream, bool leaveOpen, out CHDFile? chdFile)
-        => Open(stream, leaveOpen, null, out chdFile);
+    public static chd_error Open(Stream stream, bool leaveOpen, out ChdFile? chdFile)
+    {
+        return Open(stream, leaveOpen, null, out chdFile);
+    }
 
     /// <summary>
     /// Opens a (possibly child) CHD from an existing seekable stream, resolving
     /// parent references against <paramref name="parent"/> (null = standalone).
     /// </summary>
-    public static chd_error Open(Stream stream, bool leaveOpen, CHDFile? parent, out CHDFile? chdFile)
+    public static chd_error Open(Stream stream, bool leaveOpen, ChdFile? parent, out ChdFile? chdFile)
     {
         chdFile = null;
-        if (stream == null || !stream.CanRead || !stream.CanSeek)
+        if (stream is not { CanRead: true } || !stream.CanSeek)
             return chd_error.CHDERR_INVALID_PARAMETER;
 
         stream.Seek(0, SeekOrigin.Begin);
@@ -165,11 +169,11 @@ public sealed class CHDFile : IDisposable
         {
             switch (version)
             {
-                case 1: valid = CHDHeaders.ReadHeaderV1(stream, out chd); break;
-                case 2: valid = CHDHeaders.ReadHeaderV2(stream, out chd); break;
-                case 3: valid = CHDHeaders.ReadHeaderV3(stream, out chd); break;
-                case 4: valid = CHDHeaders.ReadHeaderV4(stream, out chd); break;
-                case 5: valid = CHDHeaders.ReadHeaderV5(stream, out chd); break;
+                case 1: valid = ChdHeaders.ReadHeaderV1(stream, out chd); break;
+                case 2: valid = ChdHeaders.ReadHeaderV2(stream, out chd); break;
+                case 3: valid = ChdHeaders.ReadHeaderV3(stream, out chd); break;
+                case 4: valid = ChdHeaders.ReadHeaderV4(stream, out chd); break;
+                case 5: valid = ChdHeaders.ReadHeaderV5(stream, out chd); break;
                 default: return chd_error.CHDERR_UNSUPPORTED_VERSION;
             }
         }
@@ -200,7 +204,7 @@ public sealed class CHDFile : IDisposable
         // needed for random access and is deliberately skipped.)
         LinkSelfBlocks(chd);
 
-        chdFile = new CHDFile(stream, leaveOpen, chd, version);
+        chdFile = new ChdFile(stream, leaveOpen, chd, version);
         chdFile._parent = needsParent ? parent : null;
         return chd_error.CHDERR_NONE;
     }
@@ -217,7 +221,7 @@ public sealed class CHDFile : IDisposable
             return chd_error.CHDERR_INVALID_PARENT;
 
         var childSha1 = child.Parentsha1;
-        var parentSha1 = parent.Sha1 ?? parent.Rawsha1;
+        var parentSha1 = parent.Sha1;
         if (childSha1 != null && parentSha1 != null &&
             !Util.IsAllZeroArray(childSha1) && !Util.IsAllZeroArray(parentSha1) &&
             !Util.ByteArrEquals(childSha1, parentSha1))
@@ -228,9 +232,8 @@ public sealed class CHDFile : IDisposable
 
     private static void LinkSelfBlocks(ChdHeader chd)
     {
-        for (var i = 0; i < chd.Map.Length; i++)
+        foreach (var me in chd.Map)
         {
-            var me = chd.Map[i];
             if (me.Comptype == compression_type.COMPRESSION_SELF)
             {
                 me.SelfMapEntry = chd.Map[me.Offset];
@@ -258,7 +261,7 @@ public sealed class CHDFile : IDisposable
 
         // Resolve the entry that actually holds compressed data (follow SELF links).
         var dataEntry = me;
-        while (dataEntry.Comptype == compression_type.COMPRESSION_SELF && dataEntry.SelfMapEntry != null)
+        while (dataEntry is { Comptype: compression_type.COMPRESSION_SELF })
         {
             dataEntry = dataEntry.SelfMapEntry;
         }
@@ -369,9 +372,7 @@ public sealed class CHDFile : IDisposable
     public chd_error Read(ulong byteOffset, byte[] destination, int destinationOffset, int count)
     {
         if (destination == null || destinationOffset < 0 || count < 0 ||
-            destinationOffset + count > destination.Length)
-            return chd_error.CHDERR_INVALID_PARAMETER;
-        if (byteOffset + (ulong)count > _chd.Totalbytes)
+            destinationOffset + count > destination.Length || byteOffset + (ulong)count > _chd.Totalbytes)
             return chd_error.CHDERR_INVALID_PARAMETER;
 
         _hunkBuffer ??= new byte[_chd.Blocksize];
@@ -390,6 +391,7 @@ public sealed class CHDFile : IDisposable
                     _cachedHunk = -1;
                     return err;
                 }
+
                 _cachedHunk = hunk;
             }
 

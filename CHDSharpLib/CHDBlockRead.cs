@@ -147,32 +147,32 @@ internal static class ChdBlockRead
 
     internal static void FindBlockReaders(ChdHeader chd)
     {
-        chd.ChdReader = new CHDReader[chd.Compression.Length];
+        chd.ChdReader = new ChdReader[chd.Compression.Length];
         for (var i = 0; i < chd.Compression.Length; i++)
         {
             chd.ChdReader[i] = GetReaderFromCodec(chd.Compression[i]);
         }
     }
 
-    private static CHDReader GetReaderFromCodec(chd_codec chdCodec)
+    private static ChdReader GetReaderFromCodec(chd_codec chdCodec)
     {
         switch (chdCodec)
         {
-            case chd_codec.CHD_CODEC_ZLIB: return CHDReaders.zlib;
-            case chd_codec.CHD_CODEC_LZMA: return CHDReaders.lzma;
-            case chd_codec.CHD_CODEC_HUFFMAN: return CHDReaders.huffman;
-            case chd_codec.CHD_CODEC_FLAC: return CHDReaders.flac;
-            case chd_codec.CHD_CODEC_ZSTD: return CHDReaders.zstd;
-            case chd_codec.CHD_CODEC_CD_ZLIB: return CHDReaders.cdzlib;
-            case chd_codec.CHD_CODEC_CD_LZMA: return CHDReaders.cdlzma;
-            case chd_codec.CHD_CODEC_CD_FLAC: return CHDReaders.cdflac;
-            case chd_codec.CHD_CODEC_CD_ZSTD: return CHDReaders.cdzstd;
-            case chd_codec.CHD_CODEC_AVHUFF: return CHDReaders.avHuff;
+            case chd_codec.CHD_CODEC_ZLIB: return ChdReaders.Zlib;
+            case chd_codec.CHD_CODEC_LZMA: return ChdReaders.Lzma;
+            case chd_codec.CHD_CODEC_HUFFMAN: return ChdReaders.Huffman;
+            case chd_codec.CHD_CODEC_FLAC: return ChdReaders.Flac;
+            case chd_codec.CHD_CODEC_ZSTD: return ChdReaders.Zstd;
+            case chd_codec.CHD_CODEC_CD_ZLIB: return ChdReaders.Cdzlib;
+            case chd_codec.CHD_CODEC_CD_LZMA: return ChdReaders.Cdlzma;
+            case chd_codec.CHD_CODEC_CD_FLAC: return ChdReaders.Cdflac;
+            case chd_codec.CHD_CODEC_CD_ZSTD: return ChdReaders.Cdzstd;
+            case chd_codec.CHD_CODEC_AVHUFF: return ChdReaders.avHuff;
             default: return null!;
         }
     }
 
-    internal static chd_error ReadBlock(MapEntry mapEntry, ArrayPool arrPool, CHDReader[] compression, CHDCodec codec, byte[] buffOut, int buffOutLength)
+    internal static chd_error ReadBlock(MapEntry mapEntry, ArrayPool arrPool, ChdReader[] compression, CHDCodec codec, byte[] buffOut, int buffOutLength)
     {
         var checkCrc = true;
 
@@ -230,6 +230,7 @@ internal static class ChdBlockRead
                             mapEntry.BuffOutCache = arrPool.Rent();
                             Array.Copy(buffOut, 0, mapEntry.BuffOutCache, 0, buffOutLength);
                         }
+
                         break;
                     }
 
@@ -244,6 +245,7 @@ internal static class ChdBlockRead
 
                     checkCrc = false;
                 }
+
                 break;
             }
 

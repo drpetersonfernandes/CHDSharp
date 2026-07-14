@@ -92,27 +92,33 @@ public class AudioPCMConfig
     /// <summary>
     /// Gets the number of bits per sample.
     /// </summary>
-    public int BitsPerSample { get { return _bitsPerSample; } }
+    public int BitsPerSample => _bitsPerSample;
+
     /// <summary>
     /// Gets the number of channels.
     /// </summary>
-    public int ChannelCount { get { return _channelCount; } }
+    public int ChannelCount => _channelCount;
+
     /// <summary>
     /// Gets the sample rate in Hz.
     /// </summary>
-    public int SampleRate { get { return _sampleRate; } }
+    public int SampleRate => _sampleRate;
+
     /// <summary>
     /// Gets the block alignment in bytes (calculated from channel count and bits per sample).
     /// </summary>
-    public int BlockAlign { get { return _channelCount * ((_bitsPerSample + 7) / 8); } }
+    public int BlockAlign => _channelCount * ((_bitsPerSample + 7) / 8);
+
     /// <summary>
     /// Gets the speaker channel mask.
     /// </summary>
-    public SpeakerConfig ChannelMask { get { return _channelMask; } }
+    public SpeakerConfig ChannelMask => _channelMask;
+
     /// <summary>
     /// Gets a value indicating whether the configuration matches Red Book audio CD format (16-bit, 2-channel, 44100 Hz).
     /// </summary>
-    public bool IsRedBook { get { return _bitsPerSample == 16 && _channelCount == 2 && _sampleRate == 44100; } }
+    public bool IsRedBook => _bitsPerSample == 16 && _channelCount == 2 && _sampleRate == 44100;
+
     /// <summary>
     /// Counts the number of set bits in the speaker mask, which represents the number of channels.
     /// </summary>

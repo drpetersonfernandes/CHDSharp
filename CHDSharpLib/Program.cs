@@ -11,7 +11,7 @@ internal class Program
     {
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
-            .WriteTo.Console(outputTemplate: "{Message:lj}{NewLine}{Exception}")
+            .WriteTo.Console(formatProvider: null, outputTemplate: "{Message:lj}{NewLine}{Exception}")
             .CreateLogger();
 
         var sw = new Stopwatch();
@@ -27,48 +27,38 @@ internal class Program
             return;
         }
 
-        if (args[0] == "--random")
+        switch (args[0])
         {
-            if (args.Length < 2)
-            {
+            case "--random" when args.Length < 2:
                 Log.Information("--random requires a .chd file path");
                 return;
-            }
-            RandomAccessTest(args[1].Replace("\"", ""));
-            Log.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
-            return;
-        }
-
-        if (args[0] == "--list")
-        {
-            if (args.Length < 2)
-            {
+            case "--random":
+                RandomAccessTest(args[1].Replace("\"", ""));
+                Log.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
+            case "--list" when args.Length < 2:
                 Log.Information("--list requires a text file of .chd paths");
                 return;
-            }
-            VerifyList(args[1].Replace("\"", ""));
-            Log.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
-            return;
-        }
-
-        if (args[0] == "--parent")
-        {
-            if (args.Length < 3)
-            {
+            case "--list":
+                VerifyList(args[1].Replace("\"", ""));
+                Log.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
+            case "--parent" when args.Length < 3:
                 Log.Information("--parent requires <child.chd> <parent.chd>");
                 return;
-            }
-            ParentTest(args[1].Replace("\"", ""), args[2].Replace("\"", ""));
-            Log.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
-            return;
+            case "--parent":
+                ParentTest(args[1].Replace("\"", ""), args[2].Replace("\"", ""));
+                Log.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
         }
 
         foreach (var arg in args)
         {
             var sDir = arg.Replace("\"", "");
             var di = new DirectoryInfo(sDir);
-            checkdir(di);
+            Checkdir(di);
         }
+
         Log.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
     }
 
@@ -83,17 +73,21 @@ internal class Program
             Log.Information("  Open(child, parent) => {Error}", err);
             return;
         }
+
         using (chd)
         {
-            Log.Information("  Opened V{Version}: {TotalBytes} bytes, {HunkCount} hunks x {HunkBytes}", chd.Version, chd.TotalBytes, chd.HunkCount, chd.HunkBytes);
-            var hbuf = new byte[chd.HunkBytes];
-            var probes = chd.HunkCount <= 1 ? new uint[] { 0 } : new uint[] { 0, chd.HunkCount / 2, chd.HunkCount - 1 };
-            foreach (var h in probes)
+            if (chd != null)
             {
-                err = chd.ReadHunk(h, hbuf);
-                Log.Information("  ReadHunk({Hunk}) => {Error}", h, err);
-                if (err != ChdError.Chderrnone)
-                    return;
+                Log.Information("  Opened V{Version}: {TotalBytes} bytes, {HunkCount} hunks x {HunkBytes}", chd.Version, chd.TotalBytes, chd.HunkCount, chd.HunkBytes);
+                var hbuf = new byte[chd.HunkBytes];
+                var probes = chd.HunkCount <= 1 ? new uint[] { 0 } : new uint[] { 0, chd.HunkCount / 2, chd.HunkCount - 1 };
+                foreach (var h in probes)
+                {
+                    err = chd.ReadHunk(h, hbuf);
+                    Log.Information("  ReadHunk({Hunk}) => {Error}", h, err);
+                    if (err != ChdError.Chderrnone)
+                        return;
+                }
             }
         }
 
@@ -134,7 +128,7 @@ internal class Program
             var fileSw = Stopwatch.StartNew();
             ChdError result;
             uint? version = null;
-            byte[] sha1 = null;
+            byte[]? sha1 = null;
             try
             {
                 using Stream s = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 4096);
@@ -145,6 +139,7 @@ internal class Program
                 result = ChdError.Chderrdecompressionerror;
                 Log.Information("       exception: {Message}", ex.Message);
             }
+
             fileSw.Stop();
 
             var sha1Str = sha1 != null ? ToHex(sha1) : "(none)";
@@ -178,66 +173,73 @@ internal class Program
 
         using (chd)
         {
-            Log.Information("Opened V{Version}: {TotalBytes} bytes, {HunkCount} hunks x {HunkBytes} bytes", chd.Version, chd.TotalBytes, chd.HunkCount, chd.HunkBytes);
-
-            var hbuf = new byte[chd.HunkBytes];
-            var probes = chd.HunkCount <= 1
-                ? new uint[] { 0 }
-                : new uint[] { 0, chd.HunkCount / 2, chd.HunkCount - 1 };
-            foreach (var h in probes)
+            if (chd != null)
             {
-                err = chd.ReadHunk(h, hbuf);
-                Log.Information("  ReadHunk({Hunk}) => {Error}", h, err);
-                if (err != ChdError.Chderrnone)
-                    return;
-            }
+                Log.Information("Opened V{Version}: {TotalBytes} bytes, {HunkCount} hunks x {HunkBytes} bytes", chd.Version, chd.TotalBytes, chd.HunkCount, chd.HunkBytes);
 
-            var expectedSha1 = chd.RawSha1;
-            var expectedMd5 = chd.Md5;
-            var haveSha1 = expectedSha1 != null && !IsAllZero(expectedSha1);
-            var haveMd5 = expectedMd5 != null && !IsAllZero(expectedMd5);
-
-            if (!haveSha1 && !haveMd5)
-            {
-                Log.Information("  No raw-data hash stored in header; skipping full-image validation.");
-                return;
-            }
-
-            using var sha1 = haveSha1 ? SHA1.Create() : null;
-            using var md5 = haveMd5 ? MD5.Create() : null;
-            var buf = new byte[chd.HunkBytes];
-            var remaining = chd.TotalBytes;
-            ulong offset = 0;
-            while (remaining > 0)
-            {
-                var chunk = (int)Math.Min((ulong)buf.Length, remaining);
-                err = chd.Read(offset, buf, 0, chunk);
-                if (err != ChdError.Chderrnone)
+                var hbuf = new byte[chd.HunkBytes];
+                var probes = chd.HunkCount <= 1
+                    ? new uint[] { 0 }
+                    : new uint[] { 0, chd.HunkCount / 2, chd.HunkCount - 1 };
+                foreach (var h in probes)
                 {
-                    Log.Information("  Read(offset={Offset}) => {Error}", offset, err);
+                    err = chd.ReadHunk(h, hbuf);
+                    Log.Information("  ReadHunk({Hunk}) => {Error}", h, err);
+                    if (err != ChdError.Chderrnone)
+                        return;
+                }
+
+                var expectedSha1 = chd.RawSha1;
+                var expectedMd5 = chd.Md5;
+                var haveSha1 = expectedSha1 != null && !IsAllZero(expectedSha1);
+                var haveMd5 = expectedMd5 != null && !IsAllZero(expectedMd5);
+
+                if (!haveSha1 && !haveMd5)
+                {
+                    Log.Information("  No raw-data hash stored in header; skipping full-image validation.");
                     return;
                 }
-                sha1?.TransformBlock(buf, 0, chunk, null, 0);
-                md5?.TransformBlock(buf, 0, chunk, null, 0);
-                offset += (ulong)chunk;
-                remaining -= (ulong)chunk;
-            }
-            sha1?.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
-            md5?.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
 
-            if (haveSha1)
-            {
-                var match = ByteEquals(sha1.Hash, expectedSha1);
-                Log.Information("  Full-image raw SHA1 {Result} header raw SHA1", match ? "MATCHES" : "DIFFERS from");
-                Log.Information("    computed: {Hash}", ToHex(sha1.Hash));
-                Log.Information("    header:   {Hash}", ToHex(expectedSha1));
-            }
-            if (haveMd5)
-            {
-                var match = ByteEquals(md5.Hash, expectedMd5);
-                Log.Information("  Full-image MD5 {Result} header MD5", match ? "MATCHES" : "DIFFERS from");
-                Log.Information("    computed: {Hash}", ToHex(md5.Hash));
-                Log.Information("    header:   {Hash}", ToHex(expectedMd5));
+                using var sha1 = haveSha1 ? SHA1.Create() : null;
+                using var md5 = haveMd5 ? MD5.Create() : null;
+                var buf = new byte[chd.HunkBytes];
+                var remaining = chd.TotalBytes;
+                ulong offset = 0;
+                while (remaining > 0)
+                {
+                    var chunk = (int)Math.Min((ulong)buf.Length, remaining);
+                    err = chd.Read(offset, buf, 0, chunk);
+                    if (err != ChdError.Chderrnone)
+                    {
+                        Log.Information("  Read(offset={Offset}) => {Error}", offset, err);
+                        return;
+                    }
+
+                    sha1?.TransformBlock(buf, 0, chunk, null, 0);
+                    md5?.TransformBlock(buf, 0, chunk, null, 0);
+                    offset += (ulong)chunk;
+                    remaining -= (ulong)chunk;
+                }
+
+                sha1?.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+                md5?.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+
+                if (haveSha1)
+                {
+                    var match = expectedSha1 != null && sha1 is { Hash: not null } && ByteEquals(sha1.Hash, expectedSha1);
+                    Log.Information("  Full-image raw SHA1 {Result} header raw SHA1", match ? "MATCHES" : "DIFFERS from");
+                    if (sha1 is { Hash: not null }) Log.Information("    computed: {Hash}", ToHex(sha1.Hash));
+                    if (expectedSha1 != null) Log.Information("    header:   {Hash}", ToHex(expectedSha1));
+                }
+
+                if (haveMd5)
+                {
+                    var match = expectedMd5 != null && md5 is { Hash: not null } && ByteEquals(md5.Hash, expectedMd5);
+                    Log.Information("  Full-image MD5 {Result} header MD5", match ? "MATCHES" : "DIFFERS from");
+                    if (md5?.Hash != null)
+                        Log.Information("    computed: {Hash}", ToHex(md5.Hash));
+                    if (expectedMd5 != null) Log.Information("    header:   {Hash}", ToHex(expectedMd5));
+                }
             }
         }
     }
@@ -265,19 +267,19 @@ internal class Program
         return Convert.ToHexString(a).ToLowerInvariant();
     }
 
-    private static void checkdir(DirectoryInfo di)
+    private static void Checkdir(DirectoryInfo di)
     {
         var fi = di.GetFiles("*.chd");
         foreach (var f in fi)
         {
             using Stream s = new FileStream(f.FullName, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 4096);
-            Chd.CheckFile(s, f.Name, true, out var chdVersion, out var chdSHA1, out var chdMD5);
+            Chd.CheckFile(s, f.Name, true, out _, out _, out _);
         }
 
         var arrdi = di.GetDirectories();
         foreach (var d in arrdi)
         {
-            checkdir(d);
+            Checkdir(d);
         }
     }
 }

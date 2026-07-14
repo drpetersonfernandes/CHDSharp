@@ -17,9 +17,9 @@ internal static class ChdCommon
     }
 
     /* Converts V3 & V4 MapEntryFlag to V5 compression_type */
-    internal static CompressionType ConvMapEntryFlagtoCompressionType(MapEntryFlag MapEntryFlag)
+    internal static CompressionType ConvMapEntryFlagtoCompressionType(MapEntryFlag mapEntryFlag)
     {
-        switch (MapEntryFlag & MapEntryFlag.Mapentryflagtypemask)
+        switch (mapEntryFlag & MapEntryFlag.Mapentryflagtypemask)
         {
             case MapEntryFlag.Mapentrytypeinvalid: return CompressionType.Compressionerror;
             case MapEntryFlag.Mapentrytypecompressed: return CompressionType.Compressiontype0;

@@ -1,24 +1,3 @@
-/**
- * CUETools.Flake: pure managed FLAC audio encoder
- * Copyright (c) 2009-2023 Grigory Chudov
- * Based on Flake encoder, http://flake-enc.sourceforge.net/
- * Copyright (c) 2006-2009 Justin Ruggles
- *
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
- *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- * Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this library; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
- */
-
 using CHDSharp.Flac.FlacDeps;
 using CHDSharp.Interfaces.Flac.FlacDeps;
 using CHDSharp.Models.Flac;
@@ -30,122 +9,115 @@ namespace CHDSharp.Flac;
 /// FLAC audio decoder that reads and decodes FLAC streams into PCM audio samples.
 /// Implements <see cref="IAudioSource"/> for integration with the audio pipeline.
 /// </summary>
-public class AudioDecoder: IAudioSource
+public class AudioDecoder : IAudioSource
 {
-    private readonly int[] samplesBuffer;
-    private readonly int[] residualBuffer;
+    private readonly int[] _residualBuffer;
 
     private readonly byte[] _framesBuffer;
     private int _framesBufferLength, _framesBufferOffset;
-    private long first_frame_offset;
+    private long _firstFrameOffset;
 
-    private SeekPoint[] seek_table;
+    private SeekPoint[] _seekTable;
 
-    private readonly Crc8 crc8;
-    private readonly FlacFrame frame;
-    private readonly BitReader framereader;
-    private AudioPcmConfig pcm;
+    private readonly Crc8 _crc8;
+    private readonly FlacFrame _frame;
+    private readonly BitReader _framereader;
 
-    private uint min_block_size;
-    private uint max_block_size;
-    private uint min_frame_size;
-    private uint max_frame_size;
+    private uint _minBlockSize;
+    private uint _maxBlockSize;
+    private uint _minFrameSize;
+    private uint _maxFrameSize;
 
     private int _samplesInBuffer, _samplesBufferOffset;
-    private long _sampleCount, _sampleOffset;
+    private long _sampleOffset;
 
-    private bool do_crc = true;
-
-    private readonly string _path;
-    private readonly Stream _IO;
+    private readonly Stream _io;
 
     /// <summary>
     /// Gets or sets whether CRC verification is performed during decoding.
     /// </summary>
-    public bool DoCRC
-    {
-        get => do_crc;
-        set => do_crc = value;
-    }
+    public bool DoCrc { get; set; } = true;
 
     /// <summary>
     /// Gets the decoded sample buffer containing the current frame's audio data.
     /// </summary>
-    public int[] Samples => samplesBuffer;
+    public int[] Samples { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AudioDecoder"/> class from a file path or stream.
     /// </summary>
     /// <param name="settings">Decoder configuration settings.</param>
     /// <param name="path">Path to the FLAC file, or null if reading from a stream.</param>
-    /// <param name="IO">Input stream. If null and path is provided, a <see cref="FileStream"/> is opened.</param>
-    public AudioDecoder(DecoderSettings settings, string path, Stream IO = null)
+    /// <param name="io">Input stream. If null and path is provided, a <see cref="FileStream"/> is opened.</param>
+    public AudioDecoder(DecoderSettings settings, string path, Stream io = null)
     {
-        m_settings = settings;
+        _mSettings = settings;
 
         if (path != null)
         {
-            _path = path;
-            _IO = IO != null ? IO : new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 0x10000);
+            Path = path;
+            _io = io != null ? io : new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 0x10000);
         }
         else
         {
-            _IO = IO;
+            _io = io;
         }
 
-        crc8 = new Crc8();
+        _crc8 = new Crc8();
 
         _framesBuffer = new byte[0x20000];
         decode_metadata();
 
-        frame = new FlacFrame(PCM.ChannelCount);
-        framereader = new BitReader();
+        _frame = new FlacFrame(PCM.ChannelCount);
+        _framereader = new BitReader();
 
         //max_frame_size = 16 + ((Flake.MAX_BLOCKSIZE * PCM.BitsPerSample * PCM.ChannelCount + 1) + 7) >> 3);
-        if ((((int)max_frame_size * PCM.BitsPerSample * PCM.ChannelCount * 2) >> 3) > _framesBuffer.Length)
+        if ((((int)_maxFrameSize * PCM.BitsPerSample * PCM.ChannelCount * 2) >> 3) > _framesBuffer.Length)
         {
             var temp = _framesBuffer;
-            _framesBuffer = new byte[(((int)max_frame_size * PCM.BitsPerSample * PCM.ChannelCount * 2) >> 3)];
+            _framesBuffer = new byte[(((int)_maxFrameSize * PCM.BitsPerSample * PCM.ChannelCount * 2) >> 3)];
             if (_framesBufferLength > 0)
                 Array.Copy(temp, _framesBufferOffset, _framesBuffer, 0, _framesBufferLength);
             _framesBufferOffset = 0;
         }
+
         _samplesInBuffer = 0;
 
         if (PCM.BitsPerSample != 16 && PCM.BitsPerSample != 24)
             throw new Exception("invalid flac file");
 
-        samplesBuffer = new int[FlakeConstants.MAXBLOCKSIZE * PCM.ChannelCount];
-        residualBuffer = new int[FlakeConstants.MAXBLOCKSIZE * PCM.ChannelCount];
+        Samples = new int[FlakeConstants.MAXBLOCKSIZE * PCM.ChannelCount];
+        _residualBuffer = new int[FlakeConstants.MAXBLOCKSIZE * PCM.ChannelCount];
     }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AudioDecoder"/> class with a given PCM configuration.
     /// </summary>
-    /// <param name="Pcm">PCM audio configuration specifying sample rate, bit depth, and channel count.</param>
-    public AudioDecoder(AudioPcmConfig Pcm)
+    /// <param name="pcm">PCM audio configuration specifying sample rate, bit depth, and channel count.</param>
+    public AudioDecoder(AudioPcmConfig pcm)
     {
-        pcm = Pcm;
-        crc8 = new Crc8();
+        PCM = pcm;
+        _crc8 = new Crc8();
 
-        samplesBuffer = new int[FlakeConstants.MAXBLOCKSIZE * PCM.ChannelCount];
-        residualBuffer = new int[FlakeConstants.MAXBLOCKSIZE * PCM.ChannelCount];
-        frame = new FlacFrame(PCM.ChannelCount);
-        framereader = new BitReader();
+        Samples = new int[FlakeConstants.MAXBLOCKSIZE * PCM.ChannelCount];
+        _residualBuffer = new int[FlakeConstants.MAXBLOCKSIZE * PCM.ChannelCount];
+        _frame = new FlacFrame(PCM.ChannelCount);
+        _framereader = new BitReader();
     }
 
-    private readonly DecoderSettings m_settings;
+    private readonly DecoderSettings _mSettings;
+
     /// <summary>
     /// Gets the decoder settings used by this instance.
     /// </summary>
-    public IAudioDecoderSettings Settings => m_settings;
+    public IAudioDecoderSettings Settings => _mSettings;
 
     /// <summary>
     /// Closes the underlying input stream.
     /// </summary>
     public void Close()
     {
-        _IO.Close();
+        _io.Close();
     }
 
     /// <summary>
@@ -156,7 +128,7 @@ public class AudioDecoder: IAudioSource
     /// <summary>
     /// Gets the total number of samples in the stream.
     /// </summary>
-    public long Length => _sampleCount;
+    public long Length { get; private set; }
 
     /// <summary>
     /// Gets the number of samples remaining from the current position to the end of the stream.
@@ -171,34 +143,37 @@ public class AudioDecoder: IAudioSource
         get => _sampleOffset - _samplesInBuffer;
         set
         {
-            if (value > _sampleCount)
+            if (value > Length)
                 throw new Exception("seeking past end of stream");
 
             if (value < Position || value > _sampleOffset)
             {
-                if (seek_table != null && _IO.CanSeek)
+                if (_seekTable != null && _io.CanSeek)
                 {
-                    var best_st = -1;
-                    for (var st = 0; st < seek_table.Length; st++)
+                    var bestSt = -1;
+                    for (var st = 0; st < _seekTable.Length; st++)
                     {
-                        if (seek_table[st].number <= value &&
-                            (best_st == -1 || seek_table[st].number > seek_table[best_st].number))
+                        if (_seekTable[st].number <= value &&
+                            (bestSt == -1 || _seekTable[st].number > _seekTable[bestSt].number))
                         {
-                            best_st = st;
+                            bestSt = st;
                         }
                     }
-                    if (best_st != -1)
+
+                    if (bestSt != -1)
                     {
                         _framesBufferLength = 0;
                         _samplesInBuffer = 0;
                         _samplesBufferOffset = 0;
-                        _IO.Position = (long)seek_table[best_st].offset + first_frame_offset;
-                        _sampleOffset = seek_table[best_st].number;
+                        _io.Position = (long)_seekTable[bestSt].offset + _firstFrameOffset;
+                        _sampleOffset = _seekTable[bestSt].number;
                     }
                 }
+
                 if (value < Position)
                     throw new Exception("cannot seek backwards without seek table");
             }
+
             while (value > _sampleOffset)
             {
                 _samplesInBuffer = 0;
@@ -213,7 +188,8 @@ public class AudioDecoder: IAudioSource
                 _framesBufferOffset += bytesDecoded;
 
                 _sampleOffset += _samplesInBuffer;
-            };
+            }
+
             var diff = _samplesInBuffer - (int)(_sampleOffset - value);
             _samplesInBuffer -= diff;
             _samplesBufferOffset += diff;
@@ -223,18 +199,18 @@ public class AudioDecoder: IAudioSource
     /// <summary>
     /// Gets the PCM audio configuration for this stream.
     /// </summary>
-    public AudioPcmConfig PCM => pcm;
+    public AudioPcmConfig PCM { get; private set; }
 
     /// <summary>
     /// Gets the file path of the FLAC source, or null if reading from a stream.
     /// </summary>
-    public string Path => _path;
+    public string Path { get; }
 
-    private unsafe void interlace(AudioBuffer buff, int offset, int count)
+    private unsafe void Interlace(AudioBuffer buff, int offset, int count)
     {
         if (PCM.ChannelCount == 2)
         {
-            fixed (int* src = &samplesBuffer[_samplesBufferOffset])
+            fixed (int* src = &Samples[_samplesBufferOffset])
             {
                 buff.Interlace(offset, src, src + FlakeConstants.MAXBLOCKSIZE, count);
             }
@@ -242,7 +218,7 @@ public class AudioDecoder: IAudioSource
         else
         {
             for (var ch = 0; ch < PCM.ChannelCount; ch++)
-                fixed (int* res = &buff.Samples[offset, ch], src = &samplesBuffer[_samplesBufferOffset + ch * FlakeConstants.MAXBLOCKSIZE])
+                fixed (int* res = &buff.Samples[offset, ch], src = &Samples[_samplesBufferOffset + ch * FlakeConstants.MAXBLOCKSIZE])
                 {
                     var psrc = src;
                     for (var i = 0; i < count; i++)
@@ -256,21 +232,21 @@ public class AudioDecoder: IAudioSource
     /// <summary>
     /// Reads audio samples into the specified buffer, decoding FLAC frames as needed.
     /// </summary>
-    /// <param name="buff">The audio buffer to fill with decoded samples.</param>
+    /// <param name="buffer">The audio buffer to fill with decoded samples.</param>
     /// <param name="maxLength">The maximum number of samples to read.</param>
     /// <returns>The actual number of samples read.</returns>
-    public int Read(AudioBuffer buff, int maxLength)
+    public int Read(AudioBuffer buffer, int maxLength)
     {
-        buff.Prepare(this, maxLength);
+        buffer.Prepare(this, maxLength);
 
         var offset = 0;
-        var sampleCount = buff.Length;
+        var sampleCount = buffer.Length;
 
         while (_samplesInBuffer < sampleCount)
         {
             if (_samplesInBuffer > 0)
             {
-                interlace(buff, offset, _samplesInBuffer);
+                Interlace(buffer, offset, _samplesInBuffer);
                 sampleCount -= _samplesInBuffer;
                 offset += _samplesInBuffer;
                 _samplesInBuffer = 0;
@@ -280,7 +256,7 @@ public class AudioDecoder: IAudioSource
             fill_frames_buffer();
 
             if (_framesBufferLength == 0)
-                return buff.Length = offset;
+                return buffer.Length = offset;
 
             var bytesDecoded = DecodeFrame(_framesBuffer, _framesBufferOffset, _framesBufferLength);
             _framesBufferLength -= bytesDecoded;
@@ -290,7 +266,7 @@ public class AudioDecoder: IAudioSource
             _sampleOffset += _samplesInBuffer;
         }
 
-        interlace(buff, offset, sampleCount);
+        Interlace(buffer, offset, sampleCount);
         _samplesInBuffer -= sampleCount;
         _samplesBufferOffset += sampleCount;
         if (_samplesInBuffer == 0)
@@ -298,7 +274,7 @@ public class AudioDecoder: IAudioSource
             _samplesBufferOffset = 0;
         }
 
-        return buff.Length = offset + sampleCount;
+        return buffer.Length = offset + sampleCount;
     }
 
     private unsafe void fill_frames_buffer()
@@ -316,9 +292,10 @@ public class AudioDecoder: IAudioSource
 
             _framesBufferOffset = 0;
         }
+
         while (_framesBufferLength < _framesBuffer.Length / 2)
         {
-            var read = _IO.Read(_framesBuffer, _framesBufferOffset + _framesBufferLength, _framesBuffer.Length - _framesBufferOffset - _framesBufferLength);
+            var read = _io.Read(_framesBuffer, _framesBufferOffset + _framesBufferLength, _framesBuffer.Length - _framesBufferOffset - _framesBufferLength);
             _framesBufferLength += read;
             if (read == 0)
                 break;
@@ -327,43 +304,43 @@ public class AudioDecoder: IAudioSource
 
     private unsafe void decode_frame_header(BitReader bitreader, FlacFrame frame)
     {
-        var header_start = bitreader.Position;
+        var headerStart = bitreader.Position;
 
-        if (bitreader.readbits(15) != 0x7FFC)
+        if (bitreader.Readbits(15) != 0x7FFC)
             throw new Exception("invalid frame");
 
-        var vbs = bitreader.readbit();
-        frame.bs_code0 = (int) bitreader.readbits(4);
-        var sr_code0 = bitreader.readbits(4);
-        frame.ch_mode = (ChannelMode)bitreader.readbits(4);
-        var bps_code = bitreader.readbits(3);
-        if (FlakeConstants.flacBitdepths[bps_code] != PCM.BitsPerSample)
+        var vbs = bitreader.Readbit();
+        frame.bs_code0 = (int)bitreader.Readbits(4);
+        var srCode0 = bitreader.Readbits(4);
+        frame.ch_mode = (ChannelMode)bitreader.Readbits(4);
+        var bpsCode = bitreader.Readbits(3);
+        if (FlakeConstants.flacBitdepths[bpsCode] != PCM.BitsPerSample)
             throw new Exception("unsupported bps coding");
 
-        var t1 = bitreader.readbit(); // == 0?????
+        var t1 = bitreader.Readbit(); // == 0?????
         if (t1 != 0)
             throw new Exception("unsupported frame coding");
 
-        frame.frame_number = (int)bitreader.readUtf8();
+        frame.frame_number = (int)bitreader.ReadUtf8();
 
-        // custom block size
-        if (frame.bs_code0 == 6)
+        switch (frame.bs_code0)
         {
-            frame.bs_code1 = (int)bitreader.readbits(8);
-            frame.blocksize = frame.bs_code1 + 1;
-        }
-        else if (frame.bs_code0 == 7)
-        {
-            frame.bs_code1 = (int)bitreader.readbits(16);
-            frame.blocksize = frame.bs_code1 + 1;
-        }
-        else
-        {
-            frame.blocksize = FlakeConstants.flacBlocksizes[frame.bs_code0];
+            // custom block size
+            case 6:
+                frame.bs_code1 = (int)bitreader.Readbits(8);
+                frame.blocksize = frame.bs_code1 + 1;
+                break;
+            case 7:
+                frame.bs_code1 = (int)bitreader.Readbits(16);
+                frame.blocksize = frame.bs_code1 + 1;
+                break;
+            default:
+                frame.blocksize = FlakeConstants.flacBlocksizes[frame.bs_code0];
+                break;
         }
 
         // custom sample rate
-        if (sr_code0 is < 1 or > 11)
+        if (srCode0 is < 1 or > 11)
         {
             // sr_code0 == 12 -> sr == bitreader.readbits(8) * 1000;
             // sr_code0 == 13 -> sr == bitreader.readbits(16);
@@ -371,33 +348,34 @@ public class AudioDecoder: IAudioSource
             throw new Exception("invalid sample rate mode");
         }
 
-        var frame_channels = (int)frame.ch_mode + 1;
-        if (frame_channels > 11)
-            throw new Exception("invalid channel mode");
-
-        if (frame_channels is 2 or > 8) // Mid/Left/Right Side Stereo
+        var frameChannels = (int)frame.ch_mode + 1;
+        switch (frameChannels)
         {
-            frame_channels = 2;
-        }
-        else
-        {
-            frame.ch_mode = ChannelMode.NotStereo;
+            case > 11:
+                throw new Exception("invalid channel mode");
+            // Mid/Left/Right Side Stereo
+            case 2 or > 8:
+                frameChannels = 2;
+                break;
+            default:
+                frame.ch_mode = ChannelMode.NotStereo;
+                break;
         }
 
-        if (frame_channels != PCM.ChannelCount)
+        if (frameChannels != PCM.ChannelCount)
             throw new Exception("invalid channel mode");
 
         // CRC-8 of frame header
-        var crc = do_crc ? crc8.ComputeChecksum(bitreader.Buffer, header_start, bitreader.Position - header_start) : (byte)0;
-        frame.crc8 = (byte)bitreader.readbits(8);
-        if (do_crc && frame.crc8 != crc)
+        var crc = DoCrc ? _crc8.ComputeChecksum(bitreader.Buffer, headerStart, bitreader.Position - headerStart) : (byte)0;
+        frame.crc8 = (byte)bitreader.Readbits(8);
+        if (DoCrc && frame.crc8 != crc)
             throw new Exception("header crc mismatch");
     }
 
     private unsafe void decode_subframe_constant(BitReader bitreader, FlacFrame frame, int ch)
     {
         var obits = frame.subframes[ch].obits;
-        frame.subframes[ch].best.residual[0] = bitreader.readbitsSigned(obits);
+        frame.subframes[ch].best.residual[0] = bitreader.ReadbitsSigned(obits);
     }
 
     private unsafe void decode_subframe_verbatim(BitReader bitreader, FlacFrame frame, int ch)
@@ -405,19 +383,19 @@ public class AudioDecoder: IAudioSource
         var obits = frame.subframes[ch].obits;
         for (var i = 0; i < frame.blocksize; i++)
         {
-            frame.subframes[ch].best.residual[i] = bitreader.readbitsSigned(obits);
+            frame.subframes[ch].best.residual[i] = bitreader.ReadbitsSigned(obits);
         }
     }
 
-    private unsafe void decode_residual(BitReader bitreader, FlacFrame frame, int ch)
+    private static unsafe void decode_residual(BitReader bitreader, FlacFrame frame, int ch)
     {
         // rice-encoded block
         // coding method
-        frame.subframes[ch].best.rc.coding_method = (int)bitreader.readbits(2); // ????? == 0
+        frame.subframes[ch].best.rc.coding_method = (int)bitreader.Readbits(2); // ????? == 0
         if (frame.subframes[ch].best.rc.coding_method != 0 && frame.subframes[ch].best.rc.coding_method != 1)
             throw new Exception("unsupported residual coding");
         // partition order
-        frame.subframes[ch].best.rc.porder = (int)bitreader.readbits(4);
+        frame.subframes[ch].best.rc.porder = (int)bitreader.Readbits(4);
         if (frame.subframes[ch].best.rc.porder > 8)
             throw new Exception("invalid partition order");
 
@@ -437,18 +415,18 @@ public class AudioDecoder: IAudioSource
 
             var n = Math.Min(res_cnt, frame.blocksize - j);
 
-            var k = frame.subframes[ch].best.rc.rparams[p] = (int)bitreader.readbits(rice_len);
+            var k = frame.subframes[ch].best.rc.rparams[p] = (int)bitreader.Readbits(rice_len);
             if (k == (1 << rice_len) - 1)
             {
-                k = frame.subframes[ch].best.rc.esc_bps[p] = (int)bitreader.readbits(5);
+                k = frame.subframes[ch].best.rc.esc_bps[p] = (int)bitreader.Readbits(5);
                 for (var i = n; i > 0; i--)
                 {
-                    *(r++) = bitreader.readbitsSigned((int)k);
+                    *(r++) = bitreader.ReadbitsSigned((int)k);
                 }
             }
             else
             {
-                bitreader.readRiceBlock(n, (int)k, r);
+                bitreader.ReadRiceBlock(n, (int)k, r);
                 r += n;
             }
             j += n;
@@ -461,7 +439,7 @@ public class AudioDecoder: IAudioSource
         var obits = frame.subframes[ch].obits;
         for (var i = 0; i < frame.subframes[ch].best.order; i++)
         {
-            frame.subframes[ch].best.residual[i] = bitreader.readbitsSigned(obits);
+            frame.subframes[ch].best.residual[i] = bitreader.ReadbitsSigned(obits);
         }
 
         // residual
@@ -474,21 +452,21 @@ public class AudioDecoder: IAudioSource
         var obits = frame.subframes[ch].obits;
         for (var i = 0; i < frame.subframes[ch].best.order; i++)
         {
-            frame.subframes[ch].best.residual[i] = bitreader.readbitsSigned(obits);
+            frame.subframes[ch].best.residual[i] = bitreader.ReadbitsSigned(obits);
         }
 
         // LPC coefficients
-        frame.subframes[ch].best.cbits = (int)bitreader.readbits(4) + 1; // lpc_precision
+        frame.subframes[ch].best.cbits = (int)bitreader.Readbits(4) + 1; // lpc_precision
         if (frame.subframes[ch].best.cbits >= 16)
             throw new Exception("cbits >= 16");
 
-        frame.subframes[ch].best.shift = bitreader.readbitsSigned(5);
+        frame.subframes[ch].best.shift = bitreader.ReadbitsSigned(5);
         if (frame.subframes[ch].best.shift < 0)
             throw new Exception("negative shift");
 
         for (var i = 0; i < frame.subframes[ch].best.order; i++)
         {
-            frame.subframes[ch].best.coefs[i] = bitreader.readbitsSigned(frame.subframes[ch].best.cbits);
+            frame.subframes[ch].best.coefs[i] = bitreader.ReadbitsSigned(frame.subframes[ch].best.cbits);
         }
 
         // residual
@@ -497,20 +475,20 @@ public class AudioDecoder: IAudioSource
 
     private unsafe void decode_subframes(BitReader bitreader, FlacFrame frame)
     {
-        fixed (int *r = residualBuffer, s = samplesBuffer)
+        fixed (int *r = _residualBuffer, s = Samples)
         {
             for (var ch = 0; ch < PCM.ChannelCount; ch++)
             {
                 // subframe header
-                var t1 = bitreader.readbit(); // ?????? == 0
+                var t1 = bitreader.Readbit(); // ?????? == 0
                 if (t1 != 0)
                     throw new Exception("unsupported subframe coding (ch == " + ch + ")");
 
-                var type_code = (int)bitreader.readbits(6);
-                frame.subframes[ch].wbits = (int)bitreader.readbit();
+                var type_code = (int)bitreader.Readbits(6);
+                frame.subframes[ch].wbits = (int)bitreader.Readbit();
                 if (frame.subframes[ch].wbits != 0)
                 {
-                    frame.subframes[ch].wbits += (int)bitreader.readUnary();
+                    frame.subframes[ch].wbits += (int)bitreader.ReadUnary();
                 }
 
                 frame.subframes[ch].obits = PCM.BitsPerSample - frame.subframes[ch].wbits;
@@ -707,18 +685,18 @@ public class AudioDecoder: IAudioSource
     {
         fixed (byte* buf = buffer)
         {
-            framereader.Reset(buf, pos, len);
-            decode_frame_header(framereader, frame);
-            decode_subframes(framereader, frame);
-            framereader.flush();
-            var crc_1 = framereader.getCrc16();
-            var crc_2 = framereader.readUshort();
-            if (do_crc && crc_1 != crc_2)
+            _framereader.Reset(buf, pos, len);
+            decode_frame_header(_framereader, _frame);
+            decode_subframes(_framereader, _frame);
+            _framereader.Flush();
+            var crc_1 = _framereader.GetCrc16();
+            var crc_2 = _framereader.ReadUshort();
+            if (DoCrc && crc_1 != crc_2)
                 throw new Exception("frame crc mismatch");
 
-            restore_samples(frame);
-            _samplesInBuffer = frame.blocksize;
-            return framereader.Position - pos;
+            restore_samples(_frame);
+            _samplesInBuffer = _frame.blocksize;
+            return _framereader.Position - pos;
         }
     }
 
@@ -726,7 +704,7 @@ public class AudioDecoder: IAudioSource
     private bool skip_bytes(int bytes)
     {
         for (var j = 0; j < bytes; j++)
-            if (0 == _IO.Read(_framesBuffer, 0, 1))
+            if (0 == _io.Read(_framesBuffer, 0, 1))
                 return false;
 
         return true;
@@ -742,7 +720,7 @@ public class AudioDecoder: IAudioSource
 
         for (i = id = 0; i < 4; )
         {
-            if (_IO.Read(_framesBuffer, 0, 1) == 0)
+            if (_io.Read(_framesBuffer, 0, 1) == 0)
                 throw new Exception("FLAC stream not found");
 
             x = _framesBuffer[0];
@@ -765,7 +743,7 @@ public class AudioDecoder: IAudioSource
                     var skip = 0;
                     for (var j = 0; j < 4; j++)
                     {
-                        if (0 == _IO.Read(_framesBuffer, 0, 1))
+                        if (0 == _io.Read(_framesBuffer, 0, 1))
                             throw new Exception("FLAC stream not found");
 
                         skip <<= 7;
@@ -781,7 +759,7 @@ public class AudioDecoder: IAudioSource
             {
                 do
                 {
-                    if (_IO.Read(_framesBuffer, 0, 1) == 0)
+                    if (_io.Read(_framesBuffer, 0, 1) == 0)
                         throw new Exception("FLAC stream not found");
 
                     x = _framesBuffer[0];
@@ -802,9 +780,9 @@ public class AudioDecoder: IAudioSource
             fixed (byte* buf = _framesBuffer)
             {
                 var bitreader = new BitReader(buf, _framesBufferOffset, _framesBufferLength - _framesBufferOffset);
-                var is_last = bitreader.readbit() != 0;
-                var type = (MetadataType)bitreader.readbits(7);
-                var len = (int)bitreader.readbits(24);
+                var is_last = bitreader.Readbit() != 0;
+                var type = (MetadataType)bitreader.Readbits(7);
+                var len = (int)bitreader.Readbits(24);
 
                 if (type == MetadataType.StreamInfo)
                 {
@@ -818,31 +796,31 @@ public class AudioDecoder: IAudioSource
                     const int FLAC__STREAM_METADATA_STREAMINFO_TOTAL_SAMPLES_LEN = 36; /* bits */
                     const int FLAC__STREAM_METADATA_STREAMINFO_MD5SUM_LEN = 128; /* bits */
 
-                    min_block_size = bitreader.readbits(FLAC__STREAM_METADATA_STREAMINFO_MIN_BLOCK_SIZE_LEN);
-                    max_block_size = bitreader.readbits(FLAC__STREAM_METADATA_STREAMINFO_MAX_BLOCK_SIZE_LEN);
-                    min_frame_size = bitreader.readbits(FLAC__STREAM_METADATA_STREAMINFO_MIN_FRAME_SIZE_LEN);
-                    max_frame_size = bitreader.readbits(FLAC__STREAM_METADATA_STREAMINFO_MAX_FRAME_SIZE_LEN);
-                    var sample_rate = (int)bitreader.readbits(FLAC__STREAM_METADATA_STREAMINFO_SAMPLE_RATE_LEN);
-                    var channels = 1 + (int)bitreader.readbits(FLAC__STREAM_METADATA_STREAMINFO_CHANNELS_LEN);
-                    var bits_per_sample = 1 + (int)bitreader.readbits(FLAC__STREAM_METADATA_STREAMINFO_BITS_PER_SAMPLE_LEN);
-                    pcm = new AudioPcmConfig(bits_per_sample, channels, sample_rate);
-                    _sampleCount = (long)bitreader.readbits64(FLAC__STREAM_METADATA_STREAMINFO_TOTAL_SAMPLES_LEN);
-                    bitreader.skipbits(FLAC__STREAM_METADATA_STREAMINFO_MD5SUM_LEN);
+                    _minBlockSize = bitreader.Readbits(FLAC__STREAM_METADATA_STREAMINFO_MIN_BLOCK_SIZE_LEN);
+                    _maxBlockSize = bitreader.Readbits(FLAC__STREAM_METADATA_STREAMINFO_MAX_BLOCK_SIZE_LEN);
+                    _minFrameSize = bitreader.Readbits(FLAC__STREAM_METADATA_STREAMINFO_MIN_FRAME_SIZE_LEN);
+                    _maxFrameSize = bitreader.Readbits(FLAC__STREAM_METADATA_STREAMINFO_MAX_FRAME_SIZE_LEN);
+                    var sample_rate = (int)bitreader.Readbits(FLAC__STREAM_METADATA_STREAMINFO_SAMPLE_RATE_LEN);
+                    var channels = 1 + (int)bitreader.Readbits(FLAC__STREAM_METADATA_STREAMINFO_CHANNELS_LEN);
+                    var bits_per_sample = 1 + (int)bitreader.Readbits(FLAC__STREAM_METADATA_STREAMINFO_BITS_PER_SAMPLE_LEN);
+                    PCM = new AudioPcmConfig(bits_per_sample, channels, sample_rate);
+                    Length = (long)bitreader.Readbits64(FLAC__STREAM_METADATA_STREAMINFO_TOTAL_SAMPLES_LEN);
+                    bitreader.Skipbits(FLAC__STREAM_METADATA_STREAMINFO_MD5SUM_LEN);
                 }
                 else if (type == MetadataType.Seektable)
                 {
                     var num_entries = len / 18;
-                    seek_table = new SeekPoint[num_entries];
+                    _seekTable = new SeekPoint[num_entries];
                     for (var e = 0; e < num_entries; e++)
                     {
-                        seek_table[e].number = bitreader.readLong();
-                        seek_table[e].offset = bitreader.readLong();
-                        seek_table[e].framesize = (int)bitreader.readUshort();
+                        _seekTable[e].number = bitreader.ReadLong();
+                        _seekTable[e].offset = bitreader.ReadLong();
+                        _seekTable[e].framesize = (int)bitreader.ReadUshort();
                     }
                 }
                 if (_framesBufferLength < 4 + len)
                 {
-                    _IO.Position += 4 + len - _framesBufferLength;
+                    _io.Position += 4 + len - _framesBufferLength;
                     _framesBufferLength = 0;
                 }
                 else
@@ -854,6 +832,6 @@ public class AudioDecoder: IAudioSource
                     break;
             }
         } while (true);
-        first_frame_offset = _IO.Position - _framesBufferLength;
+        _firstFrameOffset = _io.Position - _framesBufferLength;
     }
 }

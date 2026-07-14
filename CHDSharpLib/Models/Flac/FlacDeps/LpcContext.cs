@@ -20,12 +20,12 @@ public class LpcSubframeInfo
     /// <summary>
     /// Cached autocorrelation values for each section and order.
     /// </summary>
-    public readonly double[,] AutocorrSectionValues;
+    public double[,] AutocorrSectionValues { get; }
 
     /// <summary>
     /// The maximum order computed for each section.
     /// </summary>
-    public readonly int[] AutocorrSectionOrders;
+    public int[] AutocorrSectionOrders { get; }
 
     /// <summary>
     /// Resets all section orders to zero, invalidating cached autocorrelation data.
@@ -71,22 +71,22 @@ public unsafe struct LpcWindowSection
     /// <summary>
     /// The start offset of this section in samples.
     /// </summary>
-    public int MStart;
+    public int MStart { get; set; }
 
     /// <summary>
     /// The end offset of this section in samples.
     /// </summary>
-    public int MEnd;
+    public int MEnd { get; set; }
 
     /// <summary>
     /// The type of autocorrelation computation for this section.
     /// </summary>
-    public SectionType MType;
+    public SectionType MType { get; set; }
 
     /// <summary>
     /// Identifier for cached section data (-1 if not cached).
     /// </summary>
-    public int MId;
+    public int MId { get; set; }
 
     /// <summary>
     /// Initializes a new data section with the given end boundary.
@@ -215,10 +215,10 @@ public unsafe struct LpcWindowSection
                         }
                 }
 
-                if (boundaries.Count >= Lpc.MAXLPCSECTIONS * 2) throw new IndexOutOfRangeException();
+                if (boundaries.Count >= Lpc.MAXLPCSECTIONS * 2) throw new InvalidOperationException("Maximum number of LPC sections exceeded.");
 
                 types[i, boundaries.Count] =
-                    boundaries.Count >= Lpc.MAXLPCSECTIONS * 2 - 2 ? SectionType.Data : w == 0.0 ? SectionType.Zero : w != 1.0 ? SectionType.Data : bps * 2 + BitReader.log2i(sz) >= 61 ? SectionType.OneLarge : SectionType.One;
+                    boundaries.Count >= Lpc.MAXLPCSECTIONS * 2 - 2 ? SectionType.Data : w == 0.0 ? SectionType.Zero : w != 1.0 ? SectionType.Data : bps * 2 + BitReader.Log2I(sz) >= 61 ? SectionType.OneLarge : SectionType.One;
             }
 
             var isBoundary = false;
@@ -252,7 +252,7 @@ public unsafe struct LpcWindowSection
                 // leave room for glue
                 if (secs[i] >= Lpc.MAXLPCSECTIONS - 1)
                 {
-                    throw new IndexOutOfRangeException();
+                    throw new InvalidOperationException("Maximum number of LPC sections exceeded.");
                     //window_sections[secs[i] - 1].m_type = LpcWindowSection.SectionType.Data;
                     //window_sections[secs[i] - 1].m_end = boundaries[j + 1];
                     //continue;
@@ -278,7 +278,7 @@ public unsafe struct LpcWindowSection
                     continue;
                 }
 
-                if (sectionId >= Lpc.MAXLPCSECTIONS) throw new IndexOutOfRangeException();
+                if (sectionId >= Lpc.MAXLPCSECTIONS) throw new InvalidOperationException("Maximum number of LPC sections exceeded.");
 
                 if (aliasSet[i, j] != 0
                     && types[i, j] != SectionType.Zero)
@@ -375,10 +375,12 @@ public unsafe class LpcContext
     /// Can be used to incrementaly compute coefficients for higher orders,
     /// because it caches them.
     /// </summary>
+    /// <param name="subframe">Subframe info containing cached autocorrelation data.</param>
     /// <param name="order">Maximum order</param>
     /// <param name="samples">Samples pointer</param>
     /// <param name="blocksize">Block size</param>
     /// <param name="window">Window function</param>
+    /// <param name="sections">Window sections for autocorrelation computation.</param>
     public void GetReflection(LpcSubframeInfo subframe, int order, int blocksize, int* samples, float* window, LpcWindowSection* sections)
     {
         if (_autocorrOrder > order)
@@ -491,29 +493,29 @@ public unsafe class LpcContext
     /// <summary>
     /// Autocorrelation values for the current frame.
     /// </summary>
-    public readonly double[] AutocorrValues;
+    public double[] AutocorrValues { get; }
 
     /// <summary>
     /// Prediction error values for each order.
     /// </summary>
-    public readonly double[] PredictionError;
+    public double[] PredictionError { get; }
 
     /// <summary>
     /// Best LPC orders sorted by Akaike criterion.
     /// </summary>
-    public readonly int[] BestOrders;
+    public int[] BestOrders { get; }
 
     /// <summary>
     /// Quantized LPC coefficients for the current frame.
     /// </summary>
-    public int[] Coefs;
+    public int[] Coefs { get; set; }
 
     private int _autocorrOrder;
 
     /// <summary>
     /// Right-shift amount for quantized coefficients.
     /// </summary>
-    public int Shift;
+    public int Shift { get; set; }
 
     /// <summary>
     /// Gets the reflection coefficients computed during LPC analysis.
@@ -523,5 +525,5 @@ public unsafe class LpcContext
     /// <summary>
     /// Bitmask tracking which precision/order combinations have been computed.
     /// </summary>
-    public readonly uint[] DoneLpcs;
+    public uint[] DoneLpcs { get; }
 }

@@ -169,19 +169,19 @@ internal static partial class ChdReaders
                     // rate is irrelevant to decoding (see notes in CHDReaders.flac);
                     // bit-depth is fixed at 16. These match how MAME encodes AVHuff
                     // audio, so the values are correct for every AVHuff CHD.
-                    var audioBuffer = new AudioBuffer(codec.AVHUFF_settings, blockSize); //audio buffer to take decoded samples and read them to bytes.
+                    var audioBuffer = new AudioBuffer(codec.AvhuffSettings, blockSize); //audio buffer to take decoded samples and read them to bytes.
                     var inPos = (int)buffInOffset;
                     var outPos = (int)audioChannelDestStart[channelNumber]!.Value;
 
                     while (outPos < blockSize + audioChannelDestStart[channelNumber])
                     {
                         int read;
-                        if ((read = codec.AVHUFF_audioDecoder.DecodeFrame(buffIn, inPos, (int)sourceSize)) == 0)
+                        if ((read = codec.AvhuffAudioDecoder.DecodeFrame(buffIn, inPos, (int)sourceSize)) == 0)
                             break;
 
-                        if (codec.AVHUFF_audioDecoder.Remaining != 0)
+                        if (codec.AvhuffAudioDecoder.Remaining != 0)
                         {
-                            codec.AVHUFF_audioDecoder.Read(audioBuffer, (int)codec.AVHUFF_audioDecoder.Remaining);
+                            codec.AvhuffAudioDecoder.Read(audioBuffer, (int)codec.AvhuffAudioDecoder.Remaining);
                             Array.Copy(audioBuffer.Bytes, 0, buffOut, outPos, audioBuffer.ByteLength);
                             outPos += audioBuffer.ByteLength;
                         }
@@ -209,18 +209,18 @@ internal static partial class ChdReaders
         {
             var bitbuf = new BitStream(buffIn, (int)buffInOffset, (int)treesize);
 
-            if (codec.bHuffmanHi == null)
+            if (codec.BHuffmanHi == null)
             {
-                codec.bHuffmanHi = new ushort[1 << 16];
+                codec.BHuffmanHi = new ushort[1 << 16];
             }
 
-            if (codec.bHuffmanLo == null)
+            if (codec.BHuffmanLo == null)
             {
-                codec.bHuffmanLo = new ushort[1 << 16];
+                codec.BHuffmanLo = new ushort[1 << 16];
             }
 
-            mAudiohiDecoder = new HuffmanDecoder(256, 16, bitbuf, codec.bHuffmanHi);
-            mAudioloDecoder = new HuffmanDecoder(256, 16, bitbuf, codec.bHuffmanLo);
+            mAudiohiDecoder = new HuffmanDecoder(256, 16, bitbuf, codec.BHuffmanHi);
+            mAudioloDecoder = new HuffmanDecoder(256, 16, bitbuf, codec.BHuffmanLo);
 
             var hufferr = mAudiohiDecoder.ImportTreeRLE();
             if (hufferr != huffman_error.HUFFERR_NONE)
@@ -308,24 +308,24 @@ internal static partial class ChdReaders
         var bitbuf = new BitStream(buffIn, (int)buffInOffset, (int)buffInLength);
         bitbuf.read(8);
 
-        if (codec.bHuffmanY == null)
+        if (codec.BHuffmanY == null)
         {
-            codec.bHuffmanY = new ushort[1 << 16];
+            codec.BHuffmanY = new ushort[1 << 16];
         }
 
-        if (codec.bHuffmanCB == null)
+        if (codec.BHuffmanCb == null)
         {
-            codec.bHuffmanCB = new ushort[1 << 16];
+            codec.BHuffmanCb = new ushort[1 << 16];
         }
 
-        if (codec.bHuffmanCR == null)
+        if (codec.BHuffmanCr == null)
         {
-            codec.bHuffmanCR = new ushort[1 << 16];
+            codec.BHuffmanCr = new ushort[1 << 16];
         }
 
-        var mYcontext = new HuffmanDecoderRLE(256 + 16, 16, bitbuf, codec.bHuffmanY);
-        var mCbcontext = new HuffmanDecoderRLE(256 + 16, 16, bitbuf, codec.bHuffmanCB);
-        var mCrcontext = new HuffmanDecoderRLE(256 + 16, 16, bitbuf, codec.bHuffmanCR);
+        var mYcontext = new HuffmanDecoderRLE(256 + 16, 16, bitbuf, codec.BHuffmanY);
+        var mCbcontext = new HuffmanDecoderRLE(256 + 16, 16, bitbuf, codec.BHuffmanCb);
+        var mCrcontext = new HuffmanDecoderRLE(256 + 16, 16, bitbuf, codec.BHuffmanCr);
 
         // import the tables
         var hufferr = mYcontext.ImportTreeRLE();

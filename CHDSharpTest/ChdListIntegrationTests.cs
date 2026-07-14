@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using CHDSharp.Models;
 
 namespace CHDSharp.Tests;
@@ -187,7 +188,7 @@ public class ChdListIntegrationTests
 
     internal static string ComputeFullImageSha1(ChdFile chd, ITestOutputHelper? @out = null)
     {
-        using var sha1 = System.Security.Cryptography.SHA1.Create();
+        using var sha1 = SHA1.Create();
         var buf = new byte[chd.HunkBytes];
         var remaining = chd.TotalBytes;
         ulong offset = 0;

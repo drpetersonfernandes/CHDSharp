@@ -23,8 +23,7 @@ public class AudioBuffer
     {
         var loopCount = sampleCount * channelCount;
 
-        if (inSamples.GetLength(0) - inSampleOffset < sampleCount)
-            throw new ArgumentOutOfRangeException();
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(sampleCount, inSamples.GetLength(0) - inSampleOffset);
 
         fixed (int* pInSamplesFixed = &inSamples[inSampleOffset, 0])
         {
@@ -124,7 +123,7 @@ public class AudioBuffer
         if (inSamples.GetLength(0) - inSampleOffset < sampleCount ||
             outSamples.Length - outByteOffset < loopCount * 2)
         {
-            throw new ArgumentOutOfRangeException();
+            throw new ArgumentOutOfRangeException(nameof(inSampleOffset));
         }
 
         fixed (float* pInSamplesFixed = &inSamples[inSampleOffset, 0])
@@ -234,7 +233,7 @@ public class AudioBuffer
 
         if (inSamples.Length - inByteOffset < loopCount * 2 ||
             outSamples.GetLength(0) - outSampleOffset < sampleCount)
-            throw new ArgumentOutOfRangeException();
+            throw new ArgumentOutOfRangeException(nameof(inByteOffset));
 
         fixed (byte* pInSamplesFixed = &inSamples[inByteOffset])
         {
@@ -268,7 +267,7 @@ public class AudioBuffer
         if (inSamples.Length - inByteOffset < loopCount * 2 ||
             outSamples.GetLength(0) - outSampleOffset < sampleCount)
         {
-            throw new ArgumentOutOfRangeException();
+            throw new ArgumentOutOfRangeException(nameof(inByteOffset));
         }
 
         fixed (byte* pInSamplesFixed = &inSamples[inByteOffset])
@@ -304,7 +303,7 @@ public class AudioBuffer
 
         if (inSamples.Length - inByteOffset < loopCount * 3 ||
             outSamples.GetLength(0) - outSampleOffset < sampleCount)
-            throw new ArgumentOutOfRangeException();
+            throw new ArgumentOutOfRangeException(nameof(inByteOffset));
 
         fixed (byte* pInSamplesFixed = &inSamples[inByteOffset])
         {
@@ -372,7 +371,7 @@ public class AudioBuffer
     /// <summary>
     /// Gets the PCM configuration for this buffer.
     /// </summary>
-    public AudioPCMConfig Pcm { get; }
+    public AudioPcmConfig Pcm { get; }
 
     /// <summary>
     /// Gets the length of valid data in bytes.
@@ -462,7 +461,7 @@ public class AudioBuffer
     /// </summary>
     /// <param name="pcm">The PCM configuration.</param>
     /// <param name="size">The buffer capacity in samples.</param>
-    public AudioBuffer(AudioPCMConfig pcm, int size)
+    public AudioBuffer(AudioPcmConfig pcm, int size)
     {
         Pcm = pcm;
         Size = size;
@@ -475,7 +474,7 @@ public class AudioBuffer
     /// <param name="pcm">The PCM configuration.</param>
     /// <param name="samples">The 2D sample array.</param>
     /// <param name="length">The number of valid samples in the array.</param>
-    public AudioBuffer(AudioPCMConfig pcm, int[,] samples, int length)
+    public AudioBuffer(AudioPcmConfig pcm, int[,] samples, int length)
     {
         Pcm = pcm;
         // assert _samples.GetLength(1) == pcm.ChannelCount
@@ -488,7 +487,7 @@ public class AudioBuffer
     /// <param name="pcm">The PCM configuration.</param>
     /// <param name="bytes">The byte array containing PCM data.</param>
     /// <param name="length">The number of valid samples.</param>
-    public AudioBuffer(AudioPCMConfig pcm, byte[] bytes, int length)
+    public AudioBuffer(AudioPcmConfig pcm, byte[] bytes, int length)
     {
         Pcm = pcm;
         Prepare(bytes, length);

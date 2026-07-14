@@ -1,16 +1,17 @@
 using CHDSharp.Flac;
 using CHDSharp.Models.Flac.FlacDeps;
+using ZstdSharp;
 
 namespace CHDSharp.Models;
 
 internal class CHDCodec
 {
-    internal AudioPCMConfig FLAC_settings = null!;
+    internal AudioPcmConfig FLAC_settings = null!;
     internal AudioDecoder FLAC_audioDecoder = null!;
     internal AudioBuffer FLAC_audioBuffer = null!;
 
 
-    internal AudioPCMConfig AVHUFF_settings = null!;
+    internal AudioPcmConfig AVHUFF_settings = null!;
     internal AudioDecoder AVHUFF_audioDecoder = null!;
 
 
@@ -19,7 +20,7 @@ internal class CHDCodec
 
     internal byte[] blzma = null!;
 
-    internal ZstdSharp.Decompressor bZstd = null!;
+    internal Decompressor bZstd = null!;
 
     internal ushort[] bHuffman = null!;
     internal ushort[] bHuffmanHi = null!;

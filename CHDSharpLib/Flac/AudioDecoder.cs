@@ -44,7 +44,7 @@ public class AudioDecoder: IAudioSource
     private readonly Crc8 crc8;
     private readonly FlacFrame frame;
     private readonly BitReader framereader;
-    private AudioPCMConfig pcm;
+    private AudioPcmConfig pcm;
 
     private uint min_block_size;
     private uint max_block_size;
@@ -123,7 +123,7 @@ public class AudioDecoder: IAudioSource
     /// Initializes a new instance of the <see cref="AudioDecoder"/> class with a given PCM configuration.
     /// </summary>
     /// <param name="Pcm">PCM audio configuration specifying sample rate, bit depth, and channel count.</param>
-    public AudioDecoder(AudioPCMConfig Pcm)
+    public AudioDecoder(AudioPcmConfig Pcm)
     {
         pcm = Pcm;
         crc8 = new Crc8();
@@ -223,7 +223,7 @@ public class AudioDecoder: IAudioSource
     /// <summary>
     /// Gets the PCM audio configuration for this stream.
     /// </summary>
-    public AudioPCMConfig PCM => pcm;
+    public AudioPcmConfig PCM => pcm;
 
     /// <summary>
     /// Gets the file path of the FLAC source, or null if reading from a stream.
@@ -504,7 +504,7 @@ public class AudioDecoder: IAudioSource
                 // subframe header
                 var t1 = bitreader.readbit(); // ?????? == 0
                 if (t1 != 0)
-                    throw new Exception("unsupported subframe coding (ch == " + ch.ToString() + ")");
+                    throw new Exception("unsupported subframe coding (ch == " + ch + ")");
 
                 var type_code = (int)bitreader.readbits(6);
                 frame.subframes[ch].wbits = (int)bitreader.readbit();
@@ -737,8 +737,8 @@ public class AudioDecoder: IAudioSource
         byte x;
         int i, id;
         //bool first = true;
-        var FLAC__STREAM_SYNC_STRING = new byte[] { (byte)'f', (byte)'L', (byte)'a', (byte)'C' };
-        var ID3V2_TAG_ = new byte[] { (byte)'I', (byte)'D', (byte)'3' };
+        var FLAC__STREAM_SYNC_STRING = new[] { (byte)'f', (byte)'L', (byte)'a', (byte)'C' };
+        var ID3V2_TAG_ = new[] { (byte)'I', (byte)'D', (byte)'3' };
 
         for (i = id = 0; i < 4; )
         {
@@ -825,7 +825,7 @@ public class AudioDecoder: IAudioSource
                     var sample_rate = (int)bitreader.readbits(FLAC__STREAM_METADATA_STREAMINFO_SAMPLE_RATE_LEN);
                     var channels = 1 + (int)bitreader.readbits(FLAC__STREAM_METADATA_STREAMINFO_CHANNELS_LEN);
                     var bits_per_sample = 1 + (int)bitreader.readbits(FLAC__STREAM_METADATA_STREAMINFO_BITS_PER_SAMPLE_LEN);
-                    pcm = new AudioPCMConfig(bits_per_sample, channels, sample_rate);
+                    pcm = new AudioPcmConfig(bits_per_sample, channels, sample_rate);
                     _sampleCount = (long)bitreader.readbits64(FLAC__STREAM_METADATA_STREAMINFO_TOTAL_SAMPLES_LEN);
                     bitreader.skipbits(FLAC__STREAM_METADATA_STREAMINFO_MD5SUM_LEN);
                 }

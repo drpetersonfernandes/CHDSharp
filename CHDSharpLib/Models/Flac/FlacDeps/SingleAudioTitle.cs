@@ -19,7 +19,7 @@ public class SingleAudioTitle : IAudioTitle
     /// <summary>
     /// Gets the PCM configuration from the source.
     /// </summary>
-    public AudioPCMConfig PCM => source.PCM;
+    public AudioPcmConfig PCM => source.PCM;
     /// <summary>
     /// Gets the codec name from the source settings extension.
     /// </summary>

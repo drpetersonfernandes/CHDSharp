@@ -3,121 +3,119 @@ namespace CHDSharp.Models.Flac.FlacDeps;
 /// <summary>
 /// Represents the configuration of an audio PCM stream, including sample rate, bit depth, channel count, and speaker layout.
 /// </summary>
-public class AudioPCMConfig
+public class AudioPcmConfig
 {
     /// <summary>
     /// Flags representing speaker positions and predefined speaker configurations.
     /// </summary>
+    [Flags]
     public enum SpeakerConfig
     {
-        SPEAKERFRONTLEFT = 0x1,
-        SPEAKERFRONTRIGHT = 0x2,
-        SPEAKERFRONTCENTER = 0x4,
-        SPEAKERLOWFREQUENCY = 0x8,
-        SPEAKERBACKLEFT = 0x10,
-        SPEAKERBACKRIGHT = 0x20,
-        SPEAKERFRONTLEFTOFCENTER = 0x40,
-        SPEAKERFRONTRIGHTOFCENTER = 0x80,
-        SPEAKERBACKCENTER = 0x100,
-        SPEAKERSIDELEFT = 0x200,
-        SPEAKERSIDERIGHT = 0x400,
-        SPEAKERTOPCENTER = 0x800,
-        SPEAKERTOPFRONTLEFT = 0x1000,
-        SPEAKERTOPFRONTCENTER = 0x2000,
-        SPEAKERTOPFRONTRIGHT = 0x4000,
-        SPEAKERTOPBACKLEFT = 0x8000,
-        SPEAKERTOPBACKCENTER = 0x10000,
-        SPEAKERTOPBACKRIGHT = 0x20000,
+#pragma warning disable CA1069 // Duplicate enum values are intentional flags aliases
+        Speakerfrontleft = 0x1,
+        Speakerfrontright = 0x2,
+        Speakerfrontcenter = 0x4,
+        Speakerlowfrequency = 0x8,
+        Speakerbackleft = 0x10,
+        Speakerbackright = 0x20,
+        Speakerfrontleftofcenter = 0x40,
+        Speakerfrontrightofcenter = 0x80,
+        Speakerbackcenter = 0x100,
+        Speakersideleft = 0x200,
+        Speakersideright = 0x400,
+        Speakertopcenter = 0x800,
+        Speakertopfrontleft = 0x1000,
+        Speakertopfrontcenter = 0x2000,
+        Speakertopfrontright = 0x4000,
+        Speakertopbackleft = 0x8000,
+        Speakertopbackcenter = 0x10000,
+        Speakertopbackright = 0x20000,
 
-        DIRECTOUT = 0,
-        KSAUDIOSPEAKERMONO = SPEAKERFRONTCENTER,
-        KSAUDIOSPEAKERSTEREO = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT,
-        KSAUDIOSPEAKERQUAD = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT | SPEAKERBACKLEFT | SPEAKERBACKRIGHT,
-        KSAUDIOSPEAKERSURROUND = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT | SPEAKERFRONTCENTER | SPEAKERBACKCENTER,
-        KSAUDIOSPEAKER5POINT1 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT | SPEAKERFRONTCENTER | SPEAKERLOWFREQUENCY | SPEAKERBACKLEFT | SPEAKERBACKRIGHT,
-        KSAUDIOSPEAKER5POINT1SURROUND = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT | SPEAKERFRONTCENTER | SPEAKERLOWFREQUENCY | SPEAKERSIDELEFT | SPEAKERSIDERIGHT,
-        KSAUDIOSPEAKER7POINT1 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT | SPEAKERFRONTCENTER | SPEAKERLOWFREQUENCY | SPEAKERBACKLEFT | SPEAKERBACKRIGHT | SPEAKERFRONTLEFTOFCENTER | SPEAKERFRONTRIGHTOFCENTER,
-        KSAUDIOSPEAKER7POINT1SURROUND = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT | SPEAKERFRONTCENTER | SPEAKERLOWFREQUENCY | SPEAKERBACKLEFT | SPEAKERBACKRIGHT | SPEAKERSIDELEFT | SPEAKERSIDERIGHT,
+        Directout = 0,
+        Ksaudiospeakermono = Speakerfrontcenter,
+        Ksaudiospeakerstereo = Speakerfrontleft | Speakerfrontright,
+        Ksaudiospeakerquad = Speakerfrontleft | Speakerfrontright | Speakerbackleft | Speakerbackright,
+        Ksaudiospeakersurround = Speakerfrontleft | Speakerfrontright | Speakerfrontcenter | Speakerbackcenter,
+        Ksaudiospeaker5Point1 = Speakerfrontleft | Speakerfrontright | Speakerfrontcenter | Speakerlowfrequency | Speakerbackleft | Speakerbackright,
+        Ksaudiospeaker5Point1Surround = Speakerfrontleft | Speakerfrontright | Speakerfrontcenter | Speakerlowfrequency | Speakersideleft | Speakersideright,
+        Ksaudiospeaker7Point1 = Speakerfrontleft | Speakerfrontright | Speakerfrontcenter | Speakerlowfrequency | Speakerbackleft | Speakerbackright | Speakerfrontleftofcenter | Speakerfrontrightofcenter,
+        Ksaudiospeaker7Point1Surround = Speakerfrontleft | Speakerfrontright | Speakerfrontcenter | Speakerlowfrequency | Speakerbackleft | Speakerbackright | Speakersideleft | Speakersideright,
 
-        DVDAUDIOGR10 = SPEAKERFRONTCENTER,
-        DVDAUDIOGR11 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT,
-        DVDAUDIOGR12 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT,
-        DVDAUDIOGR13 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT,
-        DVDAUDIOGR14 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT,
-        DVDAUDIOGR15 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT,
-        DVDAUDIOGR16 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT,
-        DVDAUDIOGR17 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT,
-        DVDAUDIOGR18 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT,
-        DVDAUDIOGR19 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT,
-        DVDAUDIOGR110 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT,
-        DVDAUDIOGR111 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT,
-        DVDAUDIOGR112 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT,
-        DVDAUDIOGR113 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT | SPEAKERFRONTCENTER,
-        DVDAUDIOGR114 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT | SPEAKERFRONTCENTER,
-        DVDAUDIOGR115 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT | SPEAKERFRONTCENTER,
-        DVDAUDIOGR116 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT | SPEAKERFRONTCENTER,
-        DVDAUDIOGR117 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT | SPEAKERFRONTCENTER,
-        DVDAUDIOGR118 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT | SPEAKERBACKLEFT | SPEAKERBACKRIGHT,
-        DVDAUDIOGR119 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT | SPEAKERBACKLEFT | SPEAKERBACKRIGHT,
-        DVDAUDIOGR120 = SPEAKERFRONTLEFT | SPEAKERFRONTRIGHT | SPEAKERBACKLEFT | SPEAKERBACKRIGHT,
+        Dvdaudiogr10 = Speakerfrontcenter,
+        Dvdaudiogr11 = Speakerfrontleft | Speakerfrontright,
+        Dvdaudiogr12 = Speakerfrontleft | Speakerfrontright,
+        Dvdaudiogr13 = Speakerfrontleft | Speakerfrontright,
+        Dvdaudiogr14 = Speakerfrontleft | Speakerfrontright,
+        Dvdaudiogr15 = Speakerfrontleft | Speakerfrontright,
+        Dvdaudiogr16 = Speakerfrontleft | Speakerfrontright,
+        Dvdaudiogr17 = Speakerfrontleft | Speakerfrontright,
+        Dvdaudiogr18 = Speakerfrontleft | Speakerfrontright,
+        Dvdaudiogr19 = Speakerfrontleft | Speakerfrontright,
+        Dvdaudiogr110 = Speakerfrontleft | Speakerfrontright,
+        Dvdaudiogr111 = Speakerfrontleft | Speakerfrontright,
+        Dvdaudiogr112 = Speakerfrontleft | Speakerfrontright,
+        Dvdaudiogr113 = Speakerfrontleft | Speakerfrontright | Speakerfrontcenter,
+        Dvdaudiogr114 = Speakerfrontleft | Speakerfrontright | Speakerfrontcenter,
+        Dvdaudiogr115 = Speakerfrontleft | Speakerfrontright | Speakerfrontcenter,
+        Dvdaudiogr116 = Speakerfrontleft | Speakerfrontright | Speakerfrontcenter,
+        Dvdaudiogr117 = Speakerfrontleft | Speakerfrontright | Speakerfrontcenter,
+        Dvdaudiogr118 = Speakerfrontleft | Speakerfrontright | Speakerbackleft | Speakerbackright,
+        Dvdaudiogr119 = Speakerfrontleft | Speakerfrontright | Speakerbackleft | Speakerbackright,
+        Dvdaudiogr120 = Speakerfrontleft | Speakerfrontright | Speakerbackleft | Speakerbackright,
 
-        DVDAUDIOGR20 = 0,
-        DVDAUDIOGR21 = 0,
-        DVDAUDIOGR22 = SPEAKERBACKCENTER,
-        DVDAUDIOGR23 = SPEAKERBACKLEFT | SPEAKERBACKRIGHT,
-        DVDAUDIOGR24 = SPEAKERLOWFREQUENCY,
-        DVDAUDIOGR25 = SPEAKERLOWFREQUENCY | SPEAKERBACKCENTER,
-        DVDAUDIOGR26 = SPEAKERLOWFREQUENCY | SPEAKERBACKLEFT | SPEAKERBACKRIGHT,
-        DVDAUDIOGR27 = SPEAKERFRONTCENTER,
-        DVDAUDIOGR28 = SPEAKERFRONTCENTER | SPEAKERBACKCENTER,
-        DVDAUDIOGR29 = SPEAKERFRONTCENTER | SPEAKERBACKLEFT | SPEAKERBACKRIGHT,
-        DVDAUDIOGR210 = SPEAKERFRONTCENTER | SPEAKERLOWFREQUENCY,
-        DVDAUDIOGR211 = SPEAKERFRONTCENTER | SPEAKERLOWFREQUENCY | SPEAKERBACKCENTER,
-        DVDAUDIOGR212 = SPEAKERFRONTCENTER | SPEAKERLOWFREQUENCY | SPEAKERBACKLEFT | SPEAKERBACKRIGHT,
-        DVDAUDIOGR213 = SPEAKERBACKCENTER,
-        DVDAUDIOGR214 = SPEAKERBACKLEFT | SPEAKERBACKRIGHT,
-        DVDAUDIOGR215 = SPEAKERLOWFREQUENCY,
-        DVDAUDIOGR216 = SPEAKERLOWFREQUENCY | SPEAKERBACKCENTER,
-        DVDAUDIOGR217 = SPEAKERLOWFREQUENCY | SPEAKERBACKLEFT | SPEAKERBACKRIGHT,
-        DVDAUDIOGR218 = SPEAKERLOWFREQUENCY,
-        DVDAUDIOGR219 = SPEAKERFRONTCENTER,
-        DVDAUDIOGR220 = SPEAKERFRONTCENTER | SPEAKERLOWFREQUENCY
+        Dvdaudiogr20 = 0,
+        Dvdaudiogr21 = 0,
+        Dvdaudiogr22 = Speakerbackcenter,
+        Dvdaudiogr23 = Speakerbackleft | Speakerbackright,
+        Dvdaudiogr24 = Speakerlowfrequency,
+        Dvdaudiogr25 = Speakerlowfrequency | Speakerbackcenter,
+        Dvdaudiogr26 = Speakerlowfrequency | Speakerbackleft | Speakerbackright,
+        Dvdaudiogr27 = Speakerfrontcenter,
+        Dvdaudiogr28 = Speakerfrontcenter | Speakerbackcenter,
+        Dvdaudiogr29 = Speakerfrontcenter | Speakerbackleft | Speakerbackright,
+        Dvdaudiogr210 = Speakerfrontcenter | Speakerlowfrequency,
+        Dvdaudiogr211 = Speakerfrontcenter | Speakerlowfrequency | Speakerbackcenter,
+        Dvdaudiogr212 = Speakerfrontcenter | Speakerlowfrequency | Speakerbackleft | Speakerbackright,
+        Dvdaudiogr213 = Speakerbackcenter,
+        Dvdaudiogr214 = Speakerbackleft | Speakerbackright,
+        Dvdaudiogr215 = Speakerlowfrequency,
+        Dvdaudiogr216 = Speakerlowfrequency | Speakerbackcenter,
+        Dvdaudiogr217 = Speakerlowfrequency | Speakerbackleft | Speakerbackright,
+        Dvdaudiogr218 = Speakerlowfrequency,
+        Dvdaudiogr219 = Speakerfrontcenter,
+        Dvdaudiogr220 = Speakerfrontcenter | Speakerlowfrequency
+#pragma warning restore CA1069
     }
-
-    private readonly int _bitsPerSample;
-    private readonly int _channelCount;
-    private readonly int _sampleRate;
-    private readonly SpeakerConfig _channelMask;
 
     /// <summary>
     /// Gets the number of bits per sample.
     /// </summary>
-    public int BitsPerSample => _bitsPerSample;
+    public int BitsPerSample { get; }
 
     /// <summary>
     /// Gets the number of channels.
     /// </summary>
-    public int ChannelCount => _channelCount;
+    public int ChannelCount { get; }
 
     /// <summary>
     /// Gets the sample rate in Hz.
     /// </summary>
-    public int SampleRate => _sampleRate;
+    public int SampleRate { get; }
 
     /// <summary>
     /// Gets the block alignment in bytes (calculated from channel count and bits per sample).
     /// </summary>
-    public int BlockAlign => _channelCount * ((_bitsPerSample + 7) / 8);
+    public int BlockAlign => ChannelCount * ((BitsPerSample + 7) / 8);
 
     /// <summary>
     /// Gets the speaker channel mask.
     /// </summary>
-    public SpeakerConfig ChannelMask => _channelMask;
+    public SpeakerConfig ChannelMask { get; }
 
     /// <summary>
     /// Gets a value indicating whether the configuration matches Red Book audio CD format (16-bit, 2-channel, 44100 Hz).
     /// </summary>
-    public bool IsRedBook => _bitsPerSample == 16 && _channelCount == 2 && _sampleRate == 44100;
+    public bool IsRedBook => BitsPerSample == 16 && ChannelCount == 2 && SampleRate == 44100;
 
     /// <summary>
     /// Counts the number of set bits in the speaker mask, which represents the number of channels.
@@ -132,6 +130,7 @@ public class AudioPCMConfig
             count++;
             mask &= mask - 1;
         }
+
         return count;
     }
 
@@ -145,39 +144,40 @@ public class AudioPCMConfig
         switch (channelCount)
         {
             case 1:
-                return SpeakerConfig.KSAUDIOSPEAKERMONO;
+                return SpeakerConfig.Ksaudiospeakermono;
             case 2:
-                return SpeakerConfig.KSAUDIOSPEAKERSTEREO;
+                return SpeakerConfig.Ksaudiospeakerstereo;
             case 3:
-                return SpeakerConfig.KSAUDIOSPEAKERSTEREO | SpeakerConfig.SPEAKERLOWFREQUENCY;
+                return SpeakerConfig.Ksaudiospeakerstereo | SpeakerConfig.Speakerlowfrequency;
             case 4:
-                return SpeakerConfig.KSAUDIOSPEAKERQUAD;
+                return SpeakerConfig.Ksaudiospeakerquad;
             case 5:
                 //return SpeakerConfig.KSAUDIO_SPEAKER_5POINT1 & ~SpeakerConfig.SPEAKER_LOW_FREQUENCY;
-                return SpeakerConfig.KSAUDIOSPEAKER5POINT1SURROUND & ~SpeakerConfig.SPEAKERLOWFREQUENCY;
+                return SpeakerConfig.Ksaudiospeaker5Point1Surround & ~SpeakerConfig.Speakerlowfrequency;
             case 6:
                 //return SpeakerConfig.KSAUDIO_SPEAKER_5POINT1;
-                return SpeakerConfig.KSAUDIOSPEAKER5POINT1SURROUND;
+                return SpeakerConfig.Ksaudiospeaker5Point1Surround;
             case 7:
-                return SpeakerConfig.KSAUDIOSPEAKER5POINT1SURROUND | SpeakerConfig.SPEAKERBACKCENTER;
+                return SpeakerConfig.Ksaudiospeaker5Point1Surround | SpeakerConfig.Speakerbackcenter;
             case 8:
-                return SpeakerConfig.KSAUDIOSPEAKER7POINT1SURROUND;
+                return SpeakerConfig.Ksaudiospeaker7Point1Surround;
         }
+
         return (SpeakerConfig)((1 << channelCount) - 1);
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AudioPCMConfig"/> class.
+    /// Initializes a new instance of the <see cref="AudioPcmConfig"/> class.
     /// </summary>
     /// <param name="bitsPerSample">The number of bits per sample.</param>
     /// <param name="channelCount">The number of audio channels.</param>
     /// <param name="sampleRate">The sample rate in Hz.</param>
-    /// <param name="channelMask">The speaker configuration mask. If <see cref="SpeakerConfig.DIRECTOUT"/>, a default mask is assigned based on channel count.</param>
-    public AudioPCMConfig(int bitsPerSample, int channelCount, int sampleRate, SpeakerConfig channelMask = SpeakerConfig.DIRECTOUT)
+    /// <param name="channelMask">The speaker configuration mask. If <see cref="SpeakerConfig.Directout"/>, a default mask is assigned based on channel count.</param>
+    public AudioPcmConfig(int bitsPerSample, int channelCount, int sampleRate, SpeakerConfig channelMask = SpeakerConfig.Directout)
     {
-        _bitsPerSample = bitsPerSample;
-        _channelCount = channelCount;
-        _sampleRate = sampleRate;
-        _channelMask = channelMask == 0 ? GetDefaultChannelMask(channelCount) : channelMask;
+        BitsPerSample = bitsPerSample;
+        ChannelCount = channelCount;
+        SampleRate = sampleRate;
+        ChannelMask = channelMask == 0 ? GetDefaultChannelMask(channelCount) : channelMask;
     }
 }

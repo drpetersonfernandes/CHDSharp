@@ -15,7 +15,7 @@ public interface IAudioSource
     /// <summary>
     /// Gets the PCM configuration of the audio source.
     /// </summary>
-    AudioPCMConfig PCM { get; }
+    AudioPcmConfig PCM { get; }
     /// <summary>
     /// Gets the path to the audio file.
     /// </summary>
@@ -66,7 +66,7 @@ public interface IAudioTitle
     /// <summary>
     /// Gets the PCM configuration for this title.
     /// </summary>
-    AudioPCMConfig PCM { get; }
+    AudioPcmConfig PCM { get; }
     /// <summary>
     /// Gets the codec name for this title.
     /// </summary>

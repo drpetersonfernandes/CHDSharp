@@ -1,6 +1,7 @@
 using CHDSharp.Interfaces.LZMA;
-using CHDSharp.Models.LZMA;
+using CHDSharp.LZMA.LZ;
 using CHDSharp.LZMA.RangeCoder;
+using CHDSharp.Models.LZMA;
 
 namespace CHDSharp.LZMA;
 
@@ -157,7 +158,7 @@ internal class Decoder
         }
     }
 
-    private LZ.OutWindow? _mOutWindow;
+    private OutWindow? _mOutWindow;
 
     private readonly BitDecoder[] _mIsMatchDecoders = new BitDecoder[Base.KNumStates << Base.KNumPosStatesBitsMax];
     private readonly BitDecoder[] _mIsRepDecoders = new BitDecoder[Base.KNumStates];
@@ -197,7 +198,7 @@ internal class Decoder
         if (_mDictionarySize < 0)
             throw new InvalidParamException();
 
-        _mOutWindow = new LZ.OutWindow();
+        _mOutWindow = new OutWindow();
         var blockSize = Math.Max(_mDictionarySize, (1 << 12));
         _mOutWindow.Create(blockSize);
     }
@@ -285,7 +286,7 @@ internal class Decoder
         _mOutWindow = null;
     }
 
-    internal bool Code(int dictionarySize, LZ.OutWindow outWindow, RangeCoder.Decoder rangeDecoder)
+    internal bool Code(int dictionarySize, OutWindow outWindow, RangeCoder.Decoder rangeDecoder)
     {
         var dictionarySizeCheck = Math.Max(dictionarySize, 1);
 

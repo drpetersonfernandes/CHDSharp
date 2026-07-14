@@ -1,66 +1,11 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
+using CHDSharp.Models;
 using CHDSharp.Utils;
 using Serilog;
 
 namespace CHDSharp;
-
-internal class ChdHeader
-{
-    public chd_codec[] Compression = null!;
-    public CHDReader[] ChdReader = null!;
-
-    public ulong Totalbytes;
-    public uint Blocksize;
-    public uint Totalblocks;
-
-    // V5: size of a "unit" used for parent block address translation.
-    // For V1-V4 parent entries the offset is a direct hunk index, so unitbytes
-    // is only meaningful for V5 (set to blocksize as a harmless default otherwise).
-    public uint Unitbytes;
-
-    // True when the V5 map is the uncompressed variant. In that map an offset
-    // word of 0 means "read this hunk from the parent" (or zero-fill if none).
-    public bool UncompressedMap;
-
-    public MapEntry[] Map = null!;
-
-    public byte[] Md5 = null!; // just compressed data
-    public byte[] Rawsha1 = null!; // just compressed data
-    public byte[] Sha1 = null!; // includes the meta data
-
-    public byte[] Parentmd5 = null!;
-    public byte[] Parentsha1 = null!;
-
-    public ulong Metaoffset;
-}
-
-internal class MapEntry
-{
-    public compression_type Comptype;
-    public uint Length; // length of compressed data
-    public ulong Offset; // offset of compressed data in file. Also index of source block for COMPRESSION_SELF
-    public uint? Crc; // V3 & V4
-    public ushort? Crc16; // V5
-
-    public MapEntry SelfMapEntry = null!; // link to self MapEntry data used in COMPRESSION_SELF (replaces offset index)
-
-    //Used to optimmize block reading so that any block in only decompressed once.
-    public int UseCount;
-
-    public byte[] BuffIn = null!;
-    public byte[] BuffOutCache = null!;
-    public byte[] BuffOut = null!;
-
-    // Used in Parallel decompress to keep the blocks in order when hashing.
-    public bool Processed;
-
-
-    // Used to calculate which blocks should have buffered copies kept.
-    public int UsageWeight;
-    public bool KeepBufferCopy;
-}
 
 /// <summary>Provides methods for validating and inspecting CHD files using parallel decompression.</summary>
 public static class Chd

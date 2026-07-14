@@ -1,4 +1,4 @@
-﻿namespace CHDSharp.Flac;
+namespace CHDSharp.Models.Flac;
 
 /// <summary>
 /// Method for selecting the LPC order.

@@ -1,3 +1,5 @@
+using CHDSharp.Interfaces.LZMA;
+using CHDSharp.Models.LZMA;
 using CHDSharp.LZMA.RangeCoder;
 
 namespace CHDSharp.LZMA;
@@ -158,7 +160,7 @@ internal class Decoder
 
     uint m_PosStateMask;
 
-    Base.State state = new Base.State();
+    State state = new State();
     uint rep0, rep1, rep2, rep3;
 
     public Decoder()

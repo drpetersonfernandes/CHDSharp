@@ -1,4 +1,7 @@
-namespace CHDSharp.Flac.FlacDeps;
+using CHDSharp.Flac;
+using CHDSharp.Flac.FlacDeps;
+
+namespace CHDSharp.Models.Flac.FlacDeps;
 
 /// <summary>
 /// Stores per-window autocorrelation data for LPC subframe analysis.

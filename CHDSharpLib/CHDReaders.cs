@@ -2,6 +2,9 @@
 using CHDSharp.Flac;
 using CHDSharp.Flac.FlacDeps;
 using CHDSharp.LZMA;
+using CHDSharp.Models;
+using CHDSharp.Models.Flac.FlacDeps;
+using CHDSharp.Models.Utils;
 using CHDSharp.Utils;
 
 namespace CHDSharp;

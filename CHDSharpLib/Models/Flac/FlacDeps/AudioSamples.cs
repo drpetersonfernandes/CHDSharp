@@ -1,4 +1,4 @@
-﻿namespace CHDSharp.Flac.FlacDeps;
+namespace CHDSharp.Models.Flac.FlacDeps;
 
 /// <summary>
 /// Provides low-level unsafe memory operations for audio sample buffers.

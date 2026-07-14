@@ -1,4 +1,6 @@
-﻿namespace CHDSharp.Flac;
+using CHDSharp.Flac;
+
+namespace CHDSharp.Models.Flac;
 
 /// <summary>
 /// Rice coding context for encoding/decoding residual values in FLAC subframes.

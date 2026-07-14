@@ -1,4 +1,4 @@
-﻿namespace CHDSharp.Flac.FlacDeps;
+namespace CHDSharp.Models.Flac.FlacDeps;
 
 /// <summary>
 /// Represents the configuration of an audio PCM stream, including sample rate, bit depth, channel count, and speaker layout.

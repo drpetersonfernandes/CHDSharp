@@ -1,4 +1,6 @@
-﻿namespace CHDSharp.Flac.FlacDeps;
+using CHDSharp.Interfaces.Flac.FlacDeps;
+
+namespace CHDSharp.Models.Flac.FlacDeps;
 
 /// <summary>
 /// Represents a buffer for audio sample data, supporting conversion between byte, sample, and float representations across multiple bit depths.

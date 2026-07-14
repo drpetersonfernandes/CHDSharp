@@ -1,4 +1,4 @@
-﻿namespace CHDSharp.Flac;
+namespace CHDSharp.Models.Flac;
 
 /// <summary>
 /// Type of linear prediction

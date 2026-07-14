@@ -1,6 +1,7 @@
 using CHDSharp.Flac.FlacDeps;
+using CHDSharp.Models.Flac.FlacDeps;
 
-namespace CHDSharp.Flac;
+namespace CHDSharp.Models.Flac;
 
 /// <summary>
 /// Represents a single FLAC subframe containing encoded audio data for one channel.

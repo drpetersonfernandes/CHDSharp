@@ -1,4 +1,5 @@
-﻿using Serilog;
+﻿using CHDSharp.Models;
+using Serilog;
 using System.Diagnostics;
 using System.Security.Cryptography;
 

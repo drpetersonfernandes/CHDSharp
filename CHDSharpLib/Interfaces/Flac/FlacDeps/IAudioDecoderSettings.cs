@@ -1,6 +1,7 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
+using CHDSharp.Models.Flac.FlacDeps;
 
-namespace CHDSharp.Flac.FlacDeps;
+namespace CHDSharp.Interfaces.Flac.FlacDeps;
 
 /// <summary>
 /// Settings for an audio decoder instance.

@@ -1,34 +1,11 @@
+using CHDSharp.Models.LZMA;
+
 namespace CHDSharp.LZMA;
 
 internal abstract class Base
 {
     public const uint kNumRepDistances = 4;
     public const uint kNumStates = 12;
-
-    public struct State
-    {
-        public uint Index;
-        public void Init() { Index = 0; }
-        public void UpdateChar()
-        {
-            if (Index < 4)
-            {
-                Index = 0;
-            }
-            else if (Index < 10)
-            {
-                Index -= 3;
-            }
-            else
-            {
-                Index -= 6;
-            }
-        }
-        public void UpdateMatch() { Index = (uint)(Index < 7 ? 7 : 10); }
-        public void UpdateRep() { Index = (uint)(Index < 7 ? 8 : 11); }
-        public void UpdateShortRep() { Index = (uint)(Index < 7 ? 9 : 11); }
-        public bool IsCharState() { return Index < 7; }
-    }
 
     public const int kNumPosSlotBits = 6;
     public const int kDicLogSizeMin = 0;

@@ -20,6 +20,9 @@
  */
 
 using CHDSharp.Flac.FlacDeps;
+using CHDSharp.Interfaces.Flac.FlacDeps;
+using CHDSharp.Models.Flac;
+using CHDSharp.Models.Flac.FlacDeps;
 
 namespace CHDSharp.Flac;
 

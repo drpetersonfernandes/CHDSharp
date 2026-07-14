@@ -1,6 +1,6 @@
-﻿using CHDSharp.Flac.FlacDeps;
+using CHDSharp.Models.Flac.FlacDeps;
 
-namespace CHDSharp.Flac;
+namespace CHDSharp.Models.Flac;
 
 /// <summary>
 /// Represents a FLAC audio frame with its header, subframe data, and decoding state.

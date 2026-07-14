@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using CHDSharp.Models;
 using Xunit;
 
 namespace CHDSharp.Tests;

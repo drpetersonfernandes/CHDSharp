@@ -1,4 +1,4 @@
-﻿namespace CHDSharp.Flac;
+namespace CHDSharp.Models.Flac;
 
 /// <summary>
 /// Stereo encoding mode for FLAC frames.

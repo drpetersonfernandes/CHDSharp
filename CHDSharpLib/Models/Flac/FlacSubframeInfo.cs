@@ -1,6 +1,7 @@
 using CHDSharp.Flac.FlacDeps;
+using CHDSharp.Models.Flac.FlacDeps;
 
-namespace CHDSharp.Flac;
+namespace CHDSharp.Models.Flac;
 
 /// <summary>
 /// Tracks encoding and decoding state for a single subframe within a FLAC frame.

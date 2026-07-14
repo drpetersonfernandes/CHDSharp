@@ -1,4 +1,4 @@
-﻿namespace CHDSharp.Flac;
+namespace CHDSharp.Models.Flac;
 
 /// <summary>
 /// Window method options for FLAC encoding.

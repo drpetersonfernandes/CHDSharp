@@ -1,4 +1,5 @@
-﻿using CHDSharp.Utils;
+﻿using CHDSharp.Models;
+using CHDSharp.Utils;
 using Serilog;
 
 namespace CHDSharp;

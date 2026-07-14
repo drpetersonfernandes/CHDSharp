@@ -1,7 +1,7 @@
-﻿using CHDSharp.Flac;
-using CHDSharp.Flac.FlacDeps;
+using CHDSharp.Flac;
+using CHDSharp.Models.Flac.FlacDeps;
 
-namespace CHDSharp;
+namespace CHDSharp.Models;
 
 internal class CHDCodec
 {

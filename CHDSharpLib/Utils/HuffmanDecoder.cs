@@ -1,16 +1,6 @@
-﻿namespace CHDSharp.Utils;
+﻿using CHDSharp.Models.Utils;
 
-internal enum huffman_error
-{
-    HUFFERR_NONE = 0,
-    HUFFERR_TOO_MANY_BITS,
-    HUFFERR_INVALID_DATA,
-    HUFFERR_INPUT_BUFFER_TOO_SMALL,
-    HUFFERR_OUTPUT_BUFFER_TOO_SMALL,
-    HUFFERR_INTERNAL_INCONSISTENCY,
-    HUFFERR_TOO_MANY_CONTEXTS
-};
-
+namespace CHDSharp.Utils;
 
 internal class node_t
 {

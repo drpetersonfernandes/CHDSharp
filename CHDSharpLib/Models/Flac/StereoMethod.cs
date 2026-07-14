@@ -1,5 +1,4 @@
-﻿
-namespace CHDSharp.Flac;
+namespace CHDSharp.Models.Flac;
 
 /// <summary>
 /// Stereo encoding method options for FLAC encoding.

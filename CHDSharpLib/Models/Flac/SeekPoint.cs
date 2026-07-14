@@ -1,4 +1,4 @@
-﻿namespace CHDSharp.Flac;
+namespace CHDSharp.Models.Flac;
 
 /// <summary>
 /// Represents a single entry in a FLAC seek table, mapping sample numbers to byte offsets.

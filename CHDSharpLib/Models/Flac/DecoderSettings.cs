@@ -1,15 +1,13 @@
-﻿using System.ComponentModel;
-using CHDSharp.Flac.FlacDeps;
+using System.ComponentModel;
+using CHDSharp.Flac;
+using CHDSharp.Interfaces.Flac.FlacDeps;
 
-//using Newtonsoft.Json;
-
-namespace CHDSharp.Flac;
+namespace CHDSharp.Models.Flac;
 
 /// <summary>
 /// FLAC decoder settings implementing <see cref="IAudioDecoderSettings"/>.
 /// Configured for the "cuetools" FLAC decoder with a priority of 2.
 /// </summary>
-//[JsonObject(MemberSerialization.OptIn)]
 public class DecoderSettings : IAudioDecoderSettings
 {
     #region IAudioDecoderSettings implementation

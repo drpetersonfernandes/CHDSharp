@@ -1,4 +1,6 @@
-﻿namespace CHDSharp.Flac.FlacDeps;
+using CHDSharp.Models.Flac.FlacDeps;
+
+namespace CHDSharp.Interfaces.Flac.FlacDeps;
 
 /// <summary>
 /// Represents an audio output destination that accepts sample data for writing.

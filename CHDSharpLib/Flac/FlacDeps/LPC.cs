@@ -203,7 +203,7 @@ public class Lpc
         var lpc_tmp = stackalloc double[MAXLPCORDER];
 
         if (maxOrder > MAXLPCORDER)
-            throw new Exception("weird");
+            throw new InvalidOperationException("weird");
 
         for (var i = 0; i < maxOrder; i++)
         {

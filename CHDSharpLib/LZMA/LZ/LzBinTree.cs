@@ -8,8 +8,8 @@ internal class BinTree : InWindow
     private uint _cyclicBufferSize;
     private uint _matchMaxLen;
 
-    private uint[] _son;
-    private uint[] _hash;
+    private uint[] _son = null!;
+    private uint[] _hash = null!;
 
     private uint _cutValue = 0xFF;
     private uint _hashMask;

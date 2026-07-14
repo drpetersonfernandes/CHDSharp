@@ -26,7 +26,7 @@ public class DecoderSettings : IAudioDecoderSettings
     /// <returns>A new <see cref="IAudioDecoderSettings"/> instance with the same values.</returns>
     public IAudioDecoderSettings Clone()
     {
-        return MemberwiseClone() as IAudioDecoderSettings;
+        return (IAudioDecoderSettings)MemberwiseClone();
     }
 
     #endregion

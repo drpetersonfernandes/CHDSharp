@@ -17,7 +17,7 @@ public class LzmaStream : Stream
     private readonly int _dictionarySize;
     private readonly OutWindow _outWindow = new();
     private readonly RangeCoder.Decoder _rangeDecoder = new();
-    private Decoder _decoder;
+    private Decoder _decoder = null!;
 
     private long _position;
     private bool _endReached;
@@ -37,7 +37,7 @@ public class LzmaStream : Stream
     /// <param name="properties">LZMA properties header (5 bytes).</param>
     /// <param name="inputStream">The compressed source stream.</param>
     public LzmaStream(byte[] properties, Stream inputStream)
-        : this(properties, inputStream, -1, -1, null, properties.Length < 5)
+        : this(properties, inputStream, -1, -1, null!, properties.Length < 5)
     {
     }
 
@@ -48,7 +48,7 @@ public class LzmaStream : Stream
     /// <param name="inputStream">The compressed source stream.</param>
     /// <param name="inputSize">Exact size in bytes of the compressed data, or -1 if unknown.</param>
     public LzmaStream(byte[] properties, Stream inputStream, long inputSize)
-        : this(properties, inputStream, inputSize, -1, null, properties.Length < 5)
+        : this(properties, inputStream, inputSize, -1, null!, properties.Length < 5)
     {
     }
 
@@ -60,7 +60,7 @@ public class LzmaStream : Stream
     /// <param name="inputSize">Exact size in bytes of the compressed data, or -1 if unknown.</param>
     /// <param name="outputSize">Exact size in bytes of the decompressed data, or -1 if unknown.</param>
     public LzmaStream(byte[] properties, Stream inputStream, long inputSize, long outputSize)
-        : this(properties, inputStream, inputSize, outputSize, null, properties.Length < 5)
+        : this(properties, inputStream, inputSize, outputSize, null!, properties.Length < 5)
     {
     }
 
@@ -75,7 +75,7 @@ public class LzmaStream : Stream
     /// <param name="isLzma2"><c>true</c> to use LZMA2 format; <c>false</c> for LZMA.</param>
     /// <param name="outWindowBuff">Optional pre-allocated buffer for the output window, or <c>null</c>.</param>
     public LzmaStream(byte[] properties, Stream inputStream, long inputSize, long outputSize,
-        Stream presetDictionary, bool isLzma2, byte[] outWindowBuff = null)
+        Stream presetDictionary, bool isLzma2, byte[]? outWindowBuff = null)
     {
         _inputStream = inputStream;
         _inputSize = inputSize;

@@ -9,7 +9,7 @@ namespace CHDSharp.Tests;
 /// </summary>
 public class RandomAccessTests
 {
-    private static string FirstAvailable()
+    private static string? FirstAvailable()
     {
         return ChdListData.AllPaths().FirstOrDefault(File.Exists);
     }
@@ -22,7 +22,7 @@ public class RandomAccessTests
 
         var err = ChdFile.Open(path, out var chd);
         Assert.Equal(ChdError.Chderrnone, err);
-        return chd;
+        return chd!;
     }
 
     [Fact]

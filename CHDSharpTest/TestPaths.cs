@@ -7,10 +7,10 @@ namespace CHDSharp.Tests;
 /// </summary>
 internal static class TestPaths
 {
-    private static readonly Lazy<string> _repoRoot = new(FindRepoRoot);
+    private static readonly Lazy<string?> _repoRoot = new(FindRepoRoot);
 
     /// <summary>Repository root (folder containing the .sln), or null if not found.</summary>
-    public static string RepoRoot => _repoRoot.Value;
+    public static string? RepoRoot => _repoRoot.Value;
 
     /// <summary>Full path to chdman.exe.</summary>
     public static string ChdmanExe =>
@@ -20,7 +20,7 @@ internal static class TestPaths
     public static string ChdFolder => @"D:\CHD";
 
     /// <summary>Full path to the "CHD list.txt" file (may not exist).</summary>
-    public static string ChdListFile =>
+    public static string? ChdListFile =>
         RepoRoot == null ? null : Path.Combine(RepoRoot, "References", "CHD list.txt");
 
     /// <summary>True if chdman.exe is available for cross-checking.</summary>
@@ -34,7 +34,7 @@ internal static class TestPaths
         return dir;
     }
 
-    private static string FindRepoRoot()
+    private static string? FindRepoRoot()
     {
         // Walk up from the test assembly location looking for the solution file.
         var dir = AppContext.BaseDirectory;

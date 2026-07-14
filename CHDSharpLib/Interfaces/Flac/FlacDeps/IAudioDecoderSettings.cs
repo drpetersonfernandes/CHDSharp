@@ -77,8 +77,8 @@ public static class IAudioDecoderSettingsExtensions
     /// <param name="path">The path to the audio file.</param>
     /// <param name="IO">An optional stream to use for reading (if supported by the decoder).</param>
     /// <returns>A new <see cref="IAudioSource"/> instance created by the decoder.</returns>
-    public static IAudioSource Open(this IAudioDecoderSettings settings, string path, Stream IO = null)
+    public static IAudioSource Open(this IAudioDecoderSettings settings, string path, Stream? IO = null)
     {
-        return Activator.CreateInstance(settings.DecoderType, settings, path, IO) as IAudioSource;
+        return (Activator.CreateInstance(settings.DecoderType, settings, path, IO) as IAudioSource)!;
     }
 }

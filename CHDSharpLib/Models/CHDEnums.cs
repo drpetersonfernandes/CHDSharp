@@ -115,7 +115,7 @@ public enum CompressionType
     Compressionself0 = 9,
 
     /* same as the last COMPRESSION_SELF block + 1 */
-    /// <summary>Same as the most recent <see cref="COMPRESSION_SELF"/> block plus one.</summary>
+    /// <summary>Same as the most recent <see cref="Compressionself"/> block plus one.</summary>
     Compressionself1 = 10,
 
     /* same block in the parent */
@@ -127,7 +127,7 @@ public enum CompressionType
     Compressionparent0 = 12,
 
     /* same as the last COMPRESSION_PARENT block + 1 */
-    /// <summary>Same as the most recent <see cref="COMPRESSION_PARENT"/> block plus one.</summary>
+    /// <summary>Same as the most recent <see cref="Compressionparent"/> block plus one.</summary>
     Compressionparent1 = 13,
 
     /* ADDED HERE: used in CHD V3 and V4 */

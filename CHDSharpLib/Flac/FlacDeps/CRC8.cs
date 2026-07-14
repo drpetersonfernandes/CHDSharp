@@ -7,7 +7,7 @@ public class Crc8
 {
     private const ushort poly8 = 0x07;
 
-    private static ushort[] table;
+    private static ushort[]? table;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Crc8"/> class and builds the CRC lookup table on first initialization.
@@ -50,7 +50,7 @@ public class Crc8
         ushort crc = 0;
         for (var i = pos; i < pos + count; i++)
         {
-            crc = table[crc ^ bytes[i]];
+            crc = table![crc ^ bytes[i]];
         }
 
         return (byte)crc;
@@ -68,7 +68,7 @@ public class Crc8
         ushort crc = 0;
         for (var i = pos; i < pos + count; i++)
         {
-            crc = table[crc ^ bytes[i]];
+            crc = table![crc ^ bytes[i]];
         }
 
         return (byte)crc;

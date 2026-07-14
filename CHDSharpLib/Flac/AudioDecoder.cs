@@ -1,3 +1,4 @@
+using System.IO;
 using CHDSharp.Flac.FlacDeps;
 using CHDSharp.Interfaces.Flac.FlacDeps;
 using CHDSharp.Models.Flac;
@@ -11,26 +12,55 @@ namespace CHDSharp.Flac;
 /// </summary>
 public class AudioDecoder : IAudioSource
 {
+    /// <summary>Buffer used to store residual values during subframe decoding. Allocated to <see cref="FlakeConstants.MAXBLOCKSIZE"/> × channel count ints.</summary>
     private readonly int[] _residualBuffer;
 
+    /// <summary>Buffer that holds raw FLAC frame data read from the input stream.</summary>
     private readonly byte[] _framesBuffer;
-    private int _framesBufferLength, _framesBufferOffset;
+
+    /// <summary>Number of valid bytes currently held in <see cref="_framesBuffer"/>.</summary>
+    private int _framesBufferLength;
+
+    /// <summary>Start offset within <see cref="_framesBuffer"/> of the next unprocessed data.</summary>
+    private int _framesBufferOffset;
+
+    /// <summary>File position at which the first audio frame begins (after all metadata blocks).</summary>
     private long _firstFrameOffset;
 
-    private SeekPoint[] _seekTable;
+    /// <summary>Optional seek table parsed from the FLAC metadata; <c>null</c> if no seek table is present.</summary>
+    private SeekPoint[]? _seekTable;
 
+    /// <summary>CRC-8 calculator used for frame header integrity checks.</summary>
     private readonly Crc8 _crc8;
+
+    /// <summary>Reused <see cref="FlacFrame"/> instance that holds the currently decoded frame's header and subframe state.</summary>
     private readonly FlacFrame _frame;
+
+    /// <summary>Bit-level reader wrapping the raw frame data in <see cref="_framesBuffer"/>.</summary>
     private readonly BitReader _framereader;
 
+    /// <summary>Minimum block size declared in the STREAMINFO metadata block.</summary>
     private uint _minBlockSize;
+
+    /// <summary>Maximum block size declared in the STREAMINFO metadata block.</summary>
     private uint _maxBlockSize;
+
+    /// <summary>Minimum frame size (bytes) declared in the STREAMINFO metadata block.</summary>
     private uint _minFrameSize;
+
+    /// <summary>Maximum frame size (bytes) declared in the STREAMINFO metadata block.</summary>
     private uint _maxFrameSize;
 
-    private int _samplesInBuffer, _samplesBufferOffset;
+    /// <summary>Number of decoded samples currently available in <see cref="Samples"/> (not yet consumed by <see cref="Read"/>).</summary>
+    private int _samplesInBuffer;
+
+    /// <summary>Offset into <see cref="Samples"/> where the next unconsumed sample starts.</summary>
+    private int _samplesBufferOffset;
+
+    /// <summary>Stream position (in samples) of the data held in <see cref="Samples"/>.</summary>
     private long _sampleOffset;
 
+    /// <summary>Backing input stream — either the user-supplied stream or an internally-opened <see cref="FileStream"/>.</summary>
     private readonly Stream _io;
 
     /// <summary>
@@ -49,7 +79,7 @@ public class AudioDecoder : IAudioSource
     /// <param name="settings">Decoder configuration settings.</param>
     /// <param name="path">Path to the FLAC file, or null if reading from a stream.</param>
     /// <param name="io">Input stream. If null and path is provided, a <see cref="FileStream"/> is opened.</param>
-    public AudioDecoder(DecoderSettings settings, string path, Stream io = null)
+    public AudioDecoder(DecoderSettings settings, string? path, Stream? io = null)
     {
         _mSettings = settings;
 
@@ -60,7 +90,7 @@ public class AudioDecoder : IAudioSource
         }
         else
         {
-            _io = io;
+            _io = io!;
         }
 
         _crc8 = new Crc8();
@@ -68,7 +98,7 @@ public class AudioDecoder : IAudioSource
         _framesBuffer = new byte[0x20000];
         decode_metadata();
 
-        _frame = new FlacFrame(PCM.ChannelCount);
+        _frame = new FlacFrame(PCM!.ChannelCount);
         _framereader = new BitReader();
 
         //max_frame_size = 16 + ((Flake.MAX_BLOCKSIZE * PCM.BitsPerSample * PCM.ChannelCount + 1) + 7) >> 3);
@@ -84,7 +114,7 @@ public class AudioDecoder : IAudioSource
         _samplesInBuffer = 0;
 
         if (PCM.BitsPerSample != 16 && PCM.BitsPerSample != 24)
-            throw new Exception("invalid flac file");
+            throw new InvalidDataException("invalid flac file");
 
         Samples = new int[FlakeConstants.MAXBLOCKSIZE * PCM.ChannelCount];
         _residualBuffer = new int[FlakeConstants.MAXBLOCKSIZE * PCM.ChannelCount];
@@ -96,6 +126,9 @@ public class AudioDecoder : IAudioSource
     /// <param name="pcm">PCM audio configuration specifying sample rate, bit depth, and channel count.</param>
     public AudioDecoder(AudioPcmConfig pcm)
     {
+        _framesBuffer = null!;
+        _io = null!;
+        _mSettings = null!;
         PCM = pcm;
         _crc8 = new Crc8();
 
@@ -144,7 +177,7 @@ public class AudioDecoder : IAudioSource
         set
         {
             if (value > Length)
-                throw new Exception("seeking past end of stream");
+                throw new ArgumentOutOfRangeException(nameof(value), "seeking past end of stream");
 
             if (value < Position || value > _sampleOffset)
             {
@@ -171,7 +204,7 @@ public class AudioDecoder : IAudioSource
                 }
 
                 if (value < Position)
-                    throw new Exception("cannot seek backwards without seek table");
+                    throw new InvalidOperationException("cannot seek backwards without seek table");
             }
 
             while (value > _sampleOffset)
@@ -181,7 +214,7 @@ public class AudioDecoder : IAudioSource
 
                 fill_frames_buffer();
                 if (_framesBufferLength == 0)
-                    throw new Exception("seek failed");
+                    throw new InvalidOperationException("seek failed");
 
                 var bytesDecoded = DecodeFrame(_framesBuffer, _framesBufferOffset, _framesBufferLength);
                 _framesBufferLength -= bytesDecoded;
@@ -204,8 +237,16 @@ public class AudioDecoder : IAudioSource
     /// <summary>
     /// Gets the file path of the FLAC source, or null if reading from a stream.
     /// </summary>
-    public string Path { get; }
+    public string Path { get; } = null!;
 
+    /// <summary>
+    /// Interleaves decoded samples from <see cref="Samples"/> into the target <see cref="AudioBuffer"/>.
+    /// For stereo streams, each channel's samples are interleaved (L,R,L,R,…).
+    /// For other channel counts, samples are written channel-by-channel.
+    /// </summary>
+    /// <param name="buff">Destination audio buffer.</param>
+    /// <param name="offset">Starting sample offset within <paramref name="buff"/>.</param>
+    /// <param name="count">Number of samples to write per channel.</param>
     private unsafe void Interlace(AudioBuffer buff, int offset, int count)
     {
         if (PCM.ChannelCount == 2)
@@ -277,6 +318,10 @@ public class AudioDecoder : IAudioSource
         return buffer.Length = offset + sampleCount;
     }
 
+    /// <summary>
+    /// Ensures the internal frame buffer holds at least half its capacity by reading more data from the input stream.
+    /// When the unread portion crosses the buffer's halfway point the remaining data is compacted to the start.
+    /// </summary>
     private unsafe void fill_frames_buffer()
     {
         if (_framesBufferLength == 0)
@@ -302,12 +347,18 @@ public class AudioDecoder : IAudioSource
         }
     }
 
+    /// <summary>
+    /// Decodes the FLAC frame header: sync code, block size, sample rate, channel mode, bit-depth, and frame/CRC check.
+    /// Populates <paramref name="frame"/> with the parsed values.
+    /// </summary>
+    /// <param name="bitreader">Bit reader positioned at the start of the frame header.</param>
+    /// <param name="frame">Target <see cref="FlacFrame"/> to populate.</param>
     private unsafe void decode_frame_header(BitReader bitreader, FlacFrame frame)
     {
         var headerStart = bitreader.Position;
 
         if (bitreader.Readbits(15) != 0x7FFC)
-            throw new Exception("invalid frame");
+            throw new InvalidDataException("invalid frame");
 
         var vbs = bitreader.Readbit();
         frame.bs_code0 = (int)bitreader.Readbits(4);
@@ -315,11 +366,11 @@ public class AudioDecoder : IAudioSource
         frame.ch_mode = (ChannelMode)bitreader.Readbits(4);
         var bpsCode = bitreader.Readbits(3);
         if (FlakeConstants.flacBitdepths[bpsCode] != PCM.BitsPerSample)
-            throw new Exception("unsupported bps coding");
+            throw new NotSupportedException("unsupported bps coding");
 
         var t1 = bitreader.Readbit(); // == 0?????
         if (t1 != 0)
-            throw new Exception("unsupported frame coding");
+            throw new NotSupportedException("unsupported frame coding");
 
         frame.frame_number = (int)bitreader.ReadUtf8();
 
@@ -345,14 +396,14 @@ public class AudioDecoder : IAudioSource
             // sr_code0 == 12 -> sr == bitreader.readbits(8) * 1000;
             // sr_code0 == 13 -> sr == bitreader.readbits(16);
             // sr_code0 == 14 -> sr == bitreader.readbits(16) * 10;
-            throw new Exception("invalid sample rate mode");
+            throw new NotSupportedException("invalid sample rate mode");
         }
 
         var frameChannels = (int)frame.ch_mode + 1;
         switch (frameChannels)
         {
             case > 11:
-                throw new Exception("invalid channel mode");
+                throw new InvalidDataException("invalid channel mode");
             // Mid/Left/Right Side Stereo
             case 2 or > 8:
                 frameChannels = 2;
@@ -363,21 +414,33 @@ public class AudioDecoder : IAudioSource
         }
 
         if (frameChannels != PCM.ChannelCount)
-            throw new Exception("invalid channel mode");
+            throw new InvalidDataException("invalid channel mode");
 
         // CRC-8 of frame header
         var crc = DoCrc ? _crc8.ComputeChecksum(bitreader.Buffer, headerStart, bitreader.Position - headerStart) : (byte)0;
         frame.crc8 = (byte)bitreader.Readbits(8);
         if (DoCrc && frame.crc8 != crc)
-            throw new Exception("header crc mismatch");
+            throw new InvalidDataException("header crc mismatch");
     }
 
+    /// <summary>
+    /// Decodes a constant subframe: all samples in the block share the same value read from the bitstream.
+    /// </summary>
+    /// <param name="bitreader">Bit reader positioned at the subframe data.</param>
+    /// <param name="frame">The current frame being decoded.</param>
+    /// <param name="ch">Zero-based channel index.</param>
     private unsafe void decode_subframe_constant(BitReader bitreader, FlacFrame frame, int ch)
     {
         var obits = frame.subframes[ch].obits;
         frame.subframes[ch].best.residual[0] = bitreader.ReadbitsSigned(obits);
     }
 
+    /// <summary>
+    /// Decodes a verbatim (uncompressed) subframe by reading raw signed samples directly from the bitstream.
+    /// </summary>
+    /// <param name="bitreader">Bit reader positioned at the subframe data.</param>
+    /// <param name="frame">The current frame being decoded.</param>
+    /// <param name="ch">Zero-based channel index.</param>
     private unsafe void decode_subframe_verbatim(BitReader bitreader, FlacFrame frame, int ch)
     {
         var obits = frame.subframes[ch].obits;
@@ -387,17 +450,24 @@ public class AudioDecoder : IAudioSource
         }
     }
 
+    /// <summary>
+    /// Decodes the residual (Rice-coded error signal) portion of a subframe after prediction coefficients have been read.
+    /// Handles both partition order 0 (Rice coding) and higher partition orders with configurable Rice parameters.
+    /// </summary>
+    /// <param name="bitreader">Bit reader positioned at the residual data.</param>
+    /// <param name="frame">The current frame being decoded.</param>
+    /// <param name="ch">Zero-based channel index.</param>
     private static unsafe void decode_residual(BitReader bitreader, FlacFrame frame, int ch)
     {
         // rice-encoded block
         // coding method
         frame.subframes[ch].best.rc.coding_method = (int)bitreader.Readbits(2); // ????? == 0
         if (frame.subframes[ch].best.rc.coding_method != 0 && frame.subframes[ch].best.rc.coding_method != 1)
-            throw new Exception("unsupported residual coding");
+            throw new NotSupportedException("unsupported residual coding");
         // partition order
         frame.subframes[ch].best.rc.porder = (int)bitreader.Readbits(4);
         if (frame.subframes[ch].best.rc.porder > 8)
-            throw new Exception("invalid partition order");
+            throw new InvalidDataException("invalid partition order");
 
         var psize = frame.blocksize >> frame.subframes[ch].best.rc.porder;
         var res_cnt = psize - frame.subframes[ch].best.order;
@@ -433,6 +503,13 @@ public class AudioDecoder : IAudioSource
         }
     }
 
+    /// <summary>
+    /// Decodes a Fixed-prediction subframe. Reads warm-up samples (equal to the prediction order) then the Rice-coded residual,
+    /// which is later combined by <see cref="restore_samples_fixed"/> to reconstruct the original samples.
+    /// </summary>
+    /// <param name="bitreader">Bit reader positioned at the subframe data.</param>
+    /// <param name="frame">The current frame being decoded.</param>
+    /// <param name="ch">Zero-based channel index.</param>
     private unsafe void decode_subframe_fixed(BitReader bitreader, FlacFrame frame, int ch)
     {
         // warm-up samples
@@ -446,6 +523,13 @@ public class AudioDecoder : IAudioSource
         decode_residual(bitreader, frame, ch);
     }
 
+    /// <summary>
+    /// Decodes an LPC (Linear Predictive Coding) subframe. Reads warm-up samples, quantised LPC coefficients,
+    /// and the Rice-coded residual. Actual sample reconstruction is deferred to <see cref="restore_samples_lpc"/>.
+    /// </summary>
+    /// <param name="bitreader">Bit reader positioned at the subframe data.</param>
+    /// <param name="frame">The current frame being decoded.</param>
+    /// <param name="ch">Zero-based channel index.</param>
     private unsafe void decode_subframe_lpc(BitReader bitreader, FlacFrame frame, int ch)
     {
         // warm-up samples
@@ -458,11 +542,11 @@ public class AudioDecoder : IAudioSource
         // LPC coefficients
         frame.subframes[ch].best.cbits = (int)bitreader.Readbits(4) + 1; // lpc_precision
         if (frame.subframes[ch].best.cbits >= 16)
-            throw new Exception("cbits >= 16");
+            throw new InvalidDataException("cbits >= 16");
 
         frame.subframes[ch].best.shift = bitreader.ReadbitsSigned(5);
         if (frame.subframes[ch].best.shift < 0)
-            throw new Exception("negative shift");
+            throw new InvalidDataException("negative shift");
 
         for (var i = 0; i < frame.subframes[ch].best.order; i++)
         {
@@ -482,7 +566,7 @@ public class AudioDecoder : IAudioSource
                 // subframe header
                 var t1 = bitreader.Readbit(); // ?????? == 0
                 if (t1 != 0)
-                    throw new Exception("unsupported subframe coding (ch == " + ch + ")");
+                    throw new NotSupportedException("unsupported subframe coding (ch == " + ch + ")");
 
                 var type_code = (int)bitreader.Readbits(6);
                 frame.subframes[ch].wbits = (int)bitreader.Readbit();
@@ -532,7 +616,7 @@ public class AudioDecoder : IAudioSource
                         decode_subframe_lpc(bitreader, frame, ch);
                         break;
                     default:
-                        throw new Exception("invalid subframe type");
+                        throw new InvalidDataException("invalid subframe type");
                 }
             }
         }
@@ -590,6 +674,12 @@ public class AudioDecoder : IAudioSource
         }
     }
 
+    /// <summary>
+    /// Reconstructs the original PCM samples from the LPC residual and coefficients for one channel.
+    /// Uses 32-bit or 64-bit arithmetic depending on whether the coefficient sum would overflow 32 bits.
+    /// </summary>
+    /// <param name="frame">The current frame being decoded.</param>
+    /// <param name="ch">Zero-based channel index.</param>
     private unsafe void restore_samples_lpc(FlacFrame frame, int ch)
     {
         var sub = frame.subframes[ch];
@@ -608,6 +698,12 @@ public class AudioDecoder : IAudioSource
         }
     }
 
+    /// <summary>
+    /// Reconstructs PCM samples for all channels from the decoded subframe residuals and prediction coefficients.
+    /// Handles constant, verbatim, fixed, and LPC subframe types, applies wasted-bits left shift, and performs
+    /// stereo de-correlation (Mid/Side, Left/Side, Right/Side) when the frame uses joint stereo coding.
+    /// </summary>
+    /// <param name="frame">The current frame with fully decoded subframe data.</param>
     private unsafe void restore_samples(FlacFrame frame)
     {
         for (var ch = 0; ch < PCM.ChannelCount; ch++)
@@ -692,7 +788,7 @@ public class AudioDecoder : IAudioSource
             var crc_1 = _framereader.GetCrc16();
             var crc_2 = _framereader.ReadUshort();
             if (DoCrc && crc_1 != crc_2)
-                throw new Exception("frame crc mismatch");
+                throw new InvalidDataException("frame crc mismatch");
 
             restore_samples(_frame);
             _samplesInBuffer = _frame.blocksize;
@@ -721,7 +817,7 @@ public class AudioDecoder : IAudioSource
         for (i = id = 0; i < 4; )
         {
             if (_io.Read(_framesBuffer, 0, 1) == 0)
-                throw new Exception("FLAC stream not found");
+                throw new InvalidDataException("FLAC stream not found");
 
             x = _framesBuffer[0];
             if (x == FLAC__STREAM_SYNC_STRING[i])
@@ -738,19 +834,19 @@ public class AudioDecoder : IAudioSource
                 if (id == 3)
                 {
                     if (!skip_bytes(3))
-                        throw new Exception("FLAC stream not found");
+                        throw new InvalidDataException("FLAC stream not found");
 
                     var skip = 0;
                     for (var j = 0; j < 4; j++)
                     {
                         if (0 == _io.Read(_framesBuffer, 0, 1))
-                            throw new Exception("FLAC stream not found");
+                            throw new InvalidDataException("FLAC stream not found");
 
                         skip <<= 7;
                         skip |= ((int)_framesBuffer[0] & 0x7f);
                     }
                     if (!skip_bytes(skip))
-                        throw new Exception("FLAC stream not found");
+                        throw new InvalidDataException("FLAC stream not found");
                 }
                 continue;
             }
@@ -760,7 +856,7 @@ public class AudioDecoder : IAudioSource
                 do
                 {
                     if (_io.Read(_framesBuffer, 0, 1) == 0)
-                        throw new Exception("FLAC stream not found");
+                        throw new InvalidDataException("FLAC stream not found");
 
                     x = _framesBuffer[0];
                 } while (x == 0xff);
@@ -768,10 +864,10 @@ public class AudioDecoder : IAudioSource
                 {
                     //_IO.Position -= 2;
                     // state = frame
-                    throw new Exception("headerless file unsupported");
+                    throw new NotSupportedException("headerless file unsupported");
                 }
             }
-            throw new Exception("FLAC stream not found");
+            throw new InvalidDataException("FLAC stream not found");
         }
 
         do

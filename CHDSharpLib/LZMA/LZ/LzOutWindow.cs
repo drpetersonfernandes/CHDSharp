@@ -2,18 +2,18 @@ namespace CHDSharp.LZMA.LZ;
 
 internal class OutWindow
 {
-    private byte[] _buffer;
+    private byte[] _buffer = null!;
     private int _windowSize;
     private int _pos;
     private int _streamPos;
     private int _pendingLen;
     private int _pendingDist;
-    private Stream _stream;
+    private Stream _stream = null!;
 
     public long Total;
     public long Limit;
 
-    public void Create(int windowSize, byte[] buffer=null)
+    public void Create(int windowSize, byte[]? buffer=null)
     {
         if (buffer != null)
         {
@@ -69,7 +69,7 @@ internal class OutWindow
     public void ReleaseStream()
     {
         Flush();
-        _stream = null;
+        _stream = null!;
     }
 
     public void Flush()

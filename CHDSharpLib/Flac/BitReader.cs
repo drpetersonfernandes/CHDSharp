@@ -1,3 +1,4 @@
+using System.IO;
 using CHDSharp.Flac.FlacDeps;
 
 namespace CHDSharp.Flac;
@@ -378,13 +379,13 @@ public unsafe class BitReader
         }
         else
         {
-            throw new Exception("invalid utf8 encoding");
+            throw new InvalidDataException("invalid utf8 encoding");
         }
         for (; i > 0; i--)
         {
             x = Readbits(8);
             if (0x80 != (x & 0xC0))  /* 10xxxxxx */
-                throw new Exception("invalid utf8 encoding");
+                throw new InvalidDataException("invalid utf8 encoding");
 
             v <<= 6;
             v |= (x & 0x3F);

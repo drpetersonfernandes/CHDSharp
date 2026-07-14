@@ -134,7 +134,7 @@ public static class Crc32
                 {
                     for (j = i + 1; j < rows && (mat[j] & (1 << i)) == 0; j++) ;
                     if (j == rows)
-                        throw new Exception("Matrix not invertible");
+                        throw new InvalidOperationException("Matrix not invertible");
                     tmp = mat[i]; mat[i] = mat[j]; mat[j] = tmp;
                     tmp = inv[i]; inv[i] = inv[j]; inv[j] = tmp;
                 }

@@ -2,7 +2,7 @@ namespace CHDSharp.Tests;
 
 internal static class HashUtil
 {
-    public static string ToHex(byte[] data)
+    public static string? ToHex(byte[]? data)
     {
         return data == null ? null : Convert.ToHexString(data).ToLowerInvariant();
     }

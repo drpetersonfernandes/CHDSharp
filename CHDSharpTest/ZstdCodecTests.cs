@@ -10,12 +10,12 @@ namespace CHDSharp.Tests;
 /// </summary>
 public sealed class ZstdCodecFixture : IDisposable
 {
-    public string TempDir { get; }
-    public string CdzsPath { get; } // CD source recompressed to cdzs
-    public string CdzsExpectedSha1 { get; }
-    public string ZstdPath { get; } // raw/HD source recompressed to zstd
-    public string ZstdExpectedSha1 { get; }
-    public string SkipReason { get; }
+    public string? TempDir { get; }
+    public string? CdzsPath { get; } // CD source recompressed to cdzs
+    public string? CdzsExpectedSha1 { get; }
+    public string? ZstdPath { get; } // raw/HD source recompressed to zstd
+    public string? ZstdExpectedSha1 { get; }
+    public string? SkipReason { get; }
 
     public ZstdCodecFixture()
     {
@@ -84,9 +84,12 @@ public sealed class ZstdCodecFixture : IDisposable
         }
     }
 
-    private static string RawSha1(string path)
+    private static string? RawSha1(string path)
     {
         if (ChdFile.Open(path, out var c) != ChdError.Chderrnone)
+            return null;
+
+        if (c == null)
             return null;
 
         using (c)
@@ -118,7 +121,7 @@ public class ZstdCodecTests : IClassFixture<ZstdCodecFixture>
     public void CdzsDecodesToOriginalData()
     {
         if (_fx.CdzsPath == null)
-            Assert.Skip(_fx.SkipReason);
+            Assert.Skip(_fx.SkipReason!);
 
         var err = ChdFile.Open(_fx.CdzsPath, out var chd);
         Assert.Equal(ChdError.Chderrnone, err);
@@ -132,7 +135,7 @@ public class ZstdCodecTests : IClassFixture<ZstdCodecFixture>
     public void CdzsCheckFileVerifies()
     {
         if (_fx.CdzsPath == null)
-            Assert.Skip(_fx.SkipReason);
+            Assert.Skip(_fx.SkipReason!);
 
         using Stream s = File.OpenRead(_fx.CdzsPath);
         var err = Chd.CheckFile(s, "cdzs.chd", true, out _, out _, out _);
@@ -143,7 +146,7 @@ public class ZstdCodecTests : IClassFixture<ZstdCodecFixture>
     public void ZstdDecodesToOriginalData()
     {
         if (_fx.ZstdPath == null)
-            Assert.Skip(_fx.SkipReason);
+            Assert.Skip(_fx.SkipReason!);
 
         var err = ChdFile.Open(_fx.ZstdPath, out var chd);
         Assert.Equal(ChdError.Chderrnone, err);
@@ -157,7 +160,7 @@ public class ZstdCodecTests : IClassFixture<ZstdCodecFixture>
     public void ZstdCheckFileVerifies()
     {
         if (_fx.ZstdPath == null)
-            Assert.Skip(_fx.SkipReason);
+            Assert.Skip(_fx.SkipReason!);
 
         using Stream s = File.OpenRead(_fx.ZstdPath);
         var err = Chd.CheckFile(s, "zstd.chd", true, out _, out _, out _);

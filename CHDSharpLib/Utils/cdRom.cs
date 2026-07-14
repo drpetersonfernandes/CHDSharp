@@ -256,7 +256,7 @@ public static class CdRom
     }
 
     /**
-     * @fn  void ecc_compute_bytes(const uint8_t *sector, const uint16_t *row, int rowlen, uint8_t &val1, uint8_t &val2)
+     * @fn  void ecc_compute_bytes(const uint8_t *sector, const uint16_t *row, int rowlen, uint8_t &amp;val1, uint8_t &amp;val2)
      *
      * @brief   -------------------------------------------------
      *            ecc_compute_bytes - calculate an ECC value (P or Q)

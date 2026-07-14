@@ -2,8 +2,8 @@ namespace CHDSharp.LZMA.LZ;
 
 internal class InWindow
 {
-    public byte[] _bufferBase; // pointer to buffer with data
-    private Stream _stream;
+    public byte[] _bufferBase = null!;
+    private Stream _stream = null!;
     private uint _posLimit; // offset (from _buffer) of first byte when new block reading must be done
     private bool _streamEndWasReached; // if (true) then _streamPos shows real end of stream
 
@@ -69,7 +69,7 @@ internal class InWindow
         }
     }
 
-    private void Free() { _bufferBase = null; }
+    private void Free() { _bufferBase = null!; }
 
     public void Create(uint keepSizeBefore, uint keepSizeAfter, uint keepSizeReserv)
     {
@@ -96,7 +96,7 @@ internal class InWindow
                 ReadBlock();
         }
     }
-    public void ReleaseStream() { _stream = null; }
+    public void ReleaseStream() { _stream = null!; }
 
     public void Init()
     {

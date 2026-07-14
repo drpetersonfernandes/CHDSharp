@@ -212,6 +212,6 @@ public class ChdListIntegrationTests
         }
 
         sha1.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
-        return HashUtil.ToHex(sha1.Hash!);
+        return HashUtil.ToHex(sha1.Hash!)!;
     }
 }

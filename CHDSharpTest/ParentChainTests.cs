@@ -87,7 +87,7 @@ public sealed class ParentChainFixture : IDisposable
             {
                 if (src != null)
                 {
-                    SourceRawSha1 = HashUtil.ToHex(src.RawSha1);
+                    SourceRawSha1 = HashUtil.ToHex(src.RawSha1)!;
                 }
             }
         }

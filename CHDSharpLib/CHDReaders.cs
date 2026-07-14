@@ -216,7 +216,7 @@ internal static partial class ChdReaders
             if ((buffIn[framenum / 8] & (1 << (framenum % 8))) != 0)
             {
                 Array.Copy(SCdSyncHeader, 0, buffOut, sectorStart, SCdSyncHeader.Length);
-                cdRom.ecc_generate(buffOut, sectorStart);
+                CdRom.EccGenerate(buffOut, sectorStart);
             }
         }
 
@@ -257,7 +257,7 @@ internal static partial class ChdReaders
             if ((buffIn[framenum / 8] & (1 << (framenum % 8))) != 0)
             {
                 Array.Copy(SCdSyncHeader, 0, buffOut, sectorStart, SCdSyncHeader.Length);
-                cdRom.ecc_generate(buffOut, sectorStart);
+                CdRom.EccGenerate(buffOut, sectorStart);
             }
         }
 
@@ -321,7 +321,7 @@ internal static partial class ChdReaders
             if ((buffIn[framenum / 8] & (1 << (framenum % 8))) != 0)
             {
                 Array.Copy(SCdSyncHeader, 0, buffOut, sectorStart, SCdSyncHeader.Length);
-                cdRom.ecc_generate(buffOut, sectorStart);
+                CdRom.EccGenerate(buffOut, sectorStart);
             }
         }
 

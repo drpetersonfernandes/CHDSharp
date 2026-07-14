@@ -16,7 +16,7 @@ public enum MetadataType
     Padding = 1,
 
     /// <summary>
-    /// <A HREF="../format.html#metadata_block_application">APPLICATION</A> block 
+    /// <A HREF="../format.html#metadata_block_application">APPLICATION</A> block
     /// </summary>
     Application = 2,
 

@@ -13,9 +13,9 @@ internal static class ChdListData
         var folder = TestPaths.ChdFolder;
         if (folder != null && Directory.Exists(folder))
             return Directory.GetFiles(folder, "*.chd", SearchOption.TopDirectoryOnly)
-                .Select(f => new FileInfo(f))
-                .OrderBy(fi => fi.Length)
-                .Select(fi => fi.FullName)
+                .Select(static f => new FileInfo(f))
+                .OrderBy(static fi => fi.Length)
+                .Select(static fi => fi.FullName)
                 .ToList();
 
         var listFile = TestPaths.ChdListFile;

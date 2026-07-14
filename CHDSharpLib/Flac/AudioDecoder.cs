@@ -94,7 +94,7 @@ public class AudioDecoder: IAudioSource
         }
 
         crc8 = new Crc8();
-			
+
         _framesBuffer = new byte[0x20000];
         decode_metadata();
 
@@ -274,7 +274,7 @@ public class AudioDecoder: IAudioSource
                 _samplesInBuffer = 0;
                 _samplesBufferOffset = 0;
             }
-				
+
             fill_frames_buffer();
 
             if (_framesBufferLength == 0)
@@ -409,7 +409,7 @@ public class AudioDecoder: IAudioSource
         // rice-encoded block
         // coding method
         frame.subframes[ch].best.rc.coding_method = (int)bitreader.readbits(2); // ????? == 0
-        if (frame.subframes[ch].best.rc.coding_method != 0 && frame.subframes[ch].best.rc.coding_method != 1) 
+        if (frame.subframes[ch].best.rc.coding_method != 0 && frame.subframes[ch].best.rc.coding_method != 1)
             throw new Exception("unsupported residual coding");
         // partition order
         frame.subframes[ch].best.rc.porder = (int)bitreader.readbits(4);

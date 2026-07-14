@@ -36,7 +36,7 @@ unsafe public class BitReader
     /// <returns>The floor of log2 of the value.</returns>
     public static int log2i(ulong v)
     {
-        v |= v >> 1; // first round down to one less than a power of 2 
+        v |= v >> 1; // first round down to one less than a power of 2
         v |= v >> 2;
         v |= v >> 4;
         v |= v >> 8;
@@ -54,7 +54,7 @@ unsafe public class BitReader
     /// <returns>The floor of log2 of the value.</returns>
     public static int log2i(uint v)
     {
-        v |= v >> 1; // first round down to one less than a power of 2 
+        v |= v >> 1; // first round down to one less than a power of 2
         v |= v >> 2;
         v |= v >> 4;
         v |= v >> 8;
@@ -202,7 +202,7 @@ unsafe public class BitReader
     {
         return (int)readbits(sizeof(int));
     }
-        
+
     /// <summary>
     /// Reads a 32-bit unsigned integer (big-endian).
     /// </summary>

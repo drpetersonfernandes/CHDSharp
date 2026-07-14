@@ -7,7 +7,7 @@ namespace CHDSharp.Models.Flac;
 /// Tracks encoding and decoding state for a single subframe within a FLAC frame.
 /// Uses unsafe pointers for sample data.
 /// </summary>
-unsafe public class FlacSubframeInfo
+public unsafe class FlacSubframeInfo
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="FlacSubframeInfo"/> class.
@@ -86,4 +86,4 @@ unsafe public class FlacSubframeInfo
     /// LPC subframe information for the current encoding pass.
     /// </summary>
     public LpcSubframeInfo sf;
-};
+}

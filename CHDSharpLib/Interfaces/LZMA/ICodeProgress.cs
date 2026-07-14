@@ -14,5 +14,5 @@ public interface ICodeProgress
     /// <param name="outSize">
     /// output size. -1 if unknown.
     /// </param>
-    void SetProgress(Int64 inSize, Int64 outSize);
-};
+    void SetProgress(long inSize, long outSize);
+}

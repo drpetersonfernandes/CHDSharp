@@ -83,4 +83,4 @@ internal enum CoderPropID
     /// Specifies mode with end marker.
     /// </summary>
     EndMarker
-};
+}

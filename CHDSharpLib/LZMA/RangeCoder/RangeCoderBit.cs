@@ -2,25 +2,28 @@ namespace CHDSharp.LZMA.RangeCoder;
 
 internal struct BitEncoder
 {
-    public const int kNumBitModelTotalBits = 11;
-    public const uint kBitModelTotal = (1 << kNumBitModelTotalBits);
-    const int kNumMoveBits = 5;
-    const int kNumMoveReducingBits = 2;
-    public const int kNumBitPriceShiftBits = 6;
+    public const int KNumBitModelTotalBits = 11;
+    public const uint KBitModelTotal = (1 << KNumBitModelTotalBits);
+    private const int kNumMoveBits = 5;
+    private const int kNumMoveReducingBits = 2;
+    public const int KNumBitPriceShiftBits = 6;
 
-    uint Prob;
+    private uint _prob;
 
-    public void Init() { Prob = kBitModelTotal >> 1; }
+    public void Init()
+    {
+        _prob = KBitModelTotal >> 1;
+    }
 
     public void UpdateModel(uint symbol)
     {
         if (symbol == 0)
         {
-            Prob += (kBitModelTotal - Prob) >> kNumMoveBits;
+            _prob += (KBitModelTotal - _prob) >> kNumMoveBits;
         }
         else
         {
-            Prob -= (Prob) >> kNumMoveBits;
+            _prob -= (_prob) >> kNumMoveBits;
         }
     }
 
@@ -28,98 +31,112 @@ internal struct BitEncoder
     {
         // encoder.EncodeBit(Prob, kNumBitModelTotalBits, symbol);
         // UpdateModel(symbol);
-        var newBound = (encoder.Range >> kNumBitModelTotalBits) * Prob;
+        var newBound = (encoder.Range >> KNumBitModelTotalBits) * _prob;
         if (symbol == 0)
         {
             encoder.Range = newBound;
-            Prob += (kBitModelTotal - Prob) >> kNumMoveBits;
+            _prob += (KBitModelTotal - _prob) >> kNumMoveBits;
         }
         else
         {
             encoder.Low += newBound;
             encoder.Range -= newBound;
-            Prob -= (Prob) >> kNumMoveBits;
+            _prob -= (_prob) >> kNumMoveBits;
         }
-        if (encoder.Range < Encoder.kTopValue)
+
+        if (encoder.Range < Encoder.KTopValue)
         {
             encoder.Range <<= 8;
             encoder.ShiftLow();
         }
     }
 
-    private static UInt32[] ProbPrices = new UInt32[kBitModelTotal >> kNumMoveReducingBits];
+    private static readonly uint[] ProbPrices = new uint[KBitModelTotal >> kNumMoveReducingBits];
 
     static BitEncoder()
     {
-        const int kNumBits = (kNumBitModelTotalBits - kNumMoveReducingBits);
+        const int kNumBits = (KNumBitModelTotalBits - kNumMoveReducingBits);
         for (var i = kNumBits - 1; i >= 0; i--)
         {
-            var start = (UInt32)1 << (kNumBits - i - 1);
-            var end = (UInt32)1 << (kNumBits - i);
+            var start = (uint)1 << (kNumBits - i - 1);
+            var end = (uint)1 << (kNumBits - i);
             for (var j = start; j < end; j++)
             {
-                ProbPrices[j] = ((UInt32)i << kNumBitPriceShiftBits) +
-                                (((end - j) << kNumBitPriceShiftBits) >> (kNumBits - i - 1));
+                ProbPrices[j] = ((uint)i << KNumBitPriceShiftBits) +
+                                (((end - j) << KNumBitPriceShiftBits) >> (kNumBits - i - 1));
             }
         }
     }
 
-    public uint GetPrice(uint symbol)
+    public readonly uint GetPrice(uint symbol)
     {
-        return ProbPrices[(((Prob - symbol) ^ ((-(int)symbol))) & (kBitModelTotal - 1)) >> kNumMoveReducingBits];
+        return ProbPrices[(((_prob - symbol) ^ ((-(int)symbol))) & (KBitModelTotal - 1)) >> kNumMoveReducingBits];
     }
-    public uint GetPrice0() { return ProbPrices[Prob >> kNumMoveReducingBits]; }
-    public uint GetPrice1() { return ProbPrices[(kBitModelTotal - Prob) >> kNumMoveReducingBits]; }
+
+    public readonly uint GetPrice0()
+    {
+        return ProbPrices[_prob >> kNumMoveReducingBits];
+    }
+
+    public readonly uint GetPrice1()
+    {
+        return ProbPrices[(KBitModelTotal - _prob) >> kNumMoveReducingBits];
+    }
 }
 
 internal struct BitDecoder
 {
-    public const int kNumBitModelTotalBits = 11;
-    public const uint kBitModelTotal = (1 << kNumBitModelTotalBits);
-    const int kNumMoveBits = 5;
+    public const int KNumBitModelTotalBits = 11;
+    public const uint KBitModelTotal = (1 << KNumBitModelTotalBits);
+    private const int kNumMoveBits = 5;
 
-    uint Prob;
+    private uint _prob;
 
     public void UpdateModel(int numMoveBits, uint symbol)
     {
         if (symbol == 0)
         {
-            Prob += (kBitModelTotal - Prob) >> numMoveBits;
+            _prob += (KBitModelTotal - _prob) >> numMoveBits;
         }
         else
         {
-            Prob -= (Prob) >> numMoveBits;
+            _prob -= (_prob) >> numMoveBits;
         }
     }
 
-    public void Init() { Prob = kBitModelTotal >> 1; }
+    public void Init()
+    {
+        _prob = KBitModelTotal >> 1;
+    }
 
     public uint Decode(Decoder rangeDecoder)
     {
-        var newBound = (uint)(rangeDecoder.Range >> kNumBitModelTotalBits) * (uint)Prob;
+        var newBound = (uint)(rangeDecoder.Range >> KNumBitModelTotalBits) * (uint)_prob;
         if (rangeDecoder.Code < newBound)
         {
             rangeDecoder.Range = newBound;
-            Prob += (kBitModelTotal - Prob) >> kNumMoveBits;
-            if (rangeDecoder.Range < Decoder.kTopValue)
+            _prob += (KBitModelTotal - _prob) >> kNumMoveBits;
+            if (rangeDecoder.Range < Decoder.KTopValue)
             {
                 rangeDecoder.Code = (rangeDecoder.Code << 8) | (byte)rangeDecoder.Stream.ReadByte();
                 rangeDecoder.Range <<= 8;
                 rangeDecoder.Total++;
             }
+
             return 0;
         }
         else
         {
             rangeDecoder.Range -= newBound;
             rangeDecoder.Code -= newBound;
-            Prob -= (Prob) >> kNumMoveBits;
-            if (rangeDecoder.Range < Decoder.kTopValue)
+            _prob -= (_prob) >> kNumMoveBits;
+            if (rangeDecoder.Range < Decoder.KTopValue)
             {
                 rangeDecoder.Code = (rangeDecoder.Code << 8) | (byte)rangeDecoder.Stream.ReadByte();
                 rangeDecoder.Range <<= 8;
                 rangeDecoder.Total++;
             }
+
             return 1;
         }
     }

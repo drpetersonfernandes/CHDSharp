@@ -35,7 +35,7 @@ public class Lpc
     /// <param name="min">Minimum lag to compute.</param>
     /// <param name="lag">Maximum lag to compute.</param>
     /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
-    static public unsafe void
+    public static unsafe void
         computeAutocorr(/*const*/ int* data, float* window, int len, int min, int lag, double* autoc)
     {
         var data1 = stackalloc double[len];
@@ -75,7 +75,7 @@ public class Lpc
     /// <param name="min">Minimum lag to compute.</param>
     /// <param name="lag">Maximum lag to compute.</param>
     /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
-    static public unsafe void
+    public static unsafe void
         computeAutocorrWindowless(/*const*/ int* data, int len, int min, int lag, double* autoc)
     {
         for (var i = min; i <= lag; ++i)
@@ -106,7 +106,7 @@ public class Lpc
     /// <param name="min">Minimum lag to compute.</param>
     /// <param name="lag">Maximum lag to compute.</param>
     /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
-    static public unsafe void
+    public static unsafe void
         computeAutocorrWindowlessLarge(/*const*/ int* data, int len, int min, int lag, double* autoc)
     {
         for (var i = min; i <= lag; ++i)
@@ -139,7 +139,7 @@ public class Lpc
     /// <param name="min">Minimum lag to compute.</param>
     /// <param name="lag">Maximum lag to compute.</param>
     /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
-    static public unsafe void
+    public static unsafe void
         computeAutocorrGlue(/*const*/ int* data, float* window, int offs, int offs1, int min, int lag, double* autoc)
     {
         var data1 = stackalloc double[lag + lag];
@@ -169,7 +169,7 @@ public class Lpc
     /// <param name="min">Minimum lag to compute.</param>
     /// <param name="lag">Maximum lag to compute.</param>
     /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
-    static public unsafe void
+    public static unsafe void
         computeAutocorrGlue(/*const*/ int* data, int min, int lag, double* autoc)
     {
         for (var i = min; i <= lag; ++i)

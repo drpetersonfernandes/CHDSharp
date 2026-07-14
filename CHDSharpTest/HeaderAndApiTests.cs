@@ -70,7 +70,7 @@ public class HeaderAndApiTests
     public void ChdFileOpenMissingFileReturnsFileNotFound()
     {
         var err = ChdFile.Open(@"Z:\definitely\does\not\exist.chd", out var chd);
-        Assert.Equal(chdError.CHDERRFILENOTFOUND, err);
+        Assert.Equal(ChdError.Chderrfilenotfound, err);
         Assert.Null(chd);
     }
 
@@ -79,7 +79,7 @@ public class HeaderAndApiTests
     {
         using var ms = new MemoryStream(new byte[256]); // no magic
         var err = ChdFile.Open(ms, true, out var chd);
-        Assert.Equal(chdError.CHDERRINVALIDFILE, err);
+        Assert.Equal(ChdError.Chderrinvalidfile, err);
         Assert.Null(chd);
     }
 
@@ -88,7 +88,7 @@ public class HeaderAndApiTests
     {
         using var ns = new NonSeekableStream();
         var err = ChdFile.Open(ns, true, out var chd);
-        Assert.Equal(chdError.CHDERRINVALIDPARAMETER, err);
+        Assert.Equal(ChdError.Chderrinvalidparameter, err);
         Assert.Null(chd);
     }
 

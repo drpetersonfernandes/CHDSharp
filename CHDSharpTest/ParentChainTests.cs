@@ -38,7 +38,7 @@ public sealed class ParentChainFixture : IDisposable
         var source = candidates.FirstOrDefault(static p =>
         {
             var e = ChdFile.Open(p, out var c);
-            if (e != chdError.CHDERRNONE) return false;
+            if (e != ChdError.Chderrnone) return false;
 
             using (c)
             {
@@ -81,7 +81,7 @@ public sealed class ParentChainFixture : IDisposable
         }
 
         // Capture the source's raw SHA1 for correctness comparison.
-        if (ChdFile.Open(source, out var src) == chdError.CHDERRNONE)
+        if (ChdFile.Open(source, out var src) == ChdError.Chderrnone)
         {
             using (src)
             {
@@ -128,7 +128,7 @@ public class ParentChainTests : IClassFixture<ParentChainFixture>
         RequireReady();
         var err = ChdFile.Open(_fx.ChildPath, out var chd);
         chd?.Dispose();
-        Assert.Equal(chdError.CHDERRREQUIRESPARENT, err);
+        Assert.Equal(ChdError.Chderrrequiresparent, err);
     }
 
     [Fact]
@@ -138,7 +138,7 @@ public class ParentChainTests : IClassFixture<ParentChainFixture>
         var err = ChdFile.Open(_fx.ChildPath, _fx.ParentPath, out var chd);
         using (chd)
         {
-            Assert.Equal(chdError.CHDERRNONE, err);
+            Assert.Equal(ChdError.Chderrnone, err);
         }
     }
 
@@ -150,7 +150,7 @@ public class ParentChainTests : IClassFixture<ParentChainFixture>
             Assert.Skip("no alternate CHD available to use as a wrong parent");
         var err = ChdFile.Open(_fx.ChildPath, _fx.WrongParentPath, out var chd);
         chd?.Dispose();
-        Assert.Equal(chdError.CHDERRINVALIDPARENT, err);
+        Assert.Equal(ChdError.Chderrinvalidparent, err);
     }
 
     [Fact]
@@ -158,7 +158,7 @@ public class ParentChainTests : IClassFixture<ParentChainFixture>
     {
         RequireReady();
         var err = ChdFile.Open(_fx.ChildPath, _fx.ParentPath, out var chd);
-        Assert.Equal(chdError.CHDERRNONE, err);
+        Assert.Equal(ChdError.Chderrnone, err);
         using (chd)
         {
             if (chd != null)
@@ -175,7 +175,7 @@ public class ParentChainTests : IClassFixture<ParentChainFixture>
         RequireReady();
         var err = Chd.CheckFileWithParent(_fx.ChildPath, _fx.ParentPath,
             out var version, out _, out _);
-        Assert.Equal(chdError.CHDERRNONE, err);
+        Assert.Equal(ChdError.Chderrnone, err);
         Assert.NotNull(version);
     }
 

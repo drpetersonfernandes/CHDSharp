@@ -84,10 +84,10 @@ public class AudioPCMConfig
         DVDAUDIOGR220 = SPEAKERFRONTCENTER | SPEAKERLOWFREQUENCY
     }
 
-    private int _bitsPerSample;
-    private int _channelCount;
-    private int _sampleRate;
-    private SpeakerConfig _channelMask;
+    private readonly int _bitsPerSample;
+    private readonly int _channelCount;
+    private readonly int _sampleRate;
+    private readonly SpeakerConfig _channelMask;
 
     /// <summary>
     /// Gets the number of bits per sample.

@@ -7,7 +7,7 @@ namespace CHDSharp;
 
 internal class Program
 {
-    static void Main(string[] args)
+    private static void Main(string[] args)
     {
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
@@ -72,13 +72,13 @@ internal class Program
         Log.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
     }
 
-    static void ParentTest(string childPath, string parentPath)
+    private static void ParentTest(string childPath, string parentPath)
     {
         Log.Information("Child:  {Name}", Path.GetFileName(childPath));
         Log.Information("Parent: {Name}", Path.GetFileName(parentPath));
 
         var err = ChdFile.Open(childPath, parentPath, out var chd);
-        if (err != chdError.CHDERRNONE)
+        if (err != ChdError.Chderrnone)
         {
             Log.Information("  Open(child, parent) => {Error}", err);
             return;
@@ -92,7 +92,7 @@ internal class Program
             {
                 err = chd.ReadHunk(h, hbuf);
                 Log.Information("  ReadHunk({Hunk}) => {Error}", h, err);
-                if (err != chdError.CHDERRNONE)
+                if (err != ChdError.Chderrnone)
                     return;
             }
         }
@@ -105,7 +105,7 @@ internal class Program
         Log.Information("  Open(child, no parent) => {Error}  (expected CHDERR_REQUIRES_PARENT if this is a child)", noParent);
     }
 
-    static void VerifyList(string listFile)
+    private static void VerifyList(string listFile)
     {
         if (!File.Exists(listFile))
         {
@@ -132,7 +132,7 @@ internal class Program
             }
 
             var fileSw = Stopwatch.StartNew();
-            chdError result;
+            ChdError result;
             uint? version = null;
             byte[] sha1 = null;
             try
@@ -142,13 +142,13 @@ internal class Program
             }
             catch (Exception ex)
             {
-                result = chdError.CHDERRDECOMPRESSIONERROR;
+                result = ChdError.Chderrdecompressionerror;
                 Log.Information("       exception: {Message}", ex.Message);
             }
             fileSw.Stop();
 
             var sha1Str = sha1 != null ? ToHex(sha1) : "(none)";
-            if (result == chdError.CHDERRNONE)
+            if (result == ChdError.Chderrnone)
             {
                 Log.Information("[PASS] V{Version} {Name}  sha1={Sha1}  ({Time:N1}s)", version, name, sha1Str, fileSw.Elapsed.TotalSeconds);
                 pass++;
@@ -167,10 +167,10 @@ internal class Program
             Log.Information("  FAIL: {Failure}", f);
     }
 
-    static void RandomAccessTest(string file)
+    private static void RandomAccessTest(string file)
     {
         var err = ChdFile.Open(file, out var chd);
-        if (err != chdError.CHDERRNONE)
+        if (err != ChdError.Chderrnone)
         {
             Log.Information("Open failed: {Error}", err);
             return;
@@ -188,7 +188,7 @@ internal class Program
             {
                 err = chd.ReadHunk(h, hbuf);
                 Log.Information("  ReadHunk({Hunk}) => {Error}", h, err);
-                if (err != chdError.CHDERRNONE)
+                if (err != ChdError.Chderrnone)
                     return;
             }
 
@@ -212,7 +212,7 @@ internal class Program
             {
                 var chunk = (int)Math.Min((ulong)buf.Length, remaining);
                 err = chd.Read(offset, buf, 0, chunk);
-                if (err != chdError.CHDERRNONE)
+                if (err != ChdError.Chderrnone)
                 {
                     Log.Information("  Read(offset={Offset}) => {Error}", offset, err);
                     return;
@@ -265,7 +265,7 @@ internal class Program
         return Convert.ToHexString(a).ToLowerInvariant();
     }
 
-    static void checkdir(DirectoryInfo di)
+    private static void checkdir(DirectoryInfo di)
     {
         var fi = di.GetFiles("*.chd");
         foreach (var f in fi)

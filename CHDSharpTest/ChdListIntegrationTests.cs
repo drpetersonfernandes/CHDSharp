@@ -71,7 +71,7 @@ public class ChdListIntegrationTests
         _out.WriteLine($"=== RandomAccess: {name} ===");
 
         var open = ChdFile.Open(path, out var chd);
-        Assert.Equal(chdError.CHDERRNONE, open);
+        Assert.Equal(ChdError.Chderrnone, open);
         using (chd)
         {
             if (chd != null)
@@ -106,7 +106,7 @@ public class ChdListIntegrationTests
 
                     var csharpBytes = new byte[length];
                     var err = chd.Read(offset, csharpBytes, 0, length);
-                    Assert.Equal(chdError.CHDERRNONE, err);
+                    Assert.Equal(ChdError.Chderrnone, err);
 
                     Assert.True(chdmanBytes.AsSpan().SequenceEqual(csharpBytes),
                         $"Mismatch at offset {offset}, len {length} ({desc}): {name}");
@@ -126,7 +126,7 @@ public class ChdListIntegrationTests
             Assert.Skip("chdman info failed");
 
         var open = ChdFile.Open(path, out var chd);
-        Assert.Equal(chdError.CHDERRNONE, open);
+        Assert.Equal(ChdError.Chderrnone, open);
         using (chd)
         {
             if (chd != null)
@@ -151,7 +151,7 @@ public class ChdListIntegrationTests
         using Stream s = File.OpenRead(path);
         var err = Chd.CheckFile(s, name, true,
             out var version, out _, out _);
-        Assert.Equal(chdError.CHDERRNONE, err);
+        Assert.Equal(ChdError.Chderrnone, err);
         Assert.NotNull(version);
     }
 
@@ -165,7 +165,7 @@ public class ChdListIntegrationTests
     private void VerifyFullReadSha1(string path, string name)
     {
         var open = ChdFile.Open(path, out var chd);
-        Assert.Equal(chdError.CHDERRNONE, open);
+        Assert.Equal(ChdError.Chderrnone, open);
         using (chd)
         {
             if (chd != null)
@@ -197,7 +197,7 @@ public class ChdListIntegrationTests
         {
             var chunk = (int)Math.Min((ulong)buf.Length, remaining);
             var err = chd.Read(offset, buf, 0, chunk);
-            Assert.Equal(chdError.CHDERRNONE, err);
+            Assert.Equal(ChdError.Chderrnone, err);
             sha1.TransformBlock(buf, 0, chunk, null, 0);
             offset += (ulong)chunk;
             remaining -= (ulong)chunk;

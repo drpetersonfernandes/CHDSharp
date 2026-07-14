@@ -2,7 +2,7 @@ namespace CHDSharp.Models;
 
 internal class MapEntry
 {
-    public compressionType Comptype;
+    public CompressionType Comptype;
     public uint Length; // length of compressed data
     public ulong Offset; // offset of compressed data in file. Also index of source block for COMPRESSION_SELF
     public uint? Crc; // V3 & V4

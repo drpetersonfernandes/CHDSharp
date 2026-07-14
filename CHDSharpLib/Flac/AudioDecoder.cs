@@ -32,32 +32,32 @@ namespace CHDSharp.Flac;
 /// </summary>
 public class AudioDecoder: IAudioSource
 {
-    int[] samplesBuffer;
-    int[] residualBuffer;
+    private readonly int[] samplesBuffer;
+    private readonly int[] residualBuffer;
 
-    byte[] _framesBuffer;
-    int _framesBufferLength = 0, _framesBufferOffset = 0;
-    long first_frame_offset;
+    private readonly byte[] _framesBuffer;
+    private int _framesBufferLength, _framesBufferOffset;
+    private long first_frame_offset;
 
-    SeekPoint[] seek_table;
+    private SeekPoint[] seek_table;
 
-    Crc8 crc8;
-    FlacFrame frame;
-    BitReader framereader;
-    AudioPCMConfig pcm;
+    private readonly Crc8 crc8;
+    private readonly FlacFrame frame;
+    private readonly BitReader framereader;
+    private AudioPCMConfig pcm;
 
-    uint min_block_size = 0;
-    uint max_block_size = 0;
-    uint min_frame_size = 0;
-    uint max_frame_size = 0;
+    private uint min_block_size;
+    private uint max_block_size;
+    private uint min_frame_size;
+    private uint max_frame_size;
 
-    int _samplesInBuffer, _samplesBufferOffset;
-    long _sampleCount = 0, _sampleOffset = 0;
+    private int _samplesInBuffer, _samplesBufferOffset;
+    private long _sampleCount, _sampleOffset;
 
-    bool do_crc = true;
+    private bool do_crc = true;
 
-    string _path;
-    Stream _IO;
+    private readonly string _path;
+    private readonly Stream _IO;
 
     /// <summary>
     /// Gets or sets whether CRC verification is performed during decoding.
@@ -134,7 +134,7 @@ public class AudioDecoder: IAudioSource
         framereader = new BitReader();
     }
 
-    private DecoderSettings m_settings;
+    private readonly DecoderSettings m_settings;
     /// <summary>
     /// Gets the decoder settings used by this instance.
     /// </summary>
@@ -230,7 +230,7 @@ public class AudioDecoder: IAudioSource
     /// </summary>
     public string Path => _path;
 
-    unsafe void interlace(AudioBuffer buff, int offset, int count)
+    private unsafe void interlace(AudioBuffer buff, int offset, int count)
     {
         if (PCM.ChannelCount == 2)
         {
@@ -301,7 +301,7 @@ public class AudioDecoder: IAudioSource
         return buff.Length = offset + sampleCount;
     }
 
-    unsafe void fill_frames_buffer()
+    private unsafe void fill_frames_buffer()
     {
         if (_framesBufferLength == 0)
         {
@@ -325,7 +325,7 @@ public class AudioDecoder: IAudioSource
         }
     }
 
-    unsafe void decode_frame_header(BitReader bitreader, FlacFrame frame)
+    private unsafe void decode_frame_header(BitReader bitreader, FlacFrame frame)
     {
         var header_start = bitreader.Position;
 
@@ -363,7 +363,7 @@ public class AudioDecoder: IAudioSource
         }
 
         // custom sample rate
-        if (sr_code0 < 1 || sr_code0 > 11)
+        if (sr_code0 is < 1 or > 11)
         {
             // sr_code0 == 12 -> sr == bitreader.readbits(8) * 1000;
             // sr_code0 == 13 -> sr == bitreader.readbits(16);
@@ -375,7 +375,7 @@ public class AudioDecoder: IAudioSource
         if (frame_channels > 11)
             throw new Exception("invalid channel mode");
 
-        if (frame_channels == 2 || frame_channels > 8) // Mid/Left/Right Side Stereo
+        if (frame_channels is 2 or > 8) // Mid/Left/Right Side Stereo
         {
             frame_channels = 2;
         }
@@ -394,13 +394,13 @@ public class AudioDecoder: IAudioSource
             throw new Exception("header crc mismatch");
     }
 
-    unsafe void decode_subframe_constant(BitReader bitreader, FlacFrame frame, int ch)
+    private unsafe void decode_subframe_constant(BitReader bitreader, FlacFrame frame, int ch)
     {
         var obits = frame.subframes[ch].obits;
         frame.subframes[ch].best.residual[0] = bitreader.readbitsSigned(obits);
     }
 
-    unsafe void decode_subframe_verbatim(BitReader bitreader, FlacFrame frame, int ch)
+    private unsafe void decode_subframe_verbatim(BitReader bitreader, FlacFrame frame, int ch)
     {
         var obits = frame.subframes[ch].obits;
         for (var i = 0; i < frame.blocksize; i++)
@@ -409,7 +409,7 @@ public class AudioDecoder: IAudioSource
         }
     }
 
-    unsafe void decode_residual(BitReader bitreader, FlacFrame frame, int ch)
+    private unsafe void decode_residual(BitReader bitreader, FlacFrame frame, int ch)
     {
         // rice-encoded block
         // coding method
@@ -455,7 +455,7 @@ public class AudioDecoder: IAudioSource
         }
     }
 
-    unsafe void decode_subframe_fixed(BitReader bitreader, FlacFrame frame, int ch)
+    private unsafe void decode_subframe_fixed(BitReader bitreader, FlacFrame frame, int ch)
     {
         // warm-up samples
         var obits = frame.subframes[ch].obits;
@@ -468,7 +468,7 @@ public class AudioDecoder: IAudioSource
         decode_residual(bitreader, frame, ch);
     }
 
-    unsafe void decode_subframe_lpc(BitReader bitreader, FlacFrame frame, int ch)
+    private unsafe void decode_subframe_lpc(BitReader bitreader, FlacFrame frame, int ch)
     {
         // warm-up samples
         var obits = frame.subframes[ch].obits;
@@ -495,7 +495,7 @@ public class AudioDecoder: IAudioSource
         decode_residual(bitreader, frame, ch);
     }
 
-    unsafe void decode_subframes(BitReader bitreader, FlacFrame frame)
+    private unsafe void decode_subframes(BitReader bitreader, FlacFrame frame)
     {
         fixed (int *r = residualBuffer, s = samplesBuffer)
         {
@@ -560,7 +560,7 @@ public class AudioDecoder: IAudioSource
         }
     }
 
-    unsafe void restore_samples_fixed(FlacFrame frame, int ch)
+    private unsafe void restore_samples_fixed(FlacFrame frame, int ch)
     {
         var sub = frame.subframes[ch];
 
@@ -612,7 +612,7 @@ public class AudioDecoder: IAudioSource
         }
     }
 
-    unsafe void restore_samples_lpc(FlacFrame frame, int ch)
+    private unsafe void restore_samples_lpc(FlacFrame frame, int ch)
     {
         var sub = frame.subframes[ch];
         ulong csum = 0;
@@ -630,7 +630,7 @@ public class AudioDecoder: IAudioSource
         }
     }
 
-    unsafe void restore_samples(FlacFrame frame)
+    private unsafe void restore_samples(FlacFrame frame)
     {
         for (var ch = 0; ch < PCM.ChannelCount; ch++)
         {
@@ -723,7 +723,7 @@ public class AudioDecoder: IAudioSource
     }
 
 
-    bool skip_bytes(int bytes)
+    private bool skip_bytes(int bytes)
     {
         for (var j = 0; j < bytes; j++)
             if (0 == _IO.Read(_framesBuffer, 0, 1))
@@ -732,7 +732,7 @@ public class AudioDecoder: IAudioSource
         return true;
     }
 
-    unsafe void decode_metadata()
+    private unsafe void decode_metadata()
     {
         byte x;
         int i, id;

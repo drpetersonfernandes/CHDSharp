@@ -105,65 +105,65 @@ public static class Crc32
         return value;
     }
 
-    const uint uPolynomial = 0x04c11db7;
-    const uint uReversePolynomial = 0xedb88320;
-    const uint uReversePolynomial2 = 0xdb710641;
+    private const uint uPolynomial = 0x04c11db7;
+    private const uint uReversePolynomial = 0xedb88320;
+    private const uint uReversePolynomial2 = 0xdb710641;
 
     private static readonly uint[,] combineTable;
     private static readonly uint[,] substractTable;
 
 #if need_invert_binary_matrix
-		static unsafe void invert_binary_matrix(uint* mat, uint* inv, int rows)
-		{
-			int cols, i, j;
-			uint tmp;
+        static unsafe void invert_binary_matrix(uint* mat, uint* inv, int rows)
+        {
+            int cols, i, j;
+            uint tmp;
 
-			cols = rows;
+            cols = rows;
 
-			for (i = 0; i < rows; i++) inv[i] = (1U << i);
+            for (i = 0; i < rows; i++) inv[i] = (1U << i);
 
-			/* First -- convert into upper triangular */
+            /* First -- convert into upper triangular */
 
-			for (i = 0; i < cols; i++)
-			{
+            for (i = 0; i < cols; i++)
+            {
 
-				/* Swap rows if we ave a zero i,i element.  If we can't swap, then the
+                /* Swap rows if we ave a zero i,i element.  If we can't swap, then the
                    matrix was not invertible */
 
-				if ((mat[i] & (1 << i)) == 0)
-				{
-					for (j = i + 1; j < rows && (mat[j] & (1 << i)) == 0; j++) ;
-					if (j == rows)
-						throw new Exception("Matrix not invertible");
-					tmp = mat[i]; mat[i] = mat[j]; mat[j] = tmp;
-					tmp = inv[i]; inv[i] = inv[j]; inv[j] = tmp;
-				}
+                if ((mat[i] & (1 << i)) == 0)
+                {
+                    for (j = i + 1; j < rows && (mat[j] & (1 << i)) == 0; j++) ;
+                    if (j == rows)
+                        throw new Exception("Matrix not invertible");
+                    tmp = mat[i]; mat[i] = mat[j]; mat[j] = tmp;
+                    tmp = inv[i]; inv[i] = inv[j]; inv[j] = tmp;
+                }
 
-				/* Now for each j>i, add A_ji*Ai to Aj */
-				for (j = i + 1; j != rows; j++)
-				{
-					if ((mat[j] & (1 << i)) != 0)
-					{
-						mat[j] ^= mat[i];
-						inv[j] ^= inv[i];
-					}
-				}
-			}
+                /* Now for each j>i, add A_ji*Ai to Aj */
+                for (j = i + 1; j != rows; j++)
+                {
+                    if ((mat[j] & (1 << i)) != 0)
+                    {
+                        mat[j] ^= mat[i];
+                        inv[j] ^= inv[i];
+                    }
+                }
+            }
 
-			/* Now the matrix is upper triangular.  Start at the top and multiply down */
+            /* Now the matrix is upper triangular.  Start at the top and multiply down */
 
-			for (i = rows - 1; i >= 0; i--)
-			{
-				for (j = 0; j < i; j++)
-				{
-					if ((mat[j] & (1 << i)) != 0)
-					{
-						/*        mat[j] ^= mat[i]; */
-						inv[j] ^= inv[i];
-					}
-				}
-			}
-		}
+            for (i = rows - 1; i >= 0; i--)
+            {
+                for (j = 0; j < i; j++)
+                {
+                    if ((mat[j] & (1 << i)) != 0)
+                    {
+                        /*        mat[j] ^= mat[i]; */
+                        inv[j] ^= inv[i];
+                    }
+                }
+            }
+        }
 #endif
 
     static unsafe Crc32()
@@ -191,7 +191,7 @@ public static class Crc32
         fixed (uint* ct = &combineTable[0, 0], st = &substractTable[0, 0])
         {
             //for (int i = 0; i < GF2_DIM; i++)
-            //	st[32 + i] = ct[i];
+            //  st[32 + i] = ct[i];
             //invert_binary_matrix(st + 32, st, GF2_DIM);
 
             for (var i = 1; i < GF2_DIM; i++)
@@ -202,7 +202,7 @@ public static class Crc32
         }
     }
 
-    const int GF2_DIM = 32;
+    private const int GF2_DIM = 32;
     //const int GF2_DIM2 = 67;
 
     private static unsafe uint gf2_matrix_times(uint* umat, uint uvec)

@@ -32,7 +32,8 @@ public class SingleAudioTitle : IAudioTitle
     /// Gets the stream identifier (always 0).
     /// </summary>
     public int StreamId => 0;
-    IAudioSource source;
+
+    private readonly IAudioSource source;
 }
 
 /// <summary>
@@ -49,5 +50,6 @@ public class SingleAudioTitleSet : IAudioTitleSet
     /// Gets the list containing a single audio title created from the source.
     /// </summary>
     public List<IAudioTitle> AudioTitles => [new SingleAudioTitle(source)];
-    IAudioSource source;
+
+    private readonly IAudioSource source;
 }

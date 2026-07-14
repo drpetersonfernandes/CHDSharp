@@ -10,7 +10,7 @@ internal static class ChdMetaData
 {
     internal static readonly uint ChdMdflagsChecksum = 0x01; // indicates data is checksummed
 
-    internal static chdError ReadMetaData(Stream file, ChdHeader chd)
+    internal static ChdError ReadMetaData(Stream file, ChdHeader chd)
     {
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
@@ -47,7 +47,7 @@ internal static class ChdMetaData
         }
 
         if (chd.Sha1 == null)
-            return chdError.CHDERRNONE;
+            return ChdError.Chderrnone;
 
         // binary sort the metaHashes
         metaHashes.Sort(Util.ByteArrCompare);
@@ -66,9 +66,9 @@ internal static class ChdMetaData
 
         // compare the calculated metaData + rawData SHA1 with sha1 from the CHD header
         if (!Util.IsAllZeroArray(chd.Sha1) && !Util.ByteArrEquals(chd.Sha1, sha1Total.Hash!))
-            return chdError.CHDERRINVALIDMETADATA;
+            return ChdError.Chderrinvalidmetadata;
 
-        return chdError.CHDERRNONE;
+        return ChdError.Chderrnone;
     }
 
     private static byte[] metadata_hash(uint metaTag, byte[] metaData)

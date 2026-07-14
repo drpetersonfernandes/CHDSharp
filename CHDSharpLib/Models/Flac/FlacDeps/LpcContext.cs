@@ -6,7 +6,7 @@ namespace CHDSharp.Models.Flac.FlacDeps;
 /// <summary>
 /// Stores per-window autocorrelation data for LPC subframe analysis.
 /// </summary>
-unsafe public class LpcSubframeInfo
+public unsafe class LpcSubframeInfo
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="LpcSubframeInfo"/> class with empty autocorrelation buffers.
@@ -41,7 +41,7 @@ unsafe public class LpcSubframeInfo
 /// <summary>
 /// Represents a section of a window for LPC analysis, defining boundaries and the type of autocorrelation computation to use.
 /// </summary>
-unsafe public struct LpcWindowSection
+public unsafe struct LpcWindowSection
 {
     /// <summary>
     /// Specifies the type of autocorrelation computation for a window section.
@@ -60,7 +60,7 @@ unsafe public struct LpcWindowSection
         OneGlue,
         /// <summary>Glue section between windowed regions.</summary>
         Glue
-    };
+    }
     /// <summary>
     /// The start offset of this section in samples.
     /// </summary>
@@ -145,7 +145,7 @@ unsafe public struct LpcWindowSection
     /// <param name="order">Maximum lag order.</param>
     /// <param name="blocksize">Total block size.</param>
     /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
-    unsafe public void computeAutocorr(/*const*/ int* data, float* window, int minOrder, int order, int blocksize, double* autoc)
+    public readonly unsafe void computeAutocorr(/*const*/ int* data, float* window, int minOrder, int order, int blocksize, double* autoc)
     {
         if (m_type == SectionType.OneLarge)
             Lpc.computeAutocorrWindowlessLarge(data + m_start, m_end - m_start, minOrder, order, autoc);
@@ -168,7 +168,7 @@ unsafe public struct LpcWindowSection
     /// <param name="sz">Size of each window segment.</param>
     /// <param name="bps">Bits per sample.</param>
     /// <param name="sections">Destination buffer for detected sections, sized for all windows.</param>
-    unsafe public static void Detect(int Windowcount, float* windowSegment, int stride, int sz, int bps, LpcWindowSection* sections)
+    public static unsafe void Detect(int Windowcount, float* windowSegment, int stride, int sz, int bps, LpcWindowSection* sections)
     {
         var section_id = 0;
         var boundaries = new List<int>();
@@ -317,7 +317,7 @@ unsafe public struct LpcWindowSection
 /// <summary>
 /// Context for LPC coefficients calculation and order estimation
 /// </summary>
-unsafe public class LpcContext
+public unsafe class LpcContext
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="LpcContext"/> class with default buffer sizes.
@@ -456,7 +456,8 @@ unsafe public class LpcContext
     /// Autocorrelation values for the current frame.
     /// </summary>
     public double[] autocorr_values;
-    double[] reflection_coeffs;
+
+    private readonly double[] reflection_coeffs;
     /// <summary>
     /// Prediction error values for each order.
     /// </summary>
@@ -469,7 +470,8 @@ unsafe public class LpcContext
     /// Quantized LPC coefficients for the current frame.
     /// </summary>
     public int[] coefs;
-    int autocorr_order;
+
+    private int autocorr_order;
     /// <summary>
     /// Right-shift amount for quantized coefficients.
     /// </summary>

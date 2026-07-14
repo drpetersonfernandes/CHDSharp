@@ -6,18 +6,18 @@ internal class node_t
 {
     internal uint bits;             /* bits used to encode the node */
     internal byte numbits;          /* number of bits needed for this node */
-};
+}
 
 
 internal class HuffmanDecoder
 {
     /* internal state */
-    uint numcodes;                  /* number of total codes being processed */
-    byte maxbits;                   /* maximum bits per code */
-    ushort[] lookup;                /* pointer to the lookup table */
-    node_t[] huffnode;              /* array of nodes */
+    private readonly uint numcodes;                  /* number of total codes being processed */
+    private readonly byte maxbits;                   /* maximum bits per code */
+    private readonly ushort[] lookup;                /* pointer to the lookup table */
+    private readonly node_t[] huffnode;              /* array of nodes */
 
-    BitStream bitbuf;
+    private BitStream bitbuf;
 
     private static uint MAKE_LOOKUP(uint code, uint bits) { return (code << 5) | (bits & 0x1f); }
 

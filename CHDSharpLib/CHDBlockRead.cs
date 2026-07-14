@@ -1,4 +1,4 @@
-﻿using CHDSharp.Models;
+using CHDSharp.Models;
 using CHDSharp.Utils;
 using Serilog;
 
@@ -20,7 +20,7 @@ internal static class ChdBlockRead
 
         Parallel.ForEach(chd.Map, me =>
         {
-            if (me.Comptype != compressionType.COMPRESSIONSELF)
+            if (me.Comptype != CompressionType.Compressionself)
             {
                 if ((int)me.Comptype < 5)
                     Interlocked.Increment(ref compressionCount[(int)me.Comptype]);
@@ -30,11 +30,11 @@ internal static class ChdBlockRead
             me.SelfMapEntry = chd.Map[me.Offset];
             switch (me.SelfMapEntry.Comptype)
             {
-                case compressionType.COMPRESSIONTYPE0:
-                case compressionType.COMPRESSIONTYPE1:
-                case compressionType.COMPRESSIONTYPE2:
-                case compressionType.COMPRESSIONTYPE3:
-                case compressionType.COMPRESSIONNONE:
+                case CompressionType.Compressiontype0:
+                case CompressionType.Compressiontype1:
+                case CompressionType.Compressiontype2:
+                case CompressionType.Compressiontype3:
+                case CompressionType.Compressionnone:
                     break;
                 default:
                     Log.Error("Unexpected compression type {CompType}", me.SelfMapEntry.Comptype);
@@ -106,7 +106,7 @@ internal static class ChdBlockRead
 
         Parallel.ForEach(chd.Map, static me =>
         {
-            if (me.Comptype != compressionType.COMPRESSIONSELF)
+            if (me.Comptype != CompressionType.Compressionself)
                 return;
             // this should never be true
             if (me.SelfMapEntry == null)
@@ -126,21 +126,21 @@ internal static class ChdBlockRead
 
     internal static int GetWeigth(ChdHeader chd, MapEntry me)
     {
-        if (me.Comptype == compressionType.COMPRESSIONNONE)
+        if (me.Comptype == CompressionType.Compressionnone)
             return 1;
 
         switch (chd.Compression[(int)me.Comptype])
         {
-            case chdCodec.CHDCODECLZMA: return 23;
-            case chdCodec.CHDCODECZLIB: return 1;
-            case chdCodec.CHDCODECFLAC: return (me.Length == 41) ? 1 : 2;
-            case chdCodec.CHDCODECHUFFMAN: return 64;
+            case ChdCodec.Lzma: return 23;
+            case ChdCodec.Zlib: return 1;
+            case ChdCodec.Flac: return (me.Length == 41) ? 1 : 2;
+            case ChdCodec.Huffman: return 64;
 
-            case chdCodec.CHDCODECAVHUFF: return 1;
+            case ChdCodec.Avhuff: return 1;
 
-            case chdCodec.CHDCODECCDFLAC: return (me.Length == 15) ? 1 : 2;
-            case chdCodec.CHDCODECCDLZMA: return 18;
-            case chdCodec.CHDCODECCDZLIB: return 3;
+            case ChdCodec.Cdflac: return (me.Length == 15) ? 1 : 2;
+            case ChdCodec.Cdlzma: return 18;
+            case ChdCodec.Cdzlib: return 3;
             default: return 1;
         }
     }
@@ -154,34 +154,34 @@ internal static class ChdBlockRead
         }
     }
 
-    private static ChdReader GetReaderFromCodec(chdCodec chdCodec)
+    private static ChdReader GetReaderFromCodec(ChdCodec chdCodec)
     {
         switch (chdCodec)
         {
-            case chdCodec.CHDCODECZLIB: return ChdReaders.Zlib;
-            case chdCodec.CHDCODECLZMA: return ChdReaders.Lzma;
-            case chdCodec.CHDCODECHUFFMAN: return ChdReaders.Huffman;
-            case chdCodec.CHDCODECFLAC: return ChdReaders.Flac;
-            case chdCodec.CHDCODECZSTD: return ChdReaders.Zstd;
-            case chdCodec.CHDCODECCDZLIB: return ChdReaders.Cdzlib;
-            case chdCodec.CHDCODECCDLZMA: return ChdReaders.Cdlzma;
-            case chdCodec.CHDCODECCDFLAC: return ChdReaders.Cdflac;
-            case chdCodec.CHDCODECCDZSTD: return ChdReaders.Cdzstd;
-            case chdCodec.CHDCODECAVHUFF: return ChdReaders.AvHuff;
+            case ChdCodec.Zlib: return ChdReaders.Zlib;
+            case ChdCodec.Lzma: return ChdReaders.Lzma;
+            case ChdCodec.Huffman: return ChdReaders.Huffman;
+            case ChdCodec.Flac: return ChdReaders.Flac;
+            case ChdCodec.Zstd: return ChdReaders.Zstd;
+            case ChdCodec.Cdzlib: return ChdReaders.Cdzlib;
+            case ChdCodec.Cdlzma: return ChdReaders.Cdlzma;
+            case ChdCodec.Cdflac: return ChdReaders.Cdflac;
+            case ChdCodec.Cdzstd: return ChdReaders.Cdzstd;
+            case ChdCodec.Avhuff: return ChdReaders.AvHuff;
             default: return null!;
         }
     }
 
-    internal static chdError ReadBlock(MapEntry mapEntry, ArrayPool arrPool, ChdReader[] compression, CHDCodec codec, byte[] buffOut, int buffOutLength)
+    internal static ChdError ReadBlock(MapEntry mapEntry, ArrayPool arrPool, ChdReader[] compression, CHDCodec codec, byte[] buffOut, int buffOutLength)
     {
         var checkCrc = true;
 
         switch (mapEntry.Comptype)
         {
-            case compressionType.COMPRESSIONTYPE0:
-            case compressionType.COMPRESSIONTYPE1:
-            case compressionType.COMPRESSIONTYPE2:
-            case compressionType.COMPRESSIONTYPE3:
+            case CompressionType.Compressiontype0:
+            case CompressionType.Compressiontype1:
+            case CompressionType.Compressiontype2:
+            case CompressionType.Compressiontype3:
             {
                 lock (mapEntry)
                 {
@@ -189,7 +189,7 @@ internal static class ChdBlockRead
                     {
                         var ret = compression[(int)mapEntry.Comptype].Invoke(mapEntry.BuffIn, (int)mapEntry.Length, buffOut, buffOutLength, codec);
 
-                        if (ret != chdError.CHDERRNONE)
+                        if (ret != ChdError.Chderrnone)
                             return ret;
 
                         // if this block is re-used keep a copy of it.
@@ -216,7 +216,7 @@ internal static class ChdBlockRead
 
                 break;
             }
-            case compressionType.COMPRESSIONNONE:
+            case CompressionType.Compressionnone:
             {
                 lock (mapEntry)
                 {
@@ -248,7 +248,7 @@ internal static class ChdBlockRead
                 break;
             }
 
-            case compressionType.COMPRESSIONMINI:
+            case CompressionType.Compressionmini:
             {
                 var tmp = BitConverter.GetBytes(mapEntry.Offset);
                 for (var i = 0; i < 8; i++)
@@ -264,25 +264,25 @@ internal static class ChdBlockRead
                 break;
             }
 
-            case compressionType.COMPRESSIONSELF:
+            case CompressionType.Compressionself:
             {
                 var retcs = ReadBlock(mapEntry.SelfMapEntry, arrPool, compression, codec, buffOut, buffOutLength);
-                if (retcs != chdError.CHDERRNONE)
+                if (retcs != ChdError.Chderrnone)
                     return retcs;
                 // check CRC in the read_block_into_cache call
                 checkCrc = false;
                 break;
             }
             default:
-                return chdError.CHDERRDECOMPRESSIONERROR;
+                return ChdError.Chderrdecompressionerror;
         }
 
         if (checkCrc)
         {
             if ((mapEntry.Crc != null && !CRC.VerifyDigest((uint)mapEntry.Crc, buffOut, 0, (uint)buffOutLength)) || (mapEntry.Crc16 != null && CRC16.calc(buffOut, (int)buffOutLength) != mapEntry.Crc16))
-                return chdError.CHDERRDECOMPRESSIONERROR;
+                return ChdError.Chderrdecompressionerror;
         }
 
-        return chdError.CHDERRNONE;
+        return ChdError.Chderrnone;
     }
 }

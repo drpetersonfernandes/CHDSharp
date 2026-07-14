@@ -1,34 +1,34 @@
-﻿using CHDSharp.Models;
+using CHDSharp.Models;
 
 namespace CHDSharp;
 
 internal static class ChdCommon
 {
-    internal static chdCodec CompTypeConv(uint ct)
+    internal static ChdCodec CompTypeConv(uint ct)
     {
         switch (ct)
         {
             case 1:
-            case 2: return chdCodec.CHDCODECZLIB;
-            case 3: return chdCodec.CHDCODECAVHUFF;
+            case 2: return ChdCodec.Zlib;
+            case 3: return ChdCodec.Avhuff;
             default:
-                return chdCodec.CHDCODECERROR;
+                return ChdCodec.Error;
         }
     }
 
-    /* Converts V3 & V4 mapFlags to V5 compression_type */
-    internal static compressionType ConvMapFlagstoCompressionType(mapFlags mapFlags)
+    /* Converts V3 & V4 MapEntryFlag to V5 compression_type */
+    internal static CompressionType ConvMapEntryFlagtoCompressionType(MapEntryFlag MapEntryFlag)
     {
-        switch (mapFlags & mapFlags.MAPENTRYFLAGTYPEMASK)
+        switch (MapEntryFlag & MapEntryFlag.Mapentryflagtypemask)
         {
-            case mapFlags.MAPENTRYTYPEINVALID: return compressionType.COMPRESSIONERROR;
-            case mapFlags.MAPENTRYTYPECOMPRESSED: return compressionType.COMPRESSIONTYPE0;
-            case mapFlags.MAPENTRYTYPEUNCOMPRESSED: return compressionType.COMPRESSIONNONE;
-            case mapFlags.MAPENTRYTYPEMINI: return compressionType.COMPRESSIONMINI;
-            case mapFlags.MAPENTRYTYPESELFHUNK: return compressionType.COMPRESSIONSELF;
-            case mapFlags.MAPENTRYTYPEPARENTHUNK: return compressionType.COMPRESSIONPARENT;
+            case MapEntryFlag.Mapentrytypeinvalid: return CompressionType.Compressionerror;
+            case MapEntryFlag.Mapentrytypecompressed: return CompressionType.Compressiontype0;
+            case MapEntryFlag.Mapentrytypeuncompressed: return CompressionType.Compressionnone;
+            case MapEntryFlag.Mapentrytypemini: return CompressionType.Compressionmini;
+            case MapEntryFlag.Mapentrytypeselfhunk: return CompressionType.Compressionself;
+            case MapEntryFlag.Mapentrytypeparenthunk: return CompressionType.Compressionparent;
             default:
-                return compressionType.COMPRESSIONERROR;
+                return CompressionType.Compressionerror;
         }
     }
 }

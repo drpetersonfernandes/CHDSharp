@@ -113,13 +113,13 @@ public class CRC
         }
     }
     /// <summary>Gets the CRC-32 result as a signed 32-bit integer.</summary>
-    public Int32 Crc32Result => unchecked((Int32)(~_crc));
+    public int Crc32Result => unchecked((int)(~_crc));
 
     /// <summary>Gets the CRC-32 result as an unsigned 32-bit integer.</summary>
     public uint Crc32ResultU => ~_crc;
 
     /// <summary>Gets the total number of bytes processed since the last <see cref="Reset"/>.</summary>
-    public Int64 TotalBytesRead => _totalBytesRead;
+    public long TotalBytesRead => _totalBytesRead;
 
     /// <summary>Calculates the CRC-32 digest of a data range without mutating instance state.</summary>
     /// <param name="data">The byte array containing the data.</param>

@@ -4,11 +4,11 @@ internal class BitStream
 {
     private uint buffer;
     private int bits;
-    private byte[] readBuffer;
+    private readonly byte[] readBuffer;
     private int doffset;
-    private int dlength;
+    private readonly int dlength;
 
-    private int initialOffset = 0;
+    private readonly int initialOffset;
 
     public bool overflow()
     {

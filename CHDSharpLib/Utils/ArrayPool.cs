@@ -2,8 +2,8 @@
 
 internal class ArrayPool
 {
-    private uint _arraySize;
-    private List<byte[]> _array;
+    private readonly uint _arraySize;
+    private readonly List<byte[]> _array;
     private int _count;
     private int _issuedArraysTotal;
 

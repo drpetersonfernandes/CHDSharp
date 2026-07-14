@@ -6,7 +6,7 @@ namespace CHDSharp.Flac;
 /// Low-level bit-level reader for FLAC bitstreams. Operates on raw byte pointers.
 /// This class is unsafe and requires pointer manipulation.
 /// </summary>
-unsafe public class BitReader
+public unsafe class BitReader
 {
     #region Static Methods
 

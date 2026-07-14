@@ -16,49 +16,49 @@ public static class BigEndian
     /// <summary>Reads a big-endian <see cref="UInt16"/> from the stream.</summary>
     /// <param name="binRdr">The <see cref="BinaryReader"/> to read from.</param>
     /// <returns>The unsigned 16-bit value read in big-endian order.</returns>
-    public static UInt16 ReadUInt16BE(this BinaryReader binRdr)
+    public static ushort ReadUInt16BE(this BinaryReader binRdr)
     {
-        return BitConverter.ToUInt16(binRdr.ReadBytesRequired(sizeof(UInt16)).Reverse(), 0);
+        return BitConverter.ToUInt16(binRdr.ReadBytesRequired(sizeof(ushort)).Reverse(), 0);
     }
 
     /// <summary>Reads a big-endian <see cref="Int16"/> from the stream.</summary>
     /// <param name="binRdr">The <see cref="BinaryReader"/> to read from.</param>
     /// <returns>The signed 16-bit value read in big-endian order.</returns>
-    public static Int16 ReadInt16BE(this BinaryReader binRdr)
+    public static short ReadInt16BE(this BinaryReader binRdr)
     {
-        return BitConverter.ToInt16(binRdr.ReadBytesRequired(sizeof(Int16)).Reverse(), 0);
+        return BitConverter.ToInt16(binRdr.ReadBytesRequired(sizeof(short)).Reverse(), 0);
     }
 
 
     /// <summary>Reads a big-endian <see cref="UInt32"/> from the stream.</summary>
     /// <param name="binRdr">The <see cref="BinaryReader"/> to read from.</param>
     /// <returns>The unsigned 32-bit value read in big-endian order.</returns>
-    public static UInt32 ReadUInt32BE(this BinaryReader binRdr)
+    public static uint ReadUInt32BE(this BinaryReader binRdr)
     {
-        return BitConverter.ToUInt32(binRdr.ReadBytesRequired(sizeof(UInt32)).Reverse(), 0);
+        return BitConverter.ToUInt32(binRdr.ReadBytesRequired(sizeof(uint)).Reverse(), 0);
     }
     /// <summary>Reads a big-endian 48-bit unsigned integer from the stream into a <see cref="UInt64"/>.</summary>
     /// <param name="binRdr">The <see cref="BinaryReader"/> to read from.</param>
     /// <returns>The 48-bit value read in big-endian order, stored in a <see cref="UInt64"/>.</returns>
-    public static UInt64 ReadUInt48BE(this BinaryReader binRdr)
+    public static ulong ReadUInt48BE(this BinaryReader binRdr)
     {
-        return (UInt64)((binRdr.ReadByte() << 40) | (binRdr.ReadByte() << 32) | (binRdr.ReadByte() << 24) | (binRdr.ReadByte() << 16) | (binRdr.ReadByte() << 8) | (binRdr.ReadByte() << 0));
+        return (ulong)((binRdr.ReadByte() << 40) | (binRdr.ReadByte() << 32) | (binRdr.ReadByte() << 24) | (binRdr.ReadByte() << 16) | (binRdr.ReadByte() << 8) | (binRdr.ReadByte() << 0));
     }
 
     /// <summary>Reads a big-endian <see cref="UInt64"/> from the stream.</summary>
     /// <param name="binRdr">The <see cref="BinaryReader"/> to read from.</param>
     /// <returns>The unsigned 64-bit value read in big-endian order.</returns>
-    public static UInt64 ReadUInt64BE(this BinaryReader binRdr)
+    public static ulong ReadUInt64BE(this BinaryReader binRdr)
     {
-        return BitConverter.ToUInt64(binRdr.ReadBytesRequired(sizeof(UInt64)).Reverse(), 0);
+        return BitConverter.ToUInt64(binRdr.ReadBytesRequired(sizeof(ulong)).Reverse(), 0);
     }
 
     /// <summary>Reads a big-endian <see cref="Int32"/> from the stream.</summary>
     /// <param name="binRdr">The <see cref="BinaryReader"/> to read from.</param>
     /// <returns>The signed 32-bit value read in big-endian order.</returns>
-    public static Int32 ReadInt32BE(this BinaryReader binRdr)
+    public static int ReadInt32BE(this BinaryReader binRdr)
     {
-        return BitConverter.ToInt32(binRdr.ReadBytesRequired(sizeof(Int32)).Reverse(), 0);
+        return BitConverter.ToInt32(binRdr.ReadBytesRequired(sizeof(int)).Reverse(), 0);
     }
 
     /// <summary>Reads the exact number of bytes requested from the stream, throwing if fewer bytes are available.</summary>

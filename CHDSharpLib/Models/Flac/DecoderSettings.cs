@@ -11,29 +11,14 @@ namespace CHDSharp.Models.Flac;
 public class DecoderSettings : IAudioDecoderSettings
 {
     #region IAudioDecoderSettings implementation
-    [Browsable(false)]
-    /// <summary>
-    /// Gets the file extension associated with FLAC files ("flac").
-    /// </summary>
-    public string Extension => "flac";
 
-    [Browsable(false)]
-    /// <summary>
-    /// Gets the name of this decoder implementation ("cuetools").
-    /// </summary>
-    public string Name => "cuetools";
+    [Browsable(false)] public string Extension => "flac";
 
-    [Browsable(false)]
-    /// <summary>
-    /// Gets the <see cref="Type"/> of the decoder class (<see cref="AudioDecoder"/>).
-    /// </summary>
-    public Type DecoderType => typeof(AudioDecoder);
+    [Browsable(false)] public string Name => "cuetools";
 
-    [Browsable(false)]
-    /// <summary>
-    /// Gets the priority of this decoder relative to other implementations. Higher priority decoders are preferred.
-    /// </summary>
-    public int Priority => 2;
+    [Browsable(false)] public Type DecoderType => typeof(AudioDecoder);
+
+    [Browsable(false)] public int Priority => 2;
 
     /// <summary>
     /// Creates a shallow copy of the decoder settings.
@@ -43,6 +28,7 @@ public class DecoderSettings : IAudioDecoderSettings
     {
         return MemberwiseClone() as IAudioDecoderSettings;
     }
+
     #endregion
 
     /// <summary>

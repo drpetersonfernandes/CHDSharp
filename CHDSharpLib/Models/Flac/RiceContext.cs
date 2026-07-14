@@ -6,7 +6,7 @@ namespace CHDSharp.Models.Flac;
 /// Rice coding context for encoding/decoding residual values in FLAC subframes.
 /// Uses unsafe pointers.
 /// </summary>
-unsafe public class RiceContext
+public unsafe class RiceContext
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RiceContext"/> class, allocating partition arrays.
@@ -35,4 +35,4 @@ unsafe public class RiceContext
     /// bps if using escape code
     /// </summary>
     public int[] esc_bps;
-};
+}

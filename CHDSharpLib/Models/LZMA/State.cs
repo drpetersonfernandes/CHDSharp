@@ -22,5 +22,5 @@ public struct State
     public void UpdateMatch() { Index = (uint)(Index < 7 ? 7 : 10); }
     public void UpdateRep() { Index = (uint)(Index < 7 ? 8 : 11); }
     public void UpdateShortRep() { Index = (uint)(Index < 7 ? 9 : 11); }
-    public bool IsCharState() { return Index < 7; }
+    public readonly bool IsCharState() { return Index < 7; }
 }

@@ -10,34 +10,33 @@ namespace CHDSharp.LZMA;
 /// </remarks>
 public class LzmaStream : Stream
 {
-    private Stream inputStream;
-    private long inputSize;
-    private long outputSize;
+    private readonly Stream _inputStream;
+    private readonly long _inputSize;
+    private readonly long _outputSize;
 
-    private int dictionarySize;
-    private OutWindow outWindow = new OutWindow();
-    private RangeCoder.Decoder rangeDecoder = new RangeCoder.Decoder();
-    private Decoder decoder;
+    private readonly int _dictionarySize;
+    private readonly OutWindow _outWindow = new();
+    private readonly RangeCoder.Decoder _rangeDecoder = new();
+    private Decoder _decoder;
 
-    private long position = 0;
-    private bool endReached = false;
-    private long availableBytes;
-    private long rangeDecoderLimit;
-    private long inputPosition = 0;
+    private long _position;
+    private bool _endReached;
+    private long _availableBytes;
+    private long _rangeDecoderLimit;
+    private long _inputPosition;
 
     // LZMA2
-    private bool isLZMA2;
-    private bool uncompressedChunk = false;
-    private bool needDictReset = true;
-    private bool needProps = true;
-    private byte[] props = new byte[5];
+    private readonly bool _isLzma2;
+    private bool _uncompressedChunk;
+    private bool _needDictReset = true;
+    private bool _needProps = true;
 
     /// <summary>
     /// Initializes a new LZMA decompression stream with unknown input and output sizes.
     /// </summary>
     /// <param name="properties">LZMA properties header (5 bytes).</param>
     /// <param name="inputStream">The compressed source stream.</param>
-	public LzmaStream(byte[] properties, Stream inputStream)
+    public LzmaStream(byte[] properties, Stream inputStream)
         : this(properties, inputStream, -1, -1, null, properties.Length < 5)
     {
     }
@@ -73,85 +72,85 @@ public class LzmaStream : Stream
     /// <param name="inputSize">Exact size in bytes of the compressed data, or -1 if unknown.</param>
     /// <param name="outputSize">Exact size in bytes of the decompressed data, or -1 if unknown.</param>
     /// <param name="presetDictionary">Optional preset dictionary stream for training the decoder, or <c>null</c>.</param>
-    /// <param name="isLZMA2"><c>true</c> to use LZMA2 format; <c>false</c> for LZMA.</param>
+    /// <param name="isLzma2"><c>true</c> to use LZMA2 format; <c>false</c> for LZMA.</param>
     /// <param name="outWindowBuff">Optional pre-allocated buffer for the output window, or <c>null</c>.</param>
     public LzmaStream(byte[] properties, Stream inputStream, long inputSize, long outputSize,
-        Stream presetDictionary, bool isLZMA2, byte[] outWindowBuff = null)
+        Stream presetDictionary, bool isLzma2, byte[] outWindowBuff = null)
     {
-        this.inputStream = inputStream;
-        this.inputSize = inputSize;
-        this.outputSize = outputSize;
-        this.isLZMA2 = isLZMA2;
+        _inputStream = inputStream;
+        _inputSize = inputSize;
+        _outputSize = outputSize;
+        _isLzma2 = isLzma2;
 
-        if (!isLZMA2)
+        if (!isLzma2)
         {
-            dictionarySize = BitConverter.ToInt32(properties, 1);
-            outWindow.Create(dictionarySize,outWindowBuff);
+            _dictionarySize = BitConverter.ToInt32(properties, 1);
+            _outWindow.Create(_dictionarySize, outWindowBuff);
             if (presetDictionary != null)
-                outWindow.Train(presetDictionary);
+                _outWindow.Train(presetDictionary);
 
-            rangeDecoder.Init(inputStream);
+            _rangeDecoder.Init(inputStream);
 
-            decoder = new Decoder();
-            decoder.SetDecoderProperties(properties);
-            props = properties;
+            _decoder = new Decoder();
+            _decoder.SetDecoderProperties(properties);
+            Properties = properties;
 
-            availableBytes = outputSize < 0 ? long.MaxValue : outputSize;
-            rangeDecoderLimit = inputSize;
+            _availableBytes = outputSize < 0 ? long.MaxValue : outputSize;
+            _rangeDecoderLimit = inputSize;
         }
         else
         {
-            dictionarySize = 2 | (properties[0] & 1);
-            dictionarySize <<= (properties[0] >> 1) + 11;
+            _dictionarySize = 2 | (properties[0] & 1);
+            _dictionarySize <<= (properties[0] >> 1) + 11;
 
-            outWindow.Create(dictionarySize);
+            _outWindow.Create(_dictionarySize);
             if (presetDictionary != null)
             {
-                outWindow.Train(presetDictionary);
-                needDictReset = false;
+                _outWindow.Train(presetDictionary);
+                _needDictReset = false;
             }
 
-            props = new byte[1];
-            availableBytes = 0;
+            Properties = new byte[1];
+            _availableBytes = 0;
         }
     }
 
     /// <summary>
     /// Gets a value indicating whether the stream supports reading. Always <c>true</c>.
     /// </summary>
-	public override bool CanRead => true;
+    public override bool CanRead => true;
 
     /// <summary>
     /// Gets a value indicating whether the stream supports seeking. Always <c>false</c>.
     /// </summary>
-	public override bool CanSeek => false;
+    public override bool CanSeek => false;
 
     /// <summary>
     /// Gets a value indicating whether the stream supports writing. Always <c>false</c>.
     /// </summary>
-	public override bool CanWrite => false;
+    public override bool CanWrite => false;
 
     /// <summary>
     /// Does nothing. The stream has no buffers to flush.
     /// </summary>
-	public override void Flush()
-	{
-	}
+    public override void Flush()
+    {
+    }
 
     /// <summary>
     /// Gets the total length of the decompressed stream, or the current position plus remaining available bytes if unknown.
     /// </summary>
-	public override long Length => position + availableBytes;
+    public override long Length => _position + _availableBytes;
 
     /// <summary>
     /// Gets or sets the current position within the decompressed stream.
     /// </summary>
     /// <exception cref="NotSupportedException">The setter always throws. Use <see cref="Seek"/> to advance.</exception>
-	public override long Position
-	{
-		get => position;
-		set => throw new NotSupportedException();
-	}
+    public override long Position
+    {
+        get => _position;
+        set => throw new NotSupportedException();
+    }
 
     /// <summary>
     /// Reads a sequence of decompressed bytes from the stream and advances the position.
@@ -163,134 +162,137 @@ public class LzmaStream : Stream
     /// <exception cref="DataErrorException">Thrown when the compressed data is corrupt or truncated.</exception>
     public override int Read(byte[] buffer, int offset, int count)
     {
-        if (endReached)
+        if (_endReached)
             return 0;
 
         var total = 0;
         while (total < count)
         {
-            if (availableBytes == 0)
+            if (_availableBytes == 0)
             {
-                if (isLZMA2)
-                    decodeChunkHeader();
+                if (_isLzma2)
+                    DecodeChunkHeader();
                 else
                 {
-                    endReached = true;
+                    _endReached = true;
                 }
 
-                if (endReached)
+                if (_endReached)
                     break;
             }
 
             var toProcess = count - total;
-            if (toProcess > availableBytes)
+            if (toProcess > _availableBytes)
             {
-                toProcess = (int)availableBytes;
+                toProcess = (int)_availableBytes;
             }
 
-            outWindow.SetLimit(toProcess);
-            if (uncompressedChunk)
+            _outWindow.SetLimit(toProcess);
+            if (_uncompressedChunk)
             {
-                inputPosition += outWindow.CopyStream(inputStream, toProcess);
+                _inputPosition += _outWindow.CopyStream(_inputStream, toProcess);
             }
-            else if (decoder.Code(dictionarySize, outWindow, rangeDecoder)
-                     && outputSize < 0)
+            else if (_decoder.Code(_dictionarySize, _outWindow, _rangeDecoder)
+                     && _outputSize < 0)
             {
-                availableBytes = outWindow.AvailableBytes;
+                _availableBytes = _outWindow.AvailableBytes;
             }
 
-            var read = outWindow.Read(buffer, offset, toProcess);
+            var read = _outWindow.Read(buffer, offset, toProcess);
             total += read;
             offset += read;
-            position += read;
-            availableBytes -= read;
+            _position += read;
+            _availableBytes -= read;
 
-            if (availableBytes == 0 && !uncompressedChunk)
+            if (_availableBytes == 0 && !_uncompressedChunk)
             {
-                rangeDecoder.ReleaseStream();
-                if (!rangeDecoder.IsFinished || (rangeDecoderLimit >= 0 && rangeDecoder.Total != rangeDecoderLimit))
+                _rangeDecoder.ReleaseStream();
+                if (!_rangeDecoder.IsFinished || (_rangeDecoderLimit >= 0 && _rangeDecoder.Total != _rangeDecoderLimit))
                     throw new DataErrorException();
 
-                inputPosition += rangeDecoder.Total;
-                if (outWindow.HasPending)
+                _inputPosition += _rangeDecoder.Total;
+                if (_outWindow.HasPending)
                     throw new DataErrorException();
             }
         }
 
-        if (endReached)
+        if (_endReached)
         {
-            if (inputSize >= 0 && inputPosition != inputSize)
-                throw new DataErrorException();
-            if (outputSize >= 0 && position != outputSize)
+            if ((_inputSize >= 0 && _inputPosition != _inputSize) || (_outputSize >= 0 && _position != _outputSize))
                 throw new DataErrorException();
         }
 
         return total;
     }
 
-    private void decodeChunkHeader()
+    private void DecodeChunkHeader()
     {
-        var control = inputStream.ReadByte();
-        inputPosition++;
+        var control = _inputStream.ReadByte();
+        _inputPosition++;
 
-        if (control == 0x00)
+        switch (control)
         {
-            endReached = true;
-            return;
-        }
-
-        if (control >= 0xE0 || control == 0x01)
-        {
-            needProps = true;
-            needDictReset = false;
-            outWindow.Reset();
-        }
-        else if (needDictReset)
-        {
-            throw new DataErrorException();
-        }
-
-        if (control >= 0x80)
-        {
-            uncompressedChunk = false;
-
-            availableBytes = (control & 0x1F) << 16;
-            availableBytes += (inputStream.ReadByte() << 8) + inputStream.ReadByte() + 1;
-            inputPosition += 2;
-
-            rangeDecoderLimit = (inputStream.ReadByte() << 8) + inputStream.ReadByte() + 1;
-            inputPosition += 2;
-
-            if (control >= 0xC0)
+            case 0x00:
+                _endReached = true;
+                return;
+            case >= 0xE0 or 0x01:
+                _needProps = true;
+                _needDictReset = false;
+                _outWindow.Reset();
+                break;
+            default:
             {
-                needProps = false;
-                props[0] = (byte)inputStream.ReadByte();
-                inputPosition++;
+                if (_needDictReset)
+                {
+                    throw new DataErrorException();
+                }
 
-                decoder = new Decoder();
-                decoder.SetDecoderProperties(props);
+                break;
             }
-            else if (needProps)
+        }
+
+        switch (control)
+        {
+            case >= 0x80:
             {
+                _uncompressedChunk = false;
+
+                _availableBytes = (control & 0x1F) << 16;
+                _availableBytes += (_inputStream.ReadByte() << 8) + _inputStream.ReadByte() + 1;
+                _inputPosition += 2;
+
+                _rangeDecoderLimit = (_inputStream.ReadByte() << 8) + _inputStream.ReadByte() + 1;
+                _inputPosition += 2;
+
+                if (control >= 0xC0)
+                {
+                    _needProps = false;
+                    Properties[0] = (byte)_inputStream.ReadByte();
+                    _inputPosition++;
+
+                    _decoder = new Decoder();
+                    _decoder.SetDecoderProperties(Properties);
+                }
+                else if (_needProps)
+                {
+                    throw new DataErrorException();
+                }
+                else if (control >= 0xA0)
+                {
+                    _decoder = new Decoder();
+                    _decoder.SetDecoderProperties(Properties);
+                }
+
+                _rangeDecoder.Init(_inputStream);
+                break;
+            }
+            case > 0x02:
                 throw new DataErrorException();
-            }
-            else if (control >= 0xA0)
-            {
-                decoder = new Decoder();
-                decoder.SetDecoderProperties(props);
-            }
-
-            rangeDecoder.Init(inputStream);
-        }
-        else if (control > 0x02)
-        {
-            throw new DataErrorException();
-        }
-        else
-        {
-            uncompressedChunk = true;
-            availableBytes = (inputStream.ReadByte() << 8) + inputStream.ReadByte() + 1;
-            inputPosition += 2;
+            default:
+                _uncompressedChunk = true;
+                _availableBytes = (_inputStream.ReadByte() << 8) + _inputStream.ReadByte() + 1;
+                _inputPosition += 2;
+                break;
         }
     }
 
@@ -302,32 +304,32 @@ public class LzmaStream : Stream
     /// <param name="origin">Must be <see cref="SeekOrigin.Current"/>.</param>
     /// <returns>The new position in the stream.</returns>
     /// <exception cref="NotSupportedException"><paramref name="origin"/> is not <see cref="SeekOrigin.Current"/>.</exception>
-	public override long Seek(long offset, SeekOrigin origin)
-	{
-		if (origin != SeekOrigin.Current)
-			throw new NotSupportedException();
+    public override long Seek(long offset, SeekOrigin origin)
+    {
+        if (origin != SeekOrigin.Current)
+            throw new NotSupportedException();
 
-		var tmpBuff = new byte[1024];
-		var sizeToGo = offset;
-		while (sizeToGo > 0)
-		{
-			var sizenow = sizeToGo > 1024 ? 1024 : (int)sizeToGo;
-			var read = Read(tmpBuff, 0, sizenow);
-			if (read == 0)
-				break;
+        var tmpBuff = new byte[1024];
+        var sizeToGo = offset;
+        while (sizeToGo > 0)
+        {
+            var sizenow = sizeToGo > 1024 ? 1024 : (int)sizeToGo;
+            var read = Read(tmpBuff, 0, sizenow);
+            if (read == 0)
+                break;
 
-			sizeToGo -= read;
-		}
+            sizeToGo -= read;
+        }
 
-		return offset;
-	}
+        return offset;
+    }
 
     /// <summary>
     /// Not supported. The stream is read-only.
     /// </summary>
     /// <param name="value">Ignored.</param>
     /// <exception cref="NotSupportedException">Always thrown.</exception>
-	public override void SetLength(long value)
+    public override void SetLength(long value)
     {
         throw new NotSupportedException();
     }
@@ -339,7 +341,7 @@ public class LzmaStream : Stream
     /// <param name="offset">Ignored.</param>
     /// <param name="count">Ignored.</param>
     /// <exception cref="NotSupportedException">Always thrown.</exception>
-	public override void Write(byte[] buffer, int offset, int count)
+    public override void Write(byte[] buffer, int offset, int count)
     {
         throw new NotSupportedException();
     }
@@ -347,5 +349,5 @@ public class LzmaStream : Stream
     /// <summary>
     /// Gets the current LZMA/LZMA2 properties used for decompressing subsequent chunks.
     /// </summary>
-	public byte[] Properties => props;
+    public byte[] Properties { get; }
 }

@@ -151,8 +151,8 @@ public static class Chd
         using (chd)
         {
             chdVersion = chd!.Version;
-            chdSha1 = chd!.Sha1;
-            chdMd5 = chd!.Md5;
+            chdSha1 = chd.Sha1;
+            chdMd5 = chd.Md5;
 
             var expectedSha1 = chd.RawSha1;
             var expectedMd5 = chd.Md5;

@@ -1,5 +1,3 @@
-using CHDSharp.Models.LZMA;
-
 namespace CHDSharp.LZMA;
 
 internal abstract class Base

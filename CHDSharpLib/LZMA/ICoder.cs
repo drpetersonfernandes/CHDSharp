@@ -1,5 +1,3 @@
-using CHDSharp.Interfaces.LZMA;
-
 namespace CHDSharp.LZMA;
 
 /// <summary>

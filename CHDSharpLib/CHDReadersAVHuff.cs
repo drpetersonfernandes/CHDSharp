@@ -1,11 +1,10 @@
-﻿using CHDSharp.Flac;
-using CHDSharp.Flac.FlacDeps;
-using CHDSharp.Models;
+﻿using CHDSharp.Models;
 using CHDSharp.Models.Flac.FlacDeps;
 using CHDSharp.Models.Utils;
 using CHDSharp.Utils;
 
 namespace CHDSharp;
+
 internal static partial class ChdReaders
 {
     /*
@@ -36,7 +35,7 @@ internal static partial class ChdReaders
 
     */
 
-    internal static chd_error avHuff(byte[] buffIn, int buffInLength, byte[] buffOut, int buffOutLength, CHDCodec codec)
+    internal static chd_error AvHuff(byte[] buffIn, int buffInLength, byte[] buffOut, int buffOutLength, CHDCodec codec)
     {
         // extract info from the header
         if (buffInLength < 8)
@@ -91,8 +90,6 @@ internal static partial class ChdReaders
         buffOut[11] = (byte)videoHeight;
         destOffset += 12;
 
-
-
         var metaDestStart = destOffset;
         if (metaDataLength > 0)
         {
@@ -107,6 +104,7 @@ internal static partial class ChdReaders
             audioChannelDestStart[chnum] = destOffset;
             destOffset += 2 * audioSamplesPerBlock;
         }
+
         var videoDestStart = destOffset;
 
 
@@ -171,15 +169,13 @@ internal static partial class ChdReaders
                     // rate is irrelevant to decoding (see notes in CHDReaders.flac);
                     // bit-depth is fixed at 16. These match how MAME encodes AVHuff
                     // audio, so the values are correct for every AVHuff CHD.
-                    codec.AVHUFF_settings ??= new AudioPCMConfig(16, 1, 48000);
-                    codec.AVHUFF_audioDecoder ??= new AudioDecoder(codec.AVHUFF_settings); //read the data and decode it in to a 1D array of samples - the buffer seems to want 2D :S
                     var audioBuffer = new AudioBuffer(codec.AVHUFF_settings, blockSize); //audio buffer to take decoded samples and read them to bytes.
-                    int read;
                     var inPos = (int)buffInOffset;
                     var outPos = (int)audioChannelDestStart[channelNumber]!.Value;
 
                     while (outPos < blockSize + audioChannelDestStart[channelNumber])
                     {
+                        int read;
                         if ((read = codec.AVHUFF_audioDecoder.DecodeFrame(buffIn, inPos, (int)sourceSize)) == 0)
                             break;
 
@@ -189,29 +185,26 @@ internal static partial class ChdReaders
                             Array.Copy(audioBuffer.Bytes, 0, buffOut, outPos, audioBuffer.ByteLength);
                             outPos += audioBuffer.ByteLength;
                         }
+
                         inPos += read;
                     }
 
-                    byte tmp;
                     for (var i = (int)audioChannelDestStart[channelNumber]!.Value; i < blockSize + audioChannelDestStart[channelNumber]!.Value; i += 2)
                     {
-                        tmp = buffOut[i];
-                        buffOut[i] = buffOut[i + 1];
-                        buffOut[i + 1] = tmp;
+                        (buffOut[i], buffOut[i + 1]) = (buffOut[i + 1], buffOut[i]);
                     }
-
                 }
 
                 // advance to the next channel's data
                 buffInOffset += sourceSize;
             }
+
             return chd_error.CHDERR_NONE;
         }
 
-
         // if we have a non-zero tree size, extract the trees
-        HuffmanDecoder? m_audiohi_decoder = null;
-        HuffmanDecoder? m_audiolo_decoder = null;
+        HuffmanDecoder? mAudiohiDecoder = null;
+        HuffmanDecoder? mAudioloDecoder = null;
         if (treesize != 0)
         {
             var bitbuf = new BitStream(buffIn, (int)buffInOffset, (int)treesize);
@@ -226,18 +219,16 @@ internal static partial class ChdReaders
                 codec.bHuffmanLo = new ushort[1 << 16];
             }
 
-            m_audiohi_decoder = new HuffmanDecoder(256, 16, bitbuf, codec.bHuffmanHi);
-            m_audiolo_decoder = new HuffmanDecoder(256, 16, bitbuf, codec.bHuffmanLo);
+            mAudiohiDecoder = new HuffmanDecoder(256, 16, bitbuf, codec.bHuffmanHi);
+            mAudioloDecoder = new HuffmanDecoder(256, 16, bitbuf, codec.bHuffmanLo);
 
-            var hufferr = m_audiohi_decoder.ImportTreeRLE();
+            var hufferr = mAudiohiDecoder.ImportTreeRLE();
             if (hufferr != huffman_error.HUFFERR_NONE)
                 return chd_error.CHDERR_INVALID_DATA;
 
             bitbuf.flush();
-            hufferr = m_audiolo_decoder.ImportTreeRLE();
-            if (hufferr != huffman_error.HUFFERR_NONE)
-                return chd_error.CHDERR_INVALID_DATA;
-            if (bitbuf.flush() != treesize)
+            hufferr = mAudioloDecoder.ImportTreeRLE();
+            if (hufferr != huffman_error.HUFFERR_NONE || bitbuf.flush() != treesize)
                 return chd_error.CHDERR_INVALID_DATA;
 
             buffInOffset += treesize;
@@ -274,12 +265,12 @@ internal static partial class ChdReaders
                 else
                 {
                     var bitbuf = new BitStream(buffIn, (int)buffInOffset, (int)audioChannelCompressedSize[chnum]!.Value);
-                    m_audiohi_decoder!.AssignBitStream(bitbuf);
-                    m_audiolo_decoder!.AssignBitStream(bitbuf);
+                    mAudiohiDecoder!.AssignBitStream(bitbuf);
+                    mAudioloDecoder!.AssignBitStream(bitbuf);
                     for (var sampnum = 0; sampnum < samples; sampnum++)
                     {
-                        var delta = (short)(m_audiohi_decoder.DecodeOne() << 8);
-                        delta |= (short)m_audiolo_decoder.DecodeOne();
+                        var delta = (short)(mAudiohiDecoder.DecodeOne() << 8);
+                        delta |= (short)mAudioloDecoder.DecodeOne();
 
                         var newsample = prevsample + delta;
                         prevsample = newsample;
@@ -288,6 +279,7 @@ internal static partial class ChdReaders
                         buffOut[(uint)curdest + 1] = (byte)newsample;
                         curdest += 2;
                     }
+
                     if (bitbuf.overflow())
                         return chd_error.CHDERR_INVALID_DATA;
                 }
@@ -296,10 +288,9 @@ internal static partial class ChdReaders
             // advance to the next channel's data
             buffInOffset += audioChannelCompressedSize[chnum]!.Value;
         }
+
         return chd_error.CHDERR_NONE;
     }
-
-
 
     private static chd_error DecodeVideo(uint width, uint height, byte[] buffIn, uint buffInOffset, uint buffInLength, byte[] buffOut, uint buffOutOffset, uint dstride, CHDCodec codec)
     {
@@ -332,46 +323,47 @@ internal static partial class ChdReaders
             codec.bHuffmanCR = new ushort[1 << 16];
         }
 
-        var m_ycontext = new HuffmanDecoderRLE(256 + 16, 16, bitbuf, codec.bHuffmanY);
-        var m_cbcontext = new HuffmanDecoderRLE(256 + 16, 16, bitbuf, codec.bHuffmanCB);
-        var m_crcontext = new HuffmanDecoderRLE(256 + 16, 16, bitbuf, codec.bHuffmanCR);
+        var mYcontext = new HuffmanDecoderRLE(256 + 16, 16, bitbuf, codec.bHuffmanY);
+        var mCbcontext = new HuffmanDecoderRLE(256 + 16, 16, bitbuf, codec.bHuffmanCB);
+        var mCrcontext = new HuffmanDecoderRLE(256 + 16, 16, bitbuf, codec.bHuffmanCR);
 
         // import the tables
-        var hufferr = m_ycontext.ImportTreeRLE();
+        var hufferr = mYcontext.ImportTreeRLE();
         if (hufferr != huffman_error.HUFFERR_NONE)
             return chd_error.CHDERR_INVALID_DATA;
 
         bitbuf.flush();
-        hufferr = m_cbcontext.ImportTreeRLE();
+        hufferr = mCbcontext.ImportTreeRLE();
         if (hufferr != huffman_error.HUFFERR_NONE)
             return chd_error.CHDERR_INVALID_DATA;
 
         bitbuf.flush();
-        hufferr = m_crcontext.ImportTreeRLE();
+        hufferr = mCrcontext.ImportTreeRLE();
         if (hufferr != huffman_error.HUFFERR_NONE)
             return chd_error.CHDERR_INVALID_DATA;
 
         bitbuf.flush();
 
         // decode to the destination
-        m_ycontext.Reset();
-        m_cbcontext.Reset();
-        m_crcontext.Reset();
+        mYcontext.Reset();
+        mCbcontext.Reset();
+        mCrcontext.Reset();
 
         for (var dy = 0; dy < height; dy++)
         {
             var row = buffOutOffset + (uint)dy * dstride;
             for (var dx = 0; dx < width / 2; dx++)
             {
-                buffOut[row + 0] = (byte)m_ycontext.DecodeOne();
-                buffOut[row + 1] = (byte)m_cbcontext.DecodeOne();
-                buffOut[row + 2] = (byte)m_ycontext.DecodeOne();
-                buffOut[row + 3] = (byte)m_crcontext.DecodeOne();
+                buffOut[row + 0] = (byte)mYcontext.DecodeOne();
+                buffOut[row + 1] = (byte)mCbcontext.DecodeOne();
+                buffOut[row + 2] = (byte)mYcontext.DecodeOne();
+                buffOut[row + 3] = (byte)mCrcontext.DecodeOne();
                 row += 4;
             }
-            m_ycontext.FlushRLE();
-            m_cbcontext.FlushRLE();
-            m_crcontext.FlushRLE();
+
+            mYcontext.FlushRLE();
+            mCbcontext.FlushRLE();
+            mCrcontext.FlushRLE();
         }
 
         // check for errors if we overflowed or decoded too little data
@@ -380,8 +372,5 @@ internal static partial class ChdReaders
 
         return chd_error.CHDERR_NONE;
     }
-
-
-
 }
 

@@ -434,9 +434,7 @@ unsafe public class LpcContext
             {
                 if (Akaike(blocksize, best_orders[j], alpha, beta) < Akaike(blocksize, best_orders[i], alpha, beta))
                 {
-                    var tmp = best_orders[j];
-                    best_orders[j] = best_orders[i];
-                    best_orders[i] = tmp;
+                    (best_orders[j], best_orders[i]) = (best_orders[i], best_orders[j]);
                 }
             }
         }

@@ -1,6 +1,3 @@
-using System;
-using System.Security.Cryptography;
-
 namespace CHDSharp.Tests;
 
 internal static class HashUtil

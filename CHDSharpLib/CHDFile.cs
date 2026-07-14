@@ -144,6 +144,7 @@ public sealed class ChdFile : IDisposable
     /// </summary>
     /// <param name="stream">Seekable, readable stream positioned anywhere; it will be seeked as needed.</param>
     /// <param name="leaveOpen">If false, the stream is disposed when this instance is disposed.</param>
+    /// <param name="chdFile">When this method returns, contains the opened <see cref="ChdFile"/> instance, or <c>null</c> on error.</param>
     public static chd_error Open(Stream stream, bool leaveOpen, out ChdFile? chdFile)
     {
         return Open(stream, leaveOpen, null, out chdFile);

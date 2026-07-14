@@ -167,7 +167,7 @@ internal static class ChdBlockRead
             case chd_codec.CHD_CODEC_CD_LZMA: return ChdReaders.Cdlzma;
             case chd_codec.CHD_CODEC_CD_FLAC: return ChdReaders.Cdflac;
             case chd_codec.CHD_CODEC_CD_ZSTD: return ChdReaders.Cdzstd;
-            case chd_codec.CHD_CODEC_AVHUFF: return ChdReaders.avHuff;
+            case chd_codec.CHD_CODEC_AVHUFF: return ChdReaders.AvHuff;
             default: return null!;
         }
     }
@@ -187,8 +187,7 @@ internal static class ChdBlockRead
                 {
                     if (mapEntry.BuffOutCache == null)
                     {
-                        var ret = chd_error.CHDERR_UNSUPPORTED_FORMAT;
-                        ret = compression[(int)mapEntry.Comptype].Invoke(mapEntry.BuffIn, (int)mapEntry.Length, buffOut, buffOutLength, codec);
+                        var ret = compression[(int)mapEntry.Comptype].Invoke(mapEntry.BuffIn, (int)mapEntry.Length, buffOut, buffOutLength, codec);
 
                         if (ret != chd_error.CHDERR_NONE)
                             return ret;

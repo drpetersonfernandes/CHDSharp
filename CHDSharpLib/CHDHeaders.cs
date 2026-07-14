@@ -14,8 +14,8 @@ internal static class ChdHeaders
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
         chd.Compression = [chd_codec.CHD_CODEC_ZLIB];
-        var flags = br.ReadUInt32BE();
-        var compression = br.ReadUInt32BE();
+        _ = br.ReadUInt32BE();
+        _ = br.ReadUInt32BE();
         chd.Blocksize = br.ReadUInt32BE();
         chd.Totalblocks = br.ReadUInt32BE();
         var cylinders = br.ReadUInt32BE();
@@ -66,9 +66,9 @@ internal static class ChdHeaders
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
         chd.Compression = [chd_codec.CHD_CODEC_ZLIB];
-        var flags = br.ReadUInt32BE();
-        var compression = br.ReadUInt32BE();
-        var blocksizeOld = br.ReadUInt32BE(); // this is now unused
+        _ = br.ReadUInt32BE();
+        _ = br.ReadUInt32BE();
+        _ = br.ReadUInt32BE(); // blocksizeOld is now unused
         chd.Totalblocks = br.ReadUInt32BE();
         var cylinders = br.ReadUInt32BE();
         var heads = br.ReadUInt32BE();
@@ -117,7 +117,7 @@ internal static class ChdHeaders
         chd = new ChdHeader();
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
-        var flags = br.ReadUInt32BE();
+        _ = br.ReadUInt32BE();
 
         chd.Compression = [ChdCommon.CompTypeConv(br.ReadUInt32BE())];
         chd.Totalblocks = br.ReadUInt32BE(); // total number of CHD Blocks
@@ -158,7 +158,7 @@ internal static class ChdHeaders
         chd = new ChdHeader();
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
-        var flags = br.ReadUInt32BE();
+        _ = br.ReadUInt32BE();
 
         chd.Compression = [ChdCommon.CompTypeConv(br.ReadUInt32BE())];
         chd.Totalblocks = br.ReadUInt32BE(); // total number of CHD Blocks

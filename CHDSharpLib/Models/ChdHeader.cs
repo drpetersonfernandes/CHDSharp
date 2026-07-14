@@ -1,5 +1,3 @@
-using CHDSharp;
-
 namespace CHDSharp.Models;
 
 internal class ChdHeader

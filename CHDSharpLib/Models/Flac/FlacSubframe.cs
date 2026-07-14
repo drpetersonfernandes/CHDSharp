@@ -1,5 +1,4 @@
 using CHDSharp.Flac.FlacDeps;
-using CHDSharp.Models.Flac.FlacDeps;
 
 namespace CHDSharp.Models.Flac;
 

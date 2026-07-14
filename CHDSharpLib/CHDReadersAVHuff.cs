@@ -1,4 +1,5 @@
-﻿using CHDSharp.Models;
+﻿using CHDSharp.Flac;
+using CHDSharp.Models;
 using CHDSharp.Models.Flac.FlacDeps;
 using CHDSharp.Models.Utils;
 using CHDSharp.Utils;
@@ -154,6 +155,9 @@ internal static partial class ChdReaders
         if (treesize == 0xffff)
         {
             var blockSize = (int)samples * 2;
+
+            codec.AvhuffSettings ??= new AudioPcmConfig(16, (int)channels, 44100);
+            codec.AvhuffAudioDecoder ??= new AudioDecoder(codec.AvhuffSettings);
 
             // loop over channels
             for (var channelNumber = 0; channelNumber < channels; channelNumber++)

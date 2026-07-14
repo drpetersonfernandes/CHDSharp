@@ -1,8 +1,11 @@
 ﻿using System.IO.Compression;
+using CHDSharp.Flac;
 using CHDSharp.LZMA;
 using CHDSharp.Models;
+using CHDSharp.Models.Flac.FlacDeps;
 using CHDSharp.Models.Utils;
 using CHDSharp.Utils;
+using ZstdSharp;
 
 namespace CHDSharp;
 
@@ -39,6 +42,8 @@ internal static partial class ChdReaders
 
     private static ChdError Zstd(byte[] buffIn, int buffInStart, int buffInLength, byte[] buffOut, int buffOutStart, int buffOutLength, CHDCodec codec)
     {
+        codec.BZstd ??= new ZstdSharp.Decompressor();
+
         try
         {
             var written = codec.BZstd.Unwrap(
@@ -134,21 +139,9 @@ internal static partial class ChdReaders
 
     private static ChdError Flac(byte[] buffIn, int buffInStart, int buffInLength, byte[] buffOut, int buffOutLength, bool swapEndian, CHDCodec codec, out int srcPos)
     {
-        // CHD FLAC data is HEADERLESS - it is a bare sequence of FLAC frames with
-        // NO fLaC stream marker and NO STREAMINFO metadata block. There is nothing
-        // to read the sample rate / channels / bit-depth from; that information is
-        // implicit in the CHD format itself.
-        //
-        // libchdr does the same thing: flac_codec_decompress() hardcodes
-        // flac_decoder_reset(..., 44100, 2, ...). The 44100 is arbitrary - sample
-        // rate does NOT affect FLAC sample-value decoding (AudioDecoder only
-        // validates that the per-frame rate code is a standard one and otherwise
-        // ignores it). What matters for correct decoding is:
-        //   - bits-per-sample = 16  (always true for CHD FLAC)
-        //   - channel count   = 2   (CD/raw FLAC hunks are 16-bit stereo samples)
-        // Both are fixed by the CHD format and validated against each frame header
-        // inside DecodeFrame(); the actual per-frame block size is also read from
-        // the frame header, so no block-size hint is required here.
+        codec.FlacSettings ??= new AudioPcmConfig(16, 2, 44100);
+        codec.FlacAudioDecoder ??= new AudioDecoder(codec.FlacSettings);
+        codec.FlacAudioBuffer ??= new AudioBuffer(codec.FlacSettings, buffOutLength);
 
         srcPos = buffInStart;
         var dstPos = 0;
@@ -197,6 +190,9 @@ internal static partial class ChdReaders
             complenBase = (complenBase << 8) | buffIn[eccBytes + 2];
         }
 
+        codec.BSector ??= new byte[frames * CD_MAX_SECTOR_DATA];
+        codec.BSubcode ??= new byte[frames * CD_MAX_SUBCODE_DATA];
+
         var err = Zlib(buffIn, (int)headerBytes, complenBase, codec.BSector, frames * CD_MAX_SECTOR_DATA);
         if (err != ChdError.Chderrnone)
             return err;
@@ -238,6 +234,9 @@ internal static partial class ChdReaders
             complenBase = (complenBase << 8) | buffIn[eccBytes + 2];
         }
 
+        codec.BSector ??= new byte[frames * CD_MAX_SECTOR_DATA];
+        codec.BSubcode ??= new byte[frames * CD_MAX_SUBCODE_DATA];
+
         var err = Lzma(buffIn, headerBytes, complenBase, codec.BSector, frames * CD_MAX_SECTOR_DATA, codec);
         if (err != ChdError.Chderrnone)
             return err;
@@ -267,6 +266,9 @@ internal static partial class ChdReaders
     internal static ChdError Cdflac(byte[] buffIn, int buffInLength, byte[] buffOut, int buffOutLength, CHDCodec codec)
     {
         var frames = buffOutLength / cdFrameSize;
+
+        codec.BSector ??= new byte[frames * CD_MAX_SECTOR_DATA];
+        codec.BSubcode ??= new byte[frames * CD_MAX_SUBCODE_DATA];
 
         var err = Flac(buffIn, 0, buffInLength, codec.BSector, frames * CD_MAX_SECTOR_DATA, true, codec, out var pos);
         if (err != ChdError.Chderrnone)
@@ -301,6 +303,10 @@ internal static partial class ChdReaders
         {
             complenBase = (complenBase << 8) | buffIn[eccBytes + 2];
         }
+
+        codec.BSector ??= new byte[frames * CD_MAX_SECTOR_DATA];
+        codec.BSubcode ??= new byte[frames * CD_MAX_SUBCODE_DATA];
+        codec.BZstd ??= new ZstdSharp.Decompressor();
 
         var err = Zstd(buffIn, headerBytes, complenBase, codec.BSector, 0, frames * CD_MAX_SECTOR_DATA, codec);
         if (err != ChdError.Chderrnone)

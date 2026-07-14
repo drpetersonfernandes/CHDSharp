@@ -6,25 +6,25 @@ namespace CHDSharp.Models;
 
 internal class CHDCodec
 {
-    internal AudioPcmConfig FlacSettings = null!;
-    internal readonly AudioDecoder FlacAudioDecoder = null!;
-    internal readonly AudioBuffer FlacAudioBuffer = null!;
+    internal AudioPcmConfig? FlacSettings;
+    internal AudioDecoder? FlacAudioDecoder;
+    internal AudioBuffer? FlacAudioBuffer;
 
-    internal readonly AudioPcmConfig AvhuffSettings = null!;
-    internal readonly AudioDecoder AvhuffAudioDecoder = null!;
+    internal AudioPcmConfig? AvhuffSettings;
+    internal AudioDecoder? AvhuffAudioDecoder;
 
-    internal readonly byte[] BSector = null!;
-    internal readonly byte[] BSubcode = null!;
+    internal byte[]? BSector;
+    internal byte[]? BSubcode;
 
-    internal byte[] Blzma = null!;
+    internal byte[]? Blzma;
 
-    internal readonly Decompressor BZstd = null!;
+    internal Decompressor? BZstd;
 
-    internal ushort[] BHuffman = null!;
-    internal ushort[] BHuffmanHi = null!;
-    internal ushort[] BHuffmanLo = null!;
+    internal ushort[]? BHuffman;
+    internal ushort[]? BHuffmanHi;
+    internal ushort[]? BHuffmanLo;
 
-    internal ushort[] BHuffmanY = null!;
-    internal ushort[] BHuffmanCb = null!;
-    internal ushort[] BHuffmanCr = null!;
+    internal ushort[]? BHuffmanY;
+    internal ushort[]? BHuffmanCb;
+    internal ushort[]? BHuffmanCr;
 }

@@ -61,7 +61,7 @@ internal static class ChdBlockRead
             var comp = "";
             if (i < chd.Compression.Length)
             {
-                comp = chd.Compression[i].ToString().Substring(10);
+                comp = chd.Compression[i].ToString();
             }
             else if (i == 4)
             {

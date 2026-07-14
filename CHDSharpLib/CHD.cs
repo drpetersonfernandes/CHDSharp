@@ -76,7 +76,7 @@ public static class Chd
 
         if (chd != null)
         {
-            chdSha1 = chd.Sha1;
+            chdSha1 = chd.Sha1 ?? chd.Rawsha1;
             chdMd5 = chd.Md5;
             chdVersion = version;
 
@@ -97,7 +97,7 @@ public static class Chd
             var strComp = "";
             foreach (var t in chd.Compression)
             {
-                strComp += $", {t.ToString().Substring(10)}";
+                strComp += $", {t}";
             }
 
             Log.Information("{Filename}, V:{Version} {Compression}", Path.GetFileName(filename), version, strComp);

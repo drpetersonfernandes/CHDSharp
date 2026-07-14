@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Security.Cryptography;
 using CHDSharp.Models;
 using Serilog;
@@ -20,10 +20,10 @@ internal class Program
         if (args.Length == 0)
         {
             Log.Information("Usage:");
-            Log.Information("  CHDSharpLib <directory> [<directory> ...]      Verify all .chd files in directories");
-            Log.Information("  CHDSharpLib --random <file.chd>                Random-access read test on a single CHD");
-            Log.Information("  CHDSharpLib --list <listfile.txt>              Verify every .chd path listed in a text file");
-            Log.Information("  CHDSharpLib --parent <child.chd> <parent.chd>  Verify a child (differential) CHD against its parent");
+            Log.Information("  CHDSharpCli <directory> [<directory> ...]      Verify all .chd files in directories");
+            Log.Information("  CHDSharpCli --random <file.chd>                Random-access read test on a single CHD");
+            Log.Information("  CHDSharpCli --list <listfile.txt>              Verify every .chd path listed in a text file");
+            Log.Information("  CHDSharpCli --parent <child.chd> <parent.chd>  Verify a child (differential) CHD against its parent");
             return;
         }
 

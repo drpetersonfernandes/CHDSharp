@@ -1,4 +1,5 @@
-[![.NET](https://img.shields.io/badge/.NET-10.0-blueviolet)](https://dotnet.microsoft.com/)
+[![.NET](https://img.shields.io/badge/.NET-8.0_|_9.0_|_10.0-blueviolet)](https://dotnet.microsoft.com/)
+[![NuGet](https://img.shields.io/nuget/v/CHDSharp?color=blue)](https://www.nuget.org/packages/CHDSharp/)
 [![License](https://img.shields.io/badge/license-GPL--3.0-green)](LICENSE)
 [![Tests](https://img.shields.io/badge/tests-38%20passed-brightgreen)](#testing)
 
@@ -57,38 +58,45 @@ It supports every CHD format version (V1 through V5), every compression codec (z
 
 ## Quick Start
 
+### NuGet Package
+
+```bash
+dotnet add package CHDSharp
+```
+
 ### CLI
 
 ```bash
 # Verify all .chd files in a directory
-CHDSharp D:\CHD
+CHDSharpCli D:\CHD
 
 # Verify a list of CHD paths from a text file
-CHDSharp --list chd_paths.txt
+CHDSharpCli --list chd_paths.txt
 
 # Random-access self-test on a single CHD
-CHDSharp --random game.chd
+CHDSharpCli --random game.chd
 
 # Verify a child (differential) CHD against its parent
-CHDSharp --parent child.chd parent.chd
+CHDSharpCli --parent child.chd parent.chd
 ```
 
 ### Library
 
 ```csharp
-using CHDSharpLib;
+using CHDSharp;
+using CHDSharp.Models;
 
 // Check if a stream is a valid CHD
-bool isChd = CHD.CheckHeader(stream, out uint length, out uint version);
+bool isChd = Chd.CheckHeader(stream, out uint length, out uint version);
 
 // Full verification (decompresses every hunk, validates CRC, SHA1, MD5)
 using Stream s = File.OpenRead("game.chd");
-chd_error err = CHD.CheckFile(s, "game.chd", deepCheck: true,
+ChdError err = Chd.CheckFile(s, "game.chd", deepCheck: true,
     out uint? version, out byte[] sha1, out byte[] md5);
-// err == CHDERR_NONE on success
+// err == ChdError.Chderrnone on success
 
 // Random access (open once, read hunks or byte ranges on demand)
-chd_error open = CHDFile.Open("game.chd", out CHDFile chd);
+ChdError open = ChdFile.Open("game.chd", out ChdFile chd);
 using (chd)
 {
     Console.WriteLine($"V{chd.Version}: {chd.TotalBytes} bytes, {chd.HunkCount} hunks");
@@ -103,10 +111,10 @@ using (chd)
 }
 
 // Parent/child chain (differential CHDs)
-chd_error childOpen = CHDFile.Open("child.chd", "parent.chd", out CHDFile child);
+ChdError childOpen = ChdFile.Open("child.chd", "parent.chd", out ChdFile child);
 using (child)
 {
-    chd.ReadHunk(0, hunk);  // transparently resolves parent hunks
+    child.ReadHunk(0, hunk);  // transparently resolves parent hunks
 }
 ```
 
@@ -114,7 +122,7 @@ using (child)
 
 ## API Reference
 
-### `CHD` — Static verification API
+### `Chd` — Static verification API
 
 | Method | Description |
 |--------|-------------|
@@ -122,14 +130,14 @@ using (child)
 | `CheckFile(Stream, string name, bool deep, out uint? ver, out byte[] sha1, out byte[] md5)` | Full deep verification of a standalone CHD. `deep=true` decompresses every hunk. |
 | `CheckFileWithParent(string child, string parent, out uint? ver, out byte[] sha1, out byte[] md5)` | Full verification of a child CHD with its parent. |
 
-### `CHDFile` — Random-access reader
+### `ChdFile` — Random-access reader
 
 | Method | Description |
 |--------|-------------|
-| `Open(string path, out CHDFile chd)` | Open standalone CHD. Fails with `CHDERR_REQUIRES_PARENT` if child. |
-| `Open(string path, string parentPath, out CHDFile chd)` | Open child CHD with parent (parent owned by the child). |
-| `Open(string path, CHDFile parent, out CHDFile chd)` | Open child CHD with an external parent. |
-| `Open(Stream, bool leaveOpen, out CHDFile chd)` | Open from a seekable stream. |
+| `Open(string path, out ChdFile chd)` | Open standalone CHD. Fails with `ChdError.Chderrrequiresparent` if child. |
+| `Open(string path, string parentPath, out ChdFile chd)` | Open child CHD with parent (parent owned by the child). |
+| `Open(string path, ChdFile parent, out ChdFile chd)` | Open child CHD with an external parent. |
+| `Open(Stream, bool leaveOpen, out ChdFile chd)` | Open from a seekable stream. |
 | `ReadHunk(uint hunknum, byte[] buffer)` | Decompress a single hunk into a pre-allocated buffer. |
 | `Read(ulong offset, byte[] dest, int destOff, int count)` | Read arbitrary byte range. Crosses hunk boundaries. |
 
@@ -139,23 +147,23 @@ using (child)
 | `TotalBytes` | `ulong` | Decompressed image size. |
 | `HunkBytes` | `uint` | Size of one hunk in bytes. |
 | `HunkCount` | `uint` | Total number of hunks. |
-| `SHA1` | `byte[]` | Combined SHA1 (image + metadata). |
-| `RawSHA1` | `byte[]` | Raw image data SHA1 only. |
-| `MD5` | `byte[]` | Raw image MD5 (V1–V3 only). |
+| `Sha1` | `byte[]` | Combined SHA1 (image + metadata). |
+| `RawSha1` | `byte[]` | Raw image data SHA1 only. |
+| `Md5` | `byte[]` | Raw image MD5 (V1–V3 only). |
 | `RequiresParent` | `bool` | True if this is a differential CHD needing a parent. |
 
-### `chd_error` — Error codes
+### `ChdError` — Error codes
 
 | Value | Meaning |
 |-------|---------|
-| `CHDERR_NONE` | Success |
-| `CHDERR_FILE_NOT_FOUND` | File does not exist |
-| `CHDERR_INVALID_FILE` | Not a valid CHD |
-| `CHDERR_REQUIRES_PARENT` | Child CHD opened without a parent |
-| `CHDERR_INVALID_PARENT` | Wrong parent SHA1 |
-| `CHDERR_HUNK_OUT_OF_RANGE` | Hunk index >= `HunkCount` |
-| `CHDERR_DECOMPRESSION_ERROR` | CRC mismatch or codec failure |
-| `CHDERR_UNSUPPORTED_VERSION` | Unsupported CHD version |
+| `Chderrnone` | Success |
+| `Chderrfilenotfound` | File does not exist |
+| `Chderrinvalidfile` | Not a valid CHD |
+| `Chderrrequiresparent` | Child CHD opened without a parent |
+| `Chderrinvalidparent` | Wrong parent SHA1 |
+| `Chderrhunkoutofrange` | Hunk index >= `HunkCount` |
+| `Chderrdecompressionerror` | CRC mismatch or codec failure |
+| `Chderrunsupportedversion` | Unsupported CHD version |
 | ... | (21 additional error codes) |
 
 ---
@@ -165,7 +173,7 @@ using (child)
 ```
 ┌────────────────────────────────────────────────────┐
 │                    Public API                       │
-│  CHD.CheckFile()  CHDFile.Open()  CHDFile.Read()   │
+│  Chd.CheckFile()  ChdFile.Open()  ChdFile.Read()   │
 ├────────────────────────────────────────────────────┤
 │  CHDHeaders    →  Parse V1–V5 headers + maps       │
 │  CHDBlockRead  →  Dispatch hunk → codec delegate   │
@@ -204,7 +212,7 @@ Producer (1 thread)          Decompressors (taskCount threads)       Hasher (1 t
 ```
 
 - **BQ** = `BlockingCollection<int>` (bounded, backpressure)
-- **`taskCount`** configurable via `CHD.taskCount` (default 8)
+- **`taskCount`** configurable via `Chd.TaskCount` (default 8)
 - Memory bounded by `~512MB / hunkSize` outstanding decompressed buffers
 
 ---
@@ -213,8 +221,16 @@ Producer (1 thread)          Decompressors (taskCount threads)       Hasher (1 t
 
 ### Prerequisites
 
-- [.NET 10.0 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) or later
-- Windows, Linux, or macOS (any platform supporting .NET 10)
+- [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or later
+- Windows, Linux, or macOS (any platform supporting .NET)
+
+### Project Structure
+
+| Project | Type | Target | Description |
+|---------|------|--------|-------------|
+| `CHDSharpLib` | Class Library | net8.0 / net9.0 / net10.0 | Core library (NuGet package) |
+| `CHDSharpCli` | Console App | net10.0 | CLI tool |
+| `CHDSharpTest` | xUnit Tests | net8.0 / net9.0 / net10.0 | Test suite |
 
 ### Build
 
@@ -224,13 +240,20 @@ cd CHDSharp
 dotnet build -c Release
 ```
 
-The output binary is at `CHDSharp/bin/Release/net10.0/CHDSharp.exe` (Windows) or `CHDSharp.dll` (cross-platform via `dotnet CHDSharp.dll`).
+The CLI binary is at `CHDSharpCli/bin/Release/net10.0/CHDSharpCli.exe` (Windows) or `CHDSharpCli.dll` (cross-platform via `dotnet CHDSharpCli.dll`).
+
+Build the NuGet package:
+
+```bash
+dotnet pack -c Release CHDSharpLib/
+```
 
 ### Dependencies
 
 | Package | Version | Purpose |
 |---------|---------|---------|
 | [ZstdSharp.Port](https://www.nuget.org/packages/ZstdSharp.Port/) | 0.8.8 | Zstd decompression (V5 zstd/cdzs codecs) |
+| [Serilog](https://www.nuget.org/packages/Serilog/) | 4.4.0 | Structured logging |
 
 All other codecs (zlib, lzma, huffman, flac, AVHuff) are implemented from scratch in C# with zero native dependencies.
 

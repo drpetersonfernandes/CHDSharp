@@ -42,8 +42,14 @@
         </DataTemplate>
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="20,10,20,20">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="20,10,20,20">
 
             <!-- HEADER -->
             <TextBlock Text="CHDSharp Tester" FontSize="22" FontWeight="Bold"
@@ -118,8 +124,8 @@
                                                        VerticalAlignment="Center" Margin="12,0,0,0" FontSize="11"
                                                        Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
                                             <ui:Button Grid.Column="2" Content="Remove" Margin="8,0,0,0"
-                                                       Command="{Binding DataContext.RemoveFileCommand,
-                                                                         RelativeSource={RelativeSource AncestorType=Page}}"
+Command="{Binding DataContext.RemoveFileCommand,
+                                                                  RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                        CommandParameter="{Binding}" Appearance="Danger"
                                                        FontSize="11" Padding="8,2" />
                                         </Grid>
@@ -180,10 +186,11 @@
                                  Background="Transparent"
                                  FontFamily="Consolas" FontSize="11"
                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-                                 VerticalScrollBarVisibility="Auto"
-                                 HorizontalScrollBarVisibility="Auto"
-                                 TextWrapping="NoWrap"
-                                 MaxHeight="160"
+VerticalScrollBarVisibility="Visible"
+                                  HorizontalScrollBarVisibility="Auto"
+                                  TextWrapping="NoWrap"
+                                  MinHeight="100"
+                                  MaxHeight="160"
                                  TextChanged="LogTextBox_OnTextChanged" />
                         </Grid>
                     </Border>
@@ -325,4 +332,31 @@
 
         </StackPanel>
     </ScrollViewer>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="1"
+                Background="{DynamicResource CardBackgroundFillColorDefaultBrush}"
+                Padding="10,5">
+            <Border BorderThickness="0,1,0,0"
+                    BorderBrush="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+                    Padding="0">
+                <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="1" Text="{Binding StatusText}"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorSecondaryBrush}"
+                           FontSize="12" />
+                <ProgressBar Grid.Column="2"
+                             IsIndeterminate="{Binding IsRunning}"
+                             Width="80" Height="10"
+                             Visibility="{Binding IsRunning, Converter={StaticResource BoolToVis}}"
+                             Margin="12,0,0,0" />
+            </Grid>
+            </Border>
+        </Border>
+    </Grid>
 </UserControl>

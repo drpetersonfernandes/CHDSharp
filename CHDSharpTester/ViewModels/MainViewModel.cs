@@ -123,6 +123,15 @@ internal class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged(); }
     }
 
+    private string _statusText = "Ready.";
+    /// <summary>Gets or sets the status bar text shown at the bottom of the window.</summary>
+    public string StatusText
+    {
+        get => _statusText;
+        set { _statusText = value;
+            OnPropertyChanged(); }
+    }
+
     private string _progressText = "Ready.";
     /// <summary>Gets or sets the current progress status text.</summary>
     public string ProgressText
@@ -310,6 +319,7 @@ internal class MainViewModel : INotifyPropertyChanged
         if (IsRunning || Files.Count == 0) return;
 
         IsRunning = true;
+        StatusText = "Please wait... Processing...";
         SessionResult = null;
         LogEntries.Clear();
         LogText = string.Empty;
@@ -344,6 +354,7 @@ internal class MainViewModel : INotifyPropertyChanged
             ProgressValue = 100;
             ProgressText = $"Completed: {session.PassedFiles} passed, {session.FailedFiles} failed, {session.SkippedFiles} skipped";
             CurrentTest = "Done";
+            StatusText = $"Completed: {session.PassedFiles} passed, {session.FailedFiles} failed, {session.SkippedFiles} skipped";
 
             SummarySubText = $"Sub-tests: {session.PassedSubTests} passed, {session.FailedSubTests} failed, " +
                              $"{session.SkippedSubTests} skipped | {session.TotalElapsedSeconds:N1}s";
@@ -355,6 +366,7 @@ internal class MainViewModel : INotifyPropertyChanged
             AddLog($"FATAL ERROR: {ex.Message}");
             Log.Error(ex, "Test run failed");
             ProgressText = "Test run failed.";
+            StatusText = "Error: Test run failed.";
         }
         finally
         {

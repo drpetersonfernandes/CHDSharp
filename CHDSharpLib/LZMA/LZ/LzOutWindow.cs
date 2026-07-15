@@ -1,5 +1,6 @@
 namespace CHDSharp.LZMA.LZ;
 
+/// <summary>Sliding-window output buffer for LZMA decompression. Handles literal bytes, LZ77 copy blocks, and streaming to the output stream.</summary>
 internal class OutWindow
 {
     private byte[] _buffer = null!;
@@ -10,9 +11,12 @@ internal class OutWindow
     private int _pendingDist;
     private Stream _stream = null!;
 
+    /// <summary>Total number of bytes written so far.</summary>
     public long Total;
+    /// <summary>Maximum number of bytes allowed to be written.</summary>
     public long Limit;
 
+    /// <summary>Initialises or resizes the output window buffer.</summary>
     public void Create(int windowSize, byte[]? buffer=null)
     {
         if (buffer != null)
@@ -38,17 +42,20 @@ internal class OutWindow
         Limit = 0;
     }
 
+    /// <summary>Resets the window state.</summary>
     public void Reset()
     {
         Create(_windowSize);
     }
 
+    /// <summary>Sets the output stream and releases any previous stream.</summary>
     public void Init(Stream stream)
     {
         ReleaseStream();
         _stream = stream;
     }
 
+    /// <summary>Pre-fills the window with the tail of the stream for dictionary training.</summary>
     public void Train(Stream stream)
     {
         var len = stream.Length;
@@ -66,12 +73,14 @@ internal class OutWindow
         _streamPos = _pos;
     }
 
+    /// <summary>Flushes pending data and releases the output stream reference.</summary>
     public void ReleaseStream()
     {
         Flush();
         _stream = null!;
     }
 
+    /// <summary>Writes buffered data to the output stream.</summary>
     public void Flush()
     {
         if (_stream == null)
@@ -90,6 +99,7 @@ internal class OutWindow
         _streamPos = _pos;
     }
 
+    /// <summary>Copies a previously emitted block of bytes (LZ77 back-reference).</summary>
     public void CopyBlock(int distance, int len)
     {
         var size = len;
@@ -115,6 +125,7 @@ internal class OutWindow
         _pendingDist = distance;
     }
 
+    /// <summary>Writes a single literal byte to the output window.</summary>
     public void PutByte(byte b)
     {
         _buffer[_pos++] = b;
@@ -123,6 +134,7 @@ internal class OutWindow
             Flush();
     }
 
+    /// <summary>Reads a previously written byte at the given distance (for back-references).</summary>
     public byte GetByte(int distance)
     {
         var pos = _pos - distance - 1;
@@ -134,6 +146,7 @@ internal class OutWindow
         return _buffer[pos];
     }
 
+    /// <summary>Copies raw data from a stream into the output window.</summary>
     public int CopyStream(Stream stream, int len)
     {
         var size = len;
@@ -163,15 +176,19 @@ internal class OutWindow
         return len - size;
     }
 
+    /// <summary>Sets the maximum total number of bytes that can be produced.</summary>
     public void SetLimit(long size)
     {
         Limit = Total + size;
     }
 
+    /// <summary>Gets whether the window has space to write more data.</summary>
     public bool HasSpace => _pos < _windowSize && Total < Limit;
 
+    /// <summary>Gets whether there is a pending copy-block operation.</summary>
     public bool HasPending => _pendingLen > 0;
 
+    /// <summary>Reads decoded data from the window into a byte array.</summary>
     public int Read(byte[] buffer, int offset, int count)
     {
         if (_streamPos >= _pos)
@@ -193,11 +210,13 @@ internal class OutWindow
         return size;
     }
 
+    /// <summary>Completes any pending copy-block operation from a previous <see cref="CopyBlock"/> call.</summary>
     public void CopyPending()
     {
         if (_pendingLen > 0)
             CopyBlock(_pendingDist, _pendingLen);
     }
 
+    /// <summary>Gets the number of bytes available for reading from the window.</summary>
     public int AvailableBytes => _pos - _streamPos;
 }

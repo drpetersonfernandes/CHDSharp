@@ -1,16 +1,23 @@
 ﻿namespace CHDSharp.Utils;
 
 /// <summary>Provides extension methods for reading and writing big-endian byte order values from <see cref="BinaryReader"/> and <see cref="byte"/> arrays.</summary>
-public static class BigEndian
+internal static class BigEndian
 {
     /// <param name="binRdr">The <see cref="BinaryReader"/> to read from.</param>
     extension(BinaryReader binRdr)
     {
         /// <summary>Reads a big-endian <see cref="UInt16"/> from the stream.</summary>
         /// <returns>The unsigned 16-bit value read in big-endian order.</returns>
-        public ushort ReadUInt16Be()
+        internal ushort ReadUInt16Be()
         {
             return BitConverter.ToUInt16(binRdr.ReadBytesRequired(sizeof(ushort)).Reverse(), 0);
+        }
+
+        /// <summary>Reads a big-endian <see cref="Int16"/> from the stream.</summary>
+        /// <returns>The signed 16-bit value read in big-endian order.</returns>
+        public short ReadInt16Be()
+        {
+            return BitConverter.ToInt16(binRdr.ReadBytesRequired(sizeof(short)).Reverse(), 0);
         }
 
         /// <summary>Reads a big-endian <see cref="UInt32"/> from the stream.</summary>
@@ -32,6 +39,13 @@ public static class BigEndian
         public ulong ReadUInt64Be()
         {
             return BitConverter.ToUInt64(binRdr.ReadBytesRequired(sizeof(ulong)).Reverse(), 0);
+        }
+
+        /// <summary>Reads a big-endian <see cref="Int32"/> from the stream.</summary>
+        /// <returns>The signed 32-bit value read in big-endian order.</returns>
+        public int ReadInt32Be()
+        {
+            return BitConverter.ToInt32(binRdr.ReadBytesRequired(sizeof(int)).Reverse(), 0);
         }
 
         /// <summary>Reads the exact number of bytes requested from the stream, throwing if fewer bytes are available.</summary>

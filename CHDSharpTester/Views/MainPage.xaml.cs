@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Windows.Data;
 using CHDSharpTester.Models;
@@ -25,6 +26,7 @@ public class StatusIconConverter : IValueConverter
     /// <param name="parameter">An optional converter parameter (ignored).</param>
     /// <param name="culture">The culture to use (ignored).</param>
     /// <returns>A string containing a checkmark, cross, circle, or question mark depending on the status.</returns>
+    [SuppressMessage("ReSharper", "NullnessAnnotationConflictWithJetBrainsAnnotations")]
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
         return value is TestStatus status
@@ -40,6 +42,7 @@ public class StatusIconConverter : IValueConverter
 
     /// <summary>Converting back is not supported.</summary>
     /// <exception cref="NotSupportedException">Always thrown.</exception>
+    [SuppressMessage("ReSharper", "NullnessAnnotationConflictWithJetBrainsAnnotations")]
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
     {
         throw new NotSupportedException();

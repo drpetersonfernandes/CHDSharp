@@ -77,10 +77,6 @@ internal static class ChdMetaData
         return ChdError.Chderrnone;
     }
 
-    /// <summary>Builds a 24-byte metadata hash entry: 4-byte tag followed by a 20-byte SHA1 of the metadata data.</summary>
-    /// <param name="metaTag">The 4-character metadata tag.</param>
-    /// <param name="metaData">The raw metadata content.</param>
-    /// <returns>A 24-byte array containing the tag and SHA1 hash.</returns>
     private static byte[] metadata_hash(uint metaTag, byte[] metaData)
     {
         // make 24 byte metadata hash

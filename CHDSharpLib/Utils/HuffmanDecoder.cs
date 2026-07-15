@@ -20,27 +20,16 @@ internal class NodeT
 /// </summary>
 internal class HuffmanDecoder
 {
-    /// <summary>Number of total codes being processed.</summary>
     private readonly uint _numcodes;
 
-    /// <summary>Maximum bits per code.</summary>
     private readonly byte _maxbits;
 
-    /// <summary>Pointer to the lookup table.</summary>
     private readonly ushort[] _lookup;
 
-    /// <summary>Array of nodes.</summary>
     private readonly NodeT[] _huffnode;
 
-    /// <summary>Bit stream used to read encoded data.</summary>
     private BitStream _bitbuf;
 
-    /// <summary>
-    /// Packs a code value and its bit count into a single lookup-table entry.
-    /// </summary>
-    /// <param name="code">The code value to encode.</param>
-    /// <param name="bits">The number of bits used by the code.</param>
-    /// <returns>A packed lookup-table entry with the code in the upper bits and bit count in the lower 5 bits.</returns>
     private static uint MAKE_LOOKUP(uint code, uint bits)
     {
         return (code << 5) | (bits & 0x1f);
@@ -262,13 +251,6 @@ internal class HuffmanDecoder
         return _bitbuf.Overflow() ? HuffmanError.HufferrInputBufferTooSmall : HuffmanError.HufferrNone;
     }
 
-    /// <summary>
-    /// Assigns canonical Huffman codes to all nodes based on their bit lengths.
-    /// </summary>
-    /// <returns>
-        /// <c>HufferrNone</c> on success;
-        /// <c>HufferrInternalInconsistency</c> if the code lengths are inconsistent.
-    /// </returns>
     private HuffmanError AssignCanonicalCodes()
     {
         uint curcode;
@@ -313,9 +295,6 @@ internal class HuffmanDecoder
         return HuffmanError.HufferrNone;
     }
 
-    /// <summary>
-    /// Builds a lookup table mapping bit patterns to decoded values for fast decoding.
-    /// </summary>
     private void BuildLookupTable()
     {
         uint curcode;

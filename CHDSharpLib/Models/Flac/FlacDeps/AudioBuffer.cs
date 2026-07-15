@@ -580,6 +580,7 @@ public class AudioBuffer
             throw new ArgumentException("Invalid length");
     }
 
+    /// <summary>Copies sample data from another buffer into this buffer at the specified offset.</summary>
     internal void Load(int dstOffset, AudioBuffer src, int srcOffset, int copyLength)
     {
         if (_dataInBytes)

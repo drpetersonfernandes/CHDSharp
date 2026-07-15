@@ -20,13 +20,6 @@ internal static partial class ChdReaders
         return Zlib(buffIn, 0, buffInLength, buffOut, buffOutLength);
     }
 
-    /// <summary>Decompresses a zlib (DEFLATE) stream from a specified start offset within the input buffer.</summary>
-    /// <param name="buffIn">The input buffer containing compressed data.</param>
-    /// <param name="buffInStart">The offset within <paramref name="buffIn"/> where the compressed stream begins.</param>
-    /// <param name="buffInLength">The total length of valid data in <paramref name="buffIn"/>.</param>
-    /// <param name="buffOut">The output buffer to receive decompressed data.</param>
-    /// <param name="buffOutLength">The expected decompressed output length.</param>
-    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
     private static ChdError Zlib(byte[] buffIn, int buffInStart, int buffInLength, byte[] buffOut, int buffOutLength)
     {
         using var memStream = new MemoryStream(buffIn, buffInStart, buffInLength, false);
@@ -50,7 +43,6 @@ internal static partial class ChdReaders
         return Zstd(buffIn, 0, buffInLength, buffOut, 0, buffOutLength, codec);
     }
 
-    /// <summary>Decompresses a Zstandard stream from a specified offset range within the input buffer.</summary>
     private static ChdError Zstd(byte[] buffIn, int buffInStart, int buffInLength, byte[] buffOut, int buffOutStart, int buffOutLength, CHDCodec codec)
     {
         codec.BZstd ??= new ZstdSharp.Decompressor();
@@ -77,7 +69,6 @@ internal static partial class ChdReaders
         return Lzma(buffIn, 0, buffInLength, buffOut, buffOutLength, codec);
     }
 
-    /// <summary>Decompresses a raw-headerless LZMA stream using fixed CHD encoder settings (lc=3, lp=0, pb=2).</summary>
     private static ChdError Lzma(byte[] buffIn, int buffInStart, int compsize, byte[] buffOut, int buffOutLength, CHDCodec codec)
     {
         // CHD LZMA hunks are RAW, headerless LZMA payloads. There is no 5-byte
@@ -152,7 +143,6 @@ internal static partial class ChdReaders
         return Flac(buffIn, 1, buffInLength, buffOut, buffOutLength, swapEndian, codec, out _);
     }
 
-    /// <summary>Decompresses a FLAC stream with optional endian swapping, writing decoded samples to <paramref name="buffOut"/> and returning the number of bytes consumed from the source.</summary>
     private static ChdError Flac(byte[] buffIn, int buffInStart, int buffInLength, byte[] buffOut, int buffOutLength, bool swapEndian, CHDCodec codec, out int srcPos)
     {
         codec.FlacSettings ??= new AudioPcmConfig(16, 2, 44100);
@@ -183,14 +173,10 @@ internal static partial class ChdReaders
         return ChdError.Chderrnone;
     }
 
-    /// <summary>Maximum sector data bytes per CD frame.</summary>
     private const int CdMaxSectorData = 2352;
-    /// <summary>Maximum subcode data bytes per CD frame.</summary>
     private const int CdMaxSubcodeData = 96;
-    /// <summary>Total bytes per CD frame including sector data and subcode.</summary>
     private const int CdFrameSize = CdMaxSectorData + CdMaxSubcodeData;
 
-    /// <summary>CD-ROM sync header pattern used to locate sector boundaries.</summary>
     private static readonly byte[] SCdSyncHeader = [0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00];
 
     /// <summary>Decompresses a CD sector hunk using DEFLATE (zlib) for both sector data and subcode.</summary>

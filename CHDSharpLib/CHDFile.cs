@@ -19,38 +19,23 @@ namespace CHDSharp;
 /// </summary>
 public sealed class ChdFile : IDisposable
 {
-    /// <summary>The underlying stream providing access to the CHD file data.</summary>
     private readonly Stream _stream;
 
-    /// <summary>Whether the underlying stream should remain open when this instance is disposed.</summary>
     private readonly bool _leaveOpen;
 
-    /// <summary>The parsed CHD header containing block map, compression, and checksum information.</summary>
     private readonly ChdHeader _chd;
 
-    /// <summary>Per-codec state and settings used during decompression.</summary>
     private readonly CHDCodec _codec;
 
-    /// <summary>Parent CHD for differential (child) files. Null for standalone CHDs.</summary>
     private ChdFile? _parent;
 
-    /// <summary>Whether the parent CHD was opened internally and should be disposed by this instance.</summary>
     private bool _ownsParent;
 
-    /// <summary>Reusable buffer for reading and decompressing a single hunk.</summary>
     private byte[]? _hunkBuffer;
 
-    /// <summary>Zero-based index of the most recently decompressed hunk held in <see cref="_hunkBuffer"/>, or -1 if none.</summary>
     private long _cachedHunk = -1;
 
-    /// <summary>Scratch buffer used when stitching two parent hunks for an unaligned V5 COMPRESSION_PARENT reference.</summary>
     private byte[]? _parentScratch;
-
-    /// <summary>Initializes a new instance of the <see cref="ChdFile"/> class with a parsed header and stream.</summary>
-    /// <param name="stream">The seekable stream providing access to the CHD file data.</param>
-    /// <param name="leaveOpen">Whether the stream should remain open when this instance is disposed.</param>
-    /// <param name="chd">The parsed CHD header.</param>
-    /// <param name="version">The CHD format version.</param>
     private ChdFile(Stream stream, bool leaveOpen, ChdHeader chd, uint version)
     {
         _stream = stream;
@@ -225,10 +210,6 @@ public sealed class ChdFile : IDisposable
         return ChdError.Chderrnone;
     }
 
-    /// <summary>Validates that the parent CHD's hashes match the child's expected parent hashes.</summary>
-    /// <param name="child">The child CHD header containing expected parent hashes.</param>
-    /// <param name="parent">The parent CHD header to validate against.</param>
-    /// <returns><see cref="ChdError.Chderrnone"/> if the parent is valid; otherwise <see cref="ChdError.Chderrinvalidparent"/>.</returns>
     private static ChdError ValidateParent(ChdHeader child, ChdHeader parent)
     {
         var childMd5 = child.Parentmd5;
@@ -248,8 +229,6 @@ public sealed class ChdFile : IDisposable
         return ChdError.Chderrnone;
     }
 
-    /// <summary>Links all <see cref="CompressionType.Compressionself"/> map entries to their source blocks for fast resolution during reading.</summary>
-    /// <param name="chd">The parsed CHD header containing the block map.</param>
     private static void LinkSelfBlocks(ChdHeader chd)
     {
         foreach (var me in chd.Map)
@@ -316,10 +295,6 @@ public sealed class ChdFile : IDisposable
         }
     }
 
-    /// <summary>Resolves a <see cref="CompressionType.Compressionparent"/> hunk by reading from the parent CHD, handling direct-index and V5 unit-based references.</summary>
-    /// <param name="me">The map entry describing the parent reference.</param>
-    /// <param name="buffer">The destination buffer of at least hunk size bytes.</param>
-    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
     private ChdError ReadParentHunk(MapEntry me, byte[] buffer)
     {
         if (_parent == null)

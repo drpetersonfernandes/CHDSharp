@@ -161,9 +161,6 @@ internal static class ChdBlockRead
         }
     }
 
-    /// <summary>Maps a <see cref="ChdCodec"/> value to its corresponding <see cref="ChdReader"/> decompression delegate.</summary>
-    /// <param name="chdCodec">The compression codec identifier.</param>
-    /// <returns>The matching reader delegate, or null if the codec is unrecognized.</returns>
     private static ChdReader GetReaderFromCodec(ChdCodec chdCodec)
     {
         switch (chdCodec)

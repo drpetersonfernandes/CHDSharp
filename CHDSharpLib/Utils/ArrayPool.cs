@@ -6,16 +6,12 @@
 /// </summary>
 internal class ArrayPool
 {
-    /// <summary>Size in bytes of each array managed by this pool.</summary>
     private readonly uint _arraySize;
 
-    /// <summary>List of available arrays currently held in the pool.</summary>
     private readonly List<byte[]> _array;
 
-    /// <summary>Number of arrays currently in the pool.</summary>
     private int _count;
 
-    /// <summary>Total number of arrays issued by this pool since creation.</summary>
     private int _issuedArraysTotal;
 
     /// <summary>

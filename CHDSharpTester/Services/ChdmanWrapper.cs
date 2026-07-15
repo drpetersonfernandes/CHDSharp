@@ -25,41 +25,43 @@ public class ChdmanWrapper : IDisposable
     public sealed class Info
     {
         /// <summary>The CHD file format version.</summary>
-        public int Version;
+        internal int Version;
 
         /// <summary>The logical (decompressed) size of the CHD image, in bytes.</summary>
-        public ulong LogicalBytes;
+        internal ulong LogicalBytes;
 
         /// <summary>The size of each hunk, in bytes.</summary>
-        public uint HunkBytes;
+        internal uint HunkBytes;
 
         /// <summary>The total number of hunks in the image.</summary>
-        public uint TotalHunks;
+        internal uint TotalHunks;
 
         /// <summary>The compression codec(s) used by the CHD.</summary>
+#pragma warning disable CA1051
         public string Compression = null!;
+#pragma warning restore CA1051
 
         /// <summary>The overall SHA1 hash (raw data + metadata), or null if not present.</summary>
-        public string? Sha1;
+        internal string? Sha1;
 
         /// <summary>The raw data SHA1 hash, or null if not present.</summary>
-        public string? DataSha1;
+        internal string? DataSha1;
     }
 
     /// <summary>Represents the result of a chdman process execution.</summary>
     public sealed class Result
     {
         /// <summary>The process exit code.</summary>
-        public int ExitCode;
+        internal int ExitCode;
 
         /// <summary>The captured standard output text.</summary>
-        public string StdOut = null!;
+        internal string StdOut = null!;
 
         /// <summary>The captured standard error text.</summary>
-        public string StdErr = null!;
+        internal string StdErr = null!;
 
         /// <summary>Gets the combined standard output and standard error text.</summary>
-        public string All => StdOut + "\n" + StdErr;
+        internal string All => StdOut + "\n" + StdErr;
     }
 
     /// <summary>Runs chdman with the specified arguments and returns the captured process result.</summary>

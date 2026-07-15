@@ -41,7 +41,7 @@ public class ChdListIntegrationTests
         _out.WriteLine($"=== {name} ===");
 
         if (TestPaths.ChdmanAvailable)
-            VerifyHeaderInfo(path, name);
+            VerifyHeaderInfo(path);
 
         VerifyCheckFile(path, name);
 
@@ -123,7 +123,7 @@ public class ChdListIntegrationTests
         _out.WriteLine($"=== RandomAccess: {name}: PASSED ===");
     }
 
-    private void VerifyHeaderInfo(string path, string name)
+    private void VerifyHeaderInfo(string path)
     {
         var info = Chdman.GetInfo(path);
         if (info == null)

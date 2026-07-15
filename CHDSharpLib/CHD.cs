@@ -189,10 +189,8 @@ public static class Chd
         }
     }
 
-    /// <summary>Expected header lengths in bytes for each CHD version (indexed by version number).</summary>
     private static readonly uint[] HeaderLengths = [0, 76, 80, 120, 108, 124];
 
-    /// <summary>The CHD file magic number ("MComprHD") used to identify the format.</summary>
     private static readonly byte[] Id = "MComprHD"u8.ToArray();
 
     /// <summary>Reads and validates the CHD file header signature and version.</summary>

@@ -3,9 +3,7 @@
 /// <summary>Extends <see cref="HuffmanDecoder"/> with run-length encoding support for repeated symbol sequences.</summary>
 internal class HuffmanDecoderRle : HuffmanDecoder
 {
-    /// <summary>Number of remaining identical symbols in the current RLE run.</summary>
     private int _rlecount;
-    /// <summary>The data value being repeated in the current RLE run.</summary>
     private uint _prevdata;
 
     /// <summary>Initializes a new instance of the <see cref="HuffmanDecoderRle"/> class.</summary>

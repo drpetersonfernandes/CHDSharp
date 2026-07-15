@@ -184,6 +184,7 @@ internal class Decoder
     private State _state;
     private uint _rep0, _rep1, _rep2, _rep3;
 
+    /// <summary>Initialises a new LZMA decoder with all probability models set to their default states.</summary>
     public Decoder()
     {
         _mDictionarySize = -1;
@@ -257,6 +258,7 @@ internal class Decoder
         _rep3 = 0;
     }
 
+    /// <summary>Decodes LZMA-compressed data from the range decoder into the output window.</summary>
     internal bool Code(int dictionarySize, OutWindow outWindow, RangeCoder.Decoder rangeDecoder)
     {
         var dictionarySizeCheck = Math.Max(dictionarySize, 1);
@@ -371,6 +373,7 @@ internal class Decoder
         return false;
     }
 
+    /// <summary>Sets the LZMA decoder properties (lc, lp, pb) and optional dictionary size from a property byte array.</summary>
     public void SetDecoderProperties(byte[] properties)
     {
         if (properties.Length < 1)

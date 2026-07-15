@@ -245,13 +245,6 @@ internal static class ChdHeaders
     }
 
 
-    /// <summary>Reads an uncompressed V5 block map where each hunk is either a direct uncompressed block or a parent reference.</summary>
-    /// <param name="br">The binary reader positioned at the map offset.</param>
-    /// <param name="mapoffset">The file offset where the map data begins.</param>
-    /// <param name="totalblocks">The total number of hunks.</param>
-    /// <param name="blocksize">The size of each hunk in bytes.</param>
-    /// <param name="map">When this method returns, contains the parsed map entries.</param>
-    /// <returns><see cref="ChdError.Chderrnone"/> on success.</returns>
     private static ChdError uncompressed_v5_map(BinaryReader br, ulong mapoffset, uint totalblocks, uint blocksize, out MapEntry[] map)
     {
         br.BaseStream.Seek((long)mapoffset, SeekOrigin.Begin);
@@ -281,14 +274,6 @@ internal static class ChdHeaders
         return ChdError.Chderrnone;
     }
 
-    /// <summary>Reads a Huffman-compressed V5 block map, decoding compression types, lengths, and offsets for each hunk.</summary>
-    /// <param name="br">The binary reader positioned at the map offset.</param>
-    /// <param name="mapoffset">The file offset where the compressed map data begins.</param>
-    /// <param name="totalBlocks">The total number of hunks.</param>
-    /// <param name="blocksize">The size of each hunk in bytes.</param>
-    /// <param name="unitbytes">The unit size for parent block address translation.</param>
-    /// <param name="map">When this method returns, contains the parsed map entries.</param>
-    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise <see cref="ChdError.Chderrdecompressionerror"/> if CRC validation fails.</returns>
     private static ChdError compressed_v5_map(BinaryReader br, ulong mapoffset, uint totalBlocks, uint blocksize, uint unitbytes, out MapEntry[] map)
     {
         map = new MapEntry[totalBlocks];

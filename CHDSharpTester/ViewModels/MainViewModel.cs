@@ -19,13 +19,13 @@ public class MainViewModel : INotifyPropertyChanged
     private readonly ChdTestRunner _runner = new();
 
     /// <summary>Initializes a new instance of the <see cref="MainViewModel"/> class and binds all commands.</summary>
-    public MainViewModel()
+    internal MainViewModel()
     {
         BrowseChdmanCommand = new RelayCommand(_ => BrowseChdman());
         AddFilesCommand = new RelayCommand(_ => AddFiles());
         AddFolderCommand = new RelayCommand(_ => AddFolder());
         RemoveFileCommand = new RelayCommand(RemoveFile);
-        RunTestsCommand = new RelayCommand(_ => { _ = RunTestsAsync(); }, _ => CanRunTests);
+        RunTestsCommand = new RelayCommand(o => { o = RunTestsAsync(); }, _ => CanRunTests);
         ExportPdfCommand = new RelayCommand(_ => ExportPdf(), _ => HasResults);
         CopyLogCommand = new RelayCommand(_ => CopyLog());
         CopyResultsCommand = new RelayCommand(_ => CopyResults(), _ => HasResults);
@@ -456,7 +456,7 @@ public class RelayCommand : ICommand
     /// <summary>Initializes a new instance of the <see cref="RelayCommand"/> class.</summary>
     /// <param name="execute">The action to invoke when the command is executed.</param>
     /// <param name="canExecute">An optional function that determines whether the command can execute.</param>
-    public RelayCommand(Action<object?> execute, Func<object?, bool>? canExecute = null)
+    internal RelayCommand(Action<object?> execute, Func<object?, bool>? canExecute = null)
     {
         _execute = execute;
         _canExecute = canExecute;

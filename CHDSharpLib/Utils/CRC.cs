@@ -5,9 +5,7 @@ public class Crc
 {
     /// <summary>Precomputed CRC-32 lookup tables (8 tables, 256 entries each) for fast slicing.</summary>
     public static readonly uint[] Crc32Lookup;
-    /// <summary>The running CRC-32 state value.</summary>
     private uint _crc;
-    /// <summary>The total number of bytes processed since the last reset.</summary>
     private long _totalBytesRead;
 
     static Crc()
@@ -96,7 +94,6 @@ public class Crc
         }
 
         _crc = crc;
-
     }
 
     /// <summary>Gets the CRC-32 result as an unsigned 32-bit integer.</summary>

@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Globalization;
+using System.IO;
 using System.Windows;
 using Serilog;
 
@@ -19,9 +20,10 @@ public partial class App
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Debug()
-            .WriteTo.Debug()
+            .WriteTo.Debug(formatProvider: CultureInfo.InvariantCulture)
             .WriteTo.File(logPath, rollingInterval: RollingInterval.Day,
-                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
+                formatProvider: CultureInfo.InvariantCulture)
             .CreateLogger();
 
         Log.Information("CHDSharpTester started");

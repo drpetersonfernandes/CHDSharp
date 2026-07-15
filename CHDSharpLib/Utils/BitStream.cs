@@ -3,18 +3,12 @@
 /// <summary>Provides bit-level reading from a byte buffer, used by the Huffman decoder to extract variable-length codes.</summary>
 internal class BitStream
 {
-    /// <summary>Holds accumulated bits read from the byte buffer.</summary>
     private uint _buffer;
-    /// <summary>Number of valid bits currently held in <see cref="_buffer"/>.</summary>
     private int _bits;
-    /// <summary>The underlying byte buffer being read.</summary>
     private readonly byte[] _readBuffer;
-    /// <summary>Current byte offset within <see cref="_readBuffer"/>.</summary>
     private int _doffset;
-    /// <summary>Total length of the data in bytes.</summary>
     private readonly int _dlength;
 
-    /// <summary>The initial offset into the buffer for flushing calculations.</summary>
     private readonly int _initialOffset;
 
     /// <summary>Checks whether the bit stream has overflown past its declared length.</summary>

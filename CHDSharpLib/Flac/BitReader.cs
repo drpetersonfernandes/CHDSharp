@@ -6,7 +6,7 @@ namespace CHDSharp.Flac;
 /// Low-level bit-level reader for FLAC bitstreams. Operates on raw byte pointers.
 /// This class is unsafe and requires pointer manipulation.
 /// </summary>
-public unsafe class BitReader
+internal unsafe class BitReader
 {
     #region Static Methods
 
@@ -15,7 +15,7 @@ public unsafe class BitReader
     /// </summary>
     /// <param name="v">The input value.</param>
     /// <returns>The floor of log2 of the value.</returns>
-    public static int Log2I(int v)
+    internal static int Log2I(int v)
     {
         return Log2I((uint)v);
     }
@@ -23,7 +23,7 @@ public unsafe class BitReader
     /// <summary>
     /// De Bruijn sequence lookup table used for fast integer log2 computation.
     /// </summary>
-    public static readonly byte[] MultiplyDeBruijnBitPosition =
+    private static readonly byte[] MultiplyDeBruijnBitPosition =
     [
         0, 9, 1, 10, 13, 21, 2, 29, 11, 14, 16, 18, 22, 25, 3, 30,
         8, 12, 20, 28, 15, 17, 24, 7, 19, 27, 23, 6, 26, 5, 4, 31
@@ -52,7 +52,7 @@ public unsafe class BitReader
     /// </summary>
     /// <param name="v">The input value.</param>
     /// <returns>The floor of log2 of the value.</returns>
-    public static int Log2I(uint v)
+    private static int Log2I(uint v)
     {
         v |= v >> 1; // first round down to one less than a power of 2
         v |= v >> 2;
@@ -65,7 +65,7 @@ public unsafe class BitReader
     /// <summary>
     /// Lookup table mapping a byte value to the number of leading zero bits, used for unary decoding.
     /// </summary>
-    public static readonly byte[] ByteToUnaryTable =
+    private static readonly byte[] ByteToUnaryTable =
     [
         8, 7, 6, 6, 5, 5, 5, 5, 4, 4, 4, 4, 4, 4, 4, 4,
         3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
@@ -87,7 +87,6 @@ public unsafe class BitReader
 
     #endregion
 
-    private byte* _bufferM;
     private byte* _bptrM;
     private int _bufferLenM;
     private int _haveBitsM;
@@ -97,19 +96,19 @@ public unsafe class BitReader
     /// <summary>
     /// Gets the current read position in bytes from the start of the buffer.
     /// </summary>
-    public int Position => (int)(_bptrM - _bufferM - (_haveBitsM >> 3));
+    public int Position => (int)(_bptrM - Buffer - (_haveBitsM >> 3));
 
     /// <summary>
     /// Gets a pointer to the underlying byte buffer.
     /// </summary>
-    public byte* Buffer => _bufferM;
+    public byte* Buffer { get; private set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BitReader"/> class with default values.
     /// </summary>
     public BitReader()
     {
-        _bufferM = null;
+        Buffer = null;
         _bptrM = null;
         _bufferLenM = 0;
         _haveBitsM = 0;
@@ -136,7 +135,7 @@ public unsafe class BitReader
     /// <param name="len">Length of data available in the buffer.</param>
     public void Reset(byte* buffer, int pos, int len)
     {
-        _bufferM = buffer;
+        Buffer = buffer;
         _bptrM = buffer + pos;
         _bufferLenM = len;
         _haveBitsM = 0;
@@ -148,14 +147,14 @@ public unsafe class BitReader
     /// <summary>
     /// Fills the internal cache with up to 56 bits of data from the buffer, updating CRC16.
     /// </summary>
-    public void Fill()
+    private void Fill()
     {
         while (_haveBitsM < 56)
         {
             _haveBitsM += 8;
             var b = *(_bptrM++);
             _cacheM |= (ulong)b << (64 - _haveBitsM);
-            _crc16M = (ushort)((_crc16M << 8) ^ Crc16.table[(_crc16M >> 8) ^ b]);
+            _crc16M = (ushort)((_crc16M << 8) ^ Crc16.Table[(_crc16M >> 8) ^ b]);
         }
     }
 
@@ -280,7 +279,7 @@ public unsafe class BitReader
             _cacheM <<= 8;
             var b = *(_bptrM++);
             _cacheM |= (ulong)b << (64 - _haveBitsM);
-            _crc16M = (ushort)((_crc16M << 8) ^ Crc16.table[(_crc16M >> 8) ^ b]);
+            _crc16M = (ushort)((_crc16M << 8) ^ Crc16.Table[(_crc16M >> 8) ^ b]);
             result = _cacheM >> 56;
         }
         val += ByteToUnaryTable[result];
@@ -313,7 +312,7 @@ public unsafe class BitReader
         var n = _haveBitsM >> 3;
         for (var i = 0; i < n; i++)
         {
-            crc = (ushort)((crc << 8) ^ Crc16.table[(crc >> 8) ^ (byte)(_cacheM >> (56 - (i << 3)))]);
+            crc = (ushort)((crc << 8) ^ Crc16.Table[(crc >> 8) ^ (byte)(_cacheM >> (56 - (i << 3)))]);
         }
 
         return Crc16.Subtract(_crc16M, crc, n);
@@ -402,7 +401,7 @@ public unsafe class BitReader
     {
         Fill();
         fixed (byte* unaryTable = ByteToUnaryTable)
-        fixed (ushort* t = Crc16.table)
+        fixed (ushort* t = Crc16.Table)
         {
             var mask = (1U << k) - 1;
             var bptr = _bptrM;

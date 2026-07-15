@@ -734,7 +734,6 @@ public class AudioDecoder : IAudioSource
 
     private unsafe void decode_metadata()
     {
-        byte x;
         int i, id;
         //bool first = true;
         var flacStreamSyncString = "fLaC"u8.ToArray();
@@ -745,7 +744,7 @@ public class AudioDecoder : IAudioSource
             if (_io.Read(_framesBuffer, 0, 1) == 0)
                 throw new InvalidDataException("FLAC stream not found");
 
-            x = _framesBuffer[0];
+            var x = _framesBuffer[0];
             if (x == flacStreamSyncString[i])
             {
                 //first = true;

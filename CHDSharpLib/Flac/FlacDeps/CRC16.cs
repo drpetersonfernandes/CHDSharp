@@ -4,14 +4,14 @@ namespace CHDSharp.Flac.FlacDeps;
 /// Static class for computing 16-bit CRC checksums used in FLAC audio frames.
 /// Supports combining and subtracting CRCs for efficient multi-block operations.
 /// </summary>
-public static class Crc16
+internal static class Crc16
 {
-    private const int GF2_DIM = 16;
+    private const int Gf2Dim = 16;
     /// <summary>
     /// Precomputed CRC-16 lookup table (256 entries).
     /// </summary>
-    public static ushort[] table = new ushort[256];
-    private static readonly ushort[,] substractTable = new ushort[GF2_DIM, GF2_DIM];
+    public static ushort[] Table = new ushort[256];
+    private static readonly ushort[,] SubstractTable = new ushort[Gf2Dim, Gf2Dim];
 
     /// <summary>
     /// Computes a 16-bit CRC checksum over a portion of a byte array, continuing from a previous CRC value.
@@ -38,7 +38,7 @@ public static class Crc16
     /// <returns>The updated 16-bit CRC checksum.</returns>
     public static unsafe ushort ComputeChecksum(ushort crc, byte* bytes, int count)
     {
-        fixed (ushort* t = table)
+        fixed (ushort* t = Table)
         {
             for (var i = count; i > 0; i--)
             {
@@ -49,39 +49,39 @@ public static class Crc16
         return crc;
     }
 
-    private const ushort polynomial = 0x8005;
-    private const ushort reversePolynomial = 0x4003;
+    private const ushort Polynomial = 0x8005;
+    private const ushort ReversePolynomial = 0x4003;
 
     static unsafe Crc16()
     {
-        for (ushort i = 0; i < table.Length; i++)
+        for (ushort i = 0; i < Table.Length; i++)
         {
             int crc = i;
-            for (var j = 0; j < GF2_DIM; j++)
+            for (var j = 0; j < Gf2Dim; j++)
             {
-                if ((crc & (1U << (GF2_DIM - 1))) != 0)
+                if ((crc & (1U << (Gf2Dim - 1))) != 0)
                 {
-                    crc = (crc << 1) ^ polynomial;
+                    crc = (crc << 1) ^ Polynomial;
                 }
                 else
                 {
                     crc <<= 1;
                 }
             }
-            table[i] = (ushort)(crc & ((1 << GF2_DIM) - 1));
+            Table[i] = (ushort)(crc & ((1 << Gf2Dim) - 1));
         }
 
-        substractTable[0, GF2_DIM - 1] = reversePolynomial;
-        for (var n = 1; n < GF2_DIM; n++)
+        SubstractTable[0, Gf2Dim - 1] = ReversePolynomial;
+        for (var n = 1; n < Gf2Dim; n++)
         {
-            substractTable[0, n - 1] = (ushort)(1 << n);
+            SubstractTable[0, n - 1] = (ushort)(1 << n);
         }
 
-        fixed (ushort* st = &substractTable[0, 0])
+        fixed (ushort* st = &SubstractTable[0, 0])
         {
-            for (var i = 1; i < GF2_DIM; i++)
+            for (var i = 1; i < Gf2Dim; i++)
             {
-                gf2_matrix_square(st + i * GF2_DIM, st + (i - 1) * GF2_DIM);
+                gf2_matrix_square(st + i * Gf2Dim, st + (i - 1) * Gf2Dim);
             }
         }
     }
@@ -110,7 +110,7 @@ public static class Crc16
 
     private static unsafe void gf2_matrix_square(ushort* square, ushort* mat)
     {
-        for (var n = 0; n < GF2_DIM; n++)
+        for (var n = 0; n < Gf2Dim; n++)
         {
             square[n] = gf2_matrix_times(mat, mat[n]);
         }
@@ -147,7 +147,7 @@ public static class Crc16
 
         crc1 ^= crc2;
 
-        fixed (ushort* st = &substractTable[0, 0])
+        fixed (ushort* st = &SubstractTable[0, 0])
         {
             var n = 3;
             do
@@ -155,11 +155,11 @@ public static class Crc16
                 /* apply zeros operator for this bit of len2 */
                 if ((len2 & 1) != 0)
                 {
-                    crc1 = gf2_matrix_times(st + GF2_DIM * n, crc1);
+                    crc1 = gf2_matrix_times(st + Gf2Dim * n, crc1);
                 }
 
                 len2 >>= 1;
-                n = (n + 1) & (GF2_DIM - 1);
+                n = (n + 1) & (Gf2Dim - 1);
                 /* if no more bits set, then done */
             } while (len2 != 0);
         }

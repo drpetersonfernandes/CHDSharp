@@ -3,24 +3,24 @@ namespace CHDSharp.Flac.FlacDeps;
 /// <summary>
 /// 8-bit CRC calculator used for FLAC frame headers.
 /// </summary>
-public class Crc8
+internal class Crc8
 {
-    private const ushort poly8 = 0x07;
+    private const ushort Poly8 = 0x07;
 
-    private static ushort[]? table;
+    private static ushort[]? _table;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Crc8"/> class and builds the CRC lookup table on first initialization.
     /// </summary>
     public Crc8()
     {
-        if (table != null)
+        if (_table != null)
             return;
 
-        table = new ushort[256];
+        _table = new ushort[256];
         const int bits = 8;
-        var poly = (ushort)(poly8 + (1U << bits));
-        for (ushort i = 0; i < table.Length; i++)
+        var poly = (ushort)(Poly8 + (1U << bits));
+        for (ushort i = 0; i < _table.Length; i++)
         {
             var crc = i;
             for (var j = 0; j < bits; j++)
@@ -34,7 +34,7 @@ public class Crc8
                     crc <<= 1;
                 }
             }
-            table[i] = (ushort)(crc & 0x00ff);
+            _table[i] = (ushort)(crc & 0x00ff);
         }
     }
 
@@ -50,7 +50,7 @@ public class Crc8
         ushort crc = 0;
         for (var i = pos; i < pos + count; i++)
         {
-            crc = table![crc ^ bytes[i]];
+            crc = _table![crc ^ bytes[i]];
         }
 
         return (byte)crc;
@@ -68,7 +68,7 @@ public class Crc8
         ushort crc = 0;
         for (var i = pos; i < pos + count; i++)
         {
-            crc = table![crc ^ bytes[i]];
+            crc = _table![crc ^ bytes[i]];
         }
 
         return (byte)crc;

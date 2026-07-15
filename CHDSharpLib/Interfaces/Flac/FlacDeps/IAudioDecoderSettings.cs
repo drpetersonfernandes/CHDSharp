@@ -36,7 +36,7 @@ public interface IAudioDecoderSettings
 /// <summary>
 /// Extension methods for <see cref="IAudioDecoderSettings"/>.
 /// </summary>
-public static class IAudioDecoderSettingsExtensions
+internal static class AudioDecoderSettingsExtensions
 {
     /// <summary>
     /// Resets all properties of the settings to their default values.

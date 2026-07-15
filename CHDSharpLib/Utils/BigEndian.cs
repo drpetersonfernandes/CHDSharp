@@ -13,13 +13,6 @@ public static class BigEndian
             return BitConverter.ToUInt16(binRdr.ReadBytesRequired(sizeof(ushort)).Reverse(), 0);
         }
 
-        /// <summary>Reads a big-endian <see cref="Int16"/> from the stream.</summary>
-        /// <returns>The signed 16-bit value read in big-endian order.</returns>
-        public short ReadInt16Be()
-        {
-            return BitConverter.ToInt16(binRdr.ReadBytesRequired(sizeof(short)).Reverse(), 0);
-        }
-
         /// <summary>Reads a big-endian <see cref="UInt32"/> from the stream.</summary>
         /// <returns>The unsigned 32-bit value read in big-endian order.</returns>
         public uint ReadUInt32Be()
@@ -31,7 +24,7 @@ public static class BigEndian
         /// <returns>The 48-bit value read in big-endian order, stored in a <see cref="UInt64"/>.</returns>
         public ulong ReadUInt48Be()
         {
-            return ((ulong)binRdr.ReadByte() << 40) | ((ulong)binRdr.ReadByte() << 32) | ((ulong)binRdr.ReadByte() << 24) | ((ulong)binRdr.ReadByte() << 16) | ((ulong)binRdr.ReadByte() << 8) | (ulong)binRdr.ReadByte();
+            return ((ulong)binRdr.ReadByte() << 40) | ((ulong)binRdr.ReadByte() << 32) | ((ulong)binRdr.ReadByte() << 24) | ((ulong)binRdr.ReadByte() << 16) | ((ulong)binRdr.ReadByte() << 8) | binRdr.ReadByte();
         }
 
         /// <summary>Reads a big-endian <see cref="UInt64"/> from the stream.</summary>
@@ -39,13 +32,6 @@ public static class BigEndian
         public ulong ReadUInt64Be()
         {
             return BitConverter.ToUInt64(binRdr.ReadBytesRequired(sizeof(ulong)).Reverse(), 0);
-        }
-
-        /// <summary>Reads a big-endian <see cref="Int32"/> from the stream.</summary>
-        /// <returns>The signed 32-bit value read in big-endian order.</returns>
-        public int ReadInt32Be()
-        {
-            return BitConverter.ToInt32(binRdr.ReadBytesRequired(sizeof(int)).Reverse(), 0);
         }
 
         /// <summary>Reads the exact number of bytes requested from the stream, throwing if fewer bytes are available.</summary>
@@ -80,7 +66,7 @@ public static class BigEndian
         /// <returns>The 24-bit value read in big-endian order, stored in a <see cref="uint"/>.</returns>
         public uint ReadUInt24Be(int offset)
         {
-            return ((uint)arr[offset + 0] << 16) | ((uint)arr[offset + 1] << 8) | (uint)arr[offset + 2];
+            return ((uint)arr[offset + 0] << 16) | ((uint)arr[offset + 1] << 8) | arr[offset + 2];
         }
 
         /// <summary>Reads a big-endian 32-bit unsigned integer from a byte array at the specified offset.</summary>
@@ -88,7 +74,7 @@ public static class BigEndian
         /// <returns>The unsigned 32-bit value read in big-endian order.</returns>
         public uint ReadUInt32Be(int offset)
         {
-            return ((uint)arr[offset + 0] << 24) | ((uint)arr[offset + 1] << 16) | ((uint)arr[offset + 2] << 8) | (uint)arr[offset + 3];
+            return ((uint)arr[offset + 0] << 24) | ((uint)arr[offset + 1] << 16) | ((uint)arr[offset + 2] << 8) | arr[offset + 3];
         }
 
         /// <summary>Reads a big-endian 48-bit unsigned integer from a byte array at the specified offset into a <see cref="ulong"/>.</summary>
@@ -97,7 +83,7 @@ public static class BigEndian
         public ulong ReadUInt48Be(int offset)
         {
             return ((ulong)arr[offset + 0] << 40) | ((ulong)arr[offset + 1] << 32) |
-                   ((ulong)arr[offset + 2] << 24) | ((ulong)arr[offset + 3] << 16) | ((ulong)arr[offset + 4] << 8) | (ulong)arr[offset + 5];
+                   ((ulong)arr[offset + 2] << 24) | ((ulong)arr[offset + 3] << 16) | ((ulong)arr[offset + 4] << 8) | arr[offset + 5];
         }
 
         /// <summary>Writes a 16-bit unsigned integer in big-endian order to a byte array at the specified offset.</summary>

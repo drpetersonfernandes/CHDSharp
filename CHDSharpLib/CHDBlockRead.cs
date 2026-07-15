@@ -220,7 +220,7 @@ internal static class ChdBlockRead
                         break;
                     }
 
-                    Array.Copy(mapEntry.BuffOutCache, 0, buffOut, 0, (int)buffOutLength);
+                    Array.Copy(mapEntry.BuffOutCache, 0, buffOut, 0, buffOutLength);
 
                     Interlocked.Decrement(ref mapEntry.UseCount);
                     if (mapEntry.UseCount == 0)
@@ -252,7 +252,7 @@ internal static class ChdBlockRead
                     }
 
 
-                    Array.Copy(mapEntry.BuffOutCache, 0, buffOut, 0, (int)buffOutLength);
+                    Array.Copy(mapEntry.BuffOutCache, 0, buffOut, 0, buffOutLength);
                     Interlocked.Decrement(ref mapEntry.UseCount);
                     if (mapEntry.UseCount == 0)
                     {
@@ -297,7 +297,7 @@ internal static class ChdBlockRead
 
         if (checkCrc)
         {
-            if ((mapEntry.Crc != null && !CRC.VerifyDigest((uint)mapEntry.Crc, buffOut, 0, (uint)buffOutLength)) || (mapEntry.Crc16 != null && CRC16.calc(buffOut, (int)buffOutLength) != mapEntry.Crc16))
+            if ((mapEntry.Crc != null && !Crc.VerifyDigest((uint)mapEntry.Crc, buffOut, 0, (uint)buffOutLength)) || (mapEntry.Crc16 != null && Crc16.Calc(buffOut, buffOutLength) != mapEntry.Crc16))
                 return ChdError.Chderrdecompressionerror;
         }
 

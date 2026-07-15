@@ -19,7 +19,7 @@ internal abstract class Base
         if (len < KNumLenToPosStates)
             return len;
 
-        return (uint)(KNumLenToPosStates - 1);
+        return KNumLenToPosStates - 1;
     }
 
     public const int KNumAlignBits = 4;

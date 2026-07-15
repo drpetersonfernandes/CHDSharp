@@ -93,7 +93,7 @@ public class ChdListIntegrationTests
                     (0, Math.Min((int)hb, (int)total), "first hunk"),
                     (hb, Math.Min((int)hb, (int)(total - hb)), "second hunk"),
                     (hb / 2, (int)hb, "cross-hunk boundary"),
-                    (total - Math.Min((ulong)hb, total), (int)Math.Min((ulong)hb, total), "last hunk"),
+                    (total - Math.Min(hb, total), (int)Math.Min(hb, total), "last hunk"),
                     (17, 97, "small unaligned range"),
                     (hb / 3, 7, "tiny unaligned range"),
                     (total - 50 > 0 ? total - 50 : 0, 37, "near end")

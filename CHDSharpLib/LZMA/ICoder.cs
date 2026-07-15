@@ -17,8 +17,6 @@ internal class InvalidParamException : Exception
     public InvalidParamException() : base("Invalid Parameter") { }
 }
 
-
-
 /// <summary>
 /// Provides the fields that represent properties idenitifiers for compressing.
 /// </summary>

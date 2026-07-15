@@ -14,7 +14,7 @@ public class ChecksumTests
     {
         // CRC-32 of ASCII "123456789" is the well-known 0xCBF43926.
         var data = "123456789"u8.ToArray();
-        var digest = CRC.CalculateDigest(data, 0, (uint)data.Length);
+        var digest = Crc.CalculateDigest(data, 0, (uint)data.Length);
         Assert.Equal(0xCBF43926u, digest);
     }
 
@@ -23,10 +23,10 @@ public class ChecksumTests
     public void Crc32VerifyDigestTrueForMatchFalseForMismatch()
     {
         var data = "The quick brown fox"u8.ToArray();
-        var digest = CRC.CalculateDigest(data, 0, (uint)data.Length);
+        var digest = Crc.CalculateDigest(data, 0, (uint)data.Length);
 
-        Assert.True(CRC.VerifyDigest(digest, data, 0, (uint)data.Length));
-        Assert.False(CRC.VerifyDigest(digest ^ 0x1, data, 0, (uint)data.Length));
+        Assert.True(Crc.VerifyDigest(digest, data, 0, (uint)data.Length));
+        Assert.False(Crc.VerifyDigest(digest ^ 0x1, data, 0, (uint)data.Length));
     }
 
     /// <summary>Verifies that CRC calculates the same digest for a slice as for the inner data standalone.</summary>
@@ -35,8 +35,8 @@ public class ChecksumTests
     {
         var full = "XX123456789YY"u8.ToArray();
         var inner = "123456789"u8.ToArray();
-        var digestInner = CRC.CalculateDigest(inner, 0, (uint)inner.Length);
-        var digestSlice = CRC.CalculateDigest(full, 2, (uint)inner.Length);
+        var digestInner = Crc.CalculateDigest(inner, 0, (uint)inner.Length);
+        var digestSlice = Crc.CalculateDigest(full, 2, (uint)inner.Length);
         Assert.Equal(digestInner, digestSlice);
         Assert.Equal(0xCBF43926u, digestSlice);
     }
@@ -46,14 +46,14 @@ public class ChecksumTests
     public void Crc16EmptyAndKnownDataAreDeterministic()
     {
         var zeros = new byte[16];
-        var a = CRC16.calc(zeros, zeros.Length);
-        var b = CRC16.calc(zeros, zeros.Length);
+        var a = Crc16.Calc(zeros, zeros.Length);
+        var b = Crc16.Calc(zeros, zeros.Length);
         Assert.Equal(a, b); // deterministic
 
         var data = "123456789"u8.ToArray();
-        var c1 = CRC16.calc(data, data.Length);
+        var c1 = Crc16.Calc(data, data.Length);
         // CCITT-style CRC16 used by CHD; value is stable across runs.
-        var c2 = CRC16.calc(data, data.Length);
+        var c2 = Crc16.Calc(data, data.Length);
         Assert.Equal(c1, c2);
         Assert.NotEqual(a, c1); // different inputs -> different checksum
     }

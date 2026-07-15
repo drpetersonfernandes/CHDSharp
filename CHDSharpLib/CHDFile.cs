@@ -277,7 +277,7 @@ public sealed class ChdFile : IDisposable
 
         // Parent-referenced hunk: resolve against the parent CHD.
         if (me.Comptype == CompressionType.Compressionparent)
-            return ReadParentHunk(hunknum, me, buffer);
+            return ReadParentHunk(me, buffer);
 
         // Resolve the entry that actually holds compressed data (follow SELF links).
         var dataEntry = me;
@@ -317,11 +317,10 @@ public sealed class ChdFile : IDisposable
     }
 
     /// <summary>Resolves a <see cref="CompressionType.Compressionparent"/> hunk by reading from the parent CHD, handling direct-index and V5 unit-based references.</summary>
-    /// <param name="hunknum">The zero-based hunk index in the child.</param>
     /// <param name="me">The map entry describing the parent reference.</param>
     /// <param name="buffer">The destination buffer of at least hunk size bytes.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
-    private ChdError ReadParentHunk(uint hunknum, MapEntry me, byte[] buffer)
+    private ChdError ReadParentHunk(MapEntry me, byte[] buffer)
     {
         if (_parent == null)
             return ChdError.Chderrrequiresparent;

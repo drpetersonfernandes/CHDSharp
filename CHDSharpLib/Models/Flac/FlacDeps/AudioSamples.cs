@@ -8,7 +8,7 @@ public class AudioSamples
     /// <summary>
     /// Represents the maximum unsigned 32-bit integer value.
     /// </summary>
-    public const uint UINT32MAX = 0xffffffff;
+    public const uint Uint32Max = 0xffffffff;
 
     /// <summary>
     /// Interlaces two source sample arrays into a single destination array (S1[0], S2[0], S1[1], S2[1], ...).

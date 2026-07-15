@@ -1,6 +1,4 @@
 using System.Globalization;
-using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Data;
 using CHDSharpTester.Models;
 using CHDSharpTester.ViewModels;

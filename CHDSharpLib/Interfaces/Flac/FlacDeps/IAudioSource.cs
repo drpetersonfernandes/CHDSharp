@@ -15,7 +15,7 @@ public interface IAudioSource
     /// <summary>
     /// Gets the PCM configuration of the audio source.
     /// </summary>
-    AudioPcmConfig PCM { get; }
+    AudioPcmConfig Pcm { get; }
     /// <summary>
     /// Gets the path to the audio file.
     /// </summary>
@@ -66,7 +66,7 @@ public interface IAudioTitle
     /// <summary>
     /// Gets the PCM configuration for this title.
     /// </summary>
-    AudioPcmConfig PCM { get; }
+    AudioPcmConfig Pcm { get; }
     /// <summary>
     /// Gets the codec name for this title.
     /// </summary>
@@ -79,7 +79,6 @@ public interface IAudioTitle
     /// Gets the stream identifier for this title.
     /// </summary>
     int StreamId { get; }
-    //IAudioSource Open { get; }
 }
 
 /// <summary>
@@ -96,7 +95,7 @@ public interface IAudioTitleSet
 /// <summary>
 /// Extension methods for <see cref="IAudioTitle"/>.
 /// </summary>
-public static class IAudioTitleExtensions
+public static class AudioTitleExtensions
 {
     /// <summary>
     /// Gets the total duration of the audio title, determined by its last chapter position.
@@ -117,7 +116,7 @@ public static class IAudioTitleExtensions
     /// <returns>A formatted sample rate string.</returns>
     public static string GetRateString(this IAudioTitle title)
     {
-        var sr = title.PCM.SampleRate;
+        var sr = title.Pcm.SampleRate;
         if (sr % 1000 == 0) return $"{sr / 1000}KHz";
         if (sr % 100 == 0) return $"{sr / 100}.{sr / 100 % 10}KHz";
 
@@ -131,7 +130,7 @@ public static class IAudioTitleExtensions
     /// <returns>A formatted channel format string.</returns>
     public static string GetFormatString(this IAudioTitle title)
     {
-        switch (title.PCM.ChannelCount)
+        switch (title.Pcm.ChannelCount)
         {
             case 1: return "mono";
             case 2: return "stereo";

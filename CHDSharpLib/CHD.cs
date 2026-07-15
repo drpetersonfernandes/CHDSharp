@@ -89,9 +89,9 @@ public static class Chd
             if (!deepCheck)
                 return ChdError.Chderrnone;
 
-            if (((ulong)chd.Totalblocks * (ulong)chd.Blocksize) != chd.Totalbytes)
+            if ((chd.Totalblocks * (ulong)chd.Blocksize) != chd.Totalbytes)
             {
-                Log.Debug("{BlocksXSize} != {TotalBytes}", (ulong)chd.Totalblocks * (ulong)chd.Blocksize, chd.Totalbytes);
+                Log.Debug("{BlocksXSize} != {TotalBytes}", chd.Totalblocks * (ulong)chd.Blocksize, chd.Totalbytes);
             }
 
             var strComp = "";
@@ -266,13 +266,6 @@ public static class Chd
                         /* progress */
                         if ((block % blockPercent) == 0)
                         {
-                            //arrPoolIn.ReadStats(out int issuedArraysTotalIn, out int returnedArraysTotalIn);
-                            //arrPoolOut.ReadStats(out int issuedArraysTotalOut, out int returnedArraysTotalOut);
-                            //arrPoolCache.ReadStats(out int issuedArraysTotalCache, out int returnedArraysTotalCache);
-                            //progress?.Invoke($"Verifying: {(long)block * 100 / chd.totalblocks:N0}%     Load buffer: {blocksToDecompress.Count}   Hash buffer: {blocksToHash.Count}  {issuedArraysTotalIn},{returnedArraysTotalIn} | {issuedArraysTotalOut},{returnedArraysTotalOut} | {issuedArraysTotalCache},{returnedArraysTotalCache}\r");
-
-                            //progress?.Invoke($"Verifying: {(long)block * 100 / chd.totalblocks:N0}%     Load buffer: {blocksToDecompress.Count}    Hash buffer: {blocksToHash.Count}");;
-
                             Log.Debug("Verifying: {Percent:N0}%", (long)block * 100 / chd.Totalblocks);
                         }
 
@@ -372,7 +365,7 @@ public static class Chd
                         chd.Map[item].Processed = true;
                         while (chd.Map[proc].Processed)
                         {
-                            var sizenext = sizetoGo > (ulong)chd.Blocksize ? (int)chd.Blocksize : (int)sizetoGo;
+                            var sizenext = sizetoGo > chd.Blocksize ? (int)chd.Blocksize : (int)sizetoGo;
 
                             var mapEntry = chd.Map[proc];
 

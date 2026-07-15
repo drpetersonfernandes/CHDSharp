@@ -19,8 +19,8 @@ internal static class ChdHeaders
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
         chd.Compression = [ChdCodec.Zlib];
-        var flags = br.ReadUInt32Be();
-        var compression = br.ReadUInt32Be();
+        br.ReadUInt32Be(); // flags
+        br.ReadUInt32Be(); // compression
         chd.Blocksize = br.ReadUInt32Be();
         chd.Totalblocks = br.ReadUInt32Be();
         var cylinders = br.ReadUInt32Be();
@@ -75,9 +75,9 @@ internal static class ChdHeaders
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
         chd.Compression = [ChdCodec.Zlib];
-        var flags = br.ReadUInt32Be();
-        var compression = br.ReadUInt32Be();
-        var blocksizeOld = br.ReadUInt32Be(); // this is now unused
+        br.ReadUInt32Be(); // flags
+        br.ReadUInt32Be(); // compression
+        br.ReadUInt32Be(); // blocksize (unused in V2)
         chd.Totalblocks = br.ReadUInt32Be();
         var cylinders = br.ReadUInt32Be();
         var heads = br.ReadUInt32Be();
@@ -130,7 +130,7 @@ internal static class ChdHeaders
         chd = new ChdHeader();
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
-        var flags = br.ReadUInt32Be();
+        br.ReadUInt32Be(); // flags
 
         chd.Compression = [ChdCommon.CompTypeConv(br.ReadUInt32Be())];
         chd.Totalblocks = br.ReadUInt32Be(); // total number of CHD Blocks
@@ -175,7 +175,7 @@ internal static class ChdHeaders
         chd = new ChdHeader();
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
-        var flags = br.ReadUInt32Be();
+        br.ReadUInt32Be(); // flags
 
         chd.Compression = [ChdCommon.CompTypeConv(br.ReadUInt32Be())];
         chd.Totalblocks = br.ReadUInt32Be(); // total number of CHD Blocks
@@ -364,17 +364,17 @@ internal static class ChdHeaders
                 case CompressionType.Compressiontype1:
                 case CompressionType.Compressiontype2:
                 case CompressionType.Compressiontype3:
-                    curoffset += length = bitbuf.read(lengthbits);
-                    crc16 = (ushort)bitbuf.read(16);
+                    curoffset += length = bitbuf.Read(lengthbits);
+                    crc16 = (ushort)bitbuf.Read(16);
                     break;
 
                 case CompressionType.Compressionnone:
                     curoffset += length = blocksize;
-                    crc16 = (ushort)bitbuf.read(16);
+                    crc16 = (ushort)bitbuf.Read(16);
                     break;
 
                 case CompressionType.Compressionself:
-                    lastSelf = (uint)(offset = bitbuf.read(selfbits));
+                    lastSelf = (uint)(offset = bitbuf.Read(selfbits));
                     break;
 
                 /* pseudo-types; convert into base types */
@@ -389,11 +389,11 @@ internal static class ChdHeaders
 
                 case CompressionType.Compressionparentself:
                     map[blockIndex].Comptype = CompressionType.Compressionparent;
-                    lastParent = offset = (((ulong)blockIndex) * ((ulong)blocksize)) / unitbytes;
+                    lastParent = offset = (blockIndex * ((ulong)blocksize)) / unitbytes;
                     break;
 
                 case CompressionType.Compressionparent:
-                    offset = bitbuf.read(parentbits);
+                    offset = bitbuf.Read(parentbits);
                     lastParent = offset;
                     break;
 
@@ -420,10 +420,10 @@ internal static class ChdHeaders
             rawmap[rawmapIndex] = (byte)map[blockIndex].Comptype;
             rawmap.PutUInt24Be(rawmapIndex + 1, map[blockIndex].Length);
             rawmap.PutUInt48Be(rawmapIndex + 4, map[blockIndex].Offset);
-            rawmap.PutUInt16Be(rawmapIndex + 10, (uint)map[blockIndex].Crc16!.Value);
+            rawmap.PutUInt16Be(rawmapIndex + 10, map[blockIndex].Crc16!.Value);
         }
 
-        if (CRC16.calc(rawmap, (int)totalBlocks * 12) != mapcrc)
+        if (Crc16.Calc(rawmap, (int)totalBlocks * 12) != mapcrc)
             return ChdError.Chderrdecompressionerror;
 
         return ChdError.Chderrnone;

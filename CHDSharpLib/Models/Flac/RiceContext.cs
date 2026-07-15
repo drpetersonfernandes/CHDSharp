@@ -13,8 +13,8 @@ public class RiceContext
     /// </summary>
     public RiceContext()
     {
-        Rparams = new int[FlakeConstants.MAXPARTITIONS];
-        EscBps = new int[FlakeConstants.MAXPARTITIONS];
+        Rparams = new int[FlakeConstants.Maxpartitions];
+        EscBps = new int[FlakeConstants.Maxpartitions];
     }
 
     /// <summary>

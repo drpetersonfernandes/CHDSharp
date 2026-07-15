@@ -8,19 +8,19 @@ public class Lpc
     /// <summary>
     /// Maximum LPC order.
     /// </summary>
-    public const int MAXLPCORDER = 32;
+    public const int Maxlpcorder = 32;
     /// <summary>
     /// Maximum number of LPC windows.
     /// </summary>
-    public const int MAXLPCWINDOWS = 16;
+    public const int Maxlpcwindows = 16;
     /// <summary>
     /// Maximum number of LPC precisions.
     /// </summary>
-    public const int MAXLPCPRECISIONS = 4;
+    public const int Maxlpcprecisions = 4;
     /// <summary>
     /// Maximum number of LPC sections.
     /// </summary>
-    public const int MAXLPCSECTIONS = 128;
+    public const int Maxlpcsections = 128;
 
     /**
      * Calculates autocorrelation data from audio samples
@@ -36,7 +36,7 @@ public class Lpc
     /// <param name="lag">Maximum lag to compute.</param>
     /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
     public static unsafe void
-        computeAutocorr(/*const*/ int* data, float* window, int len, int min, int lag, double* autoc)
+        ComputeAutocorr( /*const*/ int* data, float* window, int len, int min, int lag, double* autoc)
     {
         var data1 = stackalloc double[len];
         int i;
@@ -60,7 +60,7 @@ public class Lpc
             }
             if (pdata <= finish)
             {
-                temp += pdata[i] * *pdata++;
+                temp += pdata[i] * *pdata;
             }
 
             autoc[i] += temp + temp2;
@@ -76,7 +76,7 @@ public class Lpc
     /// <param name="lag">Maximum lag to compute.</param>
     /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
     public static unsafe void
-        computeAutocorrWindowless(/*const*/ int* data, int len, int min, int lag, double* autoc)
+        ComputeAutocorrWindowless( /*const*/ int* data, int len, int min, int lag, double* autoc)
     {
         for (var i = min; i <= lag; ++i)
         {
@@ -107,7 +107,7 @@ public class Lpc
     /// <param name="lag">Maximum lag to compute.</param>
     /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
     public static unsafe void
-        computeAutocorrWindowlessLarge(/*const*/ int* data, int len, int min, int lag, double* autoc)
+        ComputeAutocorrWindowlessLarge( /*const*/ int* data, int len, int min, int lag, double* autoc)
     {
         for (var i = min; i <= lag; ++i)
         {
@@ -140,7 +140,7 @@ public class Lpc
     /// <param name="lag">Maximum lag to compute.</param>
     /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
     public static unsafe void
-        computeAutocorrGlue(/*const*/ int* data, float* window, int offs, int offs1, int min, int lag, double* autoc)
+        ComputeAutocorrGlue( /*const*/ int* data, float* window, int offs, int offs1, int min, int lag, double* autoc)
     {
         var data1 = stackalloc double[lag + lag];
         for (var i = -lag; i < lag; i++)
@@ -170,7 +170,7 @@ public class Lpc
     /// <param name="lag">Maximum lag to compute.</param>
     /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
     public static unsafe void
-        computeAutocorrGlue(/*const*/ int* data, int min, int lag, double* autoc)
+        ComputeAutocorrGlue( /*const*/ int* data, int min, int lag, double* autoc)
     {
         for (var i = min; i <= lag; ++i)
         {
@@ -196,40 +196,40 @@ public class Lpc
     /// <param name="maxOrder">Maximum LPC order.</param>
     /// <param name="reff">Pointer to reflection coefficients.</param>
     /// <param name="lpc">Destination buffer for LPC coefficients, stored as a flat array indexed by [order * MAX_LPC_ORDER + coefficient].</param>
-    /// <exception cref="Exception">Thrown if <paramref name="maxOrder"/> exceeds <see cref="MAXLPCORDER"/>.</exception>
+    /// <exception cref="Exception">Thrown if <paramref name="maxOrder"/> exceeds <see cref="Maxlpcorder"/>.</exception>
     public static unsafe void
-        computeLpcCoefs(uint maxOrder, double* reff, float* lpc/*[][MAX_LPC_ORDER]*/)
+        ComputeLpcCoefs(uint maxOrder, double* reff, float* lpc /*[][MAX_LPC_ORDER]*/)
     {
-        var lpc_tmp = stackalloc double[MAXLPCORDER];
+        var lpcTmp = stackalloc double[Maxlpcorder];
 
-        if (maxOrder > MAXLPCORDER)
+        if (maxOrder > Maxlpcorder)
             throw new InvalidOperationException("weird");
 
         for (var i = 0; i < maxOrder; i++)
         {
-            lpc_tmp[i] = 0;
+            lpcTmp[i] = 0;
         }
 
         for (var i = 0; i < maxOrder; i++)
         {
             var r = reff[i];
             var i2 = i >> 1;
-            lpc_tmp[i] = r;
+            lpcTmp[i] = r;
             for (var j = 0; j < i2; j++)
             {
-                var tmp = lpc_tmp[j];
-                lpc_tmp[j] += r * lpc_tmp[i - 1 - j];
-                lpc_tmp[i - 1 - j] += r * tmp;
+                var tmp = lpcTmp[j];
+                lpcTmp[j] += r * lpcTmp[i - 1 - j];
+                lpcTmp[i - 1 - j] += r * tmp;
             }
 
             if (0 != (i & 1))
             {
-                lpc_tmp[i2] += lpc_tmp[i2] * r;
+                lpcTmp[i2] += lpcTmp[i2] * r;
             }
 
             for (var j = 0; j <= i; j++)
             {
-                lpc[i * MAXLPCORDER + j] = (float)-lpc_tmp[j];
+                lpc[i * Maxlpcorder + j] = (float)-lpcTmp[j];
             }
         }
     }
@@ -242,11 +242,11 @@ public class Lpc
     /// <param name="reff">Destination buffer for reflection coefficients.</param>
     /// <param name="err">Destination buffer for prediction errors.</param>
     public static unsafe void
-        computeSchurReflection(/*const*/ double* autoc, uint maxOrder,
-            double* reff/*[][MAX_LPC_ORDER]*/, double* err)
+        ComputeSchurReflection( /*const*/ double* autoc, uint maxOrder,
+            double* reff /*[][MAX_LPC_ORDER]*/, double* err)
     {
-        var gen0 = stackalloc double[MAXLPCORDER];
-        var gen1 = stackalloc double[MAXLPCORDER];
+        var gen0 = stackalloc double[Maxlpcorder];
+        var gen1 = stackalloc double[Maxlpcorder];
 
         // Schur recursion
         for (uint i = 0; i < maxOrder; i++)
@@ -281,7 +281,7 @@ public class Lpc
     /// <param name="coefs">Pointer to quantized LPC coefficients.</param>
     /// <param name="shift">Right-shift amount applied to the prediction value.</param>
     public static unsafe void
-        decodeResidual(int* res, int* smp, int n, int order,
+        DecodeResidual(int* res, int* smp, int n, int order,
             int* coefs, int shift)
     {
         for (var i = 0; i < order; i++)
@@ -474,7 +474,7 @@ public class Lpc
     /// <param name="coefs">Pointer to quantized LPC coefficients.</param>
     /// <param name="shift">Right-shift amount applied to the prediction value.</param>
     public static unsafe void
-        decodeResidualLong(int* res, int* smp, int n, int order,
+        DecodeResidualLong(int* res, int* smp, int n, int order,
             int* coefs, int shift)
     {
         for (var i = 0; i < order; i++)

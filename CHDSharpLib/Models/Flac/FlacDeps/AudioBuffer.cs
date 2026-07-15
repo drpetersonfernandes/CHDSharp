@@ -160,8 +160,6 @@ public class AudioBuffer
             case 16:
                 FloatToBytes16(inSamples, inSampleOffset, outSamples, outByteOffset, sampleCount, channelCount);
                 break;
-            //else if (bitsPerSample > 16 && bitsPerSample <= 24)
-            //    FLACSamplesToBytes_24(inSamples, inSampleOffset, outSamples, outByteOffset, sampleCount, channelCount, 24 - bitsPerSample);
             case 32:
                 Buffer.BlockCopy(inSamples, inSampleOffset * 4 * channelCount, outSamples, outByteOffset, sampleCount * 4 * channelCount);
                 break;
@@ -416,8 +414,6 @@ public class AudioBuffer
                     case 16:
                         Bytes16ToFloat(_bytes, 0, _fsamples, 0, Length, Pcm.ChannelCount);
                         break;
-                    //else if (pcm.BitsPerSample > 16 && PCM.BitsPerSample <= 24)
-                    //    BytesToFLACSamples_24(bytes, 0, fsamples, 0, length, pcm.ChannelCount, 24 - pcm.BitsPerSample);
                     case 32:
                         Buffer.BlockCopy(_bytes, 0, _fsamples, 0, Length * 4 * Pcm.ChannelCount);
                         break;
@@ -500,7 +496,7 @@ public class AudioBuffer
     /// <param name="size">The buffer capacity in samples.</param>
     public AudioBuffer(IAudioSource source, int size)
     {
-        Pcm = source.PCM;
+        Pcm = source.Pcm;
         Size = size;
     }
 
@@ -522,7 +518,7 @@ public class AudioBuffer
     /// <exception cref="Exception">Thrown if the source PCM format does not match.</exception>
     public void Prepare(IAudioSource source, int maxLength)
     {
-        if (source.PCM.ChannelCount != Pcm.ChannelCount || source.PCM.BitsPerSample != Pcm.BitsPerSample)
+        if (source.Pcm.ChannelCount != Pcm.ChannelCount || source.Pcm.BitsPerSample != Pcm.BitsPerSample)
             throw new InvalidOperationException("AudioBuffer format mismatch");
 
         Length = Size;
@@ -727,9 +723,4 @@ public class AudioBuffer
                 throw new NotSupportedException("Unsupported BPS");
         }
     }
-
-    //public void Clear()
-    //{
-    //    length = 0;
-    //}
 }

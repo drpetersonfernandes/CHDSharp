@@ -10,8 +10,8 @@ internal static class Util
     {
         if (b == null) return true;
 
-        for (var i = 0; i < b.Length; i++)
-            if (b[i] != 0) return false;
+        foreach (var t in b)
+            if (t != 0) return false;
 
         return true;
     }

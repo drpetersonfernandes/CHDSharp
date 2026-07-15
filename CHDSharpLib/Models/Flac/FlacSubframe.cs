@@ -13,44 +13,44 @@ public unsafe class FlacSubframe
     /// </summary>
     public FlacSubframe()
     {
-        rc = new RiceContext();
-        coefs = new int[Lpc.MAXLPCORDER];
+        Rc = new RiceContext();
+        Coefs = new int[Lpc.Maxlpcorder];
     }
     /// <summary>
     /// The type of subframe encoding used.
     /// </summary>
-    public SubframeType type;
+    public SubframeType Type;
     /// <summary>
     /// The prediction order for fixed or LPC subframes.
     /// </summary>
-    public int order;
+    public int Order;
     /// <summary>
     /// Pointer to the residual (error) samples after prediction.
     /// </summary>
-    public int* residual;
+    public int* Residual;
     /// <summary>
     /// Rice coding context for decoding residual values.
     /// </summary>
-    public RiceContext rc;
+    public RiceContext Rc;
     /// <summary>
     /// Estimated size of this subframe in bits.
     /// </summary>
-    public uint size;
+    public uint Size;
 
     /// <summary>
     /// Number of bits per LPC coefficient.
     /// </summary>
-    public int cbits;
+    public int Cbits;
     /// <summary>
     /// Quantization shift for LPC coefficients.
     /// </summary>
-    public int shift;
+    public int Shift;
     /// <summary>
     /// LPC coefficients for LPC subframes.
     /// </summary>
-    public int[] coefs;
+    public int[] Coefs;
     /// <summary>
     /// Window index used during encoding.
     /// </summary>
-    public int window;
+    public int Window;
 }

@@ -8,31 +8,31 @@ public static class CdRom
     ***************************************************************************/
 
     /** @brief  offset within sector. */
-    private const int SYNC_OFFSET = 0x000;
+    private const int SyncOffset = 0x000;
 
     /** @brief  12 bytes. */
-    private const int SYNC_NUM_BYTES = 12;
+    private const int SyncNumBytes = 12;
 
     /** @brief  offset within sector. */
-    private const int MODE_OFFSET = 0x00f;
+    private const int ModeOffset = 0x00f;
 
     /** @brief  offset within sector. */
-    private const int ECC_P_OFFSET = 0x81c;
+    private const int EccPOffset = 0x81c;
 
     /** @brief  2 lots of 86. */
-    private const int ECC_P_NUM_BYTES = 86;
+    private const int EccPNumBytes = 86;
 
     /** @brief  24 bytes each. */
-    private const int ECC_P_COMP = 24;
+    private const int EccPComp = 24;
 
     /** @brief  The ECC q offset. */
-    private const int eccQOffset = (ECC_P_OFFSET + 2 * ECC_P_NUM_BYTES);
+    private const int EccQOffset = (EccPOffset + 2 * EccPNumBytes);
 
     /** @brief  2 lots of 52. */
-    private const int ECC_Q_NUM_BYTES = 52;
+    private const int EccQNumBytes = 52;
 
     /** @brief  43 bytes each. */
-    private const int ECC_Q_COMP = 43;
+    private const int EccQComp = 43;
 
     /**
      * @brief   -------------------------------------------------
@@ -87,7 +87,6 @@ public static class CdRom
      *          -------------------------------------------------.
      */
 
-    //    static readonly ushort[,] poffsets = new ushort[ECC_P_NUM_BYTE, ECC_P_COMP]
     private static readonly ushort[][] Poffsets = new ushort[][]
     {
         [0x000, 0x056, 0x0ac, 0x102, 0x158, 0x1ae, 0x204, 0x25a, 0x2b0, 0x306, 0x35c, 0x3b2, 0x408, 0x45e, 0x4b4, 0x50a, 0x560, 0x5b6, 0x60c, 0x662, 0x6b8, 0x70e, 0x764, 0x7ba],
@@ -185,7 +184,6 @@ public static class CdRom
      *          -------------------------------------------------.
      */
 
-    //  static readonly ushort[,] qoffsets = new ushort[ECC_Q_NUM_BYTES, ECC_Q_COMP]
     private static readonly ushort[][] Qoffsets = new ushort[][]
     {
         [0x000, 0x058, 0x0b0, 0x108, 0x160, 0x1b8, 0x210, 0x268, 0x2c0, 0x318, 0x370, 0x3c8, 0x420, 0x478, 0x4d0, 0x528, 0x580, 0x5d8, 0x630, 0x688, 0x6e0, 0x738, 0x790, 0x7e8, 0x840, 0x898, 0x034, 0x08c, 0x0e4, 0x13c, 0x194, 0x1ec, 0x244, 0x29c, 0x2f4, 0x34c, 0x3a4, 0x3fc, 0x454, 0x4ac, 0x504, 0x55c, 0x5b4],
@@ -252,7 +250,7 @@ public static class CdRom
     private static byte ecc_source_byte(byte[] data, int sectorOffset, int offset)
     {
         /* in mode 2 always treat these as 0 bytes */
-        return (data[sectorOffset + MODE_OFFSET] == 2 && offset < 4) ? (byte)0x00 : data[sectorOffset + SYNC_OFFSET + SYNC_NUM_BYTES + offset];
+        return (data[sectorOffset + ModeOffset] == 2 && offset < 4) ? (byte)0x00 : data[sectorOffset + SyncOffset + SyncNumBytes + offset];
     }
 
     /**
@@ -301,11 +299,11 @@ public static class CdRom
     public static void EccGenerate(byte[] data, int sectorOffset)
     {
         /* first verify P is */
-        for (var i = 0; i < ECC_P_NUM_BYTES; i++)
-            ecc_compute_bytes(data, sectorOffset, Poffsets[i], ECC_P_COMP, sectorOffset + ECC_P_OFFSET + i, sectorOffset + ECC_P_OFFSET + ECC_P_NUM_BYTES + i);
+        for (var i = 0; i < EccPNumBytes; i++)
+            ecc_compute_bytes(data, sectorOffset, Poffsets[i], EccPComp, sectorOffset + EccPOffset + i, sectorOffset + EccPOffset + EccPNumBytes + i);
 
         /* then verify Q is */
-        for (var i = 0; i < ECC_Q_NUM_BYTES; i++)
-            ecc_compute_bytes(data, sectorOffset, Qoffsets[i], ECC_Q_COMP, sectorOffset + eccQOffset + i, sectorOffset + eccQOffset + ECC_Q_NUM_BYTES + i);
+        for (var i = 0; i < EccQNumBytes; i++)
+            ecc_compute_bytes(data, sectorOffset, Qoffsets[i], EccQComp, sectorOffset + EccQOffset + i, sectorOffset + EccQOffset + EccQNumBytes + i);
     }
 }

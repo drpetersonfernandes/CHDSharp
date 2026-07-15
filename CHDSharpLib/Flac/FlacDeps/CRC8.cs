@@ -18,7 +18,7 @@ public class Crc8
             return;
 
         table = new ushort[256];
-        var bits = 8;
+        const int bits = 8;
         var poly = (ushort)(poly8 + (1U << bits));
         for (ushort i = 0; i < table.Length; i++)
         {

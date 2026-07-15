@@ -42,7 +42,10 @@ public class ChdTestRunner
                     _chdmanVersion = lines.FirstOrDefault()?.Trim();
                 }
             }
-            catch { }
+            catch
+            {
+                // ignored
+            }
         }
 
         for (var i = 0; i < files.Count; i++)
@@ -110,7 +113,7 @@ public class ChdTestRunner
         }
 
         // Test 2: Header vs chdman info
-        if (chdman != null && chdman.Available)
+        if (chdman is { Available: true })
         {
             Report(progress, entry.FileName, fileIndex + 1, totalFiles, "Header vs chdman",
                 "Comparing header fields with chdman info...");
@@ -128,36 +131,58 @@ public class ChdTestRunner
                         var allMatch = true;
 
                         if (chd.Version == (uint)info.Version)
+                        {
                             details.Add($"Version: V{chd.Version} ✓");
-                        else { details.Add($"Version: lib={chd.Version} chdman={info.Version} ✗"); allMatch = false; }
+                        }
+                        else { details.Add($"Version: lib={chd.Version} chdman={info.Version} ✗");
+                            allMatch = false; }
 
                         if (chd.HunkBytes == info.HunkBytes)
+                        {
                             details.Add($"HunkBytes: {chd.HunkBytes} ✓");
-                        else { details.Add($"HunkBytes: lib={chd.HunkBytes} chdman={info.HunkBytes} ✗"); allMatch = false; }
+                        }
+                        else { details.Add($"HunkBytes: lib={chd.HunkBytes} chdman={info.HunkBytes} ✗");
+                            allMatch = false; }
 
                         if (chd.TotalBytes == info.LogicalBytes)
+                        {
                             details.Add($"TotalBytes: {chd.TotalBytes} ✓");
-                        else { details.Add($"TotalBytes: lib={chd.TotalBytes} chdman={info.LogicalBytes} ✗"); allMatch = false; }
+                        }
+                        else { details.Add($"TotalBytes: lib={chd.TotalBytes} chdman={info.LogicalBytes} ✗");
+                            allMatch = false; }
 
                         if (chd.HunkCount == info.TotalHunks)
+                        {
                             details.Add($"Hunks: {chd.HunkCount} ✓");
-                        else { details.Add($"Hunks: lib={chd.HunkCount} chdman={info.TotalHunks} ✗"); allMatch = false; }
+                        }
+                        else { details.Add($"Hunks: lib={chd.HunkCount} chdman={info.TotalHunks} ✗");
+                            allMatch = false; }
 
                         var libSha1 = HashUtil.ToHex(chd.Sha1);
                         if (info.Sha1 != null && libSha1 == info.Sha1)
+                        {
                             details.Add($"SHA1: {libSha1} ✓");
+                        }
                         else if (info.Sha1 != null)
-                        { details.Add($"SHA1: lib={libSha1} chdman={info.Sha1} ✗"); allMatch = false; }
+                        { details.Add($"SHA1: lib={libSha1} chdman={info.Sha1} ✗");
+                            allMatch = false; }
                         else
+                        {
                             details.Add($"SHA1: {libSha1}");
+                        }
 
                         var libDataSha1 = HashUtil.ToHex(chd.RawSha1);
                         if (info.DataSha1 != null && libDataSha1 == info.DataSha1)
+                        {
                             details.Add($"DataSHA1: {libDataSha1} ✓");
+                        }
                         else if (info.DataSha1 != null)
-                        { details.Add($"DataSHA1: lib={libDataSha1} chdman={info.DataSha1} ✗"); allMatch = false; }
-                        else if (libDataSha1 != "(none)" && !HashUtil.IsAllZero(chd.RawSha1!))
+                        { details.Add($"DataSHA1: lib={libDataSha1} chdman={info.DataSha1} ✗");
+                            allMatch = false; }
+                        else if (libDataSha1 != "(none)" && !HashUtil.IsAllZero(chd.RawSha1))
+                        {
                             details.Add($"DataSHA1: {libDataSha1}");
+                        }
 
                         result.SubTests.Add(new SubTestResult
                         {
@@ -232,7 +257,7 @@ public class ChdTestRunner
         }
 
         // Test 4: chdman verify
-        if (chdman != null && chdman.Available)
+        if (chdman is { Available: true })
         {
             Report(progress, entry.FileName, fileIndex + 1, totalFiles, "chdman Verify",
                 "Running chdman verify...");
@@ -288,7 +313,7 @@ public class ChdTestRunner
                         TestName = "Full SHA1",
                         Status = match ? TestStatus.Passed : TestStatus.Failed,
                         Detail = match
-                            ? $"{hexExpected} ✓ ({(double)chd2.TotalBytes / (1024.0 * 1024):F1} MB)"
+                            ? $"{hexExpected} ✓ ({chd2.TotalBytes / (1024.0 * 1024):F1} MB)"
                             : $"Expected={hexExpected} Computed={computed} ✗",
                         ElapsedSeconds = t1Sw.Elapsed.TotalSeconds
                     });
@@ -308,7 +333,7 @@ public class ChdTestRunner
         }
 
         // Test 6: Random Access (only for small files / files with chdman)
-        if (chdman != null && chdman.Available && entry.IsSmall)
+        if (chdman is { Available: true } && entry.IsSmall)
         {
             RunRandomAccessTest(entry, chdman, progress, fileIndex, totalFiles, result);
         }
@@ -338,7 +363,7 @@ public class ChdTestRunner
         return result;
     }
 
-    private void RunRandomAccessTest(
+    private static void RunRandomAccessTest(
         ChdFileEntry entry,
         ChdmanWrapper chdman,
         IProgress<TestProgress>? progress,

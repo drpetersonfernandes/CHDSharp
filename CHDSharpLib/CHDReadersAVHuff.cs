@@ -249,9 +249,9 @@ internal static partial class ChdReaders
             if (hufferr != HuffmanError.HufferrNone)
                 return ChdError.Chderrinvaliddata;
 
-            bitbuf.flush();
+            bitbuf.Flush();
             hufferr = mAudioloDecoder.ImportTreeRle();
-            if (hufferr != HuffmanError.HufferrNone || bitbuf.flush() != treesize)
+            if (hufferr != HuffmanError.HufferrNone || bitbuf.Flush() != treesize)
                 return ChdError.Chderrinvaliddata;
 
             buffInOffset += treesize;
@@ -303,7 +303,7 @@ internal static partial class ChdReaders
                         curdest += 2;
                     }
 
-                    if (bitbuf.overflow())
+                    if (bitbuf.Overflow())
                         return ChdError.Chderrinvaliddata;
                 }
             }
@@ -340,7 +340,7 @@ internal static partial class ChdReaders
 
         // skip the first byte
         var bitbuf = new BitStream(buffIn, (int)buffInOffset, (int)buffInLength);
-        bitbuf.read(8);
+        bitbuf.Read(8);
 
         if (codec.BHuffmanY == null)
         {
@@ -357,26 +357,26 @@ internal static partial class ChdReaders
             codec.BHuffmanCr = new ushort[1 << 16];
         }
 
-        var mYcontext = new HuffmanDecoderRLE(256 + 16, 16, bitbuf, codec.BHuffmanY);
-        var mCbcontext = new HuffmanDecoderRLE(256 + 16, 16, bitbuf, codec.BHuffmanCb);
-        var mCrcontext = new HuffmanDecoderRLE(256 + 16, 16, bitbuf, codec.BHuffmanCr);
+        var mYcontext = new HuffmanDecoderRle(256 + 16, 16, bitbuf, codec.BHuffmanY);
+        var mCbcontext = new HuffmanDecoderRle(256 + 16, 16, bitbuf, codec.BHuffmanCb);
+        var mCrcontext = new HuffmanDecoderRle(256 + 16, 16, bitbuf, codec.BHuffmanCr);
 
         // import the tables
         var hufferr = mYcontext.ImportTreeRle();
         if (hufferr != HuffmanError.HufferrNone)
             return ChdError.Chderrinvaliddata;
 
-        bitbuf.flush();
+        bitbuf.Flush();
         hufferr = mCbcontext.ImportTreeRle();
         if (hufferr != HuffmanError.HufferrNone)
             return ChdError.Chderrinvaliddata;
 
-        bitbuf.flush();
+        bitbuf.Flush();
         hufferr = mCrcontext.ImportTreeRle();
         if (hufferr != HuffmanError.HufferrNone)
             return ChdError.Chderrinvaliddata;
 
-        bitbuf.flush();
+        bitbuf.Flush();
 
         // decode to the destination
         mYcontext.Reset();
@@ -395,13 +395,13 @@ internal static partial class ChdReaders
                 row += 4;
             }
 
-            mYcontext.FlushRLE();
-            mCbcontext.FlushRLE();
-            mCrcontext.FlushRLE();
+            mYcontext.FlushRle();
+            mCbcontext.FlushRle();
+            mCrcontext.FlushRle();
         }
 
         // check for errors if we overflowed or decoded too little data
-        if (bitbuf.overflow() || bitbuf.flush() != buffInLength)
+        if (bitbuf.Overflow() || bitbuf.Flush() != buffInLength)
             return ChdError.Chderrinvaliddata;
 
         return ChdError.Chderrnone;

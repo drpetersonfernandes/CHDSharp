@@ -42,9 +42,9 @@ public unsafe class BitReader
         v |= v >> 8;
         v |= v >> 16;
         if (v >> 32 == 0)
-            return MultiplyDeBruijnBitPosition[(uint)((uint)v * 0x07C4ACDDU) >> 27];
+            return MultiplyDeBruijnBitPosition[(uint)v * 0x07C4ACDDU >> 27];
 
-        return 32 + MultiplyDeBruijnBitPosition[(uint)((uint)(v >> 32) * 0x07C4ACDDU) >> 27];
+        return 32 + MultiplyDeBruijnBitPosition[(uint)(v >> 32) * 0x07C4ACDDU >> 27];
     }
 
     /// <summary>
@@ -59,7 +59,7 @@ public unsafe class BitReader
         v |= v >> 4;
         v |= v >> 8;
         v |= v >> 16;
-        return MultiplyDeBruijnBitPosition[(uint)(v * 0x07C4ACDDU) >> 27];
+        return MultiplyDeBruijnBitPosition[v * 0x07C4ACDDU >> 27];
     }
 
     /// <summary>
@@ -209,7 +209,7 @@ public unsafe class BitReader
     /// <returns>The decoded value.</returns>
     public uint ReadUint()
     {
-        return (uint)Readbits(sizeof(uint));
+        return Readbits(sizeof(uint));
     }
 
     /// <summary>

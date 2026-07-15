@@ -171,7 +171,11 @@ public class ChdmanWrapper : IDisposable
         }
         finally
         {
-            try { File.Delete(tempFile); } catch { }
+            try { File.Delete(tempFile); }
+            catch
+            {
+                // ignored
+            }
         }
     }
 
@@ -200,5 +204,8 @@ public class ChdmanWrapper : IDisposable
     }
 
     /// <summary>Releases all resources used by this wrapper.</summary>
-    public void Dispose() { }
+    public void Dispose()
+    {
+        GC.SuppressFinalize(this);
+    }
 }

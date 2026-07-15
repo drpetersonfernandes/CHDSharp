@@ -4,24 +4,24 @@
 internal class BitStream
 {
     /// <summary>Holds accumulated bits read from the byte buffer.</summary>
-    private uint buffer;
-    /// <summary>Number of valid bits currently held in <see cref="buffer"/>.</summary>
-    private int bits;
+    private uint _buffer;
+    /// <summary>Number of valid bits currently held in <see cref="_buffer"/>.</summary>
+    private int _bits;
     /// <summary>The underlying byte buffer being read.</summary>
-    private readonly byte[] readBuffer;
-    /// <summary>Current byte offset within <see cref="readBuffer"/>.</summary>
-    private int doffset;
+    private readonly byte[] _readBuffer;
+    /// <summary>Current byte offset within <see cref="_readBuffer"/>.</summary>
+    private int _doffset;
     /// <summary>Total length of the data in bytes.</summary>
-    private readonly int dlength;
+    private readonly int _dlength;
 
     /// <summary>The initial offset into the buffer for flushing calculations.</summary>
-    private readonly int initialOffset;
+    private readonly int _initialOffset;
 
     /// <summary>Checks whether the bit stream has overflown past its declared length.</summary>
     /// <returns><c>true</c> if the read position exceeds the data length; otherwise <c>false</c>.</returns>
-    public bool overflow()
+    public bool Overflow()
     {
-        return doffset - bits / 8 > dlength;
+        return _doffset - _bits / 8 > _dlength;
     }
 
     /*-------------------------------------------------
@@ -34,11 +34,11 @@ internal class BitStream
     /// <param name="length">The number of valid bytes.</param>
     public BitStream(byte[] src, int offset, int length)
     {
-        buffer = 0;
-        bits = 0;
-        readBuffer = src;
-        doffset = initialOffset = offset;
-        dlength = offset + length;
+        _buffer = 0;
+        _bits = 0;
+        _readBuffer = src;
+        _doffset = _initialOffset = offset;
+        _dlength = offset + length;
     }
 
     /*-----------------------------------------------------
@@ -49,28 +49,28 @@ internal class BitStream
     /// <summary>Peeks at the next <paramref name="numbits"/> bits from the stream without advancing the position. Fetches more data if needed.</summary>
     /// <param name="numbits">The number of bits to peek (0-24).</param>
     /// <returns>The requested number of bits as an unsigned integer.</returns>
-    public uint peek(int numbits)
+    public uint Peek(int numbits)
     {
         if (numbits == 0)
             return 0;
 
         /* fetch data if we need more */
-        if (numbits > bits)
+        if (numbits > _bits)
         {
-            while (bits <= 24)
+            while (_bits <= 24)
             {
-                if (doffset < dlength)
+                if (_doffset < _dlength)
                 {
-                    buffer |= (uint)readBuffer[doffset] << (24 - bits);
+                    _buffer |= (uint)_readBuffer[_doffset] << (24 - _bits);
                 }
 
-                doffset++;
-                bits += 8;
+                _doffset++;
+                _bits += 8;
             }
         }
 
         /* return the data */
-        return buffer >> (32 - numbits);
+        return _buffer >> (32 - numbits);
     }
 
     /*-----------------------------------------------------
@@ -80,10 +80,10 @@ internal class BitStream
     */
     /// <summary>Advances the input pointer by <paramref name="numbits"/> bits, discarding them.</summary>
     /// <param name="numbits">The number of bits to skip.</param>
-    public void remove(int numbits)
+    public void Remove(int numbits)
     {
-        buffer <<= numbits;
-        bits -= numbits;
+        _buffer <<= numbits;
+        _bits -= numbits;
     }
 
 
@@ -94,10 +94,10 @@ internal class BitStream
     /// <summary>Reads the next <paramref name="numbits"/> bits from the stream (peek + advance).</summary>
     /// <param name="numbits">The number of bits to read.</param>
     /// <returns>The requested number of bits.</returns>
-    public uint read(int numbits)
+    public uint Read(int numbits)
     {
-        var result = peek(numbits);
-        remove(numbits);
+        var result = Peek(numbits);
+        Remove(numbits);
         return result;
     }
 
@@ -108,16 +108,16 @@ internal class BitStream
 
     /// <summary>Flushes the bit stream to the nearest byte boundary and returns the number of bytes consumed.</summary>
     /// <returns>The number of bytes read from the source buffer.</returns>
-    public int flush()
+    public int Flush()
     {
-        while (bits >= 8)
+        while (_bits >= 8)
         {
-            doffset--;
-            bits -= 8;
+            _doffset--;
+            _bits -= 8;
         }
-        bits = 0;
-        buffer = 0;
-        return doffset - initialOffset;
+        _bits = 0;
+        _buffer = 0;
+        return _doffset - _initialOffset;
     }
 
 

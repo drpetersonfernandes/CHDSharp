@@ -34,7 +34,10 @@ public static class PdfExporter
 
                     var genText = $"Generated: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
                     if (chdmanVersion != null)
+                    {
                         genText += $"    chdman: {chdmanVersion}";
+                    }
+
                     header.Item().Text(genText).FontSize(8).FontColor(Colors.Grey.Medium);
 
                     header.Item().PaddingTop(5).Row(row =>
@@ -117,7 +120,12 @@ public static class PdfExporter
     private static string FormatSubTests(PerFileResult file)
     {
         var parts = file.SubTests.Select(t =>
-            $"{(t.Status == TestStatus.Passed ? "✓" : t.Status == TestStatus.Failed ? "✗" : "○")} {t.TestName}");
+            $"{(t.Status switch
+            {
+                TestStatus.Passed => "✓",
+                TestStatus.Failed => "✗",
+                _ => "○"
+            })} {t.TestName}");
         return string.Join("  ", parts);
     }
 }

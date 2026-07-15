@@ -5,7 +5,7 @@ using Serilog;
 namespace CHDSharpTester;
 
 /// <summary>The WPF application entry point. Configures Serilog logging on startup and flushes on exit.</summary>
-public partial class App : Application
+public partial class App
 {
     /// <summary>Configures Serilog file and debug logging when the application starts.</summary>
     /// <param name="e">The startup event arguments.</param>

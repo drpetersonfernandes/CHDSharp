@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -24,7 +25,7 @@ public class MainViewModel : INotifyPropertyChanged
         AddFilesCommand = new RelayCommand(_ => AddFiles());
         AddFolderCommand = new RelayCommand(_ => AddFolder());
         RemoveFileCommand = new RelayCommand(RemoveFile);
-        RunTestsCommand = new RelayCommand(_ => _ = RunTestsAsync(), _ => CanRunTests);
+        RunTestsCommand = new RelayCommand(_ => { _ = RunTestsAsync(); }, _ => CanRunTests);
         ExportPdfCommand = new RelayCommand(_ => ExportPdf(), _ => HasResults);
         CopyLogCommand = new RelayCommand(_ => CopyLog());
         CopyResultsCommand = new RelayCommand(_ => CopyResults(), _ => HasResults);
@@ -35,7 +36,10 @@ public class MainViewModel : INotifyPropertyChanged
     public string ChdmanPath
     {
         get => _chdmanPath;
-        set { _chdmanPath = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsChdmanValid)); OnPropertyChanged(nameof(CanRunTests)); }
+        set { _chdmanPath = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsChdmanValid));
+            OnPropertyChanged(nameof(CanRunTests)); }
     }
 
     /// <summary>Gets whether the configured chdman path points to an existing file.</summary>
@@ -49,7 +53,8 @@ public class MainViewModel : INotifyPropertyChanged
     public string FilesSummary
     {
         get => _filesSummary;
-        set { _filesSummary = value; OnPropertyChanged(); }
+        set { _filesSummary = value;
+            OnPropertyChanged(); }
     }
 
     /// <summary>Gets the command to browse for the chdman executable.</summary>
@@ -84,7 +89,11 @@ public class MainViewModel : INotifyPropertyChanged
     public bool IsRunning
     {
         get => _isRunning;
-        set { _isRunning = value; OnPropertyChanged(); OnPropertyChanged(nameof(CanRunTests)); OnPropertyChanged(nameof(ShowProgress)); OnPropertyChanged(nameof(ShowResults)); }
+        set { _isRunning = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CanRunTests));
+            OnPropertyChanged(nameof(ShowProgress));
+            OnPropertyChanged(nameof(ShowResults)); }
     }
 
     /// <summary>Gets whether the progress indicator should be visible.</summary>
@@ -99,7 +108,8 @@ public class MainViewModel : INotifyPropertyChanged
     public double ProgressValue
     {
         get => _progressValue;
-        set { _progressValue = value; OnPropertyChanged(); }
+        set { _progressValue = value;
+            OnPropertyChanged(); }
     }
 
     private string _progressText = "Ready.";
@@ -107,7 +117,8 @@ public class MainViewModel : INotifyPropertyChanged
     public string ProgressText
     {
         get => _progressText;
-        set { _progressText = value; OnPropertyChanged(); }
+        set { _progressText = value;
+            OnPropertyChanged(); }
     }
 
     private string _currentTest = string.Empty;
@@ -115,7 +126,8 @@ public class MainViewModel : INotifyPropertyChanged
     public string CurrentTest
     {
         get => _currentTest;
-        set { _currentTest = value; OnPropertyChanged(); }
+        set { _currentTest = value;
+            OnPropertyChanged(); }
     }
 
     private string _fileProgress = string.Empty;
@@ -123,7 +135,8 @@ public class MainViewModel : INotifyPropertyChanged
     public string FileProgress
     {
         get => _fileProgress;
-        set { _fileProgress = value; OnPropertyChanged(); }
+        set { _fileProgress = value;
+            OnPropertyChanged(); }
     }
 
     private string _logText = string.Empty;
@@ -131,7 +144,8 @@ public class MainViewModel : INotifyPropertyChanged
     public string LogText
     {
         get => _logText;
-        set { _logText = value; OnPropertyChanged(); }
+        set { _logText = value;
+            OnPropertyChanged(); }
     }
 
     /// <summary>Gets the collection of structured log entries for data-bound display.</summary>
@@ -157,7 +171,7 @@ public class MainViewModel : INotifyPropertyChanged
     }
 
     /// <summary>Gets whether a test session has been run and has results.</summary>
-    public bool HasResults => SessionResult != null && SessionResult.FileResults.Count > 0;
+    public bool HasResults => SessionResult is { FileResults.Count: > 0 };
 
     /// <summary>Gets the number of files that passed all tests in the last session.</summary>
     public int SummaryPassed => SessionResult?.PassedFiles ?? 0;
@@ -180,7 +194,8 @@ public class MainViewModel : INotifyPropertyChanged
     public string SummarySubText
     {
         get => _summarySubText;
-        set { _summarySubText = value; OnPropertyChanged(); }
+        set { _summarySubText = value;
+            OnPropertyChanged(); }
     }
 
     /// <summary>Gets an observable collection of per-file results from the last session.</summary>
@@ -378,21 +393,25 @@ public class MainViewModel : INotifyPropertyChanged
 
         var sb = new StringBuilder();
         sb.AppendLine("=== CHDSharp Tester Results ===");
-        sb.AppendLine($"Date: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-        sb.AppendLine($"Summary: {SessionResult.TotalFiles} files | " +
-                      $"{SessionResult.PassedSubTests} passed, {SessionResult.FailedSubTests} failed, " +
-                      $"{SessionResult.SkippedSubTests} skipped | {SessionResult.TotalElapsedSeconds:N1}s");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"Date: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+        sb.AppendLine(CultureInfo.InvariantCulture, $"Summary: {SessionResult.TotalFiles} files | " +
+                                                  $"{SessionResult.PassedSubTests} passed, {SessionResult.FailedSubTests} failed, " +
+                                                  $"{SessionResult.SkippedSubTests} skipped | {SessionResult.TotalElapsedSeconds:N1}s");
         sb.AppendLine();
 
         foreach (var file in SessionResult.FileResults)
         {
             var status = file.AllPassed ? "PASS" : file.Failed > 0 ? "FAIL" : "SKIP";
-            sb.AppendLine($"--- {file.FileName} ({file.FileSize}) [{status}] {file.ElapsedSeconds:N2}s ---");
+            sb.AppendLine(CultureInfo.InvariantCulture, $"--- {file.FileName} ({file.FileSize}) [{status}] {file.ElapsedSeconds:N2}s ---");
             foreach (var t in file.SubTests)
             {
-                var icon = t.Status == TestStatus.Passed ? "[PASS]" :
-                           t.Status == TestStatus.Failed ? "[FAIL]" : "[SKIP]";
-                sb.AppendLine($"  {icon} {t.TestName,-22} {t.ElapsedSeconds,6:N2}s  {t.Detail}");
+                var icon = t.Status switch
+                {
+                    TestStatus.Passed => "[PASS]",
+                    TestStatus.Failed => "[FAIL]",
+                    _ => "[SKIP]"
+                };
+                sb.AppendLine(CultureInfo.InvariantCulture, $"  {icon} {t.TestName,-22} {t.ElapsedSeconds,6:N2}s  {t.Detail}");
             }
             sb.AppendLine();
         }
@@ -402,7 +421,7 @@ public class MainViewModel : INotifyPropertyChanged
 
     private void AddLog(string message)
     {
-        var ts = DateTime.Now.ToString("HH:mm:ss");
+        var ts = DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
         LogEntries.Add(new LogEntry { Message = message, Timestamp = ts });
         LogText += $"[{ts}] {message}\n";
     }
@@ -446,11 +465,17 @@ public class RelayCommand : ICommand
     /// <summary>Determines whether the command can execute in its current state.</summary>
     /// <param name="parameter">Data used by the command, or null.</param>
     /// <returns><c>true</c> if the command can execute; otherwise <c>false</c>.</returns>
-    public bool CanExecute(object? parameter) => _canExecute?.Invoke(parameter) ?? true;
+    public bool CanExecute(object? parameter)
+    {
+        return _canExecute?.Invoke(parameter) ?? true;
+    }
 
     /// <summary>Invokes the command's execution logic.</summary>
     /// <param name="parameter">Data used by the command, or null.</param>
-    public void Execute(object? parameter) => _execute(parameter);
+    public void Execute(object? parameter)
+    {
+        _execute(parameter);
+    }
 
     /// <summary>Occurs when changes occur that affect whether the command can execute.</summary>
     public event EventHandler? CanExecuteChanged

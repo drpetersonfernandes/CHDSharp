@@ -112,14 +112,16 @@ public static class Chd
                     }
             }
         }
-        catch
+        catch (Exception headerEx)
         {
             valid = ChdError.Chderrinvaliddata;
+            BugReporter.TryReport(valid, filename, version, headerEx);
         }
 
         if (valid != ChdError.Chderrnone)
         {
             LogChildChdFound(Log, null);
+            BugReporter.TryReport(valid, filename, version, null);
             return valid;
         }
 
@@ -161,6 +163,7 @@ public static class Chd
             if (valid != ChdError.Chderrnone)
             {
                 LogDecompressFailed(Log, valid, null);
+                BugReporter.TryReport(valid, filename, version, null);
                 return valid;
             }
 
@@ -170,6 +173,7 @@ public static class Chd
         if (valid != ChdError.Chderrnone)
         {
             LogMetaDataFailed(Log, valid, null);
+            BugReporter.TryReport(valid, filename, version, null);
             return valid;
         }
 
@@ -236,7 +240,10 @@ public static class Chd
             sha1Check?.TransformFinalBlock(tmp, 0, 0);
 
             if (md5Check != null && sha1Check != null && md5Check.Hash != null && sha1Check.Hash != null && ((haveMd5 && !Util.ByteArrEquals(expectedMd5, md5Check.Hash)) || (haveSha1 && !Util.ByteArrEquals(expectedSha1, sha1Check.Hash))))
+            {
+                BugReporter.TryReport(ChdError.Chderrdecompressionerror, filename, chdVersion, null);
                 return ChdError.Chderrdecompressionerror;
+            }
 
             return ChdError.Chderrnone;
         }

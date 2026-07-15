@@ -298,7 +298,10 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 
         stream.Seek(0, SeekOrigin.Begin);
         if (!Chd.CheckHeader(stream, out _, out var version))
+        {
+            BugReporter.TryReport(ChdError.Chderrinvalidfile, null, null, null);
             return ChdError.Chderrinvalidfile;
+        }
 
         ChdError valid;
         ChdHeader chd;
@@ -311,11 +314,14 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                 case 3: valid = ChdHeaders.ReadHeaderV3(stream, out chd); break;
                 case 4: valid = ChdHeaders.ReadHeaderV4(stream, out chd); break;
                 case 5: valid = ChdHeaders.ReadHeaderV5(stream, out chd); break;
-                default: return ChdError.Chderrunsupportedversion;
+                default:
+                    BugReporter.TryReport(ChdError.Chderrunsupportedversion, null, version, null);
+                    return ChdError.Chderrunsupportedversion;
             }
         }
-        catch
+        catch (Exception headerEx)
         {
+            BugReporter.TryReport(ChdError.Chderrinvaliddata, null, version, headerEx);
             return ChdError.Chderrinvaliddata;
         }
 
@@ -414,10 +420,14 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                 loaded = true;
             }
 
-            return ChdBlockRead.ReadBlock(me, null!, _chd.ChdReader, _codec, buffer, (int)_chd.Blocksize);
+            var rbErr = ChdBlockRead.ReadBlock(me, null!, _chd.ChdReader, _codec, buffer, (int)_chd.Blocksize);
+            if (rbErr != ChdError.Chderrnone)
+                BugReporter.TryReport(rbErr, null, Version, null);
+            return rbErr;
         }
-        catch
+        catch (Exception hunkEx)
         {
+            BugReporter.TryReport(ChdError.Chderrdecompressionerror, null, Version, hunkEx);
             return ChdError.Chderrdecompressionerror;
         }
         finally

@@ -4,6 +4,12 @@
         <name>CHDSharpLib</name>
     </assembly>
     <members>
+        <member name="T:CHDSharp.BugReporter">
+            <summary>Manages automatic bug reporting. Reports decompression and codec errors to the bug report API (rate-limited, deduplicated). Set <see cref="P:CHDSharp.BugReporter.Enabled"/> to <c>false</c> to disable.</summary>
+        </member>
+        <member name="P:CHDSharp.BugReporter.Enabled">
+            <summary>Set to <c>false</c> to disable automatic bug reporting. Default is <c>true</c>.</summary>
+        </member>
         <member name="T:CHDSharp.Chd">
             <summary>Provides methods for validating, inspecting, and reading CHD files using parallel decompression.</summary>
         </member>

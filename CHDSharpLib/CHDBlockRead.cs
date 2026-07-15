@@ -302,13 +302,17 @@ internal static class ChdBlockRead
                 break;
             }
             default:
+                BugReporter.TryReport(ChdError.Chderrdecompressionerror, null, null, null);
                 return ChdError.Chderrdecompressionerror;
         }
 
         if (checkCrc)
         {
             if ((mapEntry.Crc != null && !Crc.VerifyDigest((uint)mapEntry.Crc, buffOut, 0, (uint)buffOutLength)) || (mapEntry.Crc16 != null && Crc16.Calc(buffOut, buffOutLength) != mapEntry.Crc16))
+            {
+                BugReporter.TryReport(ChdError.Chderrdecompressionerror, null, null, null);
                 return ChdError.Chderrdecompressionerror;
+            }
         }
 
         return ChdError.Chderrnone;

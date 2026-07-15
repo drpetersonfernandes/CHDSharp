@@ -12,6 +12,6 @@
              WindowStartupLocation="CenterScreen" x:ClassModifier="internal">
     <Grid>
         <ui:TitleBar Title="CHDSharp Tester" />
-        <views:MainPage Margin="0,40,0,0" />
+        <views:MainPage x:Name="MainPageView" Margin="0,40,0,0" />
     </Grid>
 </ui:FluentWindow>

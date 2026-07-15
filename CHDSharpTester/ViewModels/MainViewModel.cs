@@ -29,6 +29,8 @@ internal class MainViewModel : INotifyPropertyChanged
         ExportPdfCommand = new RelayCommand(_ => ExportPdf(), _ => HasResults);
         CopyLogCommand = new RelayCommand(_ => CopyLog());
         CopyResultsCommand = new RelayCommand(_ => CopyResults(), _ => HasResults);
+        AboutCommand = new RelayCommand(_ => ShowAbout());
+        ExitCommand = new RelayCommand(_ => ExitApp());
 
         AutoDetectChdman();
     }
@@ -91,6 +93,12 @@ internal class MainViewModel : INotifyPropertyChanged
 
     /// <summary>Gets the command to copy formatted results to the clipboard.</summary>
     public ICommand CopyResultsCommand { get; }
+
+    /// <summary>Gets the command to show the About dialog.</summary>
+    public ICommand AboutCommand { get; }
+
+    /// <summary>Gets the command to exit the application.</summary>
+    public ICommand ExitCommand { get; }
 
     /// <summary>Gets whether tests can be started (files are selected and no run is in progress).</summary>
     public bool CanRunTests => Files.Count > 0 && !IsRunning;
@@ -447,6 +455,20 @@ internal class MainViewModel : INotifyPropertyChanged
         var ts = DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
         LogEntries.Add(new LogEntry { Message = message, Timestamp = ts });
         LogText += $"[{ts}] {message}\n";
+    }
+
+    private static void ShowAbout()
+    {
+        var about = new Views.AboutWindow
+        {
+            Owner = Application.Current.MainWindow
+        };
+        about.ShowDialog();
+    }
+
+    private static void ExitApp()
+    {
+        Application.Current.MainWindow?.Close();
     }
 
     /// <summary>Occurs when a property value changes.</summary>

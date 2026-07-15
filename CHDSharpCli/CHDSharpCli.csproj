@@ -13,6 +13,7 @@
         <NeutralLanguage>en</NeutralLanguage>
         <RootNamespace>CHDSharp</RootNamespace>
         <AssemblyName>CHDSharpCli</AssemblyName>
+        <ApplicationIcon>Icon\chd.ico</ApplicationIcon>
     </PropertyGroup>
 
     <ItemGroup>

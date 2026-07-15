@@ -52,9 +52,40 @@
             <StackPanel Margin="20,10,20,20">
 
             <!-- HEADER -->
-            <TextBlock Text="CHDSharp Tester" FontSize="22" FontWeight="Bold"
-                       Margin="0,0,0,16"
-                       Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <Image Grid.Column="0" Source="pack://application:,,,/Images/logo.png"
+                       Width="140" Height="140" Margin="0,0,12,0" />
+                <TextBlock Grid.Column="1" Text="CHDSharp Tester" FontSize="22" FontWeight="Bold"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                <StackPanel Grid.Column="3" Orientation="Horizontal">
+                    <ui:Button Command="{Binding AboutCommand}"
+                               Appearance="Secondary" Margin="0,0,6,0"
+                               ToolTip="View application information">
+                        <StackPanel Orientation="Horizontal">
+                            <Image Source="pack://application:,,,/Images/about.png"
+                                   Width="17" Height="17" Margin="0,0,5,0" />
+                            <TextBlock Text="About" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ui:Button>
+                    <ui:Button Command="{Binding ExitCommand}"
+                               Appearance="Danger"
+                               ToolTip="Close the application">
+                        <StackPanel Orientation="Horizontal">
+                            <Image Source="pack://application:,,,/Images/exit.png"
+                                   Width="17" Height="17" Margin="0,0,5,0" />
+                            <TextBlock Text="Exit" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </ui:Button>
+                </StackPanel>
+            </Grid>
 
             <!-- ========================================================== -->
             <!-- SECTION 1: CONFIGURATION -->
@@ -174,7 +205,7 @@ Command="{Binding DataContext.RemoveFileCommand,
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
-                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             <ui:Button Grid.Row="0" Content="Copy Log" FontSize="10"
                                        Margin="0,0,0,4" Padding="6,2"
@@ -186,11 +217,10 @@ Command="{Binding DataContext.RemoveFileCommand,
                                  Background="Transparent"
                                  FontFamily="Consolas" FontSize="11"
                                  Foreground="{DynamicResource TextFillColorSecondaryBrush}"
-VerticalScrollBarVisibility="Visible"
-                                  HorizontalScrollBarVisibility="Auto"
-                                  TextWrapping="NoWrap"
-                                  MinHeight="100"
-                                  MaxHeight="160"
+                                 VerticalScrollBarVisibility="Visible"
+                                 HorizontalScrollBarVisibility="Auto"
+                                 TextWrapping="NoWrap"
+                                 Height="160"
                                  TextChanged="LogTextBox_OnTextChanged" />
                         </Grid>
                     </Border>

@@ -11,6 +11,7 @@
     <AssemblyVersion>1.0.0</AssemblyVersion>
     <FileVersion>1.0.0</FileVersion>
     <NeutralLanguage>en</NeutralLanguage>
+    <ApplicationIcon>Icon\chd.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,6 +30,12 @@
     <None Update="chdman.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Images\about.png" />
+    <Resource Include="Images\exit.png" />
+    <Resource Include="Images\logo.png" />
   </ItemGroup>
 
 </Project>

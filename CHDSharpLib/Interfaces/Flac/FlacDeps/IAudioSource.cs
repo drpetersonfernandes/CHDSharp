@@ -82,17 +82,6 @@ public interface IAudioTitle
 }
 
 /// <summary>
-/// Represents a collection of audio titles.
-/// </summary>
-public interface IAudioTitleSet
-{
-    /// <summary>
-    /// Gets the list of audio titles in this set.
-    /// </summary>
-    List<IAudioTitle> AudioTitles { get; }
-}
-
-/// <summary>
 /// Extension methods for <see cref="IAudioTitle"/>.
 /// </summary>
 public static class AudioTitleExtensions

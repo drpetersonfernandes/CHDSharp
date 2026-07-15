@@ -7,8 +7,6 @@ namespace CHDSharp.Interfaces.Flac.FlacDeps;
 /// </summary>
 public interface IAudioDest
 {
-    //IAudioEncoderSettings Settings { get; }
-
     /// <summary>
     /// Gets the file path of the output destination.
     /// </summary>

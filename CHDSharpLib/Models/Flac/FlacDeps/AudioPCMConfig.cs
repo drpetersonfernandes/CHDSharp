@@ -221,10 +221,8 @@ public class AudioPcmConfig
             case 4:
                 return SpeakerConfig.Ksaudiospeakerquad;
             case 5:
-                //return SpeakerConfig.KSAUDIO_SPEAKER_5POINT1 & ~SpeakerConfig.SPEAKER_LOW_FREQUENCY;
                 return SpeakerConfig.Ksaudiospeaker5Point1Surround & ~SpeakerConfig.Speakerlowfrequency;
             case 6:
-                //return SpeakerConfig.KSAUDIO_SPEAKER_5POINT1;
                 return SpeakerConfig.Ksaudiospeaker5Point1Surround;
             case 7:
                 return SpeakerConfig.Ksaudiospeaker5Point1Surround | SpeakerConfig.Speakerbackcenter;

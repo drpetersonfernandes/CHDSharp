@@ -1,4 +1,3 @@
-using CHDSharp.Interfaces.LZMA;
 using CHDSharp.LZMA.LZ;
 using CHDSharp.LZMA.RangeCoder;
 using CHDSharp.Models.LZMA;
@@ -244,7 +243,6 @@ internal class Decoder
         _mLiteralDecoder.Init();
         for (i = 0; i < Base.KNumLenToPosStates; i++)
             _mPosSlotDecoder[i].Init();
-        // m_PosSpecDecoder.Init();
         for (i = 0; i < Base.KNumFullDistances - Base.KEndPosModelIndex; i++)
             _mPosDecoders[i].Init();
 
@@ -257,34 +255,6 @@ internal class Decoder
         _rep1 = 0;
         _rep2 = 0;
         _rep3 = 0;
-    }
-
-    public void Code(Stream inStream, Stream outStream,
-        long inSize, long outSize, ICodeProgress progress)
-    {
-        if (_mOutWindow == null)
-            CreateDictionary();
-        if (_mOutWindow != null)
-        {
-            _mOutWindow.Init(outStream);
-            if (outSize > 0)
-                _mOutWindow.SetLimit(outSize);
-            else
-                _mOutWindow.SetLimit(long.MaxValue - _mOutWindow.Total);
-
-            var rangeDecoder = new RangeCoder.Decoder();
-            rangeDecoder.Init(inStream);
-
-            Code(_mDictionarySize, _mOutWindow, rangeDecoder);
-
-            _mOutWindow.ReleaseStream();
-            rangeDecoder.ReleaseStream();
-
-            if (!rangeDecoder.IsFinished || (inSize > 0 && rangeDecoder.Total != inSize) || _mOutWindow.HasPending)
-                throw new DataErrorException();
-        }
-
-        _mOutWindow = null;
     }
 
     internal bool Code(int dictionarySize, OutWindow outWindow, RangeCoder.Decoder rangeDecoder)
@@ -425,36 +395,4 @@ internal class Decoder
             }
         }
     }
-
-    public void Train(Stream stream)
-    {
-        if (_mOutWindow == null)
-            CreateDictionary();
-        _mOutWindow?.Train(stream);
-    }
-
-    /*
-    public override bool CanRead { get { return true; }}
-    public override bool CanWrite { get { return true; }}
-    public override bool CanSeek { get { return true; }}
-    public override long Length { get { return 0; }}
-    public override long Position
-    {
-        get { return 0; }
-        set { }
-    }
-    public override void Flush() { }
-    public override int Read(byte[] buffer, int offset, int count)
-    {
-        return 0;
-    }
-    public override void Write(byte[] buffer, int offset, int count)
-    {
-    }
-    public override long Seek(long offset, System.IO.SeekOrigin origin)
-    {
-        return 0;
-    }
-    public override void SetLength(long value) {}
-    */
 }

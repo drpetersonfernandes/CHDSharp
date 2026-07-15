@@ -501,16 +501,6 @@ public class AudioBuffer
     }
 
     /// <summary>
-    /// Prepares the buffer for writing to a destination (no-op, reserved for future format validation).
-    /// </summary>
-    /// <param name="dest">The output destination.</param>
-    public void Prepare(IAudioDest dest)
-    {
-        //if (dest.Settings.PCM.ChannelCount != pcm.ChannelCount || dest.Settings.PCM.BitsPerSample != pcm.BitsPerSample)
-        //    throw new InvalidOperationException("AudioBuffer format mismatch");
-    }
-
-    /// <summary>
     /// Prepares the buffer for reading from a source, validating format compatibility and clamping length.
     /// </summary>
     /// <param name="source">The audio source.</param>

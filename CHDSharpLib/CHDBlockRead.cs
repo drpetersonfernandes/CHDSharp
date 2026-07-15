@@ -1,12 +1,25 @@
 using CHDSharp.Models;
 using CHDSharp.Utils;
-using Serilog;
+using Microsoft.Extensions.Logging;
 
 namespace CHDSharp;
 
 /// <summary>Handles CHD block reading, deduplication of self-referencing blocks, and decompression caching.</summary>
 internal static class ChdBlockRead
 {
+    private static readonly ILogger Log = ChdLogger.GetLogger(nameof(ChdBlockRead));
+
+    private static readonly Action<ILogger, CompressionType, Exception?> LogUnexpectedCompType =
+        LoggerMessage.Define<CompressionType>(LogLevel.Error, new EventId(1), "Unexpected compression type {CompType}");
+
+    private static readonly Action<ILogger, int, int, uint, Exception?> LogBlockSummary =
+        LoggerMessage.Define<int, int, uint>(LogLevel.Debug, new EventId(2), "Total Blocks {TotalBlocks}, Repeat Blocks {RepeatBlocks}, Output Block Size {BlockSize}");
+
+    private static readonly Action<ILogger, int, string, int, int, int, Exception?> LogCompressionStats =
+        LoggerMessage.Define<int, string, int, int, int>(LogLevel.Debug, new EventId(3), "Compression {Index} : {Compression} : Block Count {Count}, Repeat Source Block Count {UniqueCount}, Repeat Total Block Count {SelfCount}");
+
+    private static readonly Action<ILogger, int, Exception?> LogRepeatedBlocksCount =
+        LoggerMessage.Define<int>(LogLevel.Debug, new EventId(4), "{Count} repeated used blocks");
     /// <summary>Scans the map for <see cref="CompressionType.Compressionself"/> entries and builds usage counts for referenced source blocks.</summary>
     /// <param name="chd">The parsed CHD header containing the block map.</param>
     internal static void FindRepeatedBlocks(ChdHeader chd)
@@ -35,7 +48,7 @@ internal static class ChdBlockRead
                 case CompressionType.Compressionnone:
                     break;
                 default:
-                    Log.Error("Unexpected compression type {CompType}", me.SelfMapEntry.Comptype);
+                    LogUnexpectedCompType(Log, me.SelfMapEntry.Comptype, null);
                     break;
             }
 
@@ -50,7 +63,7 @@ internal static class ChdBlockRead
             Interlocked.Increment(ref totalFound);
         });
 
-        Log.Debug("Total Blocks {TotalBlocks}, Repeat Blocks {RepeatBlocks}, Output Block Size {BlockSize}", chd.Map.Length, totalFound, chd.Blocksize);
+        LogBlockSummary(Log, chd.Map.Length, totalFound, chd.Blocksize, null);
         for (var i = 0; i < 5; i++)
         {
             if ((compressionCount[i] == 0) & (compressionSelfCount[i] == 0))
@@ -66,7 +79,7 @@ internal static class ChdBlockRead
                 comp = "NONE";
             }
 
-            Log.Debug("Compression {Index} : {Compression} : Block Count {Count}, Repeat Source Block Count {UniqueCount}, Repeat Total Block Count {SelfCount}", i, comp, compressionCount[i], compressionUniqueCount[i], compressionSelfCount[i]);
+            LogCompressionStats(Log, i, comp, compressionCount[i], compressionUniqueCount[i], compressionSelfCount[i], null);
         }
     }
 
@@ -85,7 +98,7 @@ internal static class ChdBlockRead
             }
         }
 
-        Log.Debug("{Count} repeated used blocks", mapentries.Count);
+        LogRepeatedBlocksCount(Log, mapentries.Count, null);
         if (mapentries.Count < blocksToKeep)
             return;
 

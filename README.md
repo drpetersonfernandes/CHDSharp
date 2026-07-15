@@ -25,10 +25,13 @@ It supports every CHD format version (V1 through V5), every compression codec (z
 - **Read any CHD** — V1, V2, V3, V4, V5 headers and all internal map formats
 - **All 10 codecs** — zlib, lzma, huffman, flac, zstd, AVHuff + CD variants (`cdzl`, `cdlz`, `cdfl`, `cdzs`)
 - **Random-access API** — `ReadHunk(hunknum)` and `Read(offset, length)` with zero-copy caching
+- **Async API** — `OpenAsync`, `ReadHunkAsync`, `ReadAsync`, `IAsyncDisposable`
+- **Metadata reading** — expose game name, disc labels, and other CHD header metadata
 - **Full verification** — deep decompress + per-hunk CRC + raw SHA1/MD5 + metadata SHA1
 - **Parent/child chaining** — differential CHDs referencing a parent, with wrong-parent detection
-- **Parallel decompression** — multi-threaded `CheckFile` with bounded memory via `SemaphoreSlim`
+- **Parallel decompression** — multi-threaded `CheckFile` with bounded memory via `SemaphoreSlim`, configurable thread count
 - **100% chdman match** — integration-tested against `chdman info`, `chdman verify`, and `chdman extractraw`
+- **Pluggable logging** — `Microsoft.Extensions.Logging` integration; silent by default, hook any provider
 - **CLI tool** — verify directories, file lists, random-access self-test, parent/child validation
 
 ---
@@ -86,20 +89,28 @@ CHDSharpCli --parent child.chd parent.chd
 using CHDSharp;
 using CHDSharp.Models;
 
-// Check if a stream is a valid CHD
-bool isChd = Chd.CheckHeader(stream, out uint length, out uint version);
+// Quick check: is this a valid CHD file?
+if (Chd.IsChdFile("game.chd", out uint version))
+    Console.WriteLine($"Detected V{version}");
 
-// Full verification (decompresses every hunk, validates CRC, SHA1, MD5)
+// Full verification — returns a result object
 using Stream s = File.OpenRead("game.chd");
-ChdError err = Chd.CheckFile(s, "game.chd", deepCheck: true,
-    out uint? version, out byte[] sha1, out byte[] md5);
-// err == ChdError.Chderrnone on success
+var result = Chd.CheckFile(s, "game.chd", deepCheck: true);
+if (result.IsSuccess)
+    Console.WriteLine($"V{result.Version} — SHA1: {result.Sha1Hex}");
+else
+    Console.WriteLine($"Error: {result.Error.GetMessage()}");
+
+// Verify child (differential) CHD
+var childResult = Chd.CheckFileWithParent("child.chd", "parent.chd");
 
 // Random access (open once, read hunks or byte ranges on demand)
-ChdError open = ChdFile.Open("game.chd", out ChdFile chd);
+var err = ChdFile.Open("game.chd", out var chd);
 using (chd)
 {
-    Console.WriteLine($"V{chd.Version}: {chd.TotalBytes} bytes, {chd.HunkCount} hunks");
+    // Inspect metadata (game name, disc label, etc.)
+    foreach (var meta in chd.Metadata)
+        Console.WriteLine(meta.ToString());
 
     // Read a single decompressed hunk
     byte[] hunk = new byte[chd.HunkBytes];
@@ -111,10 +122,26 @@ using (chd)
 }
 
 // Parent/child chain (differential CHDs)
-ChdError childOpen = ChdFile.Open("child.chd", "parent.chd", out ChdFile child);
+ChdFile.Open("child.chd", "parent.chd", out var child);
 using (child)
 {
     child.ReadHunk(0, hunk);  // transparently resolves parent hunks
+}
+
+// Async random access
+var (asyncErr, asyncChd) = await ChdFile.OpenAsync("game.chd");
+await using (asyncChd)
+{
+    await asyncChd.ReadHunkAsync(0, hunk);
+}
+
+// Decompress the full image at once
+chd.ReadAllBytes(out byte[] image);
+
+// Iterate hunks one at a time
+foreach (var h in chd.EnumerateHunks())
+{
+    // process each hunk; buffer is reused — copy if needed
 }
 ```
 
@@ -126,9 +153,30 @@ using (child)
 
 | Method | Description |
 |--------|-------------|
+| `IsChdFile(string path)` | Quick check: does this file path point to a valid CHD? |
+| `IsChdFile(string path, out uint version)` | Same, also returns the version. |
 | `CheckHeader(Stream, out uint length, out uint version)` | Sniff the CHD magic `MComprHD` and return header length + version. |
-| `CheckFile(Stream, string name, bool deep, out uint? ver, out byte[] sha1, out byte[] md5)` | Full deep verification of a standalone CHD. `deep=true` decompresses every hunk. |
-| `CheckFileWithParent(string child, string parent, out uint? ver, out byte[] sha1, out byte[] md5)` | Full verification of a child CHD with its parent. |
+| `CheckFile(Stream, string name, bool deep)` | Full deep verification. Returns `ChdResult`. `deep=true` decompresses every hunk. |
+| `CheckFileWithParent(string child, string parent)` | Full verification of a child CHD with its parent. Returns `ChdResult`. Pass `parent=null` for standalone. |
+
+| Field / Property | Type | Description |
+|------------------|------|-------------|
+| `LoggerFactory` | `ILoggerFactory?` (static) | Set to enable internal logging via any MEL-compatible provider. |
+| `TaskCount` | `int` (static) | Number of parallel workers for `CheckFile`. Default 8. Change before calling. |
+
+### `ChdResult` — Verification result
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Error` | `ChdError` | Error code (Chderrnone on success). |
+| `Version` | `uint?` | CHD version (1–5). |
+| `Sha1` | `byte[]?` | SHA1 hash from header. |
+| `Md5` | `byte[]?` | MD5 hash from header. |
+| `IsSuccess` | `bool` | `true` if Error == Chderrnone. |
+| `Sha1Hex` | `string` | SHA1 as lowercase hex, or "(none)". |
+| `Md5Hex` | `string` | MD5 as lowercase hex, or "(none)". |
+
+Supports deconstruction: `var (err, ver, sha1, md5) = result;`
 
 ### `ChdFile` — Random-access reader
 
@@ -138,8 +186,14 @@ using (child)
 | `Open(string path, string parentPath, out ChdFile chd)` | Open child CHD with parent (parent owned by the child). |
 | `Open(string path, ChdFile parent, out ChdFile chd)` | Open child CHD with an external parent. |
 | `Open(Stream, bool leaveOpen, out ChdFile chd)` | Open from a seekable stream. |
+| `OpenAsync(...)` | Async overloads for all `Open` variants. |
 | `ReadHunk(uint hunknum, byte[] buffer)` | Decompress a single hunk into a pre-allocated buffer. |
 | `Read(ulong offset, byte[] dest, int destOff, int count)` | Read arbitrary byte range. Crosses hunk boundaries. |
+| `ReadHunkAsync(uint, byte[])` | Async hunk read. |
+| `ReadAsync(ulong, byte[], int, int)` | Async byte range read. |
+| `ReadAllBytes(out byte[])` | Decompress the entire image into a single `byte[]`. |
+| `EnumerateHunks()` | Yield each decompressed hunk. Buffer reused — copy if needed. |
+| `Dispose()` / `DisposeAsync()` | Release the underlying stream and any internally-owned parent. |
 
 | Property | Type | Description |
 |----------|------|-------------|
@@ -151,6 +205,18 @@ using (child)
 | `RawSha1` | `byte[]` | Raw image data SHA1 only. |
 | `Md5` | `byte[]` | Raw image MD5 (V1–V3 only). |
 | `RequiresParent` | `bool` | True if this is a differential CHD needing a parent. |
+| `IsChild` | `bool` | Alias for `RequiresParent`. |
+| `Metadata` | `IReadOnlyList<ChdMetadataEntry>` | CHD metadata entries (game name, disc type, etc.). Lazy-loaded. |
+
+### `ChdMetadataEntry` — Metadata record
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Tag` | `string` | 4-char tag (e.g. "GAME", "DISC", "HARD"). |
+| `Data` | `byte[]` | Raw metadata bytes. |
+| `IsText` | `bool` | True if data is printable ASCII. |
+| `GetText()` | `string` | ASCII text representation. |
+| `ToString()` | `string` | Human-readable: `GAME: gauntlet`. |
 
 ### `ChdError` — Error codes
 
@@ -165,6 +231,27 @@ using (child)
 | `Chderrdecompressionerror` | CRC mismatch or codec failure |
 | `Chderrunsupportedversion` | Unsupported CHD version |
 | ... | (21 additional error codes) |
+
+Use `ChdErrorExtensions.GetMessage()` (e.g. `err.GetMessage()`) for human-readable descriptions.
+
+---
+
+## Logging
+
+By default, the library is silent. To enable logging, set `Chd.LoggerFactory` before any other call:
+
+```csharp
+using Serilog;
+using Serilog.Extensions.Logging;
+
+Chd.LoggerFactory = new SerilogLoggerFactory(
+    new LoggerConfiguration()
+        .MinimumLevel.Debug()
+        .WriteTo.Console()
+        .CreateLogger());
+```
+
+Any `ILoggerFactory`-compatible provider works (NLog, `Microsoft.Extensions.Logging.Console`, etc.).
 
 ---
 
@@ -207,8 +294,8 @@ Producer (1 thread)          Decompressors (taskCount threads)       Hasher (1 t
 │ Read blocks  │──→ BQ ──→ │ Decompress + CRC validate    │──→ BQ ──→│ Reorder + MD5/   │
 │ from file    │            │ (per-codec delegates)        │        │ SHA1 hash        │
 └──────────────┘            └─────────────────────────────┘        └──────────────────┘
-                                    │                                        │
-                                    └── SemaphoreSlim ──→ memory throttle ───┘
+                                     │                                        │
+                                     └── SemaphoreSlim ──→ memory throttle ───┘
 ```
 
 - **BQ** = `BlockingCollection<int>` (bounded, backpressure)
@@ -253,7 +340,7 @@ dotnet pack -c Release CHDSharpLib/
 | Package | Version | Purpose |
 |---------|---------|---------|
 | [ZstdSharp.Port](https://www.nuget.org/packages/ZstdSharp.Port/) | 0.8.8 | Zstd decompression (V5 zstd/cdzs codecs) |
-| [Serilog](https://www.nuget.org/packages/Serilog/) | 4.4.0 | Structured logging |
+| [Microsoft.Extensions.Logging.Abstractions](https://www.nuget.org/packages/Microsoft.Extensions.Logging.Abstractions/) | 8.0.0 | Pluggable logging (optional) |
 
 All other codecs (zlib, lzma, huffman, flac, AVHuff) are implemented from scratch in C# with zero native dependencies.
 
@@ -304,11 +391,14 @@ dotnet test
 | AVHuff | ❌ | ✅ |
 | Parent/child chains | ✅ | ✅ |
 | Random access | ✅ | ✅ |
+| Async API | ❌ | ✅ |
+| Metadata reading | ❌ | ✅ |
 | Parallel verification | ❌ | ✅ |
+| Pluggable logging | ❌ | ✅ |
 | Native dependencies | zlib, lzma, flac | **none** (pure C# + ZstdSharp) |
 | CHD creation | ❌ | ❌ |
 
-CHDSharp exceeds libchdr 0.3.0's read capabilities by adding **Zstd** and **AVHuff** codec support.
+CHDSharp exceeds libchdr 0.3.0's read capabilities by adding **Zstd** and **AVHuff** codec support, plus async APIs, metadata access, and parallel verification.
 
 ---
 

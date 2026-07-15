@@ -3,28 +3,77 @@ using System.Security.Cryptography;
 using System.Text;
 using CHDSharp.Models;
 using CHDSharp.Utils;
-using Serilog;
+using Microsoft.Extensions.Logging;
 
 namespace CHDSharp;
 
-/// <summary>Provides methods for validating and inspecting CHD files using parallel decompression.</summary>
+/// <summary>Provides methods for validating, inspecting, and reading CHD files using parallel decompression.</summary>
 public static class Chd
 {
-    /// <summary>Number of parallel decompression tasks used during verification.</summary>
-    public const int TaskCount = 8;
+    private static readonly ILogger Log = ChdLogger.GetLogger(nameof(Chd));
+
+    private static readonly Action<ILogger, uint, Exception?> LogChdVersion =
+        LoggerMessage.Define<uint>(LogLevel.Information, new EventId(1), "CHD Version {Version}");
+
+    private static readonly Action<ILogger, uint, Exception?> LogUnknownVersion =
+        LoggerMessage.Define<uint>(LogLevel.Warning, new EventId(2), "Unknown version {Version}");
+
+    private static readonly Action<ILogger, Exception?> LogChildChdFound =
+        LoggerMessage.Define(LogLevel.Warning, new EventId(3), "Child CHD found, cannot be processed");
+
+    private static readonly Action<ILogger, ulong, ulong, Exception?> LogBlockSizeMismatch =
+        LoggerMessage.Define<ulong, ulong>(LogLevel.Debug, new EventId(4), "{BlocksXSize} != {TotalBytes}");
+
+    private static readonly Action<ILogger, string, uint, string, Exception?> LogFileInfo =
+        LoggerMessage.Define<string, uint, string>(LogLevel.Information, new EventId(5), "{Filename}, V:{Version} {Compression}");
+
+    private static readonly Action<ILogger, ChdError, Exception?> LogDecompressFailed =
+        LoggerMessage.Define<ChdError>(LogLevel.Error, new EventId(6), "Data Decompress Failed: {Error}");
+
+    private static readonly Action<ILogger, ChdError, Exception?> LogMetaDataFailed =
+        LoggerMessage.Define<ChdError>(LogLevel.Error, new EventId(7), "Meta Data Failed: {Error}");
+
+    private static readonly Action<ILogger, Exception?> LogValid =
+        LoggerMessage.Define(LogLevel.Information, new EventId(8), "Valid");
+
+    private static readonly Action<ILogger, long, Exception?> LogVerifyingPercent =
+        LoggerMessage.Define<long>(LogLevel.Debug, new EventId(9), "Verifying: {Percent:N0}%");
+
+    private static readonly Action<ILogger, Exception?> LogVerifyingComplete =
+        LoggerMessage.Define(LogLevel.Debug, new EventId(10), "Verifying, 100% complete");
+
+    private static readonly Action<ILogger, string, int, int, uint, Exception?> LogArrayStats =
+        LoggerMessage.Define<string, int, int, uint>(LogLevel.Debug, new EventId(11), "{Where}: Issued Arrays Total {Issued}, returned Arrays Total {Returned}, block size {BlockSize}");
+
+    /// <summary>
+    /// Gets or sets the <see cref="ILoggerFactory"/> used for internal logging. Set before
+    /// using any other API. If not set, logging is silently discarded.
+    /// </summary>
+    public static ILoggerFactory? LoggerFactory
+    {
+        get => ChdLogger.Factory;
+        set => ChdLogger.Factory = value;
+    }
+
+    /// <summary>Number of parallel decompression tasks used during verification. Can be changed at runtime.</summary>
+    public static int TaskCount = 8;
 
     /// <summary>
     /// Validates a CHD file from a <see cref="Stream"/> using parallel decompression and hash verification.
-    /// Returns the CHD version, SHA1, and MD5 hashes.
+    /// Returns a <see cref="ChdResult"/> with version, SHA1, and MD5 hashes.
     /// </summary>
     /// <param name="s">The stream to read the CHD from.</param>
     /// <param name="filename">The filename associated with the stream, used for logging.</param>
     /// <param name="deepCheck">If <c>true</c>, performs full decompression and hash verification; otherwise only validates the header.</param>
-    /// <param name="chdVersion">When this method returns, contains the CHD version number, or <c>null</c> if invalid.</param>
-    /// <param name="chdSha1">When this method returns, contains the SHA1 hash from the header, or <c>null</c> if invalid.</param>
-    /// <param name="chdMd5">When this method returns, contains the MD5 hash from the header, or <c>null</c> if invalid.</param>
-    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
-    /// <remarks>This method does not handle differential (parent/child) CHDs. Use <see cref="CheckFileWithParent"/> for those.</remarks>
+    /// <returns>A <see cref="ChdResult"/> with the verification result and hashes.</returns>
+    /// <remarks>This method does not handle differential (parent/child) CHDs. Use <see cref="CheckFileWithParent(string,string)"/> for those.</remarks>
+    public static ChdResult CheckFile(Stream s, string filename, bool deepCheck)
+    {
+        var err = CheckFile(s, filename, deepCheck, out var ver, out var sha1, out var md5);
+        return new ChdResult(err, ver, sha1, md5);
+    }
+
+    /// <inheritdoc cref="CheckFile(Stream,string,bool)"/>
     public static ChdError CheckFile(Stream s, string filename, bool deepCheck, out uint? chdVersion, out byte[]? chdSha1, out byte[]? chdMd5)
     {
         chdSha1 = null;
@@ -34,7 +83,7 @@ public static class Chd
         if (!CheckHeader(s, out _, out var version))
             return ChdError.Chderrinvalidfile;
 
-        Log.Information("CHD Version {Version}", version);
+        LogChdVersion(Log, version, null);
         ChdError valid;
         ChdHeader? chd = null;
         try
@@ -58,7 +107,7 @@ public static class Chd
                     break;
                 default:
                     {
-                        Log.Warning("Unknown version {Version}", version);
+                        LogUnknownVersion(Log, version, null);
                         return ChdError.Chderrunsupportedversion;
                     }
             }
@@ -70,7 +119,7 @@ public static class Chd
 
         if (valid != ChdError.Chderrnone)
         {
-            Log.Warning("Child CHD found, cannot be processed");
+            LogChildChdFound(Log, null);
             return valid;
         }
 
@@ -82,7 +131,7 @@ public static class Chd
 
             if (!Util.IsAllZeroArray(chd.Parentmd5) || !Util.IsAllZeroArray(chd.Parentsha1))
             {
-                Log.Warning("Child CHD found, cannot be processed");
+                LogChildChdFound(Log, null);
                 return ChdError.Chderrrequiresparent;
             }
 
@@ -91,7 +140,7 @@ public static class Chd
 
             if ((chd.Totalblocks * (ulong)chd.Blocksize) != chd.Totalbytes)
             {
-                Log.Debug("{BlocksXSize} != {TotalBytes}", chd.Totalblocks * (ulong)chd.Blocksize, chd.Totalbytes);
+                LogBlockSizeMismatch(Log, chd.Totalblocks * (ulong)chd.Blocksize, chd.Totalbytes, null);
             }
 
             var strComp = "";
@@ -100,7 +149,7 @@ public static class Chd
                 strComp += $", {t}";
             }
 
-            Log.Information("{Filename}, V:{Version} {Compression}", Path.GetFileName(filename), version, strComp);
+            LogFileInfo(Log, Path.GetFileName(filename), version, strComp, null);
 
             ChdBlockRead.FindBlockReaders(chd);
             ChdBlockRead.FindRepeatedBlocks(chd);
@@ -111,7 +160,7 @@ public static class Chd
 
             if (valid != ChdError.Chderrnone)
             {
-                Log.Error("Data Decompress Failed: {Error}", valid);
+                LogDecompressFailed(Log, valid, null);
                 return valid;
             }
 
@@ -120,23 +169,27 @@ public static class Chd
 
         if (valid != ChdError.Chderrnone)
         {
-            Log.Error("Meta Data Failed: {Error}", valid);
+            LogMetaDataFailed(Log, valid, null);
             return valid;
         }
 
 
-        Log.Information("Valid");
+        LogValid(Log, null);
         return ChdError.Chderrnone;
     }
 
     /// <summary>
     /// Fully verifies a (possibly child/differential) CHD, resolving parent
     /// references against the CHD at <paramref name="parentFilename"/> (pass null
-    /// for a standalone CHD). Reads the whole image via the random-access
-    /// <see cref="ChdFile"/> API, validates the raw-data hash (SHA1/MD5) and, for
-    /// V4/V5, the metadata SHA1. This is a sequential (single-threaded) verify -
-    /// use <see cref="CheckFile"/> for the fast parallel path on standalone CHDs.
+    /// for a standalone CHD). Returns a <see cref="ChdResult"/>.
     /// </summary>
+    public static ChdResult CheckFileWithParent(string filename, string parentFilename)
+    {
+        var err = CheckFileWithParent(filename, parentFilename, out var ver, out var sha1, out var md5);
+        return new ChdResult(err, ver, sha1, md5);
+    }
+
+    /// <inheritdoc cref="CheckFileWithParent(string,string)"/>
     public static ChdError CheckFileWithParent(string filename, string parentFilename,
         out uint? chdVersion, out byte[]? chdSha1, out byte[]? chdMd5)
     {
@@ -156,8 +209,8 @@ public static class Chd
 
             var expectedSha1 = chd.RawSha1;
             var expectedMd5 = chd.Md5;
-            var haveSha1 = expectedSha1 != null && !Util.IsAllZeroArray(expectedSha1);
-            var haveMd5 = expectedMd5 != null && !Util.IsAllZeroArray(expectedMd5);
+            var haveSha1 = !Util.IsAllZeroArray(expectedSha1);
+            var haveMd5 = !Util.IsAllZeroArray(expectedMd5);
 
             using var md5Check = haveMd5 ? MD5.Create() : null;
             using var sha1Check = haveSha1 ? SHA1.Create() : null;
@@ -182,11 +235,40 @@ public static class Chd
             md5Check?.TransformFinalBlock(tmp, 0, 0);
             sha1Check?.TransformFinalBlock(tmp, 0, 0);
 
-            if (expectedMd5 != null && md5Check != null && sha1Check != null && md5Check.Hash != null && sha1Check.Hash != null && expectedSha1 != null && ((haveMd5 && !Util.ByteArrEquals(expectedMd5, md5Check.Hash)) || (haveSha1 && !Util.ByteArrEquals(expectedSha1, sha1Check.Hash))))
+            if (md5Check != null && sha1Check != null && md5Check.Hash != null && sha1Check.Hash != null && ((haveMd5 && !Util.ByteArrEquals(expectedMd5, md5Check.Hash)) || (haveSha1 && !Util.ByteArrEquals(expectedSha1, sha1Check.Hash))))
                 return ChdError.Chderrdecompressionerror;
 
             return ChdError.Chderrnone;
         }
+    }
+
+    /// <summary>
+    /// Quickly checks whether a file at the given path has a valid CHD header.
+    /// </summary>
+    /// <param name="path">Filesystem path to a potential CHD file.</param>
+    /// <param name="version">When this method returns, contains the CHD version number (1-5) if valid.</param>
+    /// <returns><c>true</c> if the file exists and has a valid CHD header.</returns>
+    public static bool IsChdFile(string path, out uint version)
+    {
+        version = 0;
+        if (!File.Exists(path))
+            return false;
+
+        try
+        {
+            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            return CheckHeader(fs, out _, out version);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <inheritdoc cref="IsChdFile(string,out uint)"/>
+    public static bool IsChdFile(string path)
+    {
+        return IsChdFile(path, out _);
     }
 
     private static readonly uint[] HeaderLengths = [0, 76, 80, 120, 108, 124];
@@ -226,8 +308,8 @@ public static class Chd
     {
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
-        var md5Check = chd.Md5 != null ? MD5.Create() : null;
-        var sha1Check = chd.Rawsha1 != null ? SHA1.Create() : null;
+        var md5Check = MD5.Create();
+        var sha1Check = SHA1.Create();
         var blocksToDecompress = new BlockingCollection<int>(TaskCount * 100);
         var blocksToHash = new BlockingCollection<int>(TaskCount * 100);
         try
@@ -264,7 +346,7 @@ public static class Chd
                         /* progress */
                         if ((block % blockPercent) == 0)
                         {
-                            Log.Debug("Verifying: {Percent:N0}%", (long)block * 100 / chd.Totalblocks);
+                            LogVerifyingPercent(Log, (long)block * 100 / chd.Totalblocks, null);
                         }
 
                         var mapEntry = chd.Map[block];
@@ -401,14 +483,14 @@ public static class Chd
             Task.WaitAll(allTasks.ToArray());
 
 
-            Log.Debug("Verifying, 100% complete");
+            LogVerifyingComplete(Log, null);
 
             arrPoolIn.ReadStats(out var issuedArraysTotal, out var returnedArraysTotal);
-            Log.Debug("In: Issued Arrays Total {Issued}, returned Arrays Total {Returned}, block size {BlockSize}", issuedArraysTotal, returnedArraysTotal, chd.Blocksize);
+            LogArrayStats(Log, "In", issuedArraysTotal, returnedArraysTotal, chd.Blocksize, null);
             arrPoolOut.ReadStats(out issuedArraysTotal, out returnedArraysTotal);
-            Log.Debug("Out: Issued Arrays Total {Issued}, returned Arrays Total {Returned}, block size {BlockSize}", issuedArraysTotal, returnedArraysTotal, chd.Blocksize);
+            LogArrayStats(Log, "Out", issuedArraysTotal, returnedArraysTotal, chd.Blocksize, null);
             arrPoolCache.ReadStats(out issuedArraysTotal, out returnedArraysTotal);
-            Log.Debug("Cache: Issued Arrays Total {Issued}, returned Arrays Total {Returned}, block size {BlockSize}", issuedArraysTotal, returnedArraysTotal, chd.Blocksize);
+            LogArrayStats(Log, "Cache", issuedArraysTotal, returnedArraysTotal, chd.Blocksize, null);
 
             if (errMaster != ChdError.Chderrnone)
                 return errMaster;
@@ -418,12 +500,12 @@ public static class Chd
             sha1Check?.TransformFinalBlock(tmp, 0, 0);
 
             // here it is now using the rawsha1 value from the header to validate the raw binary data.
-            if (chd.Md5 != null && !Util.IsAllZeroArray(chd.Md5) && md5Check is { Hash: not null } && !Util.ByteArrEquals(chd.Md5, md5Check.Hash))
+            if (!Util.IsAllZeroArray(chd.Md5) && md5Check is { Hash: not null } && !Util.ByteArrEquals(chd.Md5, md5Check.Hash))
             {
                 return ChdError.Chderrdecompressionerror;
             }
 
-            if (chd.Rawsha1 != null && !Util.IsAllZeroArray(chd.Rawsha1) && sha1Check is { Hash: not null } && !Util.ByteArrEquals(chd.Rawsha1, sha1Check.Hash))
+            if (!Util.IsAllZeroArray(chd.Rawsha1) && sha1Check is { Hash: not null } && !Util.ByteArrEquals(chd.Rawsha1, sha1Check.Hash))
             {
                 return ChdError.Chderrdecompressionerror;
             }

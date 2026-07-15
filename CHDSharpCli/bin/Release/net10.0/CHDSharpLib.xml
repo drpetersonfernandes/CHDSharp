@@ -5,34 +5,51 @@
     </assembly>
     <members>
         <member name="T:CHDSharp.Chd">
-            <summary>Provides methods for validating and inspecting CHD files using parallel decompression.</summary>
+            <summary>Provides methods for validating, inspecting, and reading CHD files using parallel decompression.</summary>
+        </member>
+        <member name="P:CHDSharp.Chd.LoggerFactory">
+            <summary>
+            Gets or sets the <see cref="T:Microsoft.Extensions.Logging.ILoggerFactory"/> used for internal logging. Set before
+            using any other API. If not set, logging is silently discarded.
+            </summary>
         </member>
         <member name="F:CHDSharp.Chd.TaskCount">
-            <summary>Number of parallel decompression tasks used during verification.</summary>
+            <summary>Number of parallel decompression tasks used during verification. Can be changed at runtime.</summary>
         </member>
-        <member name="M:CHDSharp.Chd.CheckFile(System.IO.Stream,System.String,System.Boolean,System.Nullable{System.UInt32}@,System.Byte[]@,System.Byte[]@)">
+        <member name="M:CHDSharp.Chd.CheckFile(System.IO.Stream,System.String,System.Boolean)">
             <summary>
             Validates a CHD file from a <see cref="T:System.IO.Stream"/> using parallel decompression and hash verification.
-            Returns the CHD version, SHA1, and MD5 hashes.
+            Returns a <see cref="T:CHDSharp.Models.ChdResult"/> with version, SHA1, and MD5 hashes.
             </summary>
             <param name="s">The stream to read the CHD from.</param>
             <param name="filename">The filename associated with the stream, used for logging.</param>
             <param name="deepCheck">If <c>true</c>, performs full decompression and hash verification; otherwise only validates the header.</param>
-            <param name="chdVersion">When this method returns, contains the CHD version number, or <c>null</c> if invalid.</param>
-            <param name="chdSha1">When this method returns, contains the SHA1 hash from the header, or <c>null</c> if invalid.</param>
-            <param name="chdMd5">When this method returns, contains the MD5 hash from the header, or <c>null</c> if invalid.</param>
-            <returns><see cref="F:CHDSharp.Models.ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
-            <remarks>This method does not handle differential (parent/child) CHDs. Use <see cref="M:CHDSharp.Chd.CheckFileWithParent(System.String,System.String,System.Nullable{System.UInt32}@,System.Byte[]@,System.Byte[]@)"/> for those.</remarks>
+            <returns>A <see cref="T:CHDSharp.Models.ChdResult"/> with the verification result and hashes.</returns>
+            <remarks>This method does not handle differential (parent/child) CHDs. Use <see cref="M:CHDSharp.Chd.CheckFileWithParent(System.String,System.String)"/> for those.</remarks>
         </member>
-        <member name="M:CHDSharp.Chd.CheckFileWithParent(System.String,System.String,System.Nullable{System.UInt32}@,System.Byte[]@,System.Byte[]@)">
+        <member name="M:CHDSharp.Chd.CheckFile(System.IO.Stream,System.String,System.Boolean,System.Nullable{System.UInt32}@,System.Byte[]@,System.Byte[]@)">
+            <inheritdoc cref="M:CHDSharp.Chd.CheckFile(System.IO.Stream,System.String,System.Boolean)"/>
+        </member>
+        <member name="M:CHDSharp.Chd.CheckFileWithParent(System.String,System.String)">
             <summary>
             Fully verifies a (possibly child/differential) CHD, resolving parent
             references against the CHD at <paramref name="parentFilename"/> (pass null
-            for a standalone CHD). Reads the whole image via the random-access
-            <see cref="T:CHDSharp.ChdFile"/> API, validates the raw-data hash (SHA1/MD5) and, for
-            V4/V5, the metadata SHA1. This is a sequential (single-threaded) verify -
-            use <see cref="M:CHDSharp.Chd.CheckFile(System.IO.Stream,System.String,System.Boolean,System.Nullable{System.UInt32}@,System.Byte[]@,System.Byte[]@)"/> for the fast parallel path on standalone CHDs.
+            for a standalone CHD). Returns a <see cref="T:CHDSharp.Models.ChdResult"/>.
             </summary>
+        </member>
+        <member name="M:CHDSharp.Chd.CheckFileWithParent(System.String,System.String,System.Nullable{System.UInt32}@,System.Byte[]@,System.Byte[]@)">
+            <inheritdoc cref="M:CHDSharp.Chd.CheckFileWithParent(System.String,System.String)"/>
+        </member>
+        <member name="M:CHDSharp.Chd.IsChdFile(System.String,System.UInt32@)">
+            <summary>
+            Quickly checks whether a file at the given path has a valid CHD header.
+            </summary>
+            <param name="path">Filesystem path to a potential CHD file.</param>
+            <param name="version">When this method returns, contains the CHD version number (1-5) if valid.</param>
+            <returns><c>true</c> if the file exists and has a valid CHD header.</returns>
+        </member>
+        <member name="M:CHDSharp.Chd.IsChdFile(System.String)">
+            <inheritdoc cref="M:CHDSharp.Chd.IsChdFile(System.String,System.UInt32@)"/>
         </member>
         <member name="M:CHDSharp.Chd.CheckHeader(System.IO.Stream,System.UInt32@,System.UInt32@)">
             <summary>Reads and validates the CHD file header signature and version.</summary>
@@ -40,6 +57,65 @@
             <param name="length">When this method returns, contains the header length in bytes.</param>
             <param name="version">When this method returns, contains the CHD version number.</param>
             <returns><c>true</c> if the header signature is valid and the version is recognized; otherwise <c>false</c>.</returns>
+        </member>
+        <member name="M:CHDSharp.Chd.DecompressDataParallel(System.IO.Stream,CHDSharp.Models.ChdHeader)">
+            <summary>Reads and decompresses all hunk data from the CHD file in parallel, validating CRC and building SHA1/MD5 checksums.</summary>
+            <param name="file">The stream positioned at the start of the compressed data section.</param>
+            <param name="chd">The parsed CHD header containing compression and hunk information.</param>
+            <returns><see cref="F:CHDSharp.Models.ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
+        </member>
+        <member name="T:CHDSharp.ChdBlockRead">
+            <summary>Handles CHD block reading, deduplication of self-referencing blocks, and decompression caching.</summary>
+        </member>
+        <member name="M:CHDSharp.ChdBlockRead.FindRepeatedBlocks(CHDSharp.Models.ChdHeader)">
+            <summary>Scans the map for <see cref="F:CHDSharp.Models.CompressionType.Compressionself"/> entries and builds usage counts for referenced source blocks.</summary>
+            <param name="chd">The parsed CHD header containing the block map.</param>
+        </member>
+        <member name="M:CHDSharp.ChdBlockRead.KeepMostRepeatedBlocks(CHDSharp.Models.ChdHeader,System.Int32)">
+            <summary>Retains the most frequently used blocks for caching, promoting them to keep their decompressed buffers, and flattens remaining self-references.</summary>
+            <param name="chd">The parsed CHD header containing the block map.</param>
+            <param name="blocksToKeep">The maximum number of blocks to keep cached in memory.</param>
+        </member>
+        <member name="M:CHDSharp.ChdBlockRead.GetWeigth(CHDSharp.Models.ChdHeader,CHDSharp.Models.MapEntry)">
+            <summary>Computes a relative weight for a map entry based on its compression type, used to prioritize blocks for caching.</summary>
+            <param name="chd">The parsed CHD header.</param>
+            <param name="me">The map entry to evaluate.</param>
+            <returns>An integer weight where higher values indicate more expensive decompression.</returns>
+        </member>
+        <member name="M:CHDSharp.ChdBlockRead.FindBlockReaders(CHDSharp.Models.ChdHeader)">
+            <summary>Resolves compression codecs to their corresponding reader delegates and stores them in the header.</summary>
+            <param name="chd">The parsed CHD header whose readers will be populated.</param>
+        </member>
+        <member name="M:CHDSharp.ChdBlockRead.ReadBlock(CHDSharp.Models.MapEntry,CHDSharp.Utils.ArrayPool,CHDSharp.ChdReader[],CHDSharp.Models.CHDCodec,System.Byte[],System.Int32)">
+            <summary>Decompresses a single map entry into the output buffer, handling compression, caching, self-references, and CRC validation.</summary>
+            <param name="mapEntry">The map entry describing the compressed block.</param>
+            <param name="arrPool">The array pool used for buffer rental and caching.</param>
+            <param name="compression">The array of decompression delegates indexed by compression type.</param>
+            <param name="codec">The codec-specific state and settings.</param>
+            <param name="buffOut">The pre-allocated output buffer to receive decompressed data.</param>
+            <param name="buffOutLength">The expected length of the decompressed data.</param>
+            <returns><see cref="F:CHDSharp.Models.ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
+        </member>
+        <member name="T:CHDSharp.ChdCommon">
+            <summary>Provides conversion utilities between legacy CHD V1/V2 compression type values and the modern <see cref="T:CHDSharp.Models.ChdCodec"/> and <see cref="T:CHDSharp.Models.CompressionType"/> enums.</summary>
+        </member>
+        <member name="M:CHDSharp.ChdCommon.CompTypeConv(System.UInt32)">
+            <summary>Converts a legacy V1/V2 compression type value to a <see cref="T:CHDSharp.Models.ChdCodec"/>.</summary>
+            <param name="ct">The legacy compression type number (1=Zlib, 2=Zlib+, 3=AVHuff).</param>
+            <returns>The corresponding <see cref="T:CHDSharp.Models.ChdCodec"/>, or <see cref="F:CHDSharp.Models.ChdCodec.Error"/> if unrecognized.</returns>
+        </member>
+        <member name="M:CHDSharp.ChdCommon.ConvMapEntryFlagtoCompressionType(CHDSharp.Models.MapEntryFlag)">
+            <summary>Converts a V3/V4 <see cref="T:CHDSharp.Models.MapEntryFlag"/> to the unified V5 <see cref="T:CHDSharp.Models.CompressionType"/>.</summary>
+            <param name="mapEntryFlag">The legacy map entry flag value.</param>
+            <returns>The corresponding <see cref="T:CHDSharp.Models.CompressionType"/>, or <see cref="F:CHDSharp.Models.CompressionType.Compressionerror"/> if the flag is invalid.</returns>
+        </member>
+        <member name="T:CHDSharp.ChdErrorExtensions">
+            <summary>Provides extension methods for <see cref="T:CHDSharp.Models.ChdError"/> values.</summary>
+        </member>
+        <member name="M:CHDSharp.ChdErrorExtensions.GetMessage(CHDSharp.Models.ChdError)">
+            <summary>Returns a human-readable message describing the error code.</summary>
+            <param name="error">The error code to describe.</param>
+            <returns>A user-friendly error message string.</returns>
         </member>
         <member name="T:CHDSharp.ChdFile">
              <summary>
@@ -80,6 +156,54 @@
         </member>
         <member name="P:CHDSharp.ChdFile.RequiresParent">
             <summary>True if this CHD is a differential child that requires a parent CHD to read.</summary>
+        </member>
+        <member name="P:CHDSharp.ChdFile.IsChild">
+            <summary>True if this CHD is a differential child. Alias for <see cref="P:CHDSharp.ChdFile.RequiresParent"/>.</summary>
+        </member>
+        <member name="P:CHDSharp.ChdFile.Metadata">
+            <summary>
+            Gets the list of metadata entries from the CHD header (game name,
+            disc info, etc.). Lazy-loaded on first access; empty list if the CHD
+            has no metadata or an error occurs.
+            </summary>
+        </member>
+        <member name="M:CHDSharp.ChdFile.ToString">
+            <summary>
+            Returns a string representation of the CHD file including version,
+            size, and hunk count.
+            </summary>
+        </member>
+        <member name="M:CHDSharp.ChdFile.OpenAsync(System.String)">
+            <inheritdoc cref="M:CHDSharp.ChdFile.Open(System.String,CHDSharp.ChdFile@)"/>
+        </member>
+        <member name="M:CHDSharp.ChdFile.OpenAsync(System.String,System.String)">
+            <inheritdoc cref="M:CHDSharp.ChdFile.Open(System.String,System.String,CHDSharp.ChdFile@)"/>
+        </member>
+        <member name="M:CHDSharp.ChdFile.OpenAsync(System.String,CHDSharp.ChdFile)">
+            <inheritdoc cref="M:CHDSharp.ChdFile.Open(System.String,CHDSharp.ChdFile,CHDSharp.ChdFile@)"/>
+        </member>
+        <member name="M:CHDSharp.ChdFile.OpenAsync(System.IO.Stream,System.Boolean)">
+            <inheritdoc cref="M:CHDSharp.ChdFile.Open(System.IO.Stream,System.Boolean,CHDSharp.ChdFile@)"/>
+        </member>
+        <member name="M:CHDSharp.ChdFile.ReadHunkAsync(System.UInt32,System.Byte[])">
+            <inheritdoc cref="M:CHDSharp.ChdFile.ReadHunk(System.UInt32,System.Byte[])"/>
+        </member>
+        <member name="M:CHDSharp.ChdFile.ReadAsync(System.UInt64,System.Byte[],System.Int32,System.Int32)">
+            <inheritdoc cref="M:CHDSharp.ChdFile.Read(System.UInt64,System.Byte[],System.Int32,System.Int32)"/>
+        </member>
+        <member name="M:CHDSharp.ChdFile.ReadAllBytes(System.Byte[]@)">
+            <summary>
+            Decompresses the entire CHD image into a single byte array. Returns
+            <see cref="F:CHDSharp.Models.ChdError.Chderrnone"/> on success. Be cautious: CHD images
+            can be tens of gigabytes.
+            </summary>
+        </member>
+        <member name="M:CHDSharp.ChdFile.EnumerateHunks">
+            <summary>
+            Yields each decompressed hunk in order. The returned array is reused
+            between iterations. Copy it if you need to keep the data beyond the
+            current iteration.
+            </summary>
         </member>
         <member name="M:CHDSharp.ChdFile.Open(System.String,CHDSharp.ChdFile@)">
             <summary>
@@ -129,6 +253,88 @@
             at <paramref name="byteOffset"/>, decompressing hunks on demand. A single
             hunk is cached so sequential reads within the same hunk avoid re-decoding.
             </summary>
+        </member>
+        <member name="M:CHDSharp.ChdFile.DisposeAsync">
+            <inheritdoc cref="M:CHDSharp.ChdFile.Dispose"/>
+        </member>
+        <member name="M:CHDSharp.ChdFile.Dispose">
+            <summary>Releases the underlying stream (if not left open) and any internally-owned parent instance.</summary>
+        </member>
+        <member name="T:CHDSharp.ChdHeaders">
+            <summary>Parses and validates CHD V1-V5 file headers, reading compression configuration, block maps, checksums, and metadata pointers from the stream.</summary>
+        </member>
+        <member name="M:CHDSharp.ChdHeaders.ReadHeaderV1(System.IO.Stream,CHDSharp.Models.ChdHeader@)">
+            <summary>Reads and parses a V1 CHD header from the stream.</summary>
+            <param name="file">The stream positioned immediately after the CHD magic and version fields.</param>
+            <param name="chd">When this method returns, contains the parsed header data.</param>
+            <returns><see cref="F:CHDSharp.Models.ChdError.Chderrnone"/> on success.</returns>
+        </member>
+        <member name="M:CHDSharp.ChdHeaders.ReadHeaderV2(System.IO.Stream,CHDSharp.Models.ChdHeader@)">
+            <summary>Reads and parses a V2 CHD header from the stream.</summary>
+            <param name="file">The stream positioned immediately after the CHD magic and version fields.</param>
+            <param name="chd">When this method returns, contains the parsed header data.</param>
+            <returns><see cref="F:CHDSharp.Models.ChdError.Chderrnone"/> on success.</returns>
+        </member>
+        <member name="M:CHDSharp.ChdHeaders.ReadHeaderV3(System.IO.Stream,CHDSharp.Models.ChdHeader@)">
+            <summary>Reads and parses a V3 CHD header from the stream.</summary>
+            <param name="file">The stream positioned immediately after the CHD magic and version fields.</param>
+            <param name="chd">When this method returns, contains the parsed header data.</param>
+            <returns><see cref="F:CHDSharp.Models.ChdError.Chderrnone"/> on success.</returns>
+        </member>
+        <member name="M:CHDSharp.ChdHeaders.ReadHeaderV4(System.IO.Stream,CHDSharp.Models.ChdHeader@)">
+            <summary>Reads and parses a V4 CHD header from the stream.</summary>
+            <param name="file">The stream positioned immediately after the CHD magic and version fields.</param>
+            <param name="chd">When this method returns, contains the parsed header data.</param>
+            <returns><see cref="F:CHDSharp.Models.ChdError.Chderrnone"/> on success.</returns>
+        </member>
+        <member name="M:CHDSharp.ChdHeaders.ReadHeaderV5(System.IO.Stream,CHDSharp.Models.ChdHeader@)">
+            <summary>Reads and parses a V5 CHD header from the stream, including the compressed or uncompressed block map.</summary>
+            <param name="file">The stream positioned immediately after the CHD magic and version fields.</param>
+            <param name="chd">When this method returns, contains the parsed header data.</param>
+            <returns><see cref="F:CHDSharp.Models.ChdError.Chderrnone"/> on success; otherwise an error code if the map is corrupt.</returns>
+        </member>
+        <member name="T:CHDSharp.ChdReader">
+            <summary>Delegate for decompressing a single CHD hunk: reads compressed data from <paramref name="buffIn"/> and writes decompressed output to <paramref name="buffOut"/>.</summary>
+        </member>
+        <member name="T:CHDSharp.ChdReaders">
+            <summary>Contains all CHD decompression codec implementations as reader delegates: zlib, LZMA, Huffman, FLAC, Zstd, and their CD-sector variants.</summary>
+            <summary>Provides AVHuff decompression support: combined Huffman/RLE-compressed audio and video interleaved in a single CHD hunk.</summary>
+        </member>
+        <member name="M:CHDSharp.ChdReaders.Zlib(System.Byte[],System.Int32,System.Byte[],System.Int32,CHDSharp.Models.CHDCodec)">
+            <summary>Decompresses a DEFLATE (zlib) compressed hunk from <paramref name="buffIn"/> into <paramref name="buffOut"/>.</summary>
+        </member>
+        <member name="M:CHDSharp.ChdReaders.Zstd(System.Byte[],System.Int32,System.Byte[],System.Int32,CHDSharp.Models.CHDCodec)">
+            <summary>Decompresses a Zstandard-compressed hunk from <paramref name="buffIn"/> into <paramref name="buffOut"/>.</summary>
+        </member>
+        <member name="M:CHDSharp.ChdReaders.Lzma(System.Byte[],System.Int32,System.Byte[],System.Int32,CHDSharp.Models.CHDCodec)">
+            <summary>Decompresses an LZMA-compressed hunk from <paramref name="buffIn"/> into <paramref name="buffOut"/>.</summary>
+        </member>
+        <member name="M:CHDSharp.ChdReaders.Huffman(System.Byte[],System.Int32,System.Byte[],System.Int32,CHDSharp.Models.CHDCodec)">
+            <summary>Decompresses a Huffman-compressed hunk from <paramref name="buffIn"/> into <paramref name="buffOut"/>.</summary>
+        </member>
+        <member name="M:CHDSharp.ChdReaders.Flac(System.Byte[],System.Int32,System.Byte[],System.Int32,CHDSharp.Models.CHDCodec)">
+            <summary>Decompresses a FLAC-compressed hunk from <paramref name="buffIn"/> into <paramref name="buffOut"/>, with optional endian swapping.</summary>
+        </member>
+        <member name="M:CHDSharp.ChdReaders.Cdzlib(System.Byte[],System.Int32,System.Byte[],System.Int32,CHDSharp.Models.CHDCodec)">
+            <summary>Decompresses a CD sector hunk using DEFLATE (zlib) for both sector data and subcode.</summary>
+        </member>
+        <member name="M:CHDSharp.ChdReaders.Cdlzma(System.Byte[],System.Int32,System.Byte[],System.Int32,CHDSharp.Models.CHDCodec)">
+            <summary>Decompresses a CD sector hunk using LZMA for sector data and DEFLATE for subcode.</summary>
+        </member>
+        <member name="M:CHDSharp.ChdReaders.Cdflac(System.Byte[],System.Int32,System.Byte[],System.Int32,CHDSharp.Models.CHDCodec)">
+            <summary>Decompresses a CD sector hunk using FLAC for sector data and DEFLATE for subcode.</summary>
+        </member>
+        <member name="M:CHDSharp.ChdReaders.Cdzstd(System.Byte[],System.Int32,System.Byte[],System.Int32,CHDSharp.Models.CHDCodec)">
+            <summary>Decompresses a CD sector hunk using Zstandard for both sector data and subcode.</summary>
+        </member>
+        <member name="M:CHDSharp.ChdReaders.AvHuff(System.Byte[],System.Int32,System.Byte[],System.Int32,CHDSharp.Models.CHDCodec)">
+            <summary>Decompresses an AVHuff-encoded hunk: parses the interleaved header, decodes Huffman (or FLAC) audio channels, then decodes delta-RLE Huffman video into the output buffer.</summary>
+            <param name="buffIn">The input buffer containing compressed AVHuff data.</param>
+            <param name="buffInLength">The length of valid data in <paramref name="buffIn"/>.</param>
+            <param name="buffOut">The output buffer to receive decompressed data.</param>
+            <param name="buffOutLength">The expected decompressed output length.</param>
+            <param name="codec">The codec state holding FLAC decoder settings and scratch buffers.</param>
+            <returns><see cref="F:CHDSharp.Models.ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
         </member>
         <member name="T:CHDSharp.Flac.AudioDecoder">
             <summary>
@@ -190,7 +396,7 @@
             Gets or sets the current sample position within the stream. Setting the position seeks using the seek table if available.
             </summary>
         </member>
-        <member name="P:CHDSharp.Flac.AudioDecoder.PCM">
+        <member name="P:CHDSharp.Flac.AudioDecoder.Pcm">
             <summary>
             Gets the PCM audio configuration for this stream.
             </summary>
@@ -396,7 +602,7 @@
             Supports combining and subtracting CRCs for efficient multi-block operations.
             </summary>
         </member>
-        <member name="F:CHDSharp.Flac.FlacDeps.Crc16.table">
+        <member name="F:CHDSharp.Flac.FlacDeps.Crc16.Table">
             <summary>
             Precomputed CRC-16 lookup table (256 entries).
             </summary>
@@ -427,16 +633,6 @@
             <param name="crc">The CRC value to reflect.</param>
             <returns>The reflected 16-bit value.</returns>
         </member>
-        <member name="M:CHDSharp.Flac.FlacDeps.Crc16.Combine(System.UInt16,System.UInt16,System.Int64)">
-            <summary>
-            Combines two 16-bit CRC checksums as if the data was concatenated.
-            </summary>
-            <param name="crc1">The CRC of the first data block.</param>
-            <param name="crc2">The CRC of the second data block.</param>
-            <param name="len2">The length of the second data block in bytes.</param>
-            <returns>The combined CRC value.</returns>
-            <exception cref="T:System.ArgumentException">Thrown if <paramref name="len2"/> is negative.</exception>
-        </member>
         <member name="M:CHDSharp.Flac.FlacDeps.Crc16.Subtract(System.UInt16,System.UInt16,System.Int64)">
             <summary>
             Subtracts a 16-bit CRC checksum as if a block of data was removed.
@@ -448,79 +644,22 @@
             <exception cref="T:System.ArgumentException">Thrown if <paramref name="len2"/> is negative.</exception>
         </member>
         <member name="T:CHDSharp.Flac.FlacDeps.Crc32">
-            <summary>
-            Static class for computing 32-bit CRC checksums used in FLAC streams.
-            Supports combining and subtracting CRCs for efficient multi-block operations.
-            </summary>
+            <summary>Computes 32-bit CRC checksums used in FLAC streams.</summary>
         </member>
-        <member name="F:CHDSharp.Flac.FlacDeps.Crc32.table">
-            <summary>
-            Precomputed CRC-32 lookup table (256 entries).
-            </summary>
+        <member name="F:CHDSharp.Flac.FlacDeps.Crc32.Table">
+            <summary>Precomputed CRC-32 lookup table (256 entries).</summary>
         </member>
         <member name="M:CHDSharp.Flac.FlacDeps.Crc32.ComputeChecksum(System.UInt32,System.Byte)">
-            <summary>
-            Computes a 32-bit CRC checksum for a single byte, continuing from a previous CRC value.
-            </summary>
-            <param name="crc">The initial CRC value.</param>
-            <param name="val">The byte value to process.</param>
-            <returns>The updated 32-bit CRC checksum.</returns>
+            <summary>Computes a CRC-32 checksum for a single byte.</summary>
         </member>
         <member name="M:CHDSharp.Flac.FlacDeps.Crc32.ComputeChecksum(System.UInt32,System.Byte*,System.Int32)">
-            <summary>
-            Computes a 32-bit CRC checksum over a raw byte buffer, continuing from a previous CRC value. Operates on raw pointers.
-            </summary>
-            <param name="crc">The initial CRC value.</param>
-            <param name="bytes">The source byte pointer.</param>
-            <param name="count">The number of bytes to process.</param>
-            <returns>The updated 32-bit CRC checksum.</returns>
+            <summary>Computes a CRC-32 checksum over a raw byte buffer.</summary>
         </member>
         <member name="M:CHDSharp.Flac.FlacDeps.Crc32.ComputeChecksum(System.UInt32,System.Byte[],System.Int32,System.Int32)">
-            <summary>
-            Computes a 32-bit CRC checksum over a portion of a byte array, continuing from a previous CRC value.
-            </summary>
-            <param name="crc">The initial CRC value.</param>
-            <param name="bytes">The source byte array.</param>
-            <param name="pos">The starting position in the array.</param>
-            <param name="count">The number of bytes to process.</param>
-            <returns>The updated 32-bit CRC checksum.</returns>
+            <summary>Computes a CRC-32 checksum over a portion of a byte array.</summary>
         </member>
-        <member name="M:CHDSharp.Flac.FlacDeps.Crc32.ComputeChecksum(System.UInt32,System.UInt32)">
-            <summary>
-            Computes a 32-bit CRC checksum for a 32-bit unsigned integer value (processed byte-by-byte in little-endian order).
-            </summary>
-            <param name="crc">The initial CRC value.</param>
-            <param name="s">The unsigned integer to process.</param>
-            <returns>The updated 32-bit CRC checksum.</returns>
-        </member>
-        <member name="M:CHDSharp.Flac.FlacDeps.Crc32.ComputeChecksum(System.UInt32,System.Int32*,System.Int32)">
-            <summary>
-            Computes a 32-bit CRC checksum over an array of interleaved stereo samples. Operates on raw pointers.
-            </summary>
-            <param name="crc">The initial CRC value.</param>
-            <param name="samples">Pointer to interleaved stereo sample pairs.</param>
-            <param name="count">The number of stereo sample pairs to process.</param>
-            <returns>The updated 32-bit CRC checksum.</returns>
-        </member>
-        <member name="M:CHDSharp.Flac.FlacDeps.Crc32.Combine(System.UInt32,System.UInt32,System.Int64)">
-            <summary>
-            Combines two 32-bit CRC checksums as if the data was concatenated.
-            </summary>
-            <param name="crc1">The CRC of the first data block.</param>
-            <param name="crc2">The CRC of the second data block.</param>
-            <param name="len2">The length of the second data block in bytes.</param>
-            <returns>The combined CRC value.</returns>
-            <exception cref="T:System.ArgumentException">Thrown if <paramref name="len2"/> is negative.</exception>
-        </member>
-        <member name="M:CHDSharp.Flac.FlacDeps.Crc32.Subtract(System.UInt32,System.UInt32,System.Int64)">
-            <summary>
-            Subtracts a 32-bit CRC checksum as if a block of data was removed.
-            </summary>
-            <param name="crc1">The CRC of the combined data.</param>
-            <param name="crc2">The CRC of the data block to subtract.</param>
-            <param name="len2">The length of the data block to subtract in bytes.</param>
-            <returns>The resulting CRC value after subtraction.</returns>
-            <exception cref="T:System.ArgumentException">Thrown if <paramref name="len2"/> is negative.</exception>
+        <member name="M:CHDSharp.Flac.FlacDeps.Crc32.Reflect(System.UInt32,System.Int32)">
+            <summary>Reflects the lower <paramref name="ch"/> bits of a value.</summary>
         </member>
         <member name="T:CHDSharp.Flac.FlacDeps.Crc8">
             <summary>
@@ -555,27 +694,27 @@
             Provides static methods for Linear Predictive Coding (LPC) analysis and residual decoding used in FLAC encoding and decoding.
             </summary>
         </member>
-        <member name="F:CHDSharp.Flac.FlacDeps.Lpc.MAXLPCORDER">
+        <member name="F:CHDSharp.Flac.FlacDeps.Lpc.Maxlpcorder">
             <summary>
             Maximum LPC order.
             </summary>
         </member>
-        <member name="F:CHDSharp.Flac.FlacDeps.Lpc.MAXLPCWINDOWS">
+        <member name="F:CHDSharp.Flac.FlacDeps.Lpc.Maxlpcwindows">
             <summary>
             Maximum number of LPC windows.
             </summary>
         </member>
-        <member name="F:CHDSharp.Flac.FlacDeps.Lpc.MAXLPCPRECISIONS">
+        <member name="F:CHDSharp.Flac.FlacDeps.Lpc.Maxlpcprecisions">
             <summary>
             Maximum number of LPC precisions.
             </summary>
         </member>
-        <member name="F:CHDSharp.Flac.FlacDeps.Lpc.MAXLPCSECTIONS">
+        <member name="F:CHDSharp.Flac.FlacDeps.Lpc.Maxlpcsections">
             <summary>
             Maximum number of LPC sections.
             </summary>
         </member>
-        <member name="M:CHDSharp.Flac.FlacDeps.Lpc.computeAutocorr(System.Int32*,System.Single*,System.Int32,System.Int32,System.Int32,System.Double*)">
+        <member name="M:CHDSharp.Flac.FlacDeps.Lpc.ComputeAutocorr(System.Int32*,System.Single*,System.Int32,System.Int32,System.Int32,System.Double*)">
             Calculates autocorrelation data from audio samples
             A window function is applied before calculation.
             <summary>
@@ -588,7 +727,7 @@
             <param name="lag">Maximum lag to compute.</param>
             <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
         </member>
-        <member name="M:CHDSharp.Flac.FlacDeps.Lpc.computeAutocorrWindowless(System.Int32*,System.Int32,System.Int32,System.Int32,System.Double*)">
+        <member name="M:CHDSharp.Flac.FlacDeps.Lpc.ComputeAutocorrWindowless(System.Int32*,System.Int32,System.Int32,System.Int32,System.Double*)">
             <summary>
             Calculates autocorrelation data from audio samples without applying a window function. Operates on raw pointers.
             </summary>
@@ -598,7 +737,7 @@
             <param name="lag">Maximum lag to compute.</param>
             <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
         </member>
-        <member name="M:CHDSharp.Flac.FlacDeps.Lpc.computeAutocorrWindowlessLarge(System.Int32*,System.Int32,System.Int32,System.Int32,System.Double*)">
+        <member name="M:CHDSharp.Flac.FlacDeps.Lpc.ComputeAutocorrWindowlessLarge(System.Int32*,System.Int32,System.Int32,System.Int32,System.Double*)">
             <summary>
             Calculates autocorrelation data from audio samples without a window, using double-precision accumulation for large sample values. Operates on raw pointers.
             </summary>
@@ -608,7 +747,7 @@
             <param name="lag">Maximum lag to compute.</param>
             <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
         </member>
-        <member name="M:CHDSharp.Flac.FlacDeps.Lpc.computeAutocorrGlue(System.Int32*,System.Single*,System.Int32,System.Int32,System.Int32,System.Int32,System.Double*)">
+        <member name="M:CHDSharp.Flac.FlacDeps.Lpc.ComputeAutocorrGlue(System.Int32*,System.Single*,System.Int32,System.Int32,System.Int32,System.Int32,System.Double*)">
             <summary>
             Calculates autocorrelation across a boundary between two windowed sections using the window function. Operates on raw pointers.
             </summary>
@@ -620,7 +759,7 @@
             <param name="lag">Maximum lag to compute.</param>
             <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
         </member>
-        <member name="M:CHDSharp.Flac.FlacDeps.Lpc.computeAutocorrGlue(System.Int32*,System.Int32,System.Int32,System.Double*)">
+        <member name="M:CHDSharp.Flac.FlacDeps.Lpc.ComputeAutocorrGlue(System.Int32*,System.Int32,System.Int32,System.Double*)">
             <summary>
             Calculates autocorrelation across a boundary between two unwindowed sections. Operates on raw pointers.
             </summary>
@@ -629,7 +768,7 @@
             <param name="lag">Maximum lag to compute.</param>
             <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
         </member>
-        <member name="M:CHDSharp.Flac.FlacDeps.Lpc.computeLpcCoefs(System.UInt32,System.Double*,System.Single*)">
+        <member name="M:CHDSharp.Flac.FlacDeps.Lpc.ComputeLpcCoefs(System.UInt32,System.Double*,System.Single*)">
             Levinson-Durbin recursion.
             Produces LPC coefficients from autocorrelation data.
             <summary>
@@ -638,9 +777,9 @@
             <param name="maxOrder">Maximum LPC order.</param>
             <param name="reff">Pointer to reflection coefficients.</param>
             <param name="lpc">Destination buffer for LPC coefficients, stored as a flat array indexed by [order * MAX_LPC_ORDER + coefficient].</param>
-            <exception cref="T:System.Exception">Thrown if <paramref name="maxOrder"/> exceeds <see cref="F:CHDSharp.Flac.FlacDeps.Lpc.MAXLPCORDER"/>.</exception>
+            <exception cref="T:System.Exception">Thrown if <paramref name="maxOrder"/> exceeds <see cref="F:CHDSharp.Flac.FlacDeps.Lpc.Maxlpcorder"/>.</exception>
         </member>
-        <member name="M:CHDSharp.Flac.FlacDeps.Lpc.computeSchurReflection(System.Double*,System.UInt32,System.Double*,System.Double*)">
+        <member name="M:CHDSharp.Flac.FlacDeps.Lpc.ComputeSchurReflection(System.Double*,System.UInt32,System.Double*,System.Double*)">
             <summary>
             Computes Schur recursion to produce reflection coefficients and prediction errors from autocorrelation data. Operates on raw pointers.
             </summary>
@@ -649,7 +788,7 @@
             <param name="reff">Destination buffer for reflection coefficients.</param>
             <param name="err">Destination buffer for prediction errors.</param>
         </member>
-        <member name="M:CHDSharp.Flac.FlacDeps.Lpc.decodeResidual(System.Int32*,System.Int32*,System.Int32,System.Int32,System.Int32*,System.Int32)">
+        <member name="M:CHDSharp.Flac.FlacDeps.Lpc.DecodeResidual(System.Int32*,System.Int32*,System.Int32,System.Int32,System.Int32*,System.Int32)">
             <summary>
             Decodes an LPC residual back into audio samples using the given coefficients and shift. Operates on raw pointers.
             </summary>
@@ -660,7 +799,7 @@
             <param name="coefs">Pointer to quantized LPC coefficients.</param>
             <param name="shift">Right-shift amount applied to the prediction value.</param>
         </member>
-        <member name="M:CHDSharp.Flac.FlacDeps.Lpc.decodeResidualLong(System.Int32*,System.Int32*,System.Int32,System.Int32,System.Int32*,System.Int32)">
+        <member name="M:CHDSharp.Flac.FlacDeps.Lpc.DecodeResidualLong(System.Int32*,System.Int32*,System.Int32,System.Int32,System.Int32*,System.Int32)">
             <summary>
             Decodes an LPC residual into audio samples using 64-bit intermediate prediction values to avoid overflow. Operates on raw pointers.
             </summary>
@@ -676,52 +815,32 @@
             FLAC encoding constants as defined by the FLAC specification.
             </summary>
         </member>
-        <member name="F:CHDSharp.Flac.FlakeConstants.MAXBLOCKSIZE">
+        <member name="F:CHDSharp.Flac.FlakeConstants.Maxblocksize">
             <summary>
             Maximum block size in samples (65535).
             </summary>
         </member>
-        <member name="F:CHDSharp.Flac.FlakeConstants.MAXRICEPARAM">
+        <member name="F:CHDSharp.Flac.FlakeConstants.Maxriceparam">
             <summary>
             Maximum Rice coding parameter (14).
             </summary>
         </member>
-        <member name="F:CHDSharp.Flac.FlakeConstants.MAXPARTITIONORDER">
+        <member name="F:CHDSharp.Flac.FlakeConstants.Maxpartitionorder">
             <summary>
             Maximum partition order for Rice coding (8).
             </summary>
         </member>
-        <member name="F:CHDSharp.Flac.FlakeConstants.MAXPARTITIONS">
+        <member name="F:CHDSharp.Flac.FlakeConstants.Maxpartitions">
             <summary>
             Maximum number of Rice coding partitions (256).
             </summary>
         </member>
-        <member name="F:CHDSharp.Flac.FlakeConstants.FLACSTREAMMETADATASEEKPOINTSAMPLENUMBERLEN">
-            <summary>
-            Length in bits of the sample number field in a seekpoint.
-            </summary>
-        </member>
-        <member name="F:CHDSharp.Flac.FlakeConstants.FLACSTREAMMETADATASEEKPOINTSTREAMOFFSETLEN">
-            <summary>
-            Length in bits of the stream offset field in a seekpoint.
-            </summary>
-        </member>
-        <member name="F:CHDSharp.Flac.FlakeConstants.FLACSTREAMMETADATASEEKPOINTFRAMESAMPLESLEN">
-            <summary>
-            Length in bits of the frame samples field in a seekpoint.
-            </summary>
-        </member>
-        <member name="F:CHDSharp.Flac.FlakeConstants.flacSamplerates">
-            <summary>
-            Table of FLAC sample rates indexed by the sample rate code from the stream info header.
-            </summary>
-        </member>
-        <member name="F:CHDSharp.Flac.FlakeConstants.flacBlocksizes">
+        <member name="F:CHDSharp.Flac.FlakeConstants.FlacBlocksizes">
             <summary>
             Table of FLAC block sizes indexed by the block size code from the frame header.
             </summary>
         </member>
-        <member name="F:CHDSharp.Flac.FlakeConstants.flacBitdepths">
+        <member name="F:CHDSharp.Flac.FlakeConstants.FlacBitdepths">
             <summary>
             Table of FLAC bit depths indexed by the bits-per-sample code from the stream info header.
             </summary>
@@ -756,32 +875,16 @@
             Creates a deep copy of the settings.
             </summary>
         </member>
-        <member name="T:CHDSharp.Interfaces.Flac.FlacDeps.IAudioDecoderSettingsExtensions">
+        <member name="T:CHDSharp.Interfaces.Flac.FlacDeps.AudioDecoderSettingsExtensions">
             <summary>
             Extension methods for <see cref="T:CHDSharp.Interfaces.Flac.FlacDeps.IAudioDecoderSettings"/>.
             </summary>
         </member>
-        <member name="M:CHDSharp.Interfaces.Flac.FlacDeps.IAudioDecoderSettingsExtensions.HasBrowsableAttributes(CHDSharp.Interfaces.Flac.FlacDeps.IAudioDecoderSettings)">
-            <summary>
-            Determines whether the settings have any properties with browsable attributes.
-            </summary>
-            <param name="settings">The decoder settings to inspect.</param>
-            <returns><c>true</c> if at least one property has a browsable attribute; otherwise, <c>false</c>.</returns>
-        </member>
-        <member name="M:CHDSharp.Interfaces.Flac.FlacDeps.IAudioDecoderSettingsExtensions.Init(CHDSharp.Interfaces.Flac.FlacDeps.IAudioDecoderSettings)">
+        <member name="M:CHDSharp.Interfaces.Flac.FlacDeps.AudioDecoderSettingsExtensions.Init(CHDSharp.Interfaces.Flac.FlacDeps.IAudioDecoderSettings)">
             <summary>
             Resets all properties of the settings to their default values.
             </summary>
             <param name="settings">The decoder settings to initialize.</param>
-        </member>
-        <member name="M:CHDSharp.Interfaces.Flac.FlacDeps.IAudioDecoderSettingsExtensions.Open(CHDSharp.Interfaces.Flac.FlacDeps.IAudioDecoderSettings,System.String,System.IO.Stream)">
-            <summary>
-            Opens an audio source using the specified settings and file path.
-            </summary>
-            <param name="settings">The decoder settings used to create the source.</param>
-            <param name="path">The path to the audio file.</param>
-            <param name="IO">An optional stream to use for reading (if supported by the decoder).</param>
-            <returns>A new <see cref="T:CHDSharp.Interfaces.Flac.FlacDeps.IAudioSource"/> instance created by the decoder.</returns>
         </member>
         <member name="T:CHDSharp.Interfaces.Flac.FlacDeps.IAudioDest">
             <summary>
@@ -824,7 +927,7 @@
             Gets the decoder settings used to open this source.
             </summary>
         </member>
-        <member name="P:CHDSharp.Interfaces.Flac.FlacDeps.IAudioSource.PCM">
+        <member name="P:CHDSharp.Interfaces.Flac.FlacDeps.IAudioSource.Pcm">
             <summary>
             Gets the PCM configuration of the audio source.
             </summary>
@@ -880,7 +983,7 @@
             Gets the list of chapter time positions.
             </summary>
         </member>
-        <member name="P:CHDSharp.Interfaces.Flac.FlacDeps.IAudioTitle.PCM">
+        <member name="P:CHDSharp.Interfaces.Flac.FlacDeps.IAudioTitle.Pcm">
             <summary>
             Gets the PCM configuration for this title.
             </summary>
@@ -900,147 +1003,146 @@
             Gets the stream identifier for this title.
             </summary>
         </member>
-        <member name="T:CHDSharp.Interfaces.Flac.FlacDeps.IAudioTitleSet">
-            <summary>
-            Represents a collection of audio titles.
-            </summary>
-        </member>
-        <member name="P:CHDSharp.Interfaces.Flac.FlacDeps.IAudioTitleSet.AudioTitles">
-            <summary>
-            Gets the list of audio titles in this set.
-            </summary>
-        </member>
-        <member name="T:CHDSharp.Interfaces.Flac.FlacDeps.IAudioTitleExtensions">
+        <member name="T:CHDSharp.Interfaces.Flac.FlacDeps.AudioTitleExtensions">
             <summary>
             Extension methods for <see cref="T:CHDSharp.Interfaces.Flac.FlacDeps.IAudioTitle"/>.
             </summary>
         </member>
-        <member name="M:CHDSharp.Interfaces.Flac.FlacDeps.IAudioTitleExtensions.GetDuration(CHDSharp.Interfaces.Flac.FlacDeps.IAudioTitle)">
+        <member name="M:CHDSharp.Interfaces.Flac.FlacDeps.AudioTitleExtensions.GetDuration(CHDSharp.Interfaces.Flac.FlacDeps.IAudioTitle)">
             <summary>
             Gets the total duration of the audio title, determined by its last chapter position.
             </summary>
             <param name="title">The audio title.</param>
             <returns>The total duration as a <see cref="T:System.TimeSpan"/>.</returns>
         </member>
-        <member name="M:CHDSharp.Interfaces.Flac.FlacDeps.IAudioTitleExtensions.GetRateString(CHDSharp.Interfaces.Flac.FlacDeps.IAudioTitle)">
+        <member name="M:CHDSharp.Interfaces.Flac.FlacDeps.AudioTitleExtensions.GetRateString(CHDSharp.Interfaces.Flac.FlacDeps.IAudioTitle)">
             <summary>
             Gets a human-readable string representation of the sample rate (e.g., "44.1KHz").
             </summary>
             <param name="title">The audio title.</param>
             <returns>A formatted sample rate string.</returns>
         </member>
-        <member name="M:CHDSharp.Interfaces.Flac.FlacDeps.IAudioTitleExtensions.GetFormatString(CHDSharp.Interfaces.Flac.FlacDeps.IAudioTitle)">
+        <member name="M:CHDSharp.Interfaces.Flac.FlacDeps.AudioTitleExtensions.GetFormatString(CHDSharp.Interfaces.Flac.FlacDeps.IAudioTitle)">
             <summary>
             Gets a human-readable string representation of the audio format (e.g., "mono", "stereo", "multi-channel").
             </summary>
             <param name="title">The audio title.</param>
             <returns>A formatted channel format string.</returns>
         </member>
-        <member name="T:CHDSharp.Interfaces.LZMA.ICodeProgress">
-            <summary>
-            Provides callback for reporting progress during compression or decompression.
-            </summary>
-        </member>
-        <member name="M:CHDSharp.Interfaces.LZMA.ICodeProgress.SetProgress(System.Int64,System.Int64)">
-            <summary>
-            Callback progress.
-            </summary>
-            <param name="inSize">
-            input size. -1 if unknown.
-            </param>
-            <param name="outSize">
-            output size. -1 if unknown.
-            </param>
-        </member>
         <member name="T:CHDSharp.LZMA.DataErrorException">
             <summary>
             The exception that is thrown when an error in input stream occurs during decoding.
             </summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.DataErrorException.#ctor">
+            <summary>Initializes a new instance of the <see cref="T:CHDSharp.LZMA.DataErrorException"/> class with a default message.</summary>
         </member>
         <member name="T:CHDSharp.LZMA.InvalidParamException">
             <summary>
             The exception that is thrown when the value of an argument is outside the allowable range.
             </summary>
         </member>
-        <member name="T:CHDSharp.LZMA.CoderPropID">
-            <summary>
-            Provides the fields that represent properties idenitifiers for compressing.
-            </summary>
+        <member name="M:CHDSharp.LZMA.InvalidParamException.#ctor">
+            <summary>Initializes a new instance of the <see cref="T:CHDSharp.LZMA.InvalidParamException"/> class.</summary>
         </member>
-        <member name="F:CHDSharp.LZMA.CoderPropID.DefaultProp">
-            <summary>
-            Specifies default property.
-            </summary>
+        <member name="T:CHDSharp.LZMA.Base">
+            <summary>LZMA decoder constants and utilities.</summary>
         </member>
-        <member name="F:CHDSharp.LZMA.CoderPropID.DictionarySize">
-            <summary>
-            Specifies size of dictionary.
-            </summary>
+        <member name="F:CHDSharp.LZMA.Base.KNumRepDistances">
+            <summary>Number of repeat distances.</summary>
         </member>
-        <member name="F:CHDSharp.LZMA.CoderPropID.UsedMemorySize">
-            <summary>
-            Specifies size of memory for PPM*.
-            </summary>
+        <member name="F:CHDSharp.LZMA.Base.KNumStates">
+            <summary>Number of states in the state machine.</summary>
         </member>
-        <member name="F:CHDSharp.LZMA.CoderPropID.Order">
-            <summary>
-            Specifies order for PPM methods.
-            </summary>
+        <member name="F:CHDSharp.LZMA.Base.KNumPosSlotBits">
+            <summary>Number of position slot bits.</summary>
         </member>
-        <member name="F:CHDSharp.LZMA.CoderPropID.BlockSize">
-            <summary>
-            Specifies Block Size.
-            </summary>
+        <member name="F:CHDSharp.LZMA.Base.KDicLogSizeMin">
+            <summary>Minimum dictionary size log.</summary>
         </member>
-        <member name="F:CHDSharp.LZMA.CoderPropID.PosStateBits">
-            <summary>
-            Specifies number of postion state bits for LZMA (0 - x - 4).
-            </summary>
+        <member name="F:CHDSharp.LZMA.Base.KNumLenToPosStatesBits">
+            <summary>Number of bits for length-to-position mapping.</summary>
         </member>
-        <member name="F:CHDSharp.LZMA.CoderPropID.LitContextBits">
-            <summary>
-            Specifies number of literal context bits for LZMA (0 - x - 8).
-            </summary>
+        <member name="F:CHDSharp.LZMA.Base.KNumLenToPosStates">
+            <summary>Number of length-to-position states.</summary>
         </member>
-        <member name="F:CHDSharp.LZMA.CoderPropID.LitPosBits">
-            <summary>
-            Specifies number of literal position bits for LZMA (0 - x - 4).
-            </summary>
+        <member name="F:CHDSharp.LZMA.Base.KMatchMinLen">
+            <summary>Minimum match length.</summary>
         </member>
-        <member name="F:CHDSharp.LZMA.CoderPropID.NumFastBytes">
-            <summary>
-            Specifies number of fast bytes for LZ*.
-            </summary>
+        <member name="M:CHDSharp.LZMA.Base.GetLenToPosState(System.UInt32)">
+            <summary>Maps a length value to a position state index.</summary>
         </member>
-        <member name="F:CHDSharp.LZMA.CoderPropID.MatchFinder">
-            <summary>
-            Specifies match finder. LZMA: "BT2", "BT4" or "BT4B".
-            </summary>
+        <member name="F:CHDSharp.LZMA.Base.KNumAlignBits">
+            <summary>Number of alignment bits.</summary>
         </member>
-        <member name="F:CHDSharp.LZMA.CoderPropID.MatchFinderCycles">
-            <summary>
-            Specifies the number of match finder cyckes.
-            </summary>
+        <member name="F:CHDSharp.LZMA.Base.KAlignTableSize">
+            <summary>Size of the alignment table.</summary>
         </member>
-        <member name="F:CHDSharp.LZMA.CoderPropID.NumPasses">
-            <summary>
-            Specifies number of passes.
-            </summary>
+        <member name="F:CHDSharp.LZMA.Base.KAlignMask">
+            <summary>Alignment mask.</summary>
         </member>
-        <member name="F:CHDSharp.LZMA.CoderPropID.Algorithm">
-            <summary>
-            Specifies number of algorithm.
-            </summary>
+        <member name="F:CHDSharp.LZMA.Base.KStartPosModelIndex">
+            <summary>Start position model index.</summary>
         </member>
-        <member name="F:CHDSharp.LZMA.CoderPropID.NumThreads">
-            <summary>
-            Specifies the number of threads.
-            </summary>
+        <member name="F:CHDSharp.LZMA.Base.KEndPosModelIndex">
+            <summary>End position model index.</summary>
         </member>
-        <member name="F:CHDSharp.LZMA.CoderPropID.EndMarker">
-            <summary>
-            Specifies mode with end marker.
-            </summary>
+        <member name="F:CHDSharp.LZMA.Base.KNumPosModels">
+            <summary>Number of position models.</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.Base.KNumFullDistances">
+            <summary>Number of full distances.</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.Base.KNumLitPosStatesBitsEncodingMax">
+            <summary>Maximum literal position state bits (encoding).</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.Base.KNumLitContextBitsMax">
+            <summary>Maximum literal context bits.</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.Base.KNumPosStatesBitsMax">
+            <summary>Maximum position state bits.</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.Base.KNumPosStatesMax">
+            <summary>Maximum position states.</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.Base.KNumPosStatesBitsEncodingMax">
+            <summary>Maximum position state bits (encoding).</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.Base.KNumPosStatesEncodingMax">
+            <summary>Maximum position states (encoding).</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.Base.KNumLowLenBits">
+            <summary>Number of low length bits.</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.Base.KNumMidLenBits">
+            <summary>Number of mid length bits.</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.Base.KNumHighLenBits">
+            <summary>Number of high length bits.</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.Base.KNumLowLenSymbols">
+            <summary>Number of low length symbols.</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.Base.KNumMidLenSymbols">
+            <summary>Number of mid length symbols.</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.Base.KNumLenSymbols">
+            <summary>Total number of length symbols.</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.Base.KMatchMaxLen">
+            <summary>Maximum match length.</summary>
+        </member>
+        <member name="T:CHDSharp.LZMA.Decoder">
+            <summary>Core LZMA range-coder decoder, ported from the LZMA SDK. Decodes a raw LZMA stream using adaptive probability models.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.Decoder.#ctor">
+            <summary>Initialises a new LZMA decoder with all probability models set to their default states.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.Decoder.Code(System.Int32,CHDSharp.LZMA.LZ.OutWindow,CHDSharp.LZMA.RangeCoder.Decoder)">
+            <summary>Decodes LZMA-compressed data from the range decoder into the output window.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.Decoder.SetDecoderProperties(System.Byte[])">
+            <summary>Sets the LZMA decoder properties (lc, lp, pb) and optional dictionary size from a property byte array.</summary>
         </member>
         <member name="T:CHDSharp.LZMA.LzmaStream">
             <summary>
@@ -1158,6 +1260,195 @@
             Gets the current LZMA/LZMA2 properties used for decompressing subsequent chunks.
             </summary>
         </member>
+        <member name="T:CHDSharp.LZMA.LZ.OutWindow">
+            <summary>Sliding-window output buffer for LZMA decompression. Handles literal bytes, LZ77 copy blocks, and streaming to the output stream.</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.LZ.OutWindow.Total">
+            <summary>Total number of bytes written so far.</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.LZ.OutWindow.Limit">
+            <summary>Maximum number of bytes allowed to be written.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.LZ.OutWindow.Create(System.Int32,System.Byte[])">
+            <summary>Initialises or resizes the output window buffer.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.LZ.OutWindow.Reset">
+            <summary>Resets the window state.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.LZ.OutWindow.Init(System.IO.Stream)">
+            <summary>Sets the output stream and releases any previous stream.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.LZ.OutWindow.Train(System.IO.Stream)">
+            <summary>Pre-fills the window with the tail of the stream for dictionary training.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.LZ.OutWindow.ReleaseStream">
+            <summary>Flushes pending data and releases the output stream reference.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.LZ.OutWindow.Flush">
+            <summary>Writes buffered data to the output stream.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.LZ.OutWindow.CopyBlock(System.Int32,System.Int32)">
+            <summary>Copies a previously emitted block of bytes (LZ77 back-reference).</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.LZ.OutWindow.PutByte(System.Byte)">
+            <summary>Writes a single literal byte to the output window.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.LZ.OutWindow.GetByte(System.Int32)">
+            <summary>Reads a previously written byte at the given distance (for back-references).</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.LZ.OutWindow.CopyStream(System.IO.Stream,System.Int32)">
+            <summary>Copies raw data from a stream into the output window.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.LZ.OutWindow.SetLimit(System.Int64)">
+            <summary>Sets the maximum total number of bytes that can be produced.</summary>
+        </member>
+        <member name="P:CHDSharp.LZMA.LZ.OutWindow.HasSpace">
+            <summary>Gets whether the window has space to write more data.</summary>
+        </member>
+        <member name="P:CHDSharp.LZMA.LZ.OutWindow.HasPending">
+            <summary>Gets whether there is a pending copy-block operation.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.LZ.OutWindow.Read(System.Byte[],System.Int32,System.Int32)">
+            <summary>Reads decoded data from the window into a byte array.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.LZ.OutWindow.CopyPending">
+            <summary>Completes any pending copy-block operation from a previous <see cref="M:CHDSharp.LZMA.LZ.OutWindow.CopyBlock(System.Int32,System.Int32)"/> call.</summary>
+        </member>
+        <member name="P:CHDSharp.LZMA.LZ.OutWindow.AvailableBytes">
+            <summary>Gets the number of bytes available for reading from the window.</summary>
+        </member>
+        <member name="T:CHDSharp.LZMA.RangeCoder.Decoder">
+            <summary>LZMA range-coder decoder that adaptively decodes bits from a compressed stream.</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.RangeCoder.Decoder.KTopValue">
+            <summary>Top value used for range normalisation.</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.RangeCoder.Decoder.Range">
+            <summary>Current range value.</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.RangeCoder.Decoder.Code">
+            <summary>Current code (compressed data) being decoded.</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.RangeCoder.Decoder.Stream">
+            <summary>Input stream providing compressed data.</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.RangeCoder.Decoder.Total">
+            <summary>Total number of bytes consumed from the stream.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.RangeCoder.Decoder.Init(System.IO.Stream)">
+            <summary>Initialises the range decoder by reading the first five bytes from the stream.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.RangeCoder.Decoder.ReleaseStream">
+            <summary>Releases the reference to the input stream.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.RangeCoder.Decoder.CloseStream">
+            <summary>Closes and disposes the input stream.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.RangeCoder.Decoder.Normalize">
+            <summary>Normalises the range by reading bytes from the stream until <see cref="F:CHDSharp.LZMA.RangeCoder.Decoder.Range"/> >= <see cref="F:CHDSharp.LZMA.RangeCoder.Decoder.KTopValue"/>.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.RangeCoder.Decoder.Normalize2">
+            <summary>Single-iteration normalise (used when only one byte may be needed).</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.RangeCoder.Decoder.GetThreshold(System.UInt32)">
+            <summary>Computes the threshold value for a given total frequency.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.RangeCoder.Decoder.Decode(System.UInt32,System.UInt32)">
+            <summary>Decodes a symbol given its frequency range.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.RangeCoder.Decoder.DecodeDirectBits(System.Int32)">
+            <summary>Decodes a specified number of raw (non-adaptive) bits.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.RangeCoder.Decoder.DecodeBit(System.UInt32,System.Int32)">
+            <summary>Decodes a single adaptive bit using a probability model.</summary>
+        </member>
+        <member name="P:CHDSharp.LZMA.RangeCoder.Decoder.IsFinished">
+            <summary>Gets whether the decoder has finished (all data has been consumed).</summary>
+        </member>
+        <member name="T:CHDSharp.LZMA.RangeCoder.BitDecoder">
+            <summary>Adaptive probability bit model for the LZMA range-coder decoder.</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.RangeCoder.BitDecoder.KNumBitModelTotalBits">
+            <summary>Number of bits in the bit-model total.</summary>
+        </member>
+        <member name="F:CHDSharp.LZMA.RangeCoder.BitDecoder.KBitModelTotal">
+            <summary>Total probability range (2048).</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.RangeCoder.BitDecoder.UpdateModel(System.Int32,System.UInt32)">
+            <summary>Updates the probability model toward the decoded symbol value.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.RangeCoder.BitDecoder.Init">
+            <summary>Initialises the probability to the midpoint.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.RangeCoder.BitDecoder.Decode(CHDSharp.LZMA.RangeCoder.Decoder)">
+            <summary>Decodes a single adaptive bit from the range decoder.</summary>
+        </member>
+        <member name="T:CHDSharp.LZMA.RangeCoder.BitTreeDecoder">
+            <summary>Bit-tree decoder using adaptive probability models. Supports forward and reverse bit ordering.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.RangeCoder.BitTreeDecoder.#ctor(System.Int32)">
+            <summary>Initialises a new bit-tree decoder with the specified number of bit levels.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.RangeCoder.BitTreeDecoder.Init">
+            <summary>Initialises all probability models in the tree.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.RangeCoder.BitTreeDecoder.Decode(CHDSharp.LZMA.RangeCoder.Decoder)">
+            <summary>Decodes a symbol using forward (MSB-first) bit ordering.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.RangeCoder.BitTreeDecoder.ReverseDecode(CHDSharp.LZMA.RangeCoder.Decoder)">
+            <summary>Decodes a symbol using reverse (LSB-first) bit ordering on this instance.</summary>
+        </member>
+        <member name="M:CHDSharp.LZMA.RangeCoder.BitTreeDecoder.ReverseDecode(CHDSharp.LZMA.RangeCoder.BitDecoder[],System.UInt32,CHDSharp.LZMA.RangeCoder.Decoder,System.Int32)">
+            <summary>Decodes a symbol using reverse bit ordering on an external model array.</summary>
+        </member>
+        <member name="T:CHDSharp.Models.CHDCodec">
+            <summary>Holds per-codec state and scratch buffers used across multiple hunk decompressions, avoiding repeated allocations.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.CHDCodec.FlacSettings">
+            <summary>FLAC audio configuration (16-bit, 2-channel, 44100 Hz).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.CHDCodec.FlacAudioDecoder">
+            <summary>Reusable FLAC audio decoder instance.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.CHDCodec.FlacAudioBuffer">
+            <summary>Reusable FLAC audio output buffer.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.CHDCodec.AvhuffSettings">
+            <summary>AVHuff audio configuration.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.CHDCodec.AvhuffAudioDecoder">
+            <summary>Reusable AVHuff audio decoder instance.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.CHDCodec.BSector">
+            <summary>Scratch buffer for CD sector data reassembly.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.CHDCodec.BSubcode">
+            <summary>Scratch buffer for CD subcode data reassembly.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.CHDCodec.Blzma">
+            <summary>Scratch buffer for LZMA decompression (reused across hunks).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.CHDCodec.BZstd">
+            <summary>Reusable Zstandard decompressor instance.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.CHDCodec.BHuffman">
+            <summary>Huffman lookup table for standard audio/sector Huffman decoding.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.CHDCodec.BHuffmanHi">
+            <summary>Huffman lookup table for AVHuff video high-byte decoding.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.CHDCodec.BHuffmanLo">
+            <summary>Huffman lookup table for AVHuff video low-byte decoding.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.CHDCodec.BHuffmanY">
+            <summary>Huffman lookup table for AVHuff video Y (luma) channel.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.CHDCodec.BHuffmanCb">
+            <summary>Huffman lookup table for AVHuff video Cb (chroma blue) channel.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.CHDCodec.BHuffmanCr">
+            <summary>Huffman lookup table for AVHuff video Cr (chroma red) channel.</summary>
+        </member>
         <member name="T:CHDSharp.Models.ChdCodec">
             <summary>Identifies the compression codec used in a CHD file.</summary>
         </member>
@@ -1258,7 +1549,7 @@
             <summary>Same as the most recent <see cref="F:CHDSharp.Models.CompressionType.Compressionself"/> block.</summary>
         </member>
         <member name="F:CHDSharp.Models.CompressionType.Compressionself1">
-            <summary>Same as the most recent <see cref="!:COMPRESSION_SELF"/> block plus one.</summary>
+            <summary>Same as the most recent <see cref="F:CHDSharp.Models.CompressionType.Compressionself"/> block plus one.</summary>
         </member>
         <member name="F:CHDSharp.Models.CompressionType.Compressionparentself">
             <summary>Same block as in the parent CHD.</summary>
@@ -1267,7 +1558,7 @@
             <summary>Same as the most recent <see cref="F:CHDSharp.Models.CompressionType.Compressionparent"/> block.</summary>
         </member>
         <member name="F:CHDSharp.Models.CompressionType.Compressionparent1">
-            <summary>Same as the most recent <see cref="!:COMPRESSION_PARENT"/> block plus one.</summary>
+            <summary>Same as the most recent <see cref="F:CHDSharp.Models.CompressionType.Compressionparent"/> block plus one.</summary>
         </member>
         <member name="F:CHDSharp.Models.CompressionType.Compressionmini">
             <summary>Mini compression type used in V3/V4 formats (offset stores raw data).</summary>
@@ -1365,6 +1656,106 @@
         <member name="F:CHDSharp.Models.ChdError.Chderrcannotopenfile">
             <summary>Unable to open the specified file.</summary>
         </member>
+        <member name="T:CHDSharp.Models.ChdHeader">
+            <summary>Represents the fully parsed header of a CHD file including compression codecs, block map, checksums, and metadata offsets.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.ChdHeader.Compression">
+            <summary>The array of compression codecs used by this CHD (up to 4 slots in V5).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.ChdHeader.ChdReader">
+            <summary>The array of decompression delegate readers corresponding to each compression slot.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.ChdHeader.Totalbytes">
+            <summary>The total decompressed size of the image, in bytes.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.ChdHeader.Blocksize">
+            <summary>The size of each hunk (block) in bytes.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.ChdHeader.Totalblocks">
+            <summary>The total number of hunks in the image.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.ChdHeader.Unitbytes">
+            <summary>The size of a unit used for V5 parent block address translation. For V1-V4 this is set to <see cref="F:CHDSharp.Models.ChdHeader.Blocksize"/>.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.ChdHeader.UncompressedMap">
+            <summary>Whether the V5 map is the uncompressed variant (offset word 0 means read from parent).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.ChdHeader.Map">
+            <summary>The parsed array of map entries describing each hunk's compression type, offset, and length.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.ChdHeader.Md5">
+            <summary>MD5 hash of the raw compressed data (V1-V3). Null for V4/V5.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.ChdHeader.Rawsha1">
+            <summary>SHA1 hash of only the raw decompressed image data.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.ChdHeader.Sha1">
+            <summary>SHA1 hash of the full image including metadata.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.ChdHeader.Parentmd5">
+            <summary>MD5 hash of the expected parent file (for child/delta CHDs).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.ChdHeader.Parentsha1">
+            <summary>SHA1 hash of the expected parent file (for child/delta CHDs).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.ChdHeader.Metaoffset">
+            <summary>File offset of the first metadata entry, or 0 if none.</summary>
+        </member>
+        <member name="T:CHDSharp.Models.ChdMetadataEntry">
+            <summary>Represents a single metadata entry from a CHD file header (e.g. game name, disc label, hardware info).</summary>
+            <param name="Tag">Four-character tag identifying the metadata type (e.g. "GAME", "DISC", "HARD").</param>
+            <param name="Data">The raw metadata payload bytes. May be ASCII text or binary data.</param>
+        </member>
+        <member name="M:CHDSharp.Models.ChdMetadataEntry.#ctor(System.String,System.Byte[])">
+            <summary>Represents a single metadata entry from a CHD file header (e.g. game name, disc label, hardware info).</summary>
+            <param name="Tag">Four-character tag identifying the metadata type (e.g. "GAME", "DISC", "HARD").</param>
+            <param name="Data">The raw metadata payload bytes. May be ASCII text or binary data.</param>
+        </member>
+        <member name="P:CHDSharp.Models.ChdMetadataEntry.Tag">
+            <summary>Four-character tag identifying the metadata type (e.g. "GAME", "DISC", "HARD").</summary>
+        </member>
+        <member name="P:CHDSharp.Models.ChdMetadataEntry.Data">
+            <summary>The raw metadata payload bytes. May be ASCII text or binary data.</summary>
+        </member>
+        <member name="M:CHDSharp.Models.ChdMetadataEntry.GetText">
+            <summary>Returns the ASCII text representation of the metadata data, if applicable.</summary>
+        </member>
+        <member name="P:CHDSharp.Models.ChdMetadataEntry.IsText">
+            <summary><c>true</c> if <see cref="P:CHDSharp.Models.ChdMetadataEntry.Data"/> appears to be printable ASCII text.</summary>
+        </member>
+        <member name="M:CHDSharp.Models.ChdMetadataEntry.ToString">
+            <summary>Returns a human-readable representation: tag plus text or byte count.</summary>
+        </member>
+        <member name="T:CHDSharp.Models.ChdResult">
+            <summary>Result of a CHD verification or validation operation, consolidating error code, version, and hashes.</summary>
+        </member>
+        <member name="P:CHDSharp.Models.ChdResult.Error">
+            <summary>The error code indicating success or failure of the operation.</summary>
+        </member>
+        <member name="P:CHDSharp.Models.ChdResult.Version">
+            <summary>The CHD format version (1-5), or <c>null</c> if the file was invalid.</summary>
+        </member>
+        <member name="P:CHDSharp.Models.ChdResult.Sha1">
+            <summary>The SHA1 hash from the header, or <c>null</c> if not available.</summary>
+        </member>
+        <member name="P:CHDSharp.Models.ChdResult.Md5">
+            <summary>The MD5 hash from the header, or <c>null</c> if not available.</summary>
+        </member>
+        <member name="P:CHDSharp.Models.ChdResult.IsSuccess">
+            <summary><c>true</c> if the operation completed successfully (<see cref="P:CHDSharp.Models.ChdResult.Error"/> is <see cref="F:CHDSharp.Models.ChdError.Chderrnone"/>).</summary>
+        </member>
+        <member name="M:CHDSharp.Models.ChdResult.#ctor(CHDSharp.Models.ChdError,System.Nullable{System.UInt32},System.Byte[],System.Byte[])">
+            <summary>Creates a new <see cref="T:CHDSharp.Models.ChdResult"/> with the given error, version, SHA1, and MD5 values.</summary>
+        </member>
+        <member name="P:CHDSharp.Models.ChdResult.Sha1Hex">
+            <summary>SHA1 hash formatted as a lowercase hex string, or "(none)" if not available.</summary>
+        </member>
+        <member name="P:CHDSharp.Models.ChdResult.Md5Hex">
+            <summary>MD5 hash formatted as a lowercase hex string, or "(none)" if not available.</summary>
+        </member>
+        <member name="M:CHDSharp.Models.ChdResult.Deconstruct(CHDSharp.Models.ChdError@,System.Nullable{System.UInt32}@,System.Byte[]@,System.Byte[]@)">
+            <summary>Deconstructs the result into error, version, SHA1, and MD5 components for pattern matching.</summary>
+        </member>
         <member name="T:CHDSharp.Models.Flac.ChannelMode">
             <summary>
             Stereo encoding mode for FLAC frames.
@@ -1390,6 +1781,18 @@
             FLAC decoder settings implementing <see cref="T:CHDSharp.Interfaces.Flac.FlacDeps.IAudioDecoderSettings"/>.
             Configured for the "cuetools" FLAC decoder with a priority of 2.
             </summary>
+        </member>
+        <member name="P:CHDSharp.Models.Flac.DecoderSettings.Extension">
+            <summary>Gets the file extension associated with this decoder ("flac").</summary>
+        </member>
+        <member name="P:CHDSharp.Models.Flac.DecoderSettings.Name">
+            <summary>Gets the human-readable name of this decoder ("cuetools").</summary>
+        </member>
+        <member name="P:CHDSharp.Models.Flac.DecoderSettings.DecoderType">
+            <summary>Gets the <see cref="T:System.Type"/> of the decoder implementation (<see cref="T:CHDSharp.Flac.AudioDecoder"/>).</summary>
+        </member>
+        <member name="P:CHDSharp.Models.Flac.DecoderSettings.Priority">
+            <summary>Gets the priority of this decoder (2). Lower values indicate higher priority.</summary>
         </member>
         <member name="M:CHDSharp.Models.Flac.DecoderSettings.Clone">
             <summary>
@@ -1608,12 +2011,6 @@
             <param name="source">The audio source whose PCM configuration to use.</param>
             <param name="size">The buffer capacity in samples.</param>
         </member>
-        <member name="M:CHDSharp.Models.Flac.FlacDeps.AudioBuffer.Prepare(CHDSharp.Interfaces.Flac.FlacDeps.IAudioDest)">
-            <summary>
-            Prepares the buffer for writing to a destination (no-op, reserved for future format validation).
-            </summary>
-            <param name="dest">The output destination.</param>
-        </member>
         <member name="M:CHDSharp.Models.Flac.FlacDeps.AudioBuffer.Prepare(CHDSharp.Interfaces.Flac.FlacDeps.IAudioSource,System.Int32)">
             <summary>
             Prepares the buffer for reading from a source, validating format compatibility and clamping length.
@@ -1643,6 +2040,9 @@
             <param name="bytes">The byte array containing PCM data.</param>
             <param name="length">The number of valid samples.</param>
             <exception cref="T:System.Exception">Thrown if <paramref name="length"/> exceeds the computed capacity.</exception>
+        </member>
+        <member name="M:CHDSharp.Models.Flac.FlacDeps.AudioBuffer.Load(System.Int32,CHDSharp.Models.Flac.FlacDeps.AudioBuffer,System.Int32,System.Int32)">
+            <summary>Copies sample data from another buffer into this buffer at the specified offset.</summary>
         </member>
         <member name="M:CHDSharp.Models.Flac.FlacDeps.AudioBuffer.Prepare(CHDSharp.Models.Flac.FlacDeps.AudioBuffer,System.Int32,System.Int32)">
             <summary>
@@ -1678,6 +2078,213 @@
             <summary>
             Flags representing speaker positions and predefined speaker configurations.
             </summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Speakerfrontleft">
+            <summary>Front left speaker.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Speakerfrontright">
+            <summary>Front right speaker.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Speakerfrontcenter">
+            <summary>Front center speaker.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Speakerlowfrequency">
+            <summary>Low-frequency effects (subwoofer) channel.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Speakerbackleft">
+            <summary>Back left surround speaker.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Speakerbackright">
+            <summary>Back right surround speaker.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Speakerfrontleftofcenter">
+            <summary>Front left of center speaker.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Speakerfrontrightofcenter">
+            <summary>Front right of center speaker.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Speakerbackcenter">
+            <summary>Back center surround speaker.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Speakersideleft">
+            <summary>Side left surround speaker.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Speakersideright">
+            <summary>Side right surround speaker.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Speakertopcenter">
+            <summary>Top center overhead speaker.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Speakertopfrontleft">
+            <summary>Top front left overhead speaker.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Speakertopfrontcenter">
+            <summary>Top front center overhead speaker.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Speakertopfrontright">
+            <summary>Top front right overhead speaker.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Speakertopbackleft">
+            <summary>Top back left overhead speaker.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Speakertopbackcenter">
+            <summary>Top back center overhead speaker.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Speakertopbackright">
+            <summary>Top back right overhead speaker.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Directout">
+            <summary>Direct output (no predefined speaker configuration).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Ksaudiospeakermono">
+            <summary>Mono speaker configuration (front center).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Ksaudiospeakerstereo">
+            <summary>Stereo speaker configuration (front left + front right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Ksaudiospeakerquad">
+            <summary>Quadraphonic speaker configuration (front left/right + back left/right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Ksaudiospeakersurround">
+            <summary>Surround speaker configuration (front left/right/center + back center).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Ksaudiospeaker5Point1">
+            <summary>5.1 surround speaker configuration (front left/right/center + LFE + back left/right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Ksaudiospeaker5Point1Surround">
+            <summary>5.1 surround speaker configuration using side speakers (front left/right/center + LFE + side left/right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Ksaudiospeaker7Point1">
+            <summary>7.1 surround speaker configuration (front left/right/center + LFE + back left/right + front left/right of center).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Ksaudiospeaker7Point1Surround">
+            <summary>7.1 surround speaker configuration using side speakers (front left/right/center + LFE + back left/right + side left/right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr10">
+            <summary>DVD Audio channel group 1, channel 0 (front center).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr11">
+            <summary>DVD Audio channel group 1, channel 1 (front left + front right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr12">
+            <summary>DVD Audio channel group 1, channel 2 (front left + front right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr13">
+            <summary>DVD Audio channel group 1, channel 3 (front left + front right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr14">
+            <summary>DVD Audio channel group 1, channel 4 (front left + front right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr15">
+            <summary>DVD Audio channel group 1, channel 5 (front left + front right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr16">
+            <summary>DVD Audio channel group 1, channel 6 (front left + front right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr17">
+            <summary>DVD Audio channel group 1, channel 7 (front left + front right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr18">
+            <summary>DVD Audio channel group 1, channel 8 (front left + front right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr19">
+            <summary>DVD Audio channel group 1, channel 9 (front left + front right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr110">
+            <summary>DVD Audio channel group 1, channel 10 (front left + front right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr111">
+            <summary>DVD Audio channel group 1, channel 11 (front left + front right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr112">
+            <summary>DVD Audio channel group 1, channel 12 (front left + front right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr113">
+            <summary>DVD Audio channel group 1, channel 13 (front left/right + front center).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr114">
+            <summary>DVD Audio channel group 1, channel 14 (front left/right + front center).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr115">
+            <summary>DVD Audio channel group 1, channel 15 (front left/right + front center).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr116">
+            <summary>DVD Audio channel group 1, channel 16 (front left/right + front center).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr117">
+            <summary>DVD Audio channel group 1, channel 17 (front left/right + front center).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr118">
+            <summary>DVD Audio channel group 1, channel 18 (front left/right + back left/right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr119">
+            <summary>DVD Audio channel group 1, channel 19 (front left/right + back left/right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr120">
+            <summary>DVD Audio channel group 1, channel 20 (front left/right + back left/right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr20">
+            <summary>DVD Audio channel group 2, channel 0 (silent).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr21">
+            <summary>DVD Audio channel group 2, channel 1 (silent).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr22">
+            <summary>DVD Audio channel group 2, channel 2 (back center).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr23">
+            <summary>DVD Audio channel group 2, channel 3 (back left + back right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr24">
+            <summary>DVD Audio channel group 2, channel 4 (LFE).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr25">
+            <summary>DVD Audio channel group 2, channel 5 (LFE + back center).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr26">
+            <summary>DVD Audio channel group 2, channel 6 (LFE + back left/right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr27">
+            <summary>DVD Audio channel group 2, channel 7 (front center).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr28">
+            <summary>DVD Audio channel group 2, channel 8 (front center + back center).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr29">
+            <summary>DVD Audio channel group 2, channel 9 (front center + back left/right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr210">
+            <summary>DVD Audio channel group 2, channel 10 (front center + LFE).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr211">
+            <summary>DVD Audio channel group 2, channel 11 (front center + LFE + back center).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr212">
+            <summary>DVD Audio channel group 2, channel 12 (front center + LFE + back left/right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr213">
+            <summary>DVD Audio channel group 2, channel 13 (back center).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr214">
+            <summary>DVD Audio channel group 2, channel 14 (back left + back right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr215">
+            <summary>DVD Audio channel group 2, channel 15 (LFE).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr216">
+            <summary>DVD Audio channel group 2, channel 16 (LFE + back center).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr217">
+            <summary>DVD Audio channel group 2, channel 17 (LFE + back left/right).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr218">
+            <summary>DVD Audio channel group 2, channel 18 (LFE).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr219">
+            <summary>DVD Audio channel group 2, channel 19 (front center).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.SpeakerConfig.Dvdaudiogr220">
+            <summary>DVD Audio channel group 2, channel 20 (front center + LFE).</summary>
         </member>
         <member name="P:CHDSharp.Models.Flac.FlacDeps.AudioPcmConfig.BitsPerSample">
             <summary>
@@ -1737,7 +2344,7 @@
             Provides low-level unsafe memory operations for audio sample buffers.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioSamples.UINT32MAX">
+        <member name="F:CHDSharp.Models.Flac.FlacDeps.AudioSamples.Uint32Max">
             <summary>
             Represents the maximum unsigned 32-bit integer value.
             </summary>
@@ -2056,112 +2663,60 @@
             Bitmask tracking which precision/order combinations have been computed.
             </summary>
         </member>
-        <member name="T:CHDSharp.Models.Flac.FlacDeps.SingleAudioTitle">
-            <summary>
-            Default implementation of <see cref="T:CHDSharp.Interfaces.Flac.FlacDeps.IAudioTitle"/> that wraps a single <see cref="T:CHDSharp.Interfaces.Flac.FlacDeps.IAudioSource"/>.
-            </summary>
-        </member>
-        <member name="M:CHDSharp.Models.Flac.FlacDeps.SingleAudioTitle.#ctor(CHDSharp.Interfaces.Flac.FlacDeps.IAudioSource)">
-            <summary>
-            Initializes a new instance of the <see cref="T:CHDSharp.Models.Flac.FlacDeps.SingleAudioTitle"/> class.
-            </summary>
-            <param name="source">The audio source to wrap.</param>
-        </member>
-        <member name="P:CHDSharp.Models.Flac.FlacDeps.SingleAudioTitle.Chapters">
-            <summary>
-            Gets the chapters, starting at zero and ending at the source duration.
-            </summary>
-        </member>
-        <member name="P:CHDSharp.Models.Flac.FlacDeps.SingleAudioTitle.PCM">
-            <summary>
-            Gets the PCM configuration from the source.
-            </summary>
-        </member>
-        <member name="P:CHDSharp.Models.Flac.FlacDeps.SingleAudioTitle.Codec">
-            <summary>
-            Gets the codec name from the source settings extension.
-            </summary>
-        </member>
-        <member name="P:CHDSharp.Models.Flac.FlacDeps.SingleAudioTitle.Language">
-            <summary>
-            Gets the language (empty by default).
-            </summary>
-        </member>
-        <member name="P:CHDSharp.Models.Flac.FlacDeps.SingleAudioTitle.StreamId">
-            <summary>
-            Gets the stream identifier (always 0).
-            </summary>
-        </member>
-        <member name="T:CHDSharp.Models.Flac.FlacDeps.SingleAudioTitleSet">
-            <summary>
-            Default implementation of <see cref="T:CHDSharp.Interfaces.Flac.FlacDeps.IAudioTitleSet"/> that wraps a single <see cref="T:CHDSharp.Interfaces.Flac.FlacDeps.IAudioSource"/> as one title.
-            </summary>
-        </member>
-        <member name="M:CHDSharp.Models.Flac.FlacDeps.SingleAudioTitleSet.#ctor(CHDSharp.Interfaces.Flac.FlacDeps.IAudioSource)">
-            <summary>
-            Initializes a new instance of the <see cref="T:CHDSharp.Models.Flac.FlacDeps.SingleAudioTitleSet"/> class.
-            </summary>
-            <param name="source">The audio source to wrap.</param>
-        </member>
-        <member name="P:CHDSharp.Models.Flac.FlacDeps.SingleAudioTitleSet.AudioTitles">
-            <summary>
-            Gets the list containing a single audio title created from the source.
-            </summary>
-        </member>
         <member name="T:CHDSharp.Models.Flac.FlacFrame">
             <summary>
             Represents a FLAC audio frame with its header, subframe data, and decoding state.
             This class uses unsafe pointers for window buffer access.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacFrame.blocksize">
+        <member name="F:CHDSharp.Models.Flac.FlacFrame.Blocksize">
             <summary>
             The block size (number of samples) for this frame.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacFrame.bs_code0">
+        <member name="F:CHDSharp.Models.Flac.FlacFrame.BsCode0">
             <summary>
             Block size codes from the frame header. <c>bs_code0</c> is the primary code;
             <c>bs_code1</c> provides additional info for custom block sizes.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacFrame.bs_code1">
+        <member name="F:CHDSharp.Models.Flac.FlacFrame.BsCode1">
             <summary>
             Block size codes from the frame header. <c>bs_code0</c> is the primary code;
             <c>bs_code1</c> provides additional info for custom block sizes.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacFrame.ch_mode">
+        <member name="F:CHDSharp.Models.Flac.FlacFrame.ChMode">
             <summary>
             Channel assignment mode for this frame.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacFrame.crc8">
+        <member name="F:CHDSharp.Models.Flac.FlacFrame.Crc8">
             <summary>
             CRC-8 checksum of the frame header.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacFrame.subframes">
+        <member name="F:CHDSharp.Models.Flac.FlacFrame.Subframes">
             <summary>
             Array of subframe processing information, one per channel.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacFrame.frame_number">
+        <member name="F:CHDSharp.Models.Flac.FlacFrame.FrameNumber">
             <summary>
             Frame number (sample number of the first sample in this frame).
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacFrame.current">
+        <member name="F:CHDSharp.Models.Flac.FlacFrame.Current">
             <summary>
             Temporary subframe used during encoding.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacFrame.window_buffer">
+        <member name="F:CHDSharp.Models.Flac.FlacFrame.WindowBuffer">
             <summary>
             Pointer to a floating-point window buffer for LPC analysis.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacFrame.nSeg">
+        <member name="F:CHDSharp.Models.Flac.FlacFrame.NSeg">
             <summary>
             Number of segments (for streaming FLAC).
             </summary>
@@ -2183,47 +2738,47 @@
             Initializes a new instance of the <see cref="T:CHDSharp.Models.Flac.FlacSubframe"/> class.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacSubframe.type">
+        <member name="F:CHDSharp.Models.Flac.FlacSubframe.Type">
             <summary>
             The type of subframe encoding used.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacSubframe.order">
+        <member name="F:CHDSharp.Models.Flac.FlacSubframe.Order">
             <summary>
             The prediction order for fixed or LPC subframes.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacSubframe.residual">
+        <member name="F:CHDSharp.Models.Flac.FlacSubframe.Residual">
             <summary>
             Pointer to the residual (error) samples after prediction.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacSubframe.rc">
+        <member name="F:CHDSharp.Models.Flac.FlacSubframe.Rc">
             <summary>
             Rice coding context for decoding residual values.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacSubframe.size">
+        <member name="F:CHDSharp.Models.Flac.FlacSubframe.Size">
             <summary>
             Estimated size of this subframe in bits.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacSubframe.cbits">
+        <member name="F:CHDSharp.Models.Flac.FlacSubframe.Cbits">
             <summary>
             Number of bits per LPC coefficient.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacSubframe.shift">
+        <member name="F:CHDSharp.Models.Flac.FlacSubframe.Shift">
             <summary>
             Quantization shift for LPC coefficients.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacSubframe.coefs">
+        <member name="F:CHDSharp.Models.Flac.FlacSubframe.Coefs">
             <summary>
             LPC coefficients for LPC subframes.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacSubframe.window">
+        <member name="F:CHDSharp.Models.Flac.FlacSubframe.Window">
             <summary>
             Window index used during encoding.
             </summary>
@@ -2248,42 +2803,42 @@
             <param name="bps">Bits per sample of the source audio.</param>
             <param name="w">Wasted bits per sample.</param>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacSubframeInfo.best">
+        <member name="F:CHDSharp.Models.Flac.FlacSubframeInfo.Best">
             <summary>
             The best subframe encoding found so far.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacSubframeInfo.obits">
+        <member name="F:CHDSharp.Models.Flac.FlacSubframeInfo.Obits">
             <summary>
             Number of significant bits per sample (after removing wasted bits).
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacSubframeInfo.wbits">
+        <member name="F:CHDSharp.Models.Flac.FlacSubframeInfo.Wbits">
             <summary>
             Number of wasted bits per sample.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacSubframeInfo.samples">
+        <member name="F:CHDSharp.Models.Flac.FlacSubframeInfo.Samples">
             <summary>
             Pointer to the input sample data.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacSubframeInfo.done_fixed">
+        <member name="F:CHDSharp.Models.Flac.FlacSubframeInfo.DoneFixed">
             <summary>
             Bitmask indicating which fixed prediction orders have been evaluated.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacSubframeInfo.best_fixed">
+        <member name="F:CHDSharp.Models.Flac.FlacSubframeInfo.BestFixed">
             <summary>
             Estimated sizes for each fixed prediction order.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacSubframeInfo.lpc_ctx">
+        <member name="F:CHDSharp.Models.Flac.FlacSubframeInfo.LpcCtx">
             <summary>
             LPC analysis contexts, one per window.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.FlacSubframeInfo.sf">
+        <member name="F:CHDSharp.Models.Flac.FlacSubframeInfo.Sf">
             <summary>
             LPC subframe information for the current encoding pass.
             </summary>
@@ -2318,7 +2873,7 @@
             <A HREF="../format.html#metadata_block_vorbis_comment">VORBISCOMMENT</A> block (a.k.a. FLAC tags)
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.MetadataType.CUESheet">
+        <member name="F:CHDSharp.Models.Flac.MetadataType.CueSheet">
             <summary>
             <A HREF="../format.html#metadata_block_cuesheet">CUESHEET</A> block
             </summary>
@@ -2333,41 +2888,6 @@
             marker to denote beginning of undefined type range; this number will increase as new metadata types are added
             </summary>
         </member>
-        <member name="T:CHDSharp.Models.Flac.OrderMethod">
-            <summary>
-            Method for selecting the LPC order.
-            </summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.OrderMethod.Akaike">
-            <summary>
-            Select orders based on Akaike's criteria
-            </summary>
-        </member>
-        <member name="T:CHDSharp.Models.Flac.PredictionType">
-            <summary>
-            Type of linear prediction
-            </summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.PredictionType.None">
-            <summary>
-            Verbatim
-            </summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.PredictionType.Fixed">
-            <summary>
-            Fixed prediction only
-            </summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.PredictionType.Levinson">
-            <summary>
-            Levinson-Durbin recursion
-            </summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.PredictionType.Search">
-            <summary>
-            Exhaustive search
-            </summary>
-        </member>
         <member name="T:CHDSharp.Models.Flac.RiceContext">
             <summary>
             Rice coding context for encoding/decoding residual values in FLAC subframes.
@@ -2379,22 +2899,22 @@
             Initializes a new instance of the <see cref="T:CHDSharp.Models.Flac.RiceContext"/> class, allocating partition arrays.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.RiceContext.porder">
+        <member name="F:CHDSharp.Models.Flac.RiceContext.Porder">
             <summary>
             partition order
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.RiceContext.coding_method">
+        <member name="F:CHDSharp.Models.Flac.RiceContext.CodingMethod">
             <summary>
             coding method: rice parameters use 4 bits for coding_method 0 and 5 bits for coding_method 1
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.RiceContext.rparams">
+        <member name="F:CHDSharp.Models.Flac.RiceContext.Rparams">
             <summary>
             Rice parameters
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.RiceContext.esc_bps">
+        <member name="F:CHDSharp.Models.Flac.RiceContext.EscBps">
             <summary>
             bps if using escape code
             </summary>
@@ -2404,49 +2924,20 @@
             Represents a single entry in a FLAC seek table, mapping sample numbers to byte offsets.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.SeekPoint.number">
+        <member name="F:CHDSharp.Models.Flac.SeekPoint.Number">
             <summary>
             The sample number at which this seek point is positioned.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.SeekPoint.offset">
+        <member name="F:CHDSharp.Models.Flac.SeekPoint.Offset">
             <summary>
             The byte offset from the first frame header to the target frame.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.SeekPoint.framesize">
+        <member name="F:CHDSharp.Models.Flac.SeekPoint.Framesize">
             <summary>
             The number of samples in the target frame.
             </summary>
-        </member>
-        <member name="T:CHDSharp.Models.Flac.StereoMethod">
-            <summary>
-            Stereo encoding method options for FLAC encoding.
-            </summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.StereoMethod.Invalid">
-            <summary>Invalid / no stereo method selected.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.StereoMethod.Independent">
-            <summary>Encode channels independently.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.StereoMethod.Estimate">
-            <summary>Estimate the best stereo method.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.StereoMethod.Evaluate">
-            <summary>Evaluate stereo methods.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.StereoMethod.Search">
-            <summary>Exhaustive search for best stereo method.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.StereoMethod.EstimateX">
-            <summary>Estimate methods including left-side and right-side.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.StereoMethod.EvaluateX">
-            <summary>Evaluate methods including left-side and right-side.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.StereoMethod.EstimateFixed">
-            <summary>Estimate with fixed prediction order.</summary>
         </member>
         <member name="T:CHDSharp.Models.Flac.SubframeType">
             <summary>
@@ -2462,233 +2953,313 @@
         <member name="F:CHDSharp.Models.Flac.SubframeType.Fixed">
             <summary>Fixed polynomial prediction subframe.</summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.SubframeType.LPC">
+        <member name="F:CHDSharp.Models.Flac.SubframeType.Lpc">
             <summary>Linear Predictive Coding subframe.</summary>
         </member>
-        <member name="T:CHDSharp.Models.Flac.WindowFunction">
+        <member name="T:CHDSharp.Models.LZMA.State">
+            <summary>Represents the LZMA probability state used during literal and match decoding.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.LZMA.State.Index">
+            <summary>The current probability state index (0-11).</summary>
+        </member>
+        <member name="M:CHDSharp.Models.LZMA.State.Init">
+            <summary>Resets the state to its initial value.</summary>
+        </member>
+        <member name="M:CHDSharp.Models.LZMA.State.UpdateChar">
+            <summary>Updates the state after decoding a literal character.</summary>
+        </member>
+        <member name="M:CHDSharp.Models.LZMA.State.UpdateMatch">
+            <summary>Updates the state after decoding a match.</summary>
+        </member>
+        <member name="M:CHDSharp.Models.LZMA.State.UpdateRep">
+            <summary>Updates the state after decoding a repeated match.</summary>
+        </member>
+        <member name="M:CHDSharp.Models.LZMA.State.UpdateShortRep">
+            <summary>Updates the state after decoding a short repeated match.</summary>
+        </member>
+        <member name="M:CHDSharp.Models.LZMA.State.IsCharState">
+            <summary>Determines whether the current state represents a character state.</summary>
+            <returns><c>true</c> if <see cref="F:CHDSharp.Models.LZMA.State.Index"/> is less than 7; otherwise <c>false</c>.</returns>
+        </member>
+        <member name="T:CHDSharp.Models.MapEntry">
+            <summary>Represents a single entry in the CHD block map, describing compression type, location, length, and caching state for one hunk.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.MapEntry.Comptype">
+            <summary>The compression type applied to this hunk.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.MapEntry.Length">
+            <summary>The length of the compressed data on disk.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.MapEntry.Offset">
+            <summary>The file offset of the compressed data, or the source hunk index for self-referencing/parent entries.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.MapEntry.Crc">
+            <summary>The CRC-32 checksum of the decompressed hunk data (V3 &amp; V4). Null if CRC checking is disabled.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.MapEntry.Crc16">
+            <summary>The CRC-16 checksum of the decompressed hunk data (V5).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.MapEntry.SelfMapEntry">
+            <summary>Reference to the source map entry when this hunk is a <see cref="F:CHDSharp.Models.CompressionType.Compressionself"/> reference.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.MapEntry.UseCount">
+            <summary>Number of times this block is referenced by other hunks; used for caching decompressed data.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.MapEntry.BuffIn">
+            <summary>Buffer holding the raw compressed data read from disk.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.MapEntry.BuffOutCache">
+            <summary>Cached copy of the decompressed output when this block is kept for reuse.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.MapEntry.BuffOut">
+            <summary>Buffer holding the final decompressed hunk data.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.MapEntry.Processed">
+            <summary>Whether this hunk has been processed during parallel decompression (for ordering during hashing).</summary>
+        </member>
+        <member name="F:CHDSharp.Models.MapEntry.UsageWeight">
+            <summary>A computed weight value used to prioritize which blocks keep cached copies.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.MapEntry.KeepBufferCopy">
+            <summary>Whether the decompressed data buffer should be kept in <see cref="F:CHDSharp.Models.MapEntry.BuffOutCache"/> for reuse.</summary>
+        </member>
+        <member name="T:CHDSharp.Models.Utils.HuffmanError">
+            <summary>Error codes returned by Huffman decoder operations.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Utils.HuffmanError.HufferrNone">
+            <summary>No error; operation completed successfully.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Utils.HuffmanError.HufferrTooManyBits">
+            <summary>The Huffman tree contains a code with more bits than allowed.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Utils.HuffmanError.HufferrInvalidData">
+            <summary>The input data is malformed or corrupted.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Utils.HuffmanError.HufferrInputBufferTooSmall">
+            <summary>The input buffer is too small to contain the expected Huffman data.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Utils.HuffmanError.HufferrOutputBufferTooSmall">
+            <summary>The output buffer is too small to hold the decoded result.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Utils.HuffmanError.HufferrInternalInconsistency">
+            <summary>An internal inconsistency was detected in the Huffman tree structure.</summary>
+        </member>
+        <member name="F:CHDSharp.Models.Utils.HuffmanError.HufferrTooManyContexts">
+            <summary>Too many Huffman contexts were requested.</summary>
+        </member>
+        <member name="T:CHDSharp.Utils.ArrayPool">
             <summary>
-            Window function types for FLAC autocorrelation.
+            A simple thread-safe pool for reusing byte arrays of a fixed size,
+            reducing GC pressure when many temporary buffers are needed.
             </summary>
         </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.None">
-            <summary>No window (rectangular).</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.Welch">
-            <summary>Welch window.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.Tukey">
-            <summary>Tukey window.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.Hann">
-            <summary>Hann window.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.Flattop">
-            <summary>Flat-top window.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.Bartlett">
-            <summary>Bartlett (triangular) window.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.Tukey2">
-            <summary>Tukey window variant 2.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.Tukey3">
-            <summary>Tukey window variant 3.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.Tukey4">
-            <summary>Tukey window variant 4.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.Tukey2A">
-            <summary>Tukey window variant 2A.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.Tukey2B">
-            <summary>Tukey window variant 2B.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.Tukey3A">
-            <summary>Tukey window variant 3A.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.Tukey3B">
-            <summary>Tukey window variant 3B.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.Tukey4A">
-            <summary>Tukey window variant 4A.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.Tukey4B">
-            <summary>Tukey window variant 4B.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.Tukey1A">
-            <summary>Tukey window variant 1A.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.Tukey1B">
-            <summary>Tukey window variant 1B.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.Tukey1X">
-            <summary>Tukey window variant 1X.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.Tukey2X">
-            <summary>Tukey window variant 2X.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.Tukey3X">
-            <summary>Tukey window variant 3X.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowFunction.Tukey4X">
-            <summary>Tukey window variant 4X.</summary>
-        </member>
-        <member name="T:CHDSharp.Models.Flac.WindowMethod">
+        <member name="M:CHDSharp.Utils.ArrayPool.#ctor(System.UInt32)">
             <summary>
-            Window method options for FLAC encoding.
+            Initializes a new pool that manages byte arrays of the specified size.
             </summary>
+            <param name="arraySize">The fixed size in bytes for each array in this pool.</param>
         </member>
-        <member name="F:CHDSharp.Models.Flac.WindowMethod.Invalid">
-            <summary>Invalid / no window method selected.</summary>
+        <member name="M:CHDSharp.Utils.ArrayPool.Rent">
+            <summary>
+            Rents a byte array from the pool, allocating a new one if the pool is empty.
+            </summary>
+            <returns>A byte array of size <see cref="F:CHDSharp.Utils.ArrayPool._arraySize"/>.</returns>
         </member>
-        <member name="F:CHDSharp.Models.Flac.WindowMethod.Evaluate">
-            <summary>Evaluate window functions.</summary>
+        <member name="M:CHDSharp.Utils.ArrayPool.Return(System.Byte[])">
+            <summary>
+            Returns a previously rented byte array back to the pool for reuse.
+            </summary>
+            <param name="ret">The byte array to return. Must have been originally obtained from <see cref="M:CHDSharp.Utils.ArrayPool.Rent"/>.</param>
         </member>
-        <member name="F:CHDSharp.Models.Flac.WindowMethod.Search">
-            <summary>Search for the best window function.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowMethod.Estimate">
-            <summary>Estimate the best window function.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowMethod.Estimate2">
-            <summary>Estimate variant 2.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowMethod.Estimate3">
-            <summary>Estimate variant 3.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowMethod.EstimateN">
-            <summary>Estimate with variable N.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowMethod.Evaluate2">
-            <summary>Evaluate variant 2.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowMethod.Evaluate2N">
-            <summary>Evaluate variant 2 with variable N.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowMethod.Evaluate3">
-            <summary>Evaluate variant 3.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowMethod.Evaluate3N">
-            <summary>Evaluate variant 3 with variable N.</summary>
-        </member>
-        <member name="F:CHDSharp.Models.Flac.WindowMethod.EvaluateN">
-            <summary>Evaluate with variable N.</summary>
+        <member name="M:CHDSharp.Utils.ArrayPool.ReadStats(System.Int32@,System.Int32@)">
+            <summary>
+            Reads statistics about array pool usage.
+            </summary>
+            <param name="issuedArraysTotal">Total number of arrays allocated since creation.</param>
+            <param name="returnedArraysTotal">Number of arrays currently held in the pool.</param>
         </member>
         <member name="T:CHDSharp.Utils.BigEndian">
             <summary>Provides extension methods for reading and writing big-endian byte order values from <see cref="T:System.IO.BinaryReader"/> and <see cref="T:System.Byte"/> arrays.</summary>
         </member>
-        <member name="M:CHDSharp.Utils.BigEndian.Reverse(System.Byte[])">
-            <summary>Reverses the byte order of the array in-place and returns the same array.</summary>
-            <param name="b">The byte array to reverse.</param>
-            <returns>A reference to <paramref name="b"/> after reversal.</returns>
+        <member name="M:CHDSharp.Utils.BigEndian.ReadUInt16Be(System.IO.BinaryReader)">
+            <inheritdoc cref="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$695D470279A3D0B0E149C7DC966C880D.ReadUInt16Be"/>
         </member>
-        <member name="M:CHDSharp.Utils.BigEndian.ReadUInt16BE(System.IO.BinaryReader)">
-            <summary>Reads a big-endian <see cref="T:System.UInt16"/> from the stream.</summary>
-            <param name="binRdr">The <see cref="T:System.IO.BinaryReader"/> to read from.</param>
-            <returns>The unsigned 16-bit value read in big-endian order.</returns>
+        <member name="M:CHDSharp.Utils.BigEndian.ReadInt16Be(System.IO.BinaryReader)">
+            <inheritdoc cref="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$695D470279A3D0B0E149C7DC966C880D.ReadInt16Be"/>
         </member>
-        <member name="M:CHDSharp.Utils.BigEndian.ReadInt16BE(System.IO.BinaryReader)">
-            <summary>Reads a big-endian <see cref="T:System.Int16"/> from the stream.</summary>
-            <param name="binRdr">The <see cref="T:System.IO.BinaryReader"/> to read from.</param>
-            <returns>The signed 16-bit value read in big-endian order.</returns>
+        <member name="M:CHDSharp.Utils.BigEndian.ReadUInt32Be(System.IO.BinaryReader)">
+            <inheritdoc cref="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$695D470279A3D0B0E149C7DC966C880D.ReadUInt32Be"/>
         </member>
-        <member name="M:CHDSharp.Utils.BigEndian.ReadUInt32BE(System.IO.BinaryReader)">
-            <summary>Reads a big-endian <see cref="T:System.UInt32"/> from the stream.</summary>
-            <param name="binRdr">The <see cref="T:System.IO.BinaryReader"/> to read from.</param>
-            <returns>The unsigned 32-bit value read in big-endian order.</returns>
+        <member name="M:CHDSharp.Utils.BigEndian.ReadUInt48Be(System.IO.BinaryReader)">
+            <inheritdoc cref="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$695D470279A3D0B0E149C7DC966C880D.ReadUInt48Be"/>
         </member>
-        <member name="M:CHDSharp.Utils.BigEndian.ReadUInt48BE(System.IO.BinaryReader)">
-            <summary>Reads a big-endian 48-bit unsigned integer from the stream into a <see cref="T:System.UInt64"/>.</summary>
-            <param name="binRdr">The <see cref="T:System.IO.BinaryReader"/> to read from.</param>
-            <returns>The 48-bit value read in big-endian order, stored in a <see cref="T:System.UInt64"/>.</returns>
+        <member name="M:CHDSharp.Utils.BigEndian.ReadUInt64Be(System.IO.BinaryReader)">
+            <inheritdoc cref="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$695D470279A3D0B0E149C7DC966C880D.ReadUInt64Be"/>
         </member>
-        <member name="M:CHDSharp.Utils.BigEndian.ReadUInt64BE(System.IO.BinaryReader)">
-            <summary>Reads a big-endian <see cref="T:System.UInt64"/> from the stream.</summary>
-            <param name="binRdr">The <see cref="T:System.IO.BinaryReader"/> to read from.</param>
-            <returns>The unsigned 64-bit value read in big-endian order.</returns>
-        </member>
-        <member name="M:CHDSharp.Utils.BigEndian.ReadInt32BE(System.IO.BinaryReader)">
-            <summary>Reads a big-endian <see cref="T:System.Int32"/> from the stream.</summary>
-            <param name="binRdr">The <see cref="T:System.IO.BinaryReader"/> to read from.</param>
-            <returns>The signed 32-bit value read in big-endian order.</returns>
+        <member name="M:CHDSharp.Utils.BigEndian.ReadInt32Be(System.IO.BinaryReader)">
+            <inheritdoc cref="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$695D470279A3D0B0E149C7DC966C880D.ReadInt32Be"/>
         </member>
         <member name="M:CHDSharp.Utils.BigEndian.ReadBytesRequired(System.IO.BinaryReader,System.Int32)">
-            <summary>Reads the exact number of bytes requested from the stream, throwing if fewer bytes are available.</summary>
+            <inheritdoc cref="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$695D470279A3D0B0E149C7DC966C880D.ReadBytesRequired(System.Int32)"/>
+        </member>
+        <member name="M:CHDSharp.Utils.BigEndian.ReadUInt16Be(System.Byte[],System.Int32)">
+            <inheritdoc cref="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$CFF5569F447ACD79F0E183612A282817.ReadUInt16Be(System.Int32)"/>
+        </member>
+        <member name="M:CHDSharp.Utils.BigEndian.ReadUInt24Be(System.Byte[],System.Int32)">
+            <inheritdoc cref="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$CFF5569F447ACD79F0E183612A282817.ReadUInt24Be(System.Int32)"/>
+        </member>
+        <member name="M:CHDSharp.Utils.BigEndian.ReadUInt32Be(System.Byte[],System.Int32)">
+            <inheritdoc cref="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$CFF5569F447ACD79F0E183612A282817.ReadUInt32Be(System.Int32)"/>
+        </member>
+        <member name="M:CHDSharp.Utils.BigEndian.ReadUInt48Be(System.Byte[],System.Int32)">
+            <inheritdoc cref="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$CFF5569F447ACD79F0E183612A282817.ReadUInt48Be(System.Int32)"/>
+        </member>
+        <member name="M:CHDSharp.Utils.BigEndian.PutUInt16Be(System.Byte[],System.Int32,System.UInt32)">
+            <inheritdoc cref="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$CFF5569F447ACD79F0E183612A282817.PutUInt16Be(System.Int32,System.UInt32)"/>
+        </member>
+        <member name="M:CHDSharp.Utils.BigEndian.PutUInt24Be(System.Byte[],System.Int32,System.UInt32)">
+            <inheritdoc cref="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$CFF5569F447ACD79F0E183612A282817.PutUInt24Be(System.Int32,System.UInt32)"/>
+        </member>
+        <member name="M:CHDSharp.Utils.BigEndian.PutUInt48Be(System.Byte[],System.Int32,System.UInt64)">
+            <inheritdoc cref="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$CFF5569F447ACD79F0E183612A282817.PutUInt48Be(System.Int32,System.UInt64)"/>
+        </member>
+        <member name="M:CHDSharp.Utils.BigEndian.Reverse(System.Byte[])">
+            <inheritdoc cref="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$CFF5569F447ACD79F0E183612A282817.Reverse"/>
+        </member>
+        <member name="T:CHDSharp.Utils.BigEndian.&lt;G&gt;$695D470279A3D0B0E149C7DC966C880D.&lt;M&gt;$26CD6FE375864D201F8FEB237E39FEE3">
             <param name="binRdr">The <see cref="T:System.IO.BinaryReader"/> to read from.</param>
+        </member>
+        <member name="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$695D470279A3D0B0E149C7DC966C880D.ReadUInt16Be">
+            <summary>Reads a big-endian <see cref="T:System.UInt16"/> from the stream.</summary>
+            <returns>The unsigned 16-bit value read in big-endian order.</returns>
+        </member>
+        <member name="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$695D470279A3D0B0E149C7DC966C880D.ReadInt16Be">
+            <summary>Reads a big-endian <see cref="T:System.Int16"/> from the stream.</summary>
+            <returns>The signed 16-bit value read in big-endian order.</returns>
+        </member>
+        <member name="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$695D470279A3D0B0E149C7DC966C880D.ReadUInt32Be">
+            <summary>Reads a big-endian <see cref="T:System.UInt32"/> from the stream.</summary>
+            <returns>The unsigned 32-bit value read in big-endian order.</returns>
+        </member>
+        <member name="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$695D470279A3D0B0E149C7DC966C880D.ReadUInt48Be">
+            <summary>Reads a big-endian 48-bit unsigned integer from the stream into a <see cref="T:System.UInt64"/>.</summary>
+            <returns>The 48-bit value read in big-endian order, stored in a <see cref="T:System.UInt64"/>.</returns>
+        </member>
+        <member name="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$695D470279A3D0B0E149C7DC966C880D.ReadUInt64Be">
+            <summary>Reads a big-endian <see cref="T:System.UInt64"/> from the stream.</summary>
+            <returns>The unsigned 64-bit value read in big-endian order.</returns>
+        </member>
+        <member name="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$695D470279A3D0B0E149C7DC966C880D.ReadInt32Be">
+            <summary>Reads a big-endian <see cref="T:System.Int32"/> from the stream.</summary>
+            <returns>The signed 32-bit value read in big-endian order.</returns>
+        </member>
+        <member name="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$695D470279A3D0B0E149C7DC966C880D.ReadBytesRequired(System.Int32)">
+            <summary>Reads the exact number of bytes requested from the stream, throwing if fewer bytes are available.</summary>
             <param name="byteCount">The number of bytes to read.</param>
             <returns>A byte array containing exactly <paramref name="byteCount"/> bytes.</returns>
             <exception cref="T:System.IO.EndOfStreamException">Thrown when the stream contains fewer than <paramref name="byteCount"/> bytes.</exception>
         </member>
-        <member name="M:CHDSharp.Utils.BigEndian.ReadUInt16BE(System.Byte[],System.Int32)">
-            <summary>Reads a big-endian 16-bit unsigned integer from a byte array at the specified offset.</summary>
+        <member name="T:CHDSharp.Utils.BigEndian.&lt;G&gt;$CFF5569F447ACD79F0E183612A282817.&lt;M&gt;$A80EBF041718931A604B91D9A294BA79">
             <param name="arr">The byte array to read from.</param>
+        </member>
+        <member name="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$CFF5569F447ACD79F0E183612A282817.ReadUInt16Be(System.Int32)">
+            <summary>Reads a big-endian 16-bit unsigned integer from a byte array at the specified offset.</summary>
             <param name="offset">The zero-based offset at which to begin reading.</param>
             <returns>The unsigned 16-bit value read in big-endian order.</returns>
         </member>
-        <member name="M:CHDSharp.Utils.BigEndian.ReadUInt24BE(System.Byte[],System.Int32)">
+        <member name="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$CFF5569F447ACD79F0E183612A282817.ReadUInt24Be(System.Int32)">
             <summary>Reads a big-endian 24-bit unsigned integer from a byte array at the specified offset into a <see cref="T:System.UInt32"/>.</summary>
-            <param name="arr">The byte array to read from.</param>
             <param name="offset">The zero-based offset at which to begin reading.</param>
             <returns>The 24-bit value read in big-endian order, stored in a <see cref="T:System.UInt32"/>.</returns>
         </member>
-        <member name="M:CHDSharp.Utils.BigEndian.ReadUInt32BE(System.Byte[],System.Int32)">
+        <member name="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$CFF5569F447ACD79F0E183612A282817.ReadUInt32Be(System.Int32)">
             <summary>Reads a big-endian 32-bit unsigned integer from a byte array at the specified offset.</summary>
-            <param name="arr">The byte array to read from.</param>
             <param name="offset">The zero-based offset at which to begin reading.</param>
             <returns>The unsigned 32-bit value read in big-endian order.</returns>
         </member>
-        <member name="M:CHDSharp.Utils.BigEndian.ReadUInt48BE(System.Byte[],System.Int32)">
+        <member name="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$CFF5569F447ACD79F0E183612A282817.ReadUInt48Be(System.Int32)">
             <summary>Reads a big-endian 48-bit unsigned integer from a byte array at the specified offset into a <see cref="T:System.UInt64"/>.</summary>
-            <param name="arr">The byte array to read from.</param>
             <param name="offset">The zero-based offset at which to begin reading.</param>
             <returns>The 48-bit value read in big-endian order, stored in a <see cref="T:System.UInt64"/>.</returns>
         </member>
-        <member name="M:CHDSharp.Utils.BigEndian.PutUInt16BE(System.Byte[],System.Int32,System.UInt32)">
+        <member name="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$CFF5569F447ACD79F0E183612A282817.PutUInt16Be(System.Int32,System.UInt32)">
             <summary>Writes a 16-bit unsigned integer in big-endian order to a byte array at the specified offset.</summary>
-            <param name="arr">The byte array to write to.</param>
             <param name="offset">The zero-based offset at which to begin writing.</param>
             <param name="value">The value to write.</param>
         </member>
-        <member name="M:CHDSharp.Utils.BigEndian.PutUInt24BE(System.Byte[],System.Int32,System.UInt32)">
+        <member name="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$CFF5569F447ACD79F0E183612A282817.PutUInt24Be(System.Int32,System.UInt32)">
             <summary>Writes a 24-bit unsigned integer in big-endian order to a byte array at the specified offset.</summary>
-            <param name="arr">The byte array to write to.</param>
             <param name="offset">The zero-based offset at which to begin writing.</param>
             <param name="value">The value to write (only the lower 24 bits are used).</param>
         </member>
-        <member name="M:CHDSharp.Utils.BigEndian.PutUInt48BE(System.Byte[],System.Int32,System.UInt64)">
+        <member name="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$CFF5569F447ACD79F0E183612A282817.PutUInt48Be(System.Int32,System.UInt64)">
             <summary>Writes a 48-bit unsigned integer in big-endian order to a byte array at the specified offset.</summary>
-            <param name="arr">The byte array to write to.</param>
             <param name="offset">The zero-based offset at which to begin writing.</param>
             <param name="value">The value to write (only the lower 48 bits are used).</param>
+        </member>
+        <member name="M:CHDSharp.Utils.BigEndian.&lt;G&gt;$CFF5569F447ACD79F0E183612A282817.Reverse">
+            <summary>Reverses the byte order of the array in-place and returns the same array.</summary>
+            <returns>A reference to <paramref name="arr"/> after reversal.</returns>
+        </member>
+        <member name="T:CHDSharp.Utils.BitStream">
+            <summary>Provides bit-level reading from a byte buffer, used by the Huffman decoder to extract variable-length codes.</summary>
+        </member>
+        <member name="M:CHDSharp.Utils.BitStream.Overflow">
+            <summary>Checks whether the bit stream has overflown past its declared length.</summary>
+            <returns><c>true</c> if the read position exceeds the data length; otherwise <c>false</c>.</returns>
+        </member>
+        <member name="M:CHDSharp.Utils.BitStream.#ctor(System.Byte[],System.Int32,System.Int32)">
+            <summary>Initializes a new instance of the <see cref="T:CHDSharp.Utils.BitStream"/> class.</summary>
+            <param name="src">The byte array to read bits from.</param>
+            <param name="offset">The start offset within <paramref name="src"/>.</param>
+            <param name="length">The number of valid bytes.</param>
+        </member>
+        <member name="M:CHDSharp.Utils.BitStream.Peek(System.Int32)">
+            <summary>Peeks at the next <paramref name="numbits"/> bits from the stream without advancing the position. Fetches more data if needed.</summary>
+            <param name="numbits">The number of bits to peek (0-24).</param>
+            <returns>The requested number of bits as an unsigned integer.</returns>
+        </member>
+        <member name="M:CHDSharp.Utils.BitStream.Remove(System.Int32)">
+            <summary>Advances the input pointer by <paramref name="numbits"/> bits, discarding them.</summary>
+            <param name="numbits">The number of bits to skip.</param>
+        </member>
+        <member name="M:CHDSharp.Utils.BitStream.Read(System.Int32)">
+            <summary>Reads the next <paramref name="numbits"/> bits from the stream (peek + advance).</summary>
+            <param name="numbits">The number of bits to read.</param>
+            <returns>The requested number of bits.</returns>
+        </member>
+        <member name="M:CHDSharp.Utils.BitStream.Flush">
+            <summary>Flushes the bit stream to the nearest byte boundary and returns the number of bytes consumed.</summary>
+            <returns>The number of bytes read from the source buffer.</returns>
         </member>
         <member name="T:CHDSharp.Utils.CdRom">
             <summary>Provides CD-ROM ECC (Error Correction Code) generation for CHD sector data, producing P and Q parity bytes.</summary>
         </member>
-        <member name="F:CHDSharp.Utils.CdRom.SYNC_OFFSET">
+        <member name="F:CHDSharp.Utils.CdRom.SyncOffset">
             @brief  offset within sector. 
         </member>
-        <member name="F:CHDSharp.Utils.CdRom.SYNC_NUM_BYTES">
+        <member name="F:CHDSharp.Utils.CdRom.SyncNumBytes">
             @brief  12 bytes. 
         </member>
-        <member name="F:CHDSharp.Utils.CdRom.MODE_OFFSET">
+        <member name="F:CHDSharp.Utils.CdRom.ModeOffset">
             @brief  offset within sector. 
         </member>
-        <member name="F:CHDSharp.Utils.CdRom.ECC_P_OFFSET">
+        <member name="F:CHDSharp.Utils.CdRom.EccPOffset">
             @brief  offset within sector. 
         </member>
-        <member name="F:CHDSharp.Utils.CdRom.ECC_P_NUM_BYTES">
+        <member name="F:CHDSharp.Utils.CdRom.EccPNumBytes">
             @brief  2 lots of 86. 
         </member>
-        <member name="F:CHDSharp.Utils.CdRom.ECC_P_COMP">
+        <member name="F:CHDSharp.Utils.CdRom.EccPComp">
             @brief  24 bytes each. 
         </member>
-        <member name="F:CHDSharp.Utils.CdRom.eccQOffset">
+        <member name="F:CHDSharp.Utils.CdRom.EccQOffset">
             @brief  The ECC q offset. 
         </member>
-        <member name="F:CHDSharp.Utils.CdRom.ECC_Q_NUM_BYTES">
+        <member name="F:CHDSharp.Utils.CdRom.EccQNumBytes">
             @brief  2 lots of 52. 
         </member>
-        <member name="F:CHDSharp.Utils.CdRom.ECC_Q_COMP">
+        <member name="F:CHDSharp.Utils.CdRom.EccQComp">
             @brief  43 bytes each. 
         </member>
         <member name="F:CHDSharp.Utils.CdRom.Ecclow">
@@ -2711,7 +3282,20 @@
                        data 52 (*2) ECC Q bytes, 43 values represented by each
                      -------------------------------------------------.
         </member>
-        <!-- Badly formed XML comment ignored for member "M:CHDSharp.Utils.CdRom.ecc_compute_bytes(System.Byte[],System.Int32,System.UInt16[],System.Int32,System.Int32,System.Int32)" -->
+        <member name="M:CHDSharp.Utils.CdRom.ecc_compute_bytes(System.Byte[],System.Int32,System.UInt16[],System.Int32,System.Int32,System.Int32)">
+             @fn  void ecc_compute_bytes(const uint8_t *sector, const uint16_t *row, int rowlen, uint8_t &amp;val1, uint8_t &amp;val2)
+            
+             @brief   -------------------------------------------------
+                        ecc_compute_bytes - calculate an ECC value (P or Q)
+                      -------------------------------------------------.
+            
+             @param   [in]     data         The sector data array.
+             @param   [in]     sectorOffset Offset into the sector data.
+             @param   [in]     row          The row.
+             @param   [in]     rowlen       The rowlen.
+             @param   [in,out] val1Index    Index of the first value.
+             @param   [in,out] val2Index    Index of the second value.
+        </member>
         <member name="M:CHDSharp.Utils.CdRom.EccGenerate(System.Byte[],System.Int32)">
              @fn  void ecc_generate(uint8_t *sector)
             
@@ -2725,44 +3309,35 @@
             <param name="data">The byte array containing the sector data (must be at least 2352 bytes per sector).</param>
             <param name="sectorOffset">The zero-based offset within <paramref name="data"/> where the sector begins.</param>
         </member>
-        <member name="T:CHDSharp.Utils.CRC">
+        <member name="T:CHDSharp.Utils.Crc">
             <summary>A CRC-32 calculator using the ISO 3309 / ITU-T V.42 polynomial, with an 8-table slicing implementation for performance.</summary>
         </member>
-        <member name="F:CHDSharp.Utils.CRC.CRC32Lookup">
+        <member name="F:CHDSharp.Utils.Crc.Crc32Lookup">
             <summary>Precomputed CRC-32 lookup tables (8 tables, 256 entries each) for fast slicing.</summary>
         </member>
-        <member name="M:CHDSharp.Utils.CRC.#ctor">
-            <summary>Initializes a new instance of the <see cref="T:CHDSharp.Utils.CRC"/> class and resets the internal state.</summary>
+        <member name="M:CHDSharp.Utils.Crc.#ctor">
+            <summary>Initializes a new instance of the <see cref="T:CHDSharp.Utils.Crc"/> class and resets the internal state.</summary>
         </member>
-        <member name="M:CHDSharp.Utils.CRC.Reset">
+        <member name="M:CHDSharp.Utils.Crc.Reset">
             <summary>Resets the CRC-32 state to its initial value and clears the byte count.</summary>
         </member>
-        <member name="M:CHDSharp.Utils.CRC.SlurpBlock(System.Byte[],System.Int32,System.Int32)">
+        <member name="M:CHDSharp.Utils.Crc.SlurpBlock(System.Byte[],System.Int32,System.Int32)">
             <summary>Processes a block of data through the CRC-32 algorithm using 8-byte slicing where possible.</summary>
             <param name="block">The byte array containing the data to process.</param>
             <param name="offset">The zero-based offset in <paramref name="block"/> at which to begin processing.</param>
             <param name="count">The number of bytes to process.</param>
         </member>
-        <member name="P:CHDSharp.Utils.CRC.Crc32ResultB">
-            <summary>Gets the CRC-32 result as a big-endian byte array.</summary>
-        </member>
-        <member name="P:CHDSharp.Utils.CRC.Crc32Result">
-            <summary>Gets the CRC-32 result as a signed 32-bit integer.</summary>
-        </member>
-        <member name="P:CHDSharp.Utils.CRC.Crc32ResultU">
+        <member name="P:CHDSharp.Utils.Crc.Crc32ResultU">
             <summary>Gets the CRC-32 result as an unsigned 32-bit integer.</summary>
         </member>
-        <member name="P:CHDSharp.Utils.CRC.TotalBytesRead">
-            <summary>Gets the total number of bytes processed since the last <see cref="M:CHDSharp.Utils.CRC.Reset"/>.</summary>
-        </member>
-        <member name="M:CHDSharp.Utils.CRC.CalculateDigest(System.Byte[],System.UInt32,System.UInt32)">
+        <member name="M:CHDSharp.Utils.Crc.CalculateDigest(System.Byte[],System.UInt32,System.UInt32)">
             <summary>Calculates the CRC-32 digest of a data range without mutating instance state.</summary>
             <param name="data">The byte array containing the data.</param>
             <param name="offset">The zero-based offset in <paramref name="data"/> at which to start.</param>
             <param name="size">The number of bytes to process.</param>
             <returns>The CRC-32 digest as an unsigned 32-bit integer.</returns>
         </member>
-        <member name="M:CHDSharp.Utils.CRC.VerifyDigest(System.UInt32,System.Byte[],System.UInt32,System.UInt32)">
+        <member name="M:CHDSharp.Utils.Crc.VerifyDigest(System.UInt32,System.Byte[],System.UInt32,System.UInt32)">
             <summary>Verifies that a CRC-32 digest matches the computed digest of a data range.</summary>
             <param name="digest">The expected CRC-32 digest.</param>
             <param name="data">The byte array containing the data.</param>
@@ -2770,14 +3345,112 @@
             <param name="size">The number of bytes to process.</param>
             <returns><c>true</c> if the computed digest matches <paramref name="digest"/>; otherwise <c>false</c>.</returns>
         </member>
-        <member name="T:CHDSharp.Utils.CRC16">
+        <member name="T:CHDSharp.Utils.Crc16">
             <summary>A CCITT-style CRC-16 calculator used by the CHD format.</summary>
         </member>
-        <member name="M:CHDSharp.Utils.CRC16.calc(System.Byte[],System.Int32)">
+        <member name="M:CHDSharp.Utils.Crc16.Calc(System.Byte[],System.Int32)">
             <summary>Calculates a CCITT CRC-16 checksum over the specified data.</summary>
             <param name="data">The byte array containing the data to process.</param>
             <param name="length">The number of bytes to process from the start of <paramref name="data"/>.</param>
             <returns>The computed 16-bit CRC checksum.</returns>
+        </member>
+        <member name="T:CHDSharp.Utils.NodeT">
+            <summary>
+            Represents a single node in a Huffman tree with its encoded bit pattern and bit length.
+            </summary>
+        </member>
+        <member name="F:CHDSharp.Utils.NodeT.Bits">
+            <summary>Bits used to encode the node.</summary>
+        </member>
+        <member name="F:CHDSharp.Utils.NodeT.Numbits">
+            <summary>Number of bits needed for this node.</summary>
+        </member>
+        <member name="T:CHDSharp.Utils.HuffmanDecoder">
+            <summary>
+            Decodes Huffman-encoded bitstreams using a lookup-table-based approach.
+            Supports importing trees from RLE and Huffman-encoded formats.
+            </summary>
+        </member>
+        <member name="M:CHDSharp.Utils.HuffmanDecoder.#ctor(System.UInt32,System.Byte,CHDSharp.Utils.BitStream,System.UInt16[])">
+            <summary>
+            Initializes a new Huffman decoder with the specified capacity and bit stream.
+            </summary>
+            <param name="numcodes">Number of total codes to process.</param>
+            <param name="maxbits">Maximum bits per code (must not exceed 24).</param>
+            <param name="bitbuf">The bit stream to read encoded data from.</param>
+            <param name="buffLookup">Optional pre-allocated lookup table buffer.</param>
+        </member>
+        <member name="M:CHDSharp.Utils.HuffmanDecoder.AssignBitStream(CHDSharp.Utils.BitStream)">
+            <summary>
+            Assigns a new bit stream to the decoder, replacing any existing one.
+            </summary>
+            <param name="bitbufReplace">The replacement bit stream.</param>
+        </member>
+        <member name="M:CHDSharp.Utils.HuffmanDecoder.DecodeOne">
+            <summary>
+            Decodes a single code from the Huffman stream using the lookup table.
+            </summary>
+            <returns>The decoded value.</returns>
+        </member>
+        <member name="M:CHDSharp.Utils.HuffmanDecoder.ImportTreeRle">
+            <summary>
+            Imports a Huffman tree from an RLE-encoded bitstream.
+            </summary>
+            <returns>
+            <c>HufferrNone</c> on success;
+            <c>HufferrInvalidData</c> if the data is malformed;
+            <c>HufferrInputBufferTooSmall</c> on overflow.
+            </returns>
+        </member>
+        <member name="M:CHDSharp.Utils.HuffmanDecoder.ImportTreeHuffman">
+            <summary>
+            Imports a Huffman tree that is itself Huffman-encoded from the bitstream.
+            </summary>
+            <returns>
+            <c>HufferrNone</c> on success;
+            <c>HufferrInvalidData</c> if the data is malformed;
+            <c>HufferrInputBufferTooSmall</c> on overflow.
+            </returns>
+        </member>
+        <member name="T:CHDSharp.Utils.HuffmanDecoderRle">
+            <summary>Extends <see cref="T:CHDSharp.Utils.HuffmanDecoder"/> with run-length encoding support for repeated symbol sequences.</summary>
+        </member>
+        <member name="M:CHDSharp.Utils.HuffmanDecoderRle.#ctor(System.UInt32,System.Byte,CHDSharp.Utils.BitStream,System.UInt16[])">
+            <summary>Initializes a new instance of the <see cref="T:CHDSharp.Utils.HuffmanDecoderRle"/> class.</summary>
+        </member>
+        <member name="M:CHDSharp.Utils.HuffmanDecoderRle.Reset">
+            <summary>Resets the RLE state, clearing any pending run.</summary>
+        </member>
+        <member name="M:CHDSharp.Utils.HuffmanDecoderRle.FlushRle">
+            <summary>Flushes any pending RLE repeat count, resetting the run to zero.</summary>
+        </member>
+        <member name="M:CHDSharp.Utils.HuffmanDecoderRle.DecodeOne">
+            <summary>Decodes the next Huffman symbol, handling RLE expansion if a run is in progress.</summary>
+            <returns>The decoded symbol value.</returns>
+        </member>
+        <member name="M:CHDSharp.Utils.HuffmanDecoderRle.CodeToRleCount(System.Int32)">
+            <summary>Converts a Huffman symbol to its corresponding RLE repeat count.</summary>
+            <param name="code">The Huffman symbol value.</param>
+            <returns>The number of times the symbol should be repeated.</returns>
+        </member>
+        <member name="T:CHDSharp.Utils.Util">
+            <summary>General-purpose utility methods for byte array comparisons, hashing, and ASCII detection used throughout the CHD reader.</summary>
+        </member>
+        <member name="M:CHDSharp.Utils.Util.IsAllZeroArray(System.Byte[])">
+            <summary>Determines whether every byte in the array is zero (or the array is null).</summary>
+            <param name="b">The byte array to check.</param>
+            <returns><c>true</c> if the array is null or all bytes are zero; otherwise <c>false</c>.</returns>
+        </member>
+        <member name="M:CHDSharp.Utils.Util.ByteArrEquals(System.Byte[],System.Byte[])">
+            <summary>Compares two byte arrays for exact equality.</summary>
+            <returns><c>true</c> if both arrays are non-null and contain identical bytes; otherwise <c>false</c>.</returns>
+        </member>
+        <member name="M:CHDSharp.Utils.Util.ByteArrCompare(System.Byte[],System.Byte[])">
+            <summary>Lexicographically compares two byte arrays for use in sorting.</summary>
+            <returns>A negative value if <paramref name="x"/> is less than <paramref name="y"/>, zero if equal, or positive if greater.</returns>
+        </member>
+        <member name="M:CHDSharp.Utils.Util.IsAscii(System.Byte[])">
+            <summary>Checks whether the byte array contains only printable ASCII characters (including null bytes).</summary>
         </member>
     </members>
 </doc>

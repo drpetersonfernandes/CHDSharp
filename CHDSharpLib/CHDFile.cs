@@ -17,7 +17,7 @@ namespace CHDSharp;
 /// NOTE: an instance is NOT thread-safe. It seeks a shared stream and mutates
 /// shared per-hunk buffers, so all calls must be serialized by the caller.
 /// </summary>
-public sealed class ChdFile : IDisposable
+public sealed class ChdFile : IDisposable, IAsyncDisposable
 {
     private readonly Stream _stream;
 
@@ -36,6 +36,10 @@ public sealed class ChdFile : IDisposable
     private long _cachedHunk = -1;
 
     private byte[]? _parentScratch;
+
+    private List<ChdMetadataEntry>? _metadata;
+    private bool _metadataLoaded;
+
     private ChdFile(Stream stream, bool leaveOpen, ChdHeader chd, uint version)
     {
         _stream = stream;
@@ -68,6 +72,138 @@ public sealed class ChdFile : IDisposable
 
     /// <summary>True if this CHD is a differential child that requires a parent CHD to read.</summary>
     public bool RequiresParent => !Util.IsAllZeroArray(_chd.Parentmd5) || !Util.IsAllZeroArray(_chd.Parentsha1);
+
+    /// <summary>True if this CHD is a differential child. Alias for <see cref="RequiresParent"/>.</summary>
+    public bool IsChild => RequiresParent;
+
+    /// <summary>
+    /// Gets the list of metadata entries from the CHD header (game name,
+    /// disc info, etc.). Lazy-loaded on first access; empty list if the CHD
+    /// has no metadata or an error occurs.
+    /// </summary>
+    public IReadOnlyList<ChdMetadataEntry> Metadata
+    {
+        get
+        {
+            EnsureMetadataLoaded();
+            return _metadata!;
+        }
+    }
+
+    /// <summary>
+    /// Returns a string representation of the CHD file including version,
+    /// size, and hunk count.
+    /// </summary>
+    public override string ToString()
+    {
+        return $"V{Version}: {TotalBytes} bytes, {HunkCount} hunks x {HunkBytes}";
+    }
+
+    private void EnsureMetadataLoaded()
+    {
+        if (_metadataLoaded)
+            return;
+
+        _metadataLoaded = true;
+        _metadata = [];
+        try
+        {
+            if (_chd.Metaoffset != 0)
+            {
+                ChdMetaData.ReadMetaDataEntries(_stream, _chd, out _metadata);
+            }
+        }
+        catch
+        {
+            // Silently return empty list if metadata can't be read.
+            _metadata = [];
+        }
+    }
+
+    /// <inheritdoc cref="Open(string,out ChdFile)"/>
+    public static Task<(ChdError error, ChdFile? file)> OpenAsync(string filename)
+    {
+        return Task.Run(() =>
+        {
+            var err = Open(filename, out var chd);
+            return (err, chd);
+        });
+    }
+
+    /// <inheritdoc cref="Open(string,string,out ChdFile)"/>
+    public static Task<(ChdError error, ChdFile? file)> OpenAsync(string filename, string parentFilename)
+    {
+        return Task.Run(() =>
+        {
+            var err = Open(filename, parentFilename, out var chd);
+            return (err, chd);
+        });
+    }
+
+    /// <inheritdoc cref="Open(string,ChdFile,out ChdFile)"/>
+    public static Task<(ChdError error, ChdFile? file)> OpenAsync(string filename, ChdFile? parent)
+    {
+        return Task.Run(() =>
+        {
+            var err = Open(filename, parent, out var chd);
+            return (err, chd);
+        });
+    }
+
+    /// <inheritdoc cref="Open(Stream,bool,out ChdFile)"/>
+    public static Task<(ChdError error, ChdFile? file)> OpenAsync(Stream stream, bool leaveOpen)
+    {
+        return Task.Run(() =>
+        {
+            var err = Open(stream, leaveOpen, out var chd);
+            return (err, chd);
+        });
+    }
+
+    /// <inheritdoc cref="ReadHunk"/>
+    public Task<ChdError> ReadHunkAsync(uint hunknum, byte[] buffer)
+    {
+        return Task.Run(() => ReadHunk(hunknum, buffer));
+    }
+
+    /// <inheritdoc cref="Read"/>
+    public Task<ChdError> ReadAsync(ulong byteOffset, byte[] destination, int destinationOffset, int count)
+    {
+        return Task.Run(() => Read(byteOffset, destination, destinationOffset, count));
+    }
+
+    /// <summary>
+    /// Decompresses the entire CHD image into a single byte array. Returns
+    /// <see cref="ChdError.Chderrnone"/> on success. Be cautious: CHD images
+    /// can be tens of gigabytes.
+    /// </summary>
+    public ChdError ReadAllBytes(out byte[] data)
+    {
+        data = [];
+        if (_chd.Totalbytes > int.MaxValue)
+            return ChdError.Chderroutofmemory;
+
+        data = new byte[_chd.Totalbytes];
+        return Read(0, data, 0, data.Length);
+    }
+
+    /// <summary>
+    /// Yields each decompressed hunk in order. The returned array is reused
+    /// between iterations. Copy it if you need to keep the data beyond the
+    /// current iteration.
+    /// </summary>
+    public IEnumerable<byte[]> EnumerateHunks()
+    {
+        var buffer = new byte[_chd.Blocksize];
+        for (uint i = 0; i < _chd.Totalblocks; i++)
+        {
+            var err = ReadHunk(i, buffer);
+            if (err != ChdError.Chderrnone)
+                yield break;
+
+            yield return buffer;
+        }
+    }
 
     /// <summary>
     /// Opens a standalone CHD file from disk for random access. Fails with
@@ -214,15 +350,13 @@ public sealed class ChdFile : IDisposable
     {
         var childMd5 = child.Parentmd5;
         var parentMd5 = parent.Md5;
-        if (childMd5 != null && parentMd5 != null &&
-            !Util.IsAllZeroArray(childMd5) && !Util.IsAllZeroArray(parentMd5) &&
+        if (!Util.IsAllZeroArray(childMd5) && !Util.IsAllZeroArray(parentMd5) &&
             !Util.ByteArrEquals(childMd5, parentMd5))
             return ChdError.Chderrinvalidparent;
 
         var childSha1 = child.Parentsha1;
         var parentSha1 = parent.Sha1;
-        if (childSha1 != null && parentSha1 != null &&
-            !Util.IsAllZeroArray(childSha1) && !Util.IsAllZeroArray(parentSha1) &&
+        if (!Util.IsAllZeroArray(childSha1) && !Util.IsAllZeroArray(parentSha1) &&
             !Util.ByteArrEquals(childSha1, parentSha1))
             return ChdError.Chderrinvalidparent;
 
@@ -249,7 +383,7 @@ public sealed class ChdFile : IDisposable
     {
         if (hunknum >= _chd.Totalblocks)
             return ChdError.Chderrhunkoutofrange;
-        if (buffer == null || buffer.Length < _chd.Blocksize)
+        if (buffer.Length < _chd.Blocksize)
             return ChdError.Chderrinvalidparameter;
 
         var me = _chd.Map[hunknum];
@@ -270,7 +404,7 @@ public sealed class ChdFile : IDisposable
         {
             if (dataEntry.Length > 0)
             {
-                if (dataEntry.BuffIn == null || dataEntry.BuffIn.Length < dataEntry.Length)
+                if (dataEntry.BuffIn.Length < dataEntry.Length)
                 {
                     dataEntry.BuffIn = new byte[dataEntry.Length];
                 }
@@ -360,7 +494,7 @@ public sealed class ChdFile : IDisposable
     /// </summary>
     public ChdError Read(ulong byteOffset, byte[] destination, int destinationOffset, int count)
     {
-        if (destination == null || destinationOffset < 0 || count < 0 ||
+        if (destinationOffset < 0 || count < 0 ||
             destinationOffset + count > destination.Length || byteOffset + (ulong)count > _chd.Totalbytes)
             return ChdError.Chderrinvalidparameter;
 
@@ -391,6 +525,26 @@ public sealed class ChdFile : IDisposable
         }
 
         return ChdError.Chderrnone;
+    }
+
+    /// <inheritdoc cref="Dispose"/>
+    public async ValueTask DisposeAsync()
+    {
+        await CastAndDispose(_stream);
+
+        if (_ownsParent && _parent != null)
+            await _parent.DisposeAsync();
+        return;
+
+        static ValueTask CastAndDispose(IDisposable resource)
+        {
+            if (resource is IAsyncDisposable resourceAsyncDisposable)
+                return resourceAsyncDisposable.DisposeAsync();
+            else
+                resource.Dispose();
+
+            return ValueTask.CompletedTask;
+        }
     }
 
     /// <summary>Releases the underlying stream (if not left open) and any internally-owned parent instance.</summary>

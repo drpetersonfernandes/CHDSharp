@@ -14,7 +14,7 @@ using Serilog;
 namespace CHDSharpTester.ViewModels;
 
 /// <summary>The primary view model for the CHDSharp Tester application, managing file selection, test execution, results display, and PDF export.</summary>
-public class MainViewModel : INotifyPropertyChanged
+internal class MainViewModel : INotifyPropertyChanged
 {
     private readonly ChdTestRunner _runner = new();
 
@@ -25,10 +25,21 @@ public class MainViewModel : INotifyPropertyChanged
         AddFilesCommand = new RelayCommand(_ => AddFiles());
         AddFolderCommand = new RelayCommand(_ => AddFolder());
         RemoveFileCommand = new RelayCommand(RemoveFile);
-        RunTestsCommand = new RelayCommand(o => { o = RunTestsAsync(); }, _ => CanRunTests);
+        RunTestsCommand = new RelayCommand(o => { _ = RunTestsAsync(); }, _ => CanRunTests);
         ExportPdfCommand = new RelayCommand(_ => ExportPdf(), _ => HasResults);
         CopyLogCommand = new RelayCommand(_ => CopyLog());
         CopyResultsCommand = new RelayCommand(_ => CopyResults(), _ => HasResults);
+
+        AutoDetectChdman();
+    }
+
+    private void AutoDetectChdman()
+    {
+        var candidate = Path.Combine(AppContext.BaseDirectory, "chdman.exe");
+        if (File.Exists(candidate))
+        {
+            ChdmanPath = candidate;
+        }
     }
 
     private string _chdmanPath = string.Empty;

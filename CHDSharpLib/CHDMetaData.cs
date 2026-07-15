@@ -37,7 +37,7 @@ internal static class ChdMetaData
             Log.Debug("{MetaTag}  Length: {MetaLength}",
                 $"{(char)((metaTag >> 24) & 0xFF)}{(char)((metaTag >> 16) & 0xFF)}{(char)((metaTag >> 8) & 0xFF)}{(char)((metaTag >> 0) & 0xFF)}",
                 metaLength);
-            if (Util.isAscii(metaData))
+            if (Util.IsAscii(metaData))
                 Log.Debug("Data: {MetaData}", Encoding.ASCII.GetString(metaData));
             else
                 Log.Debug("Data: Binary Data Length {Length}", metaData.Length);

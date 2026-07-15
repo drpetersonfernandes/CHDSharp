@@ -138,12 +138,14 @@ internal static class Crc16
     {
         crc1 = Reflect(crc1);
         crc2 = Reflect(crc2);
-        /* degenerate case */
-        if (len2 == 0)
-            return crc1;
-
-        if (len2 < 0)
-            throw new ArgumentException("crc.Combine length cannot be negative", "len2");
+        switch (len2)
+        {
+            /* degenerate case */
+            case 0:
+                return crc1;
+            case < 0:
+                throw new ArgumentException("crc.Combine length cannot be negative", nameof(len2));
+        }
 
         crc1 ^= crc2;
 

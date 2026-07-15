@@ -17,7 +17,7 @@ internal class OutWindow
     public long Limit;
 
     /// <summary>Initialises or resizes the output window buffer.</summary>
-    public void Create(int windowSize, byte[]? buffer=null)
+    public void Create(int windowSize, byte[]? buffer = null)
     {
         if (buffer != null)
         {

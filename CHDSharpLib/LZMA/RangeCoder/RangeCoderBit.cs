@@ -4,10 +4,10 @@ namespace CHDSharp.LZMA.RangeCoder;
 internal struct BitDecoder
 {
     /// <summary>Number of bits in the bit-model total.</summary>
-    public const int KNumBitModelTotalBits = 11;
+    private const int KNumBitModelTotalBits = 11;
     /// <summary>Total probability range (2048).</summary>
-    public const uint KBitModelTotal = (1 << KNumBitModelTotalBits);
-    private const int kNumMoveBits = 5;
+    private const uint KBitModelTotal = (1 << KNumBitModelTotalBits);
+    private const int KNumMoveBits = 5;
 
     private uint _prob;
 
@@ -37,7 +37,7 @@ internal struct BitDecoder
         if (rangeDecoder.Code < newBound)
         {
             rangeDecoder.Range = newBound;
-            _prob += (KBitModelTotal - _prob) >> kNumMoveBits;
+            _prob += (KBitModelTotal - _prob) >> KNumMoveBits;
             if (rangeDecoder.Range < Decoder.KTopValue)
             {
                 rangeDecoder.Code = (rangeDecoder.Code << 8) | (byte)rangeDecoder.Stream.ReadByte();
@@ -51,7 +51,7 @@ internal struct BitDecoder
         {
             rangeDecoder.Range -= newBound;
             rangeDecoder.Code -= newBound;
-            _prob -= (_prob) >> kNumMoveBits;
+            _prob -= (_prob) >> KNumMoveBits;
             if (rangeDecoder.Range < Decoder.KTopValue)
             {
                 rangeDecoder.Code = (rangeDecoder.Code << 8) | (byte)rangeDecoder.Stream.ReadByte();

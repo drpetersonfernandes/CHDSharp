@@ -181,6 +181,57 @@ public class ChdmanWrapper : IDisposable
         }
     }
 
+
+    /// <summary>Copies (recompresses) a CHD file using chdman copy. Optionally writes the parent to a separate file for delta CHD chains.</summary>
+    /// <param name="input">The source CHD file path.</param>
+    /// <param name="output">The destination CHD file path.</param>
+    /// <param name="compression">The compression codec(s) to apply (e.g. "cdzs", "zstd", "cdzl,cdfl").</param>
+    /// <param name="parentOut">Optional parent output path for building parent/child delta CHDs.</param>
+    /// <returns><c>true</c> if chdman exits with code 0 and the output file exists; otherwise <c>false</c>.</returns>
+    public bool Copy(string input, string output, string compression, string? parentOut = null)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = _chdmanPath,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        psi.ArgumentList.Add("copy");
+        psi.ArgumentList.Add("-i");
+        psi.ArgumentList.Add(input);
+        psi.ArgumentList.Add("-o");
+        psi.ArgumentList.Add(output);
+        psi.ArgumentList.Add("-c");
+        psi.ArgumentList.Add(compression);
+        psi.ArgumentList.Add("-f");
+        if (parentOut != null)
+        {
+            psi.ArgumentList.Add("-op");
+            psi.ArgumentList.Add(parentOut);
+        }
+
+        using var p = Process.Start(psi)!;
+        p.WaitForExit();
+        return p.ExitCode == 0 && File.Exists(output);
+    }
+
+    /// <summary>Same as <see cref="Copy"/> but returns the full chdman result for diagnostics.</summary>
+    /// <param name="input">The source CHD file path.</param>
+    /// <param name="output">The destination CHD file path.</param>
+    /// <param name="compression">The compression codec(s) to apply.</param>
+    /// <param name="parentOut">Optional parent output path for delta CHDs.</param>
+    /// <returns>A <see cref="Result"/> containing the exit code and output streams.</returns>
+    public Result CopyVerbose(string input, string output, string compression, string? parentOut = null)
+    {
+        var args = new List<string> { "copy", "-i", input, "-o", output, "-c", compression, "-f" };
+        if (parentOut != null)
+        {
+            args.Add("-op");
+            args.Add(parentOut);
+        }
+
+        return Run(args.ToArray());
+    }
     private static int ParseIntField(string text, string pattern)
     {
         var m = Regex.Match(text, pattern);
@@ -211,3 +262,4 @@ public class ChdmanWrapper : IDisposable
         GC.SuppressFinalize(this);
     }
 }
+

@@ -54,7 +54,7 @@ public class AudioBuffer
         if (inSamples.GetLength(0) - inSampleOffset < sampleCount ||
             outSamples.Length - outByteOffset < loopCount * 2)
         {
-            throw new ArgumentOutOfRangeException();
+            throw new ArgumentOutOfRangeException(nameof(sampleCount), sampleCount, "sampleCount exceeds available space in inSamples or outSamples buffer");
         }
 
         fixed (byte* pOutSamplesFixed = &outSamples[outByteOffset])
@@ -82,7 +82,7 @@ public class AudioBuffer
         if (inSamples.GetLength(0) - inSampleOffset < sampleCount ||
             outSamples.Length - outByteOffset < loopCount * 3)
         {
-            throw new ArgumentOutOfRangeException();
+            throw new ArgumentOutOfRangeException(nameof(sampleCount), sampleCount, "sampleCount exceeds available space in inSamples or outSamples buffer");
         }
 
         fixed (int* pInSamplesFixed = &inSamples[inSampleOffset, 0])

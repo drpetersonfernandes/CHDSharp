@@ -54,7 +54,7 @@ internal static class Util
     }
 
     /// <summary>Checks whether the byte array contains only printable ASCII characters (including null bytes).</summary>
-    internal static bool isAscii(byte[] bytes)
+    internal static bool IsAscii(byte[] bytes)
     {
         foreach (var b in bytes)
         {

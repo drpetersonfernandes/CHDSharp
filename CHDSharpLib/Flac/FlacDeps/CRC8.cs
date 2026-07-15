@@ -19,7 +19,7 @@ internal class Crc8
 
         _table = new ushort[256];
         const int bits = 8;
-        var poly = (ushort)(Poly8 + (1U << bits));
+        const ushort poly = (ushort)(Poly8 + (1U << bits));
         for (ushort i = 0; i < _table.Length; i++)
         {
             var crc = i;

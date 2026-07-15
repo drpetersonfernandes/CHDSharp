@@ -53,7 +53,7 @@ public static class Crc32
 
     private const uint UPolynomial = 0x04c11db7;
 
-    static unsafe Crc32()
+    static Crc32()
     {
         Table = new uint[256];
         for (uint i = 0; i < Table.Length; i++)

@@ -128,5 +128,4 @@ internal class Decoder
 
     /// <summary>Gets whether the decoder has finished (all data has been consumed).</summary>
     public bool IsFinished => Code == 0;
-
 }

@@ -518,10 +518,10 @@ public class AudioDecoder : IAudioSource
                 frame.Subframes[ch].Best.Type = (SubframeType)typeCode;
                 frame.Subframes[ch].Best.Order = 0;
 
-                if ((typeCode & (uint)SubframeType.LPC) != 0)
+                if ((typeCode & (uint)SubframeType.Lpc) != 0)
                 {
-                    frame.Subframes[ch].Best.Order = (typeCode - (int)SubframeType.LPC) + 1;
-                    frame.Subframes[ch].Best.Type = SubframeType.LPC;
+                    frame.Subframes[ch].Best.Order = (typeCode - (int)SubframeType.Lpc) + 1;
+                    frame.Subframes[ch].Best.Type = SubframeType.Lpc;
                 }
                 else if ((typeCode & (uint)SubframeType.Fixed) != 0)
                 {
@@ -544,7 +544,7 @@ public class AudioDecoder : IAudioSource
                     case SubframeType.Fixed:
                         decode_subframe_fixed(bitreader, frame, ch);
                         break;
-                    case SubframeType.LPC:
+                    case SubframeType.Lpc:
                         decode_subframe_lpc(bitreader, frame, ch);
                         break;
                     default:
@@ -641,7 +641,7 @@ public class AudioDecoder : IAudioSource
                 case SubframeType.Fixed:
                     restore_samples_fixed(frame, ch);
                     break;
-                case SubframeType.LPC:
+                case SubframeType.Lpc:
                     restore_samples_lpc(frame, ch);
                     break;
             }

@@ -94,7 +94,7 @@ public static class AudioTitleExtensions
     public static TimeSpan GetDuration(this IAudioTitle title)
     {
         var chapters = title.Chapters;
-        return chapters[chapters.Count - 1];
+        return chapters[^1];
     }
 
 

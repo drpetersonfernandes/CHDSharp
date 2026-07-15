@@ -12,5 +12,5 @@ public enum SubframeType
     /// <summary>Fixed polynomial prediction subframe.</summary>
     Fixed = 8,
     /// <summary>Linear Predictive Coding subframe.</summary>
-    LPC = 32
+    Lpc = 32
 }

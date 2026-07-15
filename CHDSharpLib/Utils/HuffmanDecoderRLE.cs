@@ -51,13 +51,13 @@ internal class HuffmanDecoderRle : HuffmanDecoder
     /// <summary>Converts a Huffman symbol to its corresponding RLE repeat count.</summary>
     /// <param name="code">The Huffman symbol value.</param>
     /// <returns>The number of times the symbol should be repeated.</returns>
-    public int CodeToRleCount(int code)
+    private static int CodeToRleCount(int code)
     {
-        if (code == 0x00)
-            return 1;
-        if (code <= 0x107)
-            return 8 + (code - 0x100);
-
-        return 16 << (code - 0x108);
+        return code switch
+        {
+            0x00 => 1,
+            <= 0x107 => 8 + (code - 0x100),
+            _ => 16 << (code - 0x108)
+        };
     }
 }

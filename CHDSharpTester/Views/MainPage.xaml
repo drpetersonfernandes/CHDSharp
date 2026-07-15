@@ -8,7 +8,7 @@
       xmlns:m="clr-namespace:CHDSharpTester.Models"
       xmlns:views="clr-namespace:CHDSharpTester.Views"
       mc:Ignorable="d"
-      d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
+      d:DataContext="{d:DesignInstance Type=vm:MainViewModel}" x:ClassModifier="internal">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
@@ -183,7 +183,8 @@
                                  VerticalScrollBarVisibility="Auto"
                                  HorizontalScrollBarVisibility="Auto"
                                  TextWrapping="NoWrap"
-                                  MaxHeight="160" />
+                                 MaxHeight="160"
+                                 TextChanged="LogTextBox_OnTextChanged" />
                         </Grid>
                     </Border>
                 </StackPanel>

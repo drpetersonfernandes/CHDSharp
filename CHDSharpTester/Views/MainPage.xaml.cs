@@ -7,13 +7,21 @@ using CHDSharpTester.ViewModels;
 namespace CHDSharpTester.Views;
 
 /// <summary>The main page of the CHDSharp Tester, serving as the primary content for the <see cref="MainWindow"/>.</summary>
-public partial class MainPage
+internal partial class MainPage
 {
     /// <summary>Initializes a new instance of the <see cref="MainPage"/> class and sets the data context to a new <see cref="MainViewModel"/>.</summary>
     public MainPage()
     {
         InitializeComponent();
         DataContext = new MainViewModel();
+    }
+
+    private void LogTextBox_OnTextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+    {
+        if (sender is System.Windows.Controls.TextBox tb)
+        {
+            tb.ScrollToEnd();
+        }
     }
 }
 

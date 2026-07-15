@@ -113,6 +113,4 @@ internal class BitStream
         _buffer = 0;
         return _doffset - _initialOffset;
     }
-
-
 }

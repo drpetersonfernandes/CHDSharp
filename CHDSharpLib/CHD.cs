@@ -47,8 +47,9 @@ public static class Chd
         LoggerMessage.Define<string, int, int, uint>(LogLevel.Debug, new EventId(11), "{Where}: Issued Arrays Total {Issued}, returned Arrays Total {Returned}, block size {BlockSize}");
 
     /// <summary>
-    /// Gets or sets the <see cref="ILoggerFactory"/> used for internal logging. Set before
-    /// using any other API. If not set, logging is silently discarded.
+    /// Gets or sets the <see cref="ILoggerFactory"/> used for internal logging.
+    /// Can be set (or changed) at any time; loggers resolve the factory lazily.
+    /// If not set, logging is silently discarded.
     /// </summary>
     public static ILoggerFactory? LoggerFactory
     {
@@ -240,7 +241,9 @@ public static class Chd
             md5Check?.TransformFinalBlock(tmp, 0, 0);
             sha1Check?.TransformFinalBlock(tmp, 0, 0);
 
-            if (md5Check != null && sha1Check != null && md5Check.Hash != null && sha1Check.Hash != null && ((haveMd5 && !Util.ByteArrEquals(expectedMd5, md5Check.Hash)) || (haveSha1 && !Util.ByteArrEquals(expectedSha1, sha1Check.Hash))))
+            var md5Mismatch = haveMd5 && md5Check?.Hash != null && !Util.ByteArrEquals(expectedMd5, md5Check.Hash);
+            var sha1Mismatch = haveSha1 && sha1Check?.Hash != null && !Util.ByteArrEquals(expectedSha1, sha1Check.Hash);
+            if (md5Mismatch || sha1Mismatch)
             {
                 BugReporter.TryReport(ChdError.Chderrdecompressionerror, filename, chdVersion, null);
                 return ChdError.Chderrdecompressionerror;
@@ -302,8 +305,21 @@ public static class Chd
         }
 
         using var br = new BinaryReader(file, Encoding.UTF8, true);
-        length = br.ReadUInt32Be();
-        version = br.ReadUInt32Be();
+        try
+        {
+            length = br.ReadUInt32Be();
+            version = br.ReadUInt32Be();
+        }
+        catch (EndOfStreamException)
+        {
+            length = 0;
+            version = 0;
+            return false;
+        }
+
+        if (version == 0 || version >= HeaderLengths.Length)
+            return false;
+
         return HeaderLengths[version] == length;
     }
 
@@ -373,7 +389,7 @@ public static class Chd
 
                     // this must be done to tell all the decompression threads to stop working and return.
                     for (var i = 0; i < TaskCount; i++)
-                        blocksToDecompress.Add(-1);
+                        blocksToDecompress.Add(-1, ct);
                 }
                 catch
                 {

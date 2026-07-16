@@ -88,6 +88,7 @@ internal class Decoder
                     symbol = (symbol << 1) | _mDecoders[symbol].Decode(rangeDecoder);
                 } while (symbol < 0x100);
 
+                // ReSharper disable once IntVariableOverflowInUncheckedContext
                 return (byte)symbol;
             }
 
@@ -111,6 +112,7 @@ internal class Decoder
                     }
                 } while (symbol < 0x100);
 
+                // ReSharper disable once IntVariableOverflowInUncheckedContext
                 return (byte)symbol;
             }
         }
@@ -122,7 +124,7 @@ internal class Decoder
 
         public void Create(int numPosBits, int numPrevBits)
         {
-            if (_mCoders != null && _mNumPrevBits == numPrevBits &&
+            if (_mNumPrevBits == numPrevBits &&
                 _mNumPosBits == numPosBits)
                 return;
 

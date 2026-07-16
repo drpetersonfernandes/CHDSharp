@@ -200,7 +200,7 @@ internal static class ChdBlockRead
     /// <param name="buffOut">The pre-allocated output buffer to receive decompressed data.</param>
     /// <param name="buffOutLength">The expected length of the decompressed data.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
-    internal static ChdError ReadBlock(MapEntry mapEntry, ArrayPool arrPool, ChdReader[] compression, CHDCodec codec, byte[] buffOut, int buffOutLength)
+    internal static ChdError ReadBlock(MapEntry mapEntry, ArrayPool arrPool, ChdReader[] compression, ChdCodecState codec, byte[] buffOut, int buffOutLength)
     {
         var checkCrc = true;
 

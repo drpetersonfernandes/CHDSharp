@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Security.Cryptography;
 using System.Text;
 using CHDSharp.Models;
@@ -56,7 +57,7 @@ public static class Chd
     }
 
     /// <summary>Number of parallel decompression tasks used during verification. Can be changed at runtime.</summary>
-    public static int TaskCount = 8;
+    private const int TaskCount = 8;
 
     /// <summary>
     /// Validates a CHD file from a <see cref="Stream"/> using parallel decompression and hash verification.
@@ -255,7 +256,7 @@ public static class Chd
     /// <param name="path">Filesystem path to a potential CHD file.</param>
     /// <param name="version">When this method returns, contains the CHD version number (1-5) if valid.</param>
     /// <returns><c>true</c> if the file exists and has a valid CHD header.</returns>
-    public static bool IsChdFile(string path, out uint version)
+    private static bool IsChdFile(string path, out uint version)
     {
         version = 0;
         if (!File.Exists(path))
@@ -311,7 +312,8 @@ public static class Chd
     /// <param name="file">The stream positioned at the start of the compressed data section.</param>
     /// <param name="chd">The parsed CHD header containing compression and hunk information.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
-    internal static ChdError DecompressDataParallel(Stream file, ChdHeader chd)
+    [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
+    private static ChdError DecompressDataParallel(Stream file, ChdHeader chd)
     {
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
@@ -319,13 +321,12 @@ public static class Chd
         var sha1Check = SHA1.Create();
         var blocksToDecompress = new BlockingCollection<int>(TaskCount * 100);
         var blocksToHash = new BlockingCollection<int>(TaskCount * 100);
+        var allTasks = new List<Task>();
+        var ts = new CancellationTokenSource();
         try
         {
             var errMaster = ChdError.Chderrnone;
 
-            var allTasks = new List<Task>();
-
-            var ts = new CancellationTokenSource();
             var ct = ts.Token;
 
             var arrPoolIn = new ArrayPool(chd.Blocksize);
@@ -395,7 +396,7 @@ public static class Chd
                 {
                     try
                     {
-                        var codec = new CHDCodec();
+                        var codec = new ChdCodecState();
                         while (true)
                         {
                             aheadLock.Wait(ct);
@@ -521,6 +522,9 @@ public static class Chd
         }
         finally
         {
+            ts.Cancel();
+            Task.WaitAll(allTasks.ToArray());
+            ts.Dispose();
             blocksToDecompress.Dispose();
             blocksToHash.Dispose();
             md5Check?.Dispose();

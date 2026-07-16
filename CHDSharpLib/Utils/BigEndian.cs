@@ -106,7 +106,7 @@ internal static class BigEndian
         public void PutUInt16Be(int offset, uint value)
         {
             arr[offset++] = (byte)((value >> 8) & 0xFF);
-            arr[offset++] = (byte)(value & 0xFF);
+            arr[offset] = (byte)(value & 0xFF);
         }
 
         /// <summary>Writes a 24-bit unsigned integer in big-endian order to a byte array at the specified offset.</summary>
@@ -116,7 +116,7 @@ internal static class BigEndian
         {
             arr[offset++] = (byte)((value >> 16) & 0xFF);
             arr[offset++] = (byte)((value >> 8) & 0xFF);
-            arr[offset++] = (byte)(value & 0xFF);
+            arr[offset] = (byte)(value & 0xFF);
         }
 
         /// <summary>Writes a 48-bit unsigned integer in big-endian order to a byte array at the specified offset.</summary>
@@ -129,12 +129,12 @@ internal static class BigEndian
             arr[offset++] = (byte)((value >> 24) & 0xFF);
             arr[offset++] = (byte)((value >> 16) & 0xFF);
             arr[offset++] = (byte)((value >> 8) & 0xFF);
-            arr[offset++] = (byte)(value & 0xFF);
+            arr[offset] = (byte)(value & 0xFF);
         }
 
         /// <summary>Reverses the byte order of the array in-place and returns the same array.</summary>
         /// <returns>A reference to <paramref name="arr"/> after reversal.</returns>
-        public byte[] Reverse()
+        private byte[] Reverse()
         {
             Array.Reverse((Array)arr);
             return arr;

@@ -91,7 +91,7 @@ public class Lpc
             }
             if (pdata <= finish)
             {
-                temp += (long)pdata[i] * *pdata++;
+                temp += (long)pdata[i] * *pdata;
             }
 
             autoc[i] += temp + temp2;
@@ -122,7 +122,7 @@ public class Lpc
             }
             if (pdata <= finish)
             {
-                temp += (long)pdata[i] * *pdata++;
+                temp += (long)pdata[i] * *pdata;
             }
 
             autoc[i] += temp + temp2;
@@ -314,7 +314,7 @@ public class Lpc
                 {
                     var co = coefs + order - 1;
                     var pred =
-                        *co-- * *s++ +
+                        *co * *s++ +
                         c1 * *s++ + c0 * *s++;
                     *s = *r++ + (pred >> shift);
                     s -= 2;
@@ -325,7 +325,7 @@ public class Lpc
                 {
                     var co = coefs + order - 1;
                     var pred =
-                        *co-- * *s++ + *co-- * *s++ +
+                        *co-- * *s++ + *co * *s++ +
                         c1 * *s++ + c0 * *s++;
                     *s = *r++ + (pred >> shift);
                     s -= 3;
@@ -337,7 +337,7 @@ public class Lpc
                     var co = coefs + order - 1;
                     var pred =
                         *co-- * *s++ +
-                        *co-- * *s++ + *co-- * *s++ +
+                        *co-- * *s++ + *co * *s++ +
                         c1 * *s++ + c0 * *s++;
                     *s = *r++ + (pred >> shift);
                     s -= 4;
@@ -349,7 +349,7 @@ public class Lpc
                     var co = coefs + order - 1;
                     var pred =
                         *co-- * *s++ + *co-- * *s++ +
-                        *co-- * *s++ + *co-- * *s++ +
+                        *co-- * *s++ + *co * *s++ +
                         c1 * *s++ + c0 * *s++;
                     *s = *r++ + (pred >> shift);
                     s -= 5;
@@ -362,7 +362,7 @@ public class Lpc
                     var pred =
                         *co-- * *s++ +
                         *co-- * *s++ + *co-- * *s++ +
-                        *co-- * *s++ + *co-- * *s++ +
+                        *co-- * *s++ + *co * *s++ +
                         c1 * *s++ + c0 * *s++;
                     *s = *r++ + (pred >> shift);
                     s -= 6;
@@ -375,7 +375,7 @@ public class Lpc
                     var pred =
                         *co-- * *s++ + *co-- * *s++ +
                         *co-- * *s++ + *co-- * *s++ +
-                        *co-- * *s++ + *co-- * *s++ +
+                        *co-- * *s++ + *co * *s++ +
                         c1 * *s++ + c0 * *s++;
                     *s = *r++ + (pred >> shift);
                     s -= 7;
@@ -389,7 +389,7 @@ public class Lpc
                         *co-- * *s++ +
                         *co-- * *s++ + *co-- * *s++ +
                         *co-- * *s++ + *co-- * *s++ +
-                        *co-- * *s++ + *co-- * *s++ +
+                        *co-- * *s++ + *co * *s++ +
                         c1 * *s++ + c0 * *s++;
                     *s = *r++ + (pred >> shift);
                     s -= 8;
@@ -403,7 +403,7 @@ public class Lpc
                         *co-- * *s++ + *co-- * *s++ +
                         *co-- * *s++ + *co-- * *s++ +
                         *co-- * *s++ + *co-- * *s++ +
-                        *co-- * *s++ + *co-- * *s++ +
+                        *co-- * *s++ + *co * *s++ +
                         c1 * *s++ + c0 * *s++;
                     *s = *r++ + (pred >> shift);
                     s -= 9;
@@ -418,7 +418,7 @@ public class Lpc
                         *co-- * *s++ + *co-- * *s++ +
                         *co-- * *s++ + *co-- * *s++ +
                         *co-- * *s++ + *co-- * *s++ +
-                        *co-- * *s++ + *co-- * *s++ +
+                        *co-- * *s++ + *co * *s++ +
                         c1 * *s++ + c0 * *s++;
                     *s = *r++ + (pred >> shift);
                     s -= 10;
@@ -433,7 +433,7 @@ public class Lpc
                         *co-- * *s++ + *co-- * *s++ +
                         *co-- * *s++ + *co-- * *s++ +
                         *co-- * *s++ + *co-- * *s++ +
-                        *co-- * *s++ + *co-- * *s++ +
+                        *co-- * *s++ + *co * *s++ +
                         c1 * *s++ + c0 * *s++;
                     *s = *r++ + (pred >> shift);
                     s -= 11;

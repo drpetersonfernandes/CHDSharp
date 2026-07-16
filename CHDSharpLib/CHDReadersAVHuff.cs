@@ -44,7 +44,7 @@ internal static partial class ChdReaders
     /// <param name="buffOutLength">The expected decompressed output length.</param>
     /// <param name="codec">The codec state holding FLAC decoder settings and scratch buffers.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
-    internal static ChdError AvHuff(byte[] buffIn, int buffInLength, byte[] buffOut, int buffOutLength, CHDCodec codec)
+    internal static ChdError AvHuff(byte[] buffIn, int buffInLength, byte[] buffOut, int buffOutLength, ChdCodecState codec)
     {
         // extract info from the header
         if (buffInLength < 8)
@@ -157,7 +157,7 @@ internal static partial class ChdReaders
     }
 
 
-    private static ChdError DecodeAudio(uint channels, uint samples, byte[] buffIn, uint buffInOffset, uint treesize, uint?[] audioChannelCompressedSize, byte[] buffOut, uint?[] audioChannelDestStart, CHDCodec codec)
+    private static ChdError DecodeAudio(uint channels, uint samples, byte[] buffIn, uint buffInOffset, uint treesize, uint?[] audioChannelCompressedSize, byte[] buffOut, uint?[] audioChannelDestStart, ChdCodecState codec)
     {
         // if the tree size is 0xffff, the streams are FLAC-encoded
         if (treesize == 0xffff)
@@ -304,7 +304,7 @@ internal static partial class ChdReaders
         return ChdError.Chderrnone;
     }
 
-    private static ChdError DecodeVideo(uint width, uint height, byte[] buffIn, uint buffInOffset, uint buffInLength, byte[] buffOut, uint buffOutOffset, uint dstride, CHDCodec codec)
+    private static ChdError DecodeVideo(uint width, uint height, byte[] buffIn, uint buffInOffset, uint buffInLength, byte[] buffOut, uint buffOutOffset, uint dstride, ChdCodecState codec)
     {
         // The first video byte is MAME AVHuff's video-encoding marker. The high
         // bit (0x80) signals that the video stream is Huffman(+RLE) encoded, which

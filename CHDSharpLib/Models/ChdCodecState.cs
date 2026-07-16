@@ -5,7 +5,7 @@ using ZstdSharp;
 namespace CHDSharp.Models;
 
 /// <summary>Holds per-codec state and scratch buffers used across multiple hunk decompressions, avoiding repeated allocations.</summary>
-internal class CHDCodec
+internal class ChdCodecState
 {
     /// <summary>FLAC audio configuration (16-bit, 2-channel, 44100 Hz).</summary>
     internal AudioPcmConfig? FlacSettings;

@@ -324,7 +324,7 @@ public class AudioDecoder : IAudioSource
         if (bitreader.Readbits(15) != 0x7FFC)
             throw new InvalidDataException("invalid frame");
 
-        var vbs = bitreader.Readbit();
+        bitreader.Readbit(); // variable blocksize flag
         frame.BsCode0 = (int)bitreader.Readbits(4);
         var srCode0 = bitreader.Readbits(4);
         frame.ChMode = (ChannelMode)bitreader.Readbits(4);
@@ -680,8 +680,8 @@ public class AudioDecoder : IAudioSource
                 case ChannelMode.LeftSide:
                     for (var i = frame.Blocksize; i > 0; i--)
                     {
-                        int _l = *(l++), _r = *r;
-                        *(r++) = _l - _r;
+                        int left = *(l++), right = *r;
+                        *(r++) = left - right;
                     }
 
                     break;
@@ -779,7 +779,6 @@ public class AudioDecoder : IAudioSource
                 continue;
             }
 
-            id = 0;
             if (x == 0xff) /* MAGIC NUMBER for the first 8 frame sync bits */
             {
                 do

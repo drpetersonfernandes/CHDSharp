@@ -25,7 +25,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 
     private readonly ChdHeader _chd;
 
-    private readonly CHDCodec _codec;
+    private readonly ChdCodecState _codec;
 
     private ChdFile? _parent;
 
@@ -45,7 +45,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         _stream = stream;
         _leaveOpen = leaveOpen;
         _chd = chd;
-        _codec = new CHDCodec();
+        _codec = new ChdCodecState();
         Version = version;
     }
 
@@ -410,7 +410,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         {
             if (dataEntry.Length > 0)
             {
-                if (dataEntry.BuffIn.Length < dataEntry.Length)
+                if (dataEntry.BuffIn == null || dataEntry.BuffIn.Length < dataEntry.Length)
                 {
                     dataEntry.BuffIn = new byte[dataEntry.Length];
                 }

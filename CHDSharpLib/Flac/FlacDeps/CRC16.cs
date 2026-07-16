@@ -105,7 +105,7 @@ internal static class Crc16
             (*mat++ & ((vec << 03) >> 31)) ^
             (*mat++ & ((vec << 02) >> 31)) ^
             (*mat++ & ((vec << 01) >> 31)) ^
-            (*mat++ & (vec >> 31)));
+            (*mat & (vec >> 31)));
     }
 
     private static unsafe void gf2_matrix_square(ushort* square, ushort* mat)

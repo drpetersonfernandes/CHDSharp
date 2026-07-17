@@ -9,6 +9,9 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -34,13 +37,26 @@ jobs:
       - name: Run tests
         run: dotnet test CHDSharpTest/CHDSharpTest.csproj -c Release --no-restore
 
+      - name: Get OIDC token
+        run: |
+          RESPONSE=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.nuget.org")
+          OIDC_TOKEN=$(echo "$RESPONSE" | jq -r .value)
+          if [ -z "$OIDC_TOKEN" ] || [ "$OIDC_TOKEN" = "null" ]; then
+            echo "ERROR: Failed to get OIDC token. Response:"
+            echo "$RESPONSE"
+            exit 1
+          fi
+          echo "OIDC token retrieved (length: ${#OIDC_TOKEN})"
+          echo "NUGET_TOKEN=$OIDC_TOKEN" >> $GITHUB_ENV
+
       - name: Push to NuGet.org
         run: |
           dotnet nuget push artifacts/CHDSharp.*.nupkg \
-            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --api-key "$NUGET_TOKEN" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
           dotnet nuget push artifacts/CHDSharp.*.snupkg \
-            --api-key ${{ secrets.NUGET_API_KEY }} \
+            --api-key "$NUGET_TOKEN" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate

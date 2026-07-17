@@ -129,3 +129,4 @@ Tests requiring `chdman.exe` are automatically skipped if it is not configured.
 ---
 
 For unit tests (header parsing, CRC checksums, error paths) that require no external files, see `CHDSharpTest`.
+For regenerating the deterministic test corpus, see `CHDSharpTestGen`.

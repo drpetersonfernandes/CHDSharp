@@ -1,0 +1,53 @@
+name: Publish to NuGet
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c Release --no-restore
+
+      - name: Pack
+        run: dotnet pack CHDSharpLib/CHDSharpLib.csproj -c Release --output artifacts --no-build
+
+      - name: Get OIDC token
+        run: |
+          TOKEN=$(curl -s -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.nuget.org/v3/index.json" \
+            | jq -r .value)
+          echo "NUGET_TOKEN=$TOKEN" >> $GITHUB_ENV
+
+      - name: Push to NuGet.org
+        run: |
+          dotnet nuget push artifacts/CHDSharp.*.nupkg \
+            --api-key "$NUGET_TOKEN" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+          dotnet nuget push artifacts/CHDSharp.*.snupkg \
+            --api-key "$NUGET_TOKEN" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+      - name: Run tests
+        run: dotnet test --no-restore

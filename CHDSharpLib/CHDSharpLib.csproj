@@ -55,7 +55,7 @@
 
     <ItemGroup>
         <None Include="README.md" Pack="true" PackagePath="\" />
-        <None Include="LICENSE" Pack="true" PackagePath="\" />
+        <None Include="LICENSE.txt" Pack="true" PackagePath="\" />
         <None Include="Icon\chd.png" Pack="true" PackagePath="\" />
     </ItemGroup>
 

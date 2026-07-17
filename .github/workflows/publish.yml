@@ -9,9 +9,6 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -37,20 +34,13 @@ jobs:
       - name: Run tests
         run: dotnet test CHDSharpTest/CHDSharpTest.csproj -c Release --no-restore
 
-      - name: Get OIDC token
-        run: |
-          TOKEN=$(curl -s -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
-            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.nuget.org/v3/index.json" \
-            | jq -r .value)
-          echo "NUGET_TOKEN=$TOKEN" >> $GITHUB_ENV
-
       - name: Push to NuGet.org
         run: |
           dotnet nuget push artifacts/CHDSharp.*.nupkg \
-            --api-key "$NUGET_TOKEN" \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
           dotnet nuget push artifacts/CHDSharp.*.snupkg \
-            --api-key "$NUGET_TOKEN" \
+            --api-key ${{ secrets.NUGET_API_KEY }} \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate

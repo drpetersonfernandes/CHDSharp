@@ -43,11 +43,19 @@ jobs:
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://api.nuget.org")
           OIDC_TOKEN=$(echo "$RESPONSE" | jq -r .value)
           if [ -z "$OIDC_TOKEN" ] || [ "$OIDC_TOKEN" = "null" ]; then
-            echo "ERROR: Failed to get OIDC token. Response:"
+            echo "ERROR: Failed to get OIDC token"
             echo "$RESPONSE"
             exit 1
           fi
-          echo "OIDC token retrieved (length: ${#OIDC_TOKEN})"
+          echo "OIDC token length: ${#OIDC_TOKEN}"
+
+          # Decode JWT payload (second dot-separated segment)
+          PAYLOAD=$(echo "$OIDC_TOKEN" | cut -d. -f2 | base64 -d 2>/dev/null || true)
+          if [ -n "$PAYLOAD" ]; then
+            CLAIMS=$(echo "$PAYLOAD" | jq -c '{sub, repository, workflow, job_workflow_ref, ref, aud, actor, iss}' 2>/dev/null || echo "$PAYLOAD")
+            echo "JWT claims: $CLAIMS"
+          fi
+
           echo "NUGET_TOKEN=$OIDC_TOKEN" >> $GITHUB_ENV
 
       - name: Push to NuGet.org

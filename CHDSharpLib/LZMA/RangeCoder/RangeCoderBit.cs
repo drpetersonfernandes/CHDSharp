@@ -40,7 +40,7 @@ internal struct BitDecoder
             _prob += (KBitModelTotal - _prob) >> KNumMoveBits;
             if (rangeDecoder.Range < Decoder.KTopValue)
             {
-                rangeDecoder.Code = (rangeDecoder.Code << 8) | (byte)rangeDecoder.Stream.ReadByte();
+                rangeDecoder.Code = (rangeDecoder.Code << 8) | rangeDecoder.ReadByteChecked();
                 rangeDecoder.Range <<= 8;
                 rangeDecoder.Total++;
             }
@@ -54,7 +54,7 @@ internal struct BitDecoder
             _prob -= (_prob) >> KNumMoveBits;
             if (rangeDecoder.Range < Decoder.KTopValue)
             {
-                rangeDecoder.Code = (rangeDecoder.Code << 8) | (byte)rangeDecoder.Stream.ReadByte();
+                rangeDecoder.Code = (rangeDecoder.Code << 8) | rangeDecoder.ReadByteChecked();
                 rangeDecoder.Range <<= 8;
                 rangeDecoder.Total++;
             }

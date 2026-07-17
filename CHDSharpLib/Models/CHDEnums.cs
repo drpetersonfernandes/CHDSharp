@@ -136,7 +136,11 @@ public enum CompressionType
 
     /* ADDED HERE: as an internal error state */
     /// <summary>Internal error state indicating an unknown or invalid compression type.</summary>
-    Compressionerror = 101
+    Compressionerror = 101,
+
+    /* ADDED HERE: unallocated hunk in an uncompressed V5 CHD with no parent */
+    /// <summary>Unallocated hunk that reads as all zero bytes (uncompressed V5 map entry 0 with no parent).</summary>
+    Compressionzero = 102
 }
 
 /// <summary>Error codes returned by CHD operations.</summary>

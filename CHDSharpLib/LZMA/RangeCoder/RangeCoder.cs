@@ -16,6 +16,16 @@ internal class Decoder
     /// <summary>Total number of bytes consumed from the stream.</summary>
     public long Total;
 
+    /// <summary>Reads the next byte from the stream, throwing <see cref="DataErrorException"/> on EOF (truncated stream).</summary>
+    public byte ReadByteChecked()
+    {
+        var b = Stream.ReadByte();
+        if (b < 0)
+            throw new DataErrorException();
+
+        return (byte)b;
+    }
+
     /// <summary>Initialises the range decoder by reading the first five bytes from the stream.</summary>
     public void Init(Stream stream)
     {
@@ -25,7 +35,7 @@ internal class Decoder
         Range = 0xFFFFFFFF;
         for (var i = 0; i < 5; i++)
         {
-            Code = (Code << 8) | (byte)Stream.ReadByte();
+            Code = (Code << 8) | ReadByteChecked();
         }
 
         Total = 5;
@@ -40,7 +50,7 @@ internal class Decoder
     /// <summary>Closes and disposes the input stream.</summary>
     public void CloseStream()
     {
-        Stream.Dispose();
+        Stream?.Dispose();
     }
 
     /// <summary>Normalises the range by reading bytes from the stream until <see cref="Range"/> >= <see cref="KTopValue"/>.</summary>
@@ -48,7 +58,7 @@ internal class Decoder
     {
         while (Range < KTopValue)
         {
-            Code = (Code << 8) | (byte)Stream.ReadByte();
+            Code = (Code << 8) | ReadByteChecked();
             Range <<= 8;
             Total++;
         }
@@ -59,7 +69,7 @@ internal class Decoder
     {
         if (Range < KTopValue)
         {
-            Code = (Code << 8) | (byte)Stream.ReadByte();
+            Code = (Code << 8) | ReadByteChecked();
             Range <<= 8;
             Total++;
         }
@@ -68,6 +78,9 @@ internal class Decoder
     /// <summary>Computes the threshold value for a given total frequency.</summary>
     public uint GetThreshold(uint total)
     {
+        if (total == 0)
+            throw new DataErrorException();
+
         return Code / (Range /= total);
     }
 
@@ -94,7 +107,7 @@ internal class Decoder
 
             if (range < KTopValue)
             {
-                code = (code << 8) | (byte)Stream.ReadByte();
+                code = (code << 8) | ReadByteChecked();
                 range <<= 8;
                 Total++;
             }

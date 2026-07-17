@@ -1,7 +1,7 @@
 ﻿namespace CHDSharp.Utils;
 
 /// <summary>A CRC-32 calculator using the ISO 3309 / ITU-T V.42 polynomial, with an 8-table slicing implementation for performance.</summary>
-public class Crc
+internal class Crc
 {
     /// <summary>Precomputed CRC-32 lookup tables (8 tables, 256 entries each) for fast slicing.</summary>
     public static readonly uint[] Crc32Lookup;

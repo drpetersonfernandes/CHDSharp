@@ -68,8 +68,13 @@ internal static class ChdMetaData
         var results = new List<InternalEntry>();
 
         var currentOffset = chd.Metaoffset;
+        var visitedOffsets = new HashSet<ulong>();
         while (currentOffset != 0)
         {
+            // guard against crafted files with cyclic metadata chains
+            if (!visitedOffsets.Add(currentOffset))
+                break;
+
             file.Seek((long)currentOffset, SeekOrigin.Begin);
             var metaTag = br.ReadUInt32Be();
             var metaLength = br.ReadUInt32Be();

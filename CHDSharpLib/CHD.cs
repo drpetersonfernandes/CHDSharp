@@ -189,14 +189,14 @@ public static class Chd
     /// references against the CHD at <paramref name="parentFilename"/> (pass null
     /// for a standalone CHD). Returns a <see cref="ChdResult"/>.
     /// </summary>
-    public static ChdResult CheckFileWithParent(string filename, string parentFilename)
+    public static ChdResult CheckFileWithParent(string filename, string? parentFilename)
     {
         var err = CheckFileWithParent(filename, parentFilename, out var ver, out var sha1, out var md5);
         return new ChdResult(err, ver, sha1, md5);
     }
 
     /// <inheritdoc cref="CheckFileWithParent(string,string)"/>
-    public static ChdError CheckFileWithParent(string filename, string parentFilename,
+    public static ChdError CheckFileWithParent(string filename, string? parentFilename,
         out uint? chdVersion, out byte[]? chdSha1, out byte[]? chdMd5)
     {
         chdVersion = null;
@@ -403,7 +403,7 @@ public static class Chd
 
                     ts.Cancel();
                 }
-            });
+            }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
             allTasks.Add(producerThread);
 
             for (var i = 0; i < TaskCount; i++)
@@ -425,6 +425,8 @@ public static class Chd
                             var err = ChdBlockRead.ReadBlock(mapEntry, arrPoolCache, chd.ChdReader, codec, mapEntry.BuffOut, (int)chd.Blocksize);
                             if (err != ChdError.Chderrnone)
                             {
+                                arrPoolOut.Return(mapEntry.BuffOut);
+                                mapEntry.BuffOut = null!;
                                 ts.Cancel();
                                 errMaster = err;
                                 return;
@@ -451,7 +453,7 @@ public static class Chd
 
                         ts.Cancel();
                     }
-                });
+                }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
                 allTasks.Add(decompressionThread);
             }
@@ -501,7 +503,7 @@ public static class Chd
 
                     ts.Cancel();
                 }
-            });
+            }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
             allTasks.Add(hashingThread);
 
             Task.WaitAll(allTasks.ToArray());

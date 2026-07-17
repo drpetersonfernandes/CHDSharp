@@ -56,6 +56,10 @@ internal static partial class ChdReaders
         uint videoWidth = buffIn.ReadUInt16Be(4);
         uint videoHeight = buffIn.ReadUInt16Be(6);
 
+        // the format supports at most 16 audio channels
+        if (audioChannels > 16)
+            return ChdError.Chderrinvaliddata;
+
         var sourceTotalSize = 10 + 2 * audioChannels;
         // validate that the sizes make sense
         if (buffInLength < sourceTotalSize)
@@ -76,7 +80,7 @@ internal static partial class ChdReaders
             sourceTotalSize += audioChannelCompressedSize[chnum]!.Value;
         }
 
-        if (sourceTotalSize >= buffInLength)
+        if (sourceTotalSize > buffInLength)
             return ChdError.Chderrinvaliddata;
 
         // starting offsets of source data
@@ -183,12 +187,16 @@ internal static partial class ChdReaders
                     // audio, so the values are correct for every AVHuff CHD.
                     var audioBuffer = new AudioBuffer(codec.AvhuffSettings, blockSize); //audio buffer to take decoded samples and read them to bytes.
                     var inPos = (int)buffInOffset;
+                    var channelEnd = (int)(buffInOffset + sourceSize);
                     var outPos = (int)audioChannelDestStart[channelNumber]!.Value;
 
                     while (outPos < blockSize + audioChannelDestStart[channelNumber])
                     {
+                        if (inPos >= channelEnd)
+                            break;
+
                         int read;
-                        if ((read = codec.AvhuffAudioDecoder.DecodeFrame(buffIn, inPos, (int)sourceSize)) == 0)
+                        if ((read = codec.AvhuffAudioDecoder.DecodeFrame(buffIn, inPos, channelEnd - inPos)) == 0)
                             break;
 
                         if (codec.AvhuffAudioDecoder.Remaining != 0)

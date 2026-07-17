@@ -30,7 +30,7 @@ internal static class ChdHeaders
         chd.Parentmd5 = br.ReadBytes(16);
 
         const int hardDiskSectorSize = 512;
-        chd.Totalbytes = cylinders * heads * sectors * hardDiskSectorSize;
+        chd.Totalbytes = (ulong)cylinders * heads * sectors * hardDiskSectorSize;
         chd.Blocksize *= hardDiskSectorSize;
         chd.Unitbytes = chd.Blocksize;
 
@@ -87,7 +87,7 @@ internal static class ChdHeaders
         chd.Blocksize = br.ReadUInt32Be(); // blocksize added to header in V2
 
         const int hardDiskSectorSize = 512;
-        chd.Totalbytes = cylinders * heads * sectors * hardDiskSectorSize;
+        chd.Totalbytes = (ulong)cylinders * heads * sectors * hardDiskSectorSize;
         chd.Unitbytes = chd.Blocksize;
 
         chd.Map = new MapEntry[chd.Totalblocks];
@@ -201,7 +201,10 @@ internal static class ChdHeaders
             };
             var mapflag = (MapEntryFlag)br.ReadByte();
             chd.Map[i].Comptype = ChdCommon.ConvMapEntryFlagtoCompressionType(mapflag);
-            chd.Map[i].Crc = null;
+            if ((mapflag & MapEntryFlag.Mapentryflagnocrc) != 0)
+            {
+                chd.Map[i].Crc = null;
+            }
         }
 
         return ChdError.Chderrnone;
@@ -239,13 +242,13 @@ internal static class ChdHeaders
         var chdCompressed = chd.Compression[0] != ChdCodec.None;
         chd.UncompressedMap = !chdCompressed;
 
-        var err = chdCompressed ? compressed_v5_map(br, mapoffset, chd.Totalblocks, chd.Blocksize, unitbytes, out chd.Map) : uncompressed_v5_map(br, mapoffset, chd.Totalblocks, chd.Blocksize, out chd.Map);
+        var err = chdCompressed ? compressed_v5_map(br, mapoffset, chd.Totalblocks, chd.Blocksize, unitbytes, out chd.Map) : uncompressed_v5_map(br, mapoffset, chd.Totalblocks, chd.Blocksize, !Util.IsAllZeroArray(chd.Parentsha1), out chd.Map);
 
         return err;
     }
 
 
-    private static ChdError uncompressed_v5_map(BinaryReader br, ulong mapoffset, uint totalblocks, uint blocksize, out MapEntry[] map)
+    private static ChdError uncompressed_v5_map(BinaryReader br, ulong mapoffset, uint totalblocks, uint blocksize, bool hasParent, out MapEntry[] map)
     {
         br.BaseStream.Seek((long)mapoffset, SeekOrigin.Begin);
 
@@ -256,12 +259,22 @@ internal static class ChdHeaders
             var offsetWord = br.ReadUInt32Be();
             if (offsetWord == 0)
             {
-                // Offset word 0 in an uncompressed V5 map means: take this hunk
-                // from the parent (same hunk index), or zero-fill if no parent.
-                // Mark as PARENT; the read path resolves same-hunk from parent.
-                map[blockIndex].Comptype = CompressionType.Compressionparent;
-                map[blockIndex].Length = blocksize;
-                map[blockIndex].Offset = (ulong)blockIndex; // direct parent hunk index
+                if (hasParent)
+                {
+                    // Offset word 0 in an uncompressed V5 map means: take this hunk
+                    // from the parent (same hunk index), or zero-fill if no parent.
+                    // Mark as PARENT; the read path resolves same-hunk from parent.
+                    map[blockIndex].Comptype = CompressionType.Compressionparent;
+                    map[blockIndex].Length = blocksize;
+                    map[blockIndex].Offset = (ulong)blockIndex; // direct parent hunk index
+                }
+                else
+                {
+                    // No parent: an unallocated hunk reads as all zeroes (MAME chd.cpp).
+                    map[blockIndex].Comptype = CompressionType.Compressionzero;
+                    map[blockIndex].Length = 0;
+                    map[blockIndex].Offset = 0;
+                }
             }
             else
             {

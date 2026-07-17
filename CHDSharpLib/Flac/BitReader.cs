@@ -88,6 +88,7 @@ internal unsafe class BitReader
     #endregion
 
     private byte* _bptrM;
+    private byte* _bendM;
     private int _bufferLenM;
     private int _haveBitsM;
     private ulong _cacheM;
@@ -110,6 +111,7 @@ internal unsafe class BitReader
     {
         Buffer = null;
         _bptrM = null;
+        _bendM = null;
         _bufferLenM = 0;
         _haveBitsM = 0;
         _cacheM = 0;
@@ -132,11 +134,12 @@ internal unsafe class BitReader
     /// </summary>
     /// <param name="buffer">Pointer to the byte buffer.</param>
     /// <param name="pos">Starting position in the buffer.</param>
-    /// <param name="len">Length of data available in the buffer.</param>
+    /// <param name="len">Number of bytes available starting at <paramref name="pos"/>.</param>
     public void Reset(byte* buffer, int pos, int len)
     {
         Buffer = buffer;
         _bptrM = buffer + pos;
+        _bendM = buffer + pos + (len > 0 ? len : 0);
         _bufferLenM = len;
         _haveBitsM = 0;
         _cacheM = 0;
@@ -146,13 +149,16 @@ internal unsafe class BitReader
 
     /// <summary>
     /// Fills the internal cache with up to 56 bits of data from the buffer, updating CRC16.
+    /// Bytes past the end of the buffer are supplied as zero (safe lookahead padding);
+    /// corrupt/truncated streams are then rejected by the frame CRC check.
     /// </summary>
     private void Fill()
     {
         while (_haveBitsM < 56)
         {
             _haveBitsM += 8;
-            var b = *(_bptrM++);
+            var b = _bptrM < _bendM ? *_bptrM : (byte)0;
+            _bptrM++;
             _cacheM |= (ulong)b << (64 - _haveBitsM);
             _crc16M = (ushort)((_crc16M << 8) ^ Crc16.Table[(_crc16M >> 8) ^ b]);
         }
@@ -199,7 +205,7 @@ internal unsafe class BitReader
     /// <returns>The decoded value.</returns>
     public int ReadInt()
     {
-        return (int)Readbits(sizeof(int));
+        return (int)Readbits(32);
     }
 
     /// <summary>
@@ -208,7 +214,7 @@ internal unsafe class BitReader
     /// <returns>The decoded value.</returns>
     public uint ReadUint()
     {
-        return Readbits(sizeof(uint));
+        return Readbits(32);
     }
 
     /// <summary>
@@ -249,10 +255,10 @@ internal unsafe class BitReader
     /// <returns>The value as a 64-bit unsigned integer.</returns>
     public ulong Readbits64(int bits)
     {
-        if (bits <= 56)
+        if (bits <= 32)
             return Readbits(bits);
 
-        return ((ulong)Readbits(32) << (bits - 32)) | Readbits(bits - 32);
+        return ((ulong)Readbits(bits - 32) << 32) | Readbits(32);
     }
 
     /// <summary>
@@ -275,6 +281,9 @@ internal unsafe class BitReader
         var result = _cacheM >> 56;
         while (result == 0)
         {
+            if (_bptrM >= _bendM)
+                throw new InvalidDataException("FLAC bitstream truncated (unary read past end of buffer)");
+
             val += 8;
             _cacheM <<= 8;
             var b = *(_bptrM++);
@@ -405,6 +414,7 @@ internal unsafe class BitReader
         {
             var mask = (1U << k) - 1;
             var bptr = _bptrM;
+            var bend = _bendM;
             var haveBits = _haveBitsM;
             var cache = _cacheM;
             var crc = _crc16M;
@@ -414,6 +424,9 @@ internal unsafe class BitReader
                 var origBptr = bptr;
                 while ((bits = unaryTable[cache >> 56]) == 8)
                 {
+                    if (bptr >= bend)
+                        throw new InvalidDataException("FLAC bitstream truncated (rice read past end of buffer)");
+
                     cache <<= 8;
                     var b = *(bptr++);
                     cache |= (ulong)b << (64 - haveBits);
@@ -424,7 +437,8 @@ internal unsafe class BitReader
                 while (haveBits < 56)
                 {
                     haveBits += 8;
-                    var b = *(bptr++);
+                    var b = bptr < bend ? *bptr : (byte)0;
+                    bptr++;
                     cache |= (ulong)b << (64 - haveBits);
                     crc = (ushort)((crc << 8) ^ t[(crc >> 8) ^ b]);
                 }

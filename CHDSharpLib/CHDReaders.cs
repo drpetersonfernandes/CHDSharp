@@ -187,6 +187,8 @@ internal static partial class ChdReaders
         var complenBytes = (buffOutLength < 65536) ? 2 : 3;
         var eccBytes = (frames + 7) / 8;
         var headerBytes = eccBytes + complenBytes;
+        if (buffInLength < headerBytes)
+            return ChdError.Chderrinvaliddata;
 
         /* extract compressed length of base */
         var complenBase = (buffIn[eccBytes + 0] << 8) | buffIn[eccBytes + 1];
@@ -194,6 +196,9 @@ internal static partial class ChdReaders
         {
             complenBase = (complenBase << 8) | buffIn[eccBytes + 2];
         }
+
+        if (headerBytes + complenBase > buffInLength)
+            return ChdError.Chderrinvaliddata;
 
         codec.BSector ??= new byte[frames * CdMaxSectorData];
         codec.BSubcode ??= new byte[frames * CdMaxSubcodeData];
@@ -232,6 +237,8 @@ internal static partial class ChdReaders
         var complenBytes = (buffOutLength < 65536) ? 2 : 3;
         var eccBytes = (frames + 7) / 8;
         var headerBytes = eccBytes + complenBytes;
+        if (buffInLength < headerBytes)
+            return ChdError.Chderrinvaliddata;
 
         /* extract compressed length of base */
         var complenBase = ((buffIn[eccBytes + 0] << 8) | buffIn[eccBytes + 1]);
@@ -239,6 +246,9 @@ internal static partial class ChdReaders
         {
             complenBase = (complenBase << 8) | buffIn[eccBytes + 2];
         }
+
+        if (headerBytes + complenBase > buffInLength)
+            return ChdError.Chderrinvaliddata;
 
         codec.BSector ??= new byte[frames * CdMaxSectorData];
         codec.BSubcode ??= new byte[frames * CdMaxSubcodeData];
@@ -304,6 +314,8 @@ internal static partial class ChdReaders
         var complenBytes = (buffOutLength < 65536) ? 2 : 3;
         var eccBytes = (frames + 7) / 8;
         var headerBytes = eccBytes + complenBytes;
+        if (buffInLength < headerBytes)
+            return ChdError.Chderrinvaliddata;
 
         /* extract compressed length of base */
         var complenBase = (buffIn[eccBytes + 0] << 8) | buffIn[eccBytes + 1];
@@ -311,6 +323,9 @@ internal static partial class ChdReaders
         {
             complenBase = (complenBase << 8) | buffIn[eccBytes + 2];
         }
+
+        if (headerBytes + complenBase > buffInLength)
+            return ChdError.Chderrinvaliddata;
 
         codec.BSector ??= new byte[frames * CdMaxSectorData];
         codec.BSubcode ??= new byte[frames * CdMaxSubcodeData];

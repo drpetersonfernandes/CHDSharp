@@ -292,6 +292,13 @@ internal static class ChdBlockRead
                 break;
             }
 
+            case CompressionType.Compressionzero:
+            {
+                Array.Clear(buffOut, 0, buffOutLength);
+                checkCrc = false;
+                break;
+            }
+
             case CompressionType.Compressionself:
             {
                 var retcs = ReadBlock(mapEntry.SelfMapEntry, arrPool, compression, codec, buffOut, buffOutLength);

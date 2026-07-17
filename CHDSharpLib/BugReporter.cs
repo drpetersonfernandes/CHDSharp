@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using CHDSharp.Models;
 using Microsoft.Extensions.Logging;
 
@@ -25,7 +26,7 @@ public static class BugReporter
     public static bool Enabled { get; set; } = true;
 
     internal static void TryReport(ChdError error, string? fileName, uint? version,
-        Exception? exception, string? callerMethod = null)
+        Exception? exception, [CallerMemberName] string? callerMethod = null)
     {
         if (!Enabled)
             return;

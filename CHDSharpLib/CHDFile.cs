@@ -131,7 +131,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     }
 
     /// <inheritdoc cref="Open(string,string,out ChdFile)"/>
-    public static Task<(ChdError error, ChdFile? file)> OpenAsync(string filename, string parentFilename)
+    public static Task<(ChdError error, ChdFile? file)> OpenAsync(string filename, string? parentFilename)
     {
         return Task.Run(() =>
         {
@@ -192,6 +192,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// between iterations. Copy it if you need to keep the data beyond the
     /// current iteration.
     /// </summary>
+    /// <exception cref="InvalidDataException">Thrown when a hunk fails to decompress, with the <see cref="ChdError"/> in the message.</exception>
     public IEnumerable<byte[]> EnumerateHunks()
     {
         var buffer = new byte[_chd.Blocksize];
@@ -199,7 +200,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         {
             var err = ReadHunk(i, buffer);
             if (err != ChdError.Chderrnone)
-                yield break;
+                throw new InvalidDataException($"Failed to read hunk {i}: {err.GetMessage()} ({err})");
 
             yield return buffer;
         }
@@ -219,7 +220,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// against the parent CHD at <paramref name="parentFilename"/>. The parent is
     /// opened internally and disposed together with the returned instance.
     /// </summary>
-    public static ChdError Open(string filename, string parentFilename, out ChdFile? chdFile)
+    public static ChdError Open(string filename, string? parentFilename, out ChdFile? chdFile)
     {
         chdFile = null;
 
@@ -505,7 +506,8 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     public ChdError Read(ulong byteOffset, byte[] destination, int destinationOffset, int count)
     {
         if (destinationOffset < 0 || count < 0 ||
-            destinationOffset + count > destination.Length || byteOffset + (ulong)count > _chd.Totalbytes)
+            count > destination.Length - destinationOffset ||
+            byteOffset > _chd.Totalbytes || (ulong)count > _chd.Totalbytes - byteOffset)
             return ChdError.Chderrinvalidparameter;
 
         _hunkBuffer ??= new byte[_chd.Blocksize];
@@ -540,7 +542,8 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <inheritdoc cref="Dispose"/>
     public async ValueTask DisposeAsync()
     {
-        await CastAndDispose(_stream);
+        if (!_leaveOpen)
+            await CastAndDispose(_stream);
 
         if (_ownsParent && _parent != null)
             await _parent.DisposeAsync();

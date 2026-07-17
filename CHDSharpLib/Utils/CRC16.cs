@@ -1,7 +1,7 @@
 ﻿namespace CHDSharp.Utils;
 
 /// <summary>A CCITT-style CRC-16 calculator used by the CHD format.</summary>
-public static class Crc16
+internal static class Crc16
 {
     private static readonly ushort[] STable =
     [

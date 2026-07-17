@@ -23,13 +23,19 @@ jobs:
             10.0.x
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore CHDSharpLib/CHDSharpLib.csproj
 
       - name: Build
-        run: dotnet build -c Release --no-restore
+        run: dotnet build CHDSharpLib/CHDSharpLib.csproj -c Release --no-restore
 
       - name: Pack
         run: dotnet pack CHDSharpLib/CHDSharpLib.csproj -c Release --output artifacts --no-build
+
+      - name: Restore tests
+        run: dotnet restore CHDSharpTest/CHDSharpTest.csproj
+
+      - name: Run tests
+        run: dotnet test CHDSharpTest/CHDSharpTest.csproj -c Release --no-restore
 
       - name: Get OIDC token
         run: |
@@ -48,6 +54,3 @@ jobs:
             --api-key "$NUGET_TOKEN" \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
-
-      - name: Run tests
-        run: dotnet test --no-restore

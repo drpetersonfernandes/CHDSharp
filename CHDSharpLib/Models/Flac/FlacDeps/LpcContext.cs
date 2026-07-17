@@ -6,7 +6,7 @@ namespace CHDSharp.Models.Flac.FlacDeps;
 /// <summary>
 /// Stores per-window autocorrelation data for LPC subframe analysis.
 /// </summary>
-public class LpcSubframeInfo
+internal class LpcSubframeInfo
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="LpcSubframeInfo"/> class with empty autocorrelation buffers.
@@ -42,7 +42,7 @@ public class LpcSubframeInfo
 /// <summary>
 /// Represents a section of a window for LPC analysis, defining boundaries and the type of autocorrelation computation to use.
 /// </summary>
-public unsafe struct LpcWindowSection
+internal unsafe struct LpcWindowSection
 {
     /// <summary>
     /// Specifies the type of autocorrelation computation for a window section.
@@ -343,7 +343,7 @@ public unsafe struct LpcWindowSection
 /// <summary>
 /// Context for LPC coefficients calculation and order estimation
 /// </summary>
-public unsafe class LpcContext
+internal unsafe class LpcContext
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="LpcContext"/> class with default buffer sizes.

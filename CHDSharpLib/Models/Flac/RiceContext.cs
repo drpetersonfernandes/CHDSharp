@@ -6,7 +6,7 @@ namespace CHDSharp.Models.Flac;
 /// Rice coding context for encoding/decoding residual values in FLAC subframes.
 /// Uses unsafe pointers.
 /// </summary>
-public class RiceContext
+internal class RiceContext
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="RiceContext"/> class, allocating partition arrays.

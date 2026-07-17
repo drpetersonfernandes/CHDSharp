@@ -8,7 +8,7 @@ namespace CHDSharp.LZMA;
 /// <remarks>
 /// Supports forward-only reading. Seeking is limited to <see cref="SeekOrigin.Current"/>.
 /// </remarks>
-public class LzmaStream : Stream
+internal class LzmaStream : Stream
 {
     private readonly Stream _inputStream;
     private readonly long _inputSize;

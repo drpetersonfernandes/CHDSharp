@@ -8,7 +8,7 @@ namespace CHDSharp.Models.Flac;
 /// FLAC decoder settings implementing <see cref="IAudioDecoderSettings"/>.
 /// Configured for the "cuetools" FLAC decoder with a priority of 2.
 /// </summary>
-public class DecoderSettings : IAudioDecoderSettings
+internal class DecoderSettings : IAudioDecoderSettings
 {
     #region IAudioDecoderSettings implementation
 

@@ -3,7 +3,7 @@ namespace CHDSharp.Models.Flac.FlacDeps;
 /// <summary>
 /// Provides low-level unsafe memory operations for audio sample buffers.
 /// </summary>
-public class AudioSamples
+internal class AudioSamples
 {
     /// <summary>
     /// Represents the maximum unsigned 32-bit integer value.

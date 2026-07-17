@@ -20,7 +20,7 @@
         <Version>1.0.0</Version>
         <Authors>Peterson Fernandes</Authors>
         <Description>Pure C# read-only CHD (Compressed Hunks of Data) reader library. Supports MAME CHD formats V1-V5 and all 10 compression codecs (zlib, lzma, huffman, flac, zstd, avhu + CD variants).</Description>
-        <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageIcon>chd.png</PackageIcon>
         <PackageTags>chd;mame;compression;emulation;disk-image;zstd;lzma;flac;huffman;avhuff</PackageTags>
@@ -29,6 +29,7 @@
         <RepositoryType>git</RepositoryType>
         <PackageReleaseNotes>Initial release: CHD V1-V5 reading, all 10 codecs, parent/child chaining, parallel verification, random-access API, async API, and metadata support.</PackageReleaseNotes>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <WarningsAsErrors>$(WarningsAsErrors);CS1591</WarningsAsErrors>
     </PropertyGroup>
 
     <PropertyGroup>
@@ -49,10 +50,12 @@
 
     <ItemGroup>
       <InternalsVisibleTo Include="CHDSharpTest" />
+      <InternalsVisibleTo Include="CHDSharpTestGen" />
     </ItemGroup>
 
     <ItemGroup>
         <None Include="README.md" Pack="true" PackagePath="\" />
+        <None Include="LICENSE" Pack="true" PackagePath="\" />
         <None Include="Icon\chd.png" Pack="true" PackagePath="\" />
     </ItemGroup>
 

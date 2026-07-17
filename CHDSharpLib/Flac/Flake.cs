@@ -22,7 +22,7 @@ namespace CHDSharp.Flac;
 /// <summary>
 /// FLAC encoding constants as defined by the FLAC specification.
 /// </summary>
-public class FlakeConstants
+internal class FlakeConstants
 {
     /// <summary>
     /// Maximum block size in samples (65535).

@@ -12,6 +12,7 @@
     <FileVersion>1.0.0</FileVersion>
     <NeutralLanguage>en</NeutralLanguage>
     <ApplicationIcon>Icon\chd.ico</ApplicationIcon>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
@@ -33,6 +34,15 @@
 
   <ItemGroup>
     <ProjectReference Include="..\CHDSharpLib\CHDSharpLib.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="TestData\*.chd">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="TestData\manifest.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

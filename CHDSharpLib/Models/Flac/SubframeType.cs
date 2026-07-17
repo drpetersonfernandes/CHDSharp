@@ -3,7 +3,7 @@ namespace CHDSharp.Models.Flac;
 /// <summary>
 /// FLAC subframe types.
 /// </summary>
-public enum SubframeType
+internal enum SubframeType
 {
     /// <summary>Constant subframe (a single sample value repeated).</summary>
     Constant = 0,

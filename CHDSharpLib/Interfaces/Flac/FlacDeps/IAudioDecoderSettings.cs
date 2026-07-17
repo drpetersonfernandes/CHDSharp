@@ -5,7 +5,7 @@ namespace CHDSharp.Interfaces.Flac.FlacDeps;
 /// <summary>
 /// Settings for an audio decoder instance.
 /// </summary>
-public interface IAudioDecoderSettings
+internal interface IAudioDecoderSettings
 {
     /// <summary>
     /// Gets the human-readable name of the decoder.

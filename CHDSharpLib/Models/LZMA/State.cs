@@ -1,7 +1,7 @@
 namespace CHDSharp.Models.LZMA;
 
 /// <summary>Represents the LZMA probability state used during literal and match decoding.</summary>
-public struct State
+internal struct State
 {
     /// <summary>The current probability state index (0-11).</summary>
     public uint Index;

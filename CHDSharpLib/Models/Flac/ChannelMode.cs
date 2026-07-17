@@ -3,7 +3,7 @@ namespace CHDSharp.Models.Flac;
 /// <summary>
 /// Stereo encoding mode for FLAC frames.
 /// </summary>
-public enum ChannelMode
+internal enum ChannelMode
 {
     /// <summary>Not stereo (mono).</summary>
     NotStereo = 0,

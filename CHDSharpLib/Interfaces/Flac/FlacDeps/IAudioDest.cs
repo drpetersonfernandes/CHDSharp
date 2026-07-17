@@ -5,7 +5,7 @@ namespace CHDSharp.Interfaces.Flac.FlacDeps;
 /// <summary>
 /// Represents an audio output destination that accepts sample data for writing.
 /// </summary>
-public interface IAudioDest
+internal interface IAudioDest
 {
     /// <summary>
     /// Gets the file path of the output destination.

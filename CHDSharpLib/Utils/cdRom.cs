@@ -1,7 +1,7 @@
 ﻿namespace CHDSharp.Utils;
 
 /// <summary>Provides CD-ROM ECC (Error Correction Code) generation for CHD sector data, producing P and Q parity bytes.</summary>
-public static class CdRom
+internal static class CdRom
 {
     /***************************************************************************
         CONSTANTS

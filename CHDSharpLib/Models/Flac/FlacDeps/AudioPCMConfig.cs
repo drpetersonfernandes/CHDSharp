@@ -3,7 +3,7 @@ namespace CHDSharp.Models.Flac.FlacDeps;
 /// <summary>
 /// Represents the configuration of an audio PCM stream, including sample rate, bit depth, channel count, and speaker layout.
 /// </summary>
-public class AudioPcmConfig
+internal class AudioPcmConfig
 {
     /// <summary>
     /// Flags representing speaker positions and predefined speaker configurations.

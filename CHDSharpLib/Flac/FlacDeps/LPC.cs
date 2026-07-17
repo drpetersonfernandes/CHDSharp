@@ -3,7 +3,7 @@ namespace CHDSharp.Flac.FlacDeps;
 /// <summary>
 /// Provides static methods for Linear Predictive Coding (LPC) analysis and residual decoding used in FLAC encoding and decoding.
 /// </summary>
-public class Lpc
+internal class Lpc
 {
     /// <summary>
     /// Maximum LPC order.

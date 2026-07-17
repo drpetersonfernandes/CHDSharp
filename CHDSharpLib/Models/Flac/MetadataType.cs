@@ -3,7 +3,7 @@ namespace CHDSharp.Models.Flac;
 /// <summary>
 /// Type of metadata block in a FLAC stream.
 /// </summary>
-public enum MetadataType
+internal enum MetadataType
 {
     /// <summary>
     /// <A HREF="../format.html#metadata_block_streaminfo">STREAMINFO</A> block

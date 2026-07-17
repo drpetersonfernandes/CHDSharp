@@ -6,7 +6,7 @@ namespace CHDSharp.Models.Flac;
 /// Represents a single FLAC subframe containing encoded audio data for one channel.
 /// Uses unsafe pointers for residual data.
 /// </summary>
-public unsafe class FlacSubframe
+internal unsafe class FlacSubframe
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="FlacSubframe"/> class.

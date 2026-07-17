@@ -1,7 +1,7 @@
 namespace CHDSharp.Flac.FlacDeps;
 
 /// <summary>Computes 32-bit CRC checksums used in FLAC streams.</summary>
-public static class Crc32
+internal static class Crc32
 {
     /// <summary>Precomputed CRC-32 lookup table (256 entries).</summary>
     public static readonly uint[] Table;

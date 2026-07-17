@@ -5,7 +5,7 @@ namespace CHDSharp.Interfaces.Flac.FlacDeps;
 /// <summary>
 /// Represents an audio source that provides samples for decoding.
 /// </summary>
-public interface IAudioSource
+internal interface IAudioSource
 {
     /// <summary>
     /// Gets the decoder settings used to open this source.
@@ -57,7 +57,7 @@ public interface IAudioSource
 /// <summary>
 /// Represents a single audio title with metadata such as chapters, codec, and language.
 /// </summary>
-public interface IAudioTitle
+internal interface IAudioTitle
 {
     /// <summary>
     /// Gets the list of chapter time positions.
@@ -84,7 +84,7 @@ public interface IAudioTitle
 /// <summary>
 /// Extension methods for <see cref="IAudioTitle"/>.
 /// </summary>
-public static class AudioTitleExtensions
+internal static class AudioTitleExtensions
 {
     /// <summary>
     /// Gets the total duration of the audio title, determined by its last chapter position.

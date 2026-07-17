@@ -9,7 +9,7 @@ namespace CHDSharp.Flac;
 /// FLAC audio decoder that reads and decodes FLAC streams into PCM audio samples.
 /// Implements <see cref="IAudioSource"/> for integration with the audio pipeline.
 /// </summary>
-public class AudioDecoder : IAudioSource
+internal class AudioDecoder : IAudioSource
 {
     private readonly int[] _residualBuffer;
 

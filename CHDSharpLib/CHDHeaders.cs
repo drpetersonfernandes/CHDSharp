@@ -77,17 +77,17 @@ internal static class ChdHeaders
         chd.Compression = [ChdCodec.Zlib];
         br.ReadUInt32Be(); // flags
         br.ReadUInt32Be(); // compression
-        br.ReadUInt32Be(); // blocksize (unused in V2)
+        var hunkSectors = br.ReadUInt32Be(); // number of seclen-byte sectors per hunk
         chd.Totalblocks = br.ReadUInt32Be();
         var cylinders = br.ReadUInt32Be();
         var heads = br.ReadUInt32Be();
         var sectors = br.ReadUInt32Be();
         chd.Md5 = br.ReadBytes(16);
         chd.Parentmd5 = br.ReadBytes(16);
-        chd.Blocksize = br.ReadUInt32Be(); // blocksize added to header in V2
+        var seclen = br.ReadUInt32Be(); // bytes per sector (added in V2)
 
-        const int hardDiskSectorSize = 512;
-        chd.Totalbytes = (ulong)cylinders * heads * sectors * hardDiskSectorSize;
+        chd.Totalbytes = (ulong)cylinders * heads * sectors * seclen;
+        chd.Blocksize = hunkSectors * seclen;
         chd.Unitbytes = chd.Blocksize;
 
         chd.Map = new MapEntry[chd.Totalblocks];

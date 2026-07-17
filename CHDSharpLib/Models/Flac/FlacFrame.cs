@@ -4,7 +4,7 @@ namespace CHDSharp.Models.Flac;
 /// Represents a FLAC audio frame with its header, subframe data, and decoding state.
 /// This class uses unsafe pointers for window buffer access.
 /// </summary>
-public unsafe class FlacFrame
+internal unsafe class FlacFrame
 {
     /// <summary>
     /// The block size (number of samples) for this frame.

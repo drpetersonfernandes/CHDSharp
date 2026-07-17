@@ -3,7 +3,7 @@ namespace CHDSharp.Models.Flac;
 /// <summary>
 /// Represents a single entry in a FLAC seek table, mapping sample numbers to byte offsets.
 /// </summary>
-public struct SeekPoint
+internal struct SeekPoint
 {
     /// <summary>
     /// The sample number at which this seek point is positioned.

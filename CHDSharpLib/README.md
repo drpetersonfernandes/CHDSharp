@@ -1,6 +1,6 @@
 [![.NET](https://img.shields.io/badge/.NET-8.0_|_9.0_|_10.0-blueviolet)](https://dotnet.microsoft.com/)
 [![NuGet](https://img.shields.io/nuget/v/CHDSharp?color=blue)](https://www.nuget.org/packages/CHDSharp/)
-[![License](https://img.shields.io/badge/license-GPL--3.0-green)](../LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 # CHDSharpLib
 
@@ -143,7 +143,7 @@ You can use any `ILoggerFactory`-compatible provider (NLog, Microsoft.Extensions
 | Member | Signature | Description |
 |--------|-----------|-------------|
 | **LoggerFactory** | `ILoggerFactory?` (static property) | Set to enable internal logging. |
-| **TaskCount** | `int` (static field, default 8) | Number of parallel workers for `CheckFile`. Change before calling. |
+| **TaskCount** | `int` (static property, default 8) | Number of parallel workers for `CheckFile` (1-64). Change before calling. |
 | **CheckFile** | `ChdResult CheckFile(Stream, string, bool)` | Full parallel verification. Returns error, version, SHA1, MD5. |
 | **CheckFileWithParent** | `ChdResult CheckFileWithParent(string, string)` | Verify child CHD against parent. Pass `null` for second arg for standalone. |
 | **CheckHeader** | `bool CheckHeader(Stream, out uint length, out uint version)` | Sniff magic + version. Stream must be at position 0. |
@@ -387,7 +387,7 @@ dotnet pack CHDSharpLib/CHDSharpLib.csproj -c Release
 | Package | Version | Purpose |
 |---------|---------|---------|
 | [ZstdSharp.Port](https://www.nuget.org/packages/ZstdSharp.Port/) | 0.8.8 | Pure C# Zstd decompression |
-| [Microsoft.Extensions.Logging.Abstractions](https://www.nuget.org/packages/Microsoft.Extensions.Logging.Abstractions/) | 8.0.0 | Pluggable logging (optional) |
+| [Microsoft.Extensions.Logging.Abstractions](https://www.nuget.org/packages/Microsoft.Extensions.Logging.Abstractions/) | 8.0.3 (net8.0) / 9.0.9 (net9.0) / 10.0.10 (net10.0) | Pluggable logging (optional) |
 
 ---
 
@@ -403,7 +403,7 @@ dotnet pack CHDSharpLib/CHDSharpLib.csproj -c Release
 
 ## License
 
-GNU General Public License v3.0 — see [LICENSE](../LICENSE).
+MIT License — see [LICENSE](LICENSE).
 
 ---
 

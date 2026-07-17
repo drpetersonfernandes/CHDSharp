@@ -1,0 +1,205 @@
+[
+  {
+    "file": "v1_zlib.chd",
+    "version": 1,
+    "parent": null,
+    "expect": "ok",
+    "note": "raw hd, zlib, legacy map (none/self/type0)"
+  },
+  {
+    "file": "v2_zlib.chd",
+    "version": 2,
+    "parent": null,
+    "expect": "ok",
+    "note": "V1 converted to V2 (seclen header field)"
+  },
+  {
+    "file": "v3_zlib.chd",
+    "version": 3,
+    "parent": null,
+    "expect": "ok",
+    "note": "raw, zlib\u002B codec, map: type0/none/self/mini"
+  },
+  {
+    "file": "v3_cd.chd",
+    "version": 3,
+    "parent": null,
+    "expect": "ok",
+    "note": "cd (toc), zlib\u002B codec"
+  },
+  {
+    "file": "v3_av.chd",
+    "version": 3,
+    "parent": null,
+    "expect": "ok",
+    "note": "a/v laserdisc, avhuff legacy codec (comp type 3)"
+  },
+  {
+    "file": "v3_child.chd",
+    "version": 3,
+    "parent": "v3_zlib.chd",
+    "expect": "ok",
+    "note": "diff chd, map: parent refs"
+  },
+  {
+    "file": "v4_zlib.chd",
+    "version": 4,
+    "parent": null,
+    "expect": "ok",
+    "note": "raw, zlib\u002B codec, map: type0/none/self/mini"
+  },
+  {
+    "file": "v4_uncomp.chd",
+    "version": 4,
+    "parent": null,
+    "expect": "ok",
+    "note": "uncompressed hd, map: uncompressed entries"
+  },
+  {
+    "file": "v4_cd.chd",
+    "version": 4,
+    "parent": null,
+    "expect": "ok",
+    "note": "cd (cue), zlib\u002Bflac era codec"
+  },
+  {
+    "file": "v4_av.chd",
+    "version": 4,
+    "parent": null,
+    "expect": "ok",
+    "note": "a/v laserdisc, avhuff legacy codec (comp type 3)"
+  },
+  {
+    "file": "v4_child.chd",
+    "version": 4,
+    "parent": "v4_zlib.chd",
+    "expect": "ok",
+    "note": "diff chd, map: parent refs"
+  },
+  {
+    "file": "v5_zlib.chd",
+    "version": 5,
+    "parent": null,
+    "expect": "ok",
+    "note": "raw, single codec: zlib"
+  },
+  {
+    "file": "v5_lzma.chd",
+    "version": 5,
+    "parent": null,
+    "expect": "ok",
+    "note": "raw, single codec: lzma"
+  },
+  {
+    "file": "v5_huff.chd",
+    "version": 5,
+    "parent": null,
+    "expect": "ok",
+    "note": "raw, single codec: huff"
+  },
+  {
+    "file": "v5_flac.chd",
+    "version": 5,
+    "parent": null,
+    "expect": "ok",
+    "note": "raw, single codec: flac"
+  },
+  {
+    "file": "v5_zstd.chd",
+    "version": 5,
+    "parent": null,
+    "expect": "ok",
+    "note": "raw, single codec: zstd"
+  },
+  {
+    "file": "v5_multi.chd",
+    "version": 5,
+    "parent": null,
+    "expect": "ok",
+    "note": "raw, 4 codec slots: lzma,zlib,huff,flac"
+  },
+  {
+    "file": "v5_none.chd",
+    "version": 5,
+    "parent": null,
+    "expect": "ok",
+    "note": "raw, uncompressed map (compression none)"
+  },
+  {
+    "file": "v5_tiny.chd",
+    "version": 5,
+    "parent": null,
+    "expect": "invalid",
+    "note": "single hunk file, unreadable map (matches chdman behaviour)"
+  },
+  {
+    "file": "v5_odd.chd",
+    "version": 5,
+    "parent": null,
+    "expect": "ok",
+    "note": "logical size not a hunk multiple (partial last hunk)"
+  },
+  {
+    "file": "v5_parent.chd",
+    "version": 5,
+    "parent": null,
+    "expect": "ok",
+    "note": "parent for v5 children"
+  },
+  {
+    "file": "v5_child.chd",
+    "version": 5,
+    "parent": "v5_parent.chd",
+    "expect": "ok",
+    "note": "compressed map child, parent refs (parent0/1/self)"
+  },
+  {
+    "file": "v5_child_none.chd",
+    "version": 5,
+    "parent": "v5_parent.chd",
+    "expect": "ok",
+    "note": "uncompressed map child, offset-0 parent refs"
+  },
+  {
+    "file": "v5_cd_default.chd",
+    "version": 5,
+    "parent": null,
+    "expect": "ok",
+    "note": "cd, default codecs (cdlz,cdzl,cdfl)"
+  },
+  {
+    "file": "v5_cd_cdzl.chd",
+    "version": 5,
+    "parent": null,
+    "expect": "ok",
+    "note": "cd, single codec: cdzl"
+  },
+  {
+    "file": "v5_cd_cdlz.chd",
+    "version": 5,
+    "parent": null,
+    "expect": "ok",
+    "note": "cd, single codec: cdlz"
+  },
+  {
+    "file": "v5_cd_cdfl.chd",
+    "version": 5,
+    "parent": null,
+    "expect": "ok",
+    "note": "cd, single codec: cdfl"
+  },
+  {
+    "file": "v5_cd_cdzs.chd",
+    "version": 5,
+    "parent": null,
+    "expect": "ok",
+    "note": "cd, single codec: cdzs"
+  },
+  {
+    "file": "v5_ld_avhu.chd",
+    "version": 5,
+    "parent": null,
+    "expect": "ok",
+    "note": "laserdisc, avhuff codec"
+  }
+]

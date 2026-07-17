@@ -281,12 +281,17 @@ internal unsafe class BitReader
         var result = _cacheM >> 56;
         while (result == 0)
         {
-            if (_bptrM >= _bendM)
+            // Bytes past the end are supplied as zero (safe lookahead padding, matching Fill()).
+            // A valid unary code terminates on a 1-bit held in real data already in the cache;
+            // once 8 padding bytes have been consumed the cache is all zero and can never
+            // terminate, so only then is the stream truly truncated/corrupt.
+            if (_bptrM >= _bendM + 8)
                 throw new InvalidDataException("FLAC bitstream truncated (unary read past end of buffer)");
 
             val += 8;
             _cacheM <<= 8;
-            var b = *(_bptrM++);
+            var b = _bptrM < _bendM ? *_bptrM : (byte)0;
+            _bptrM++;
             _cacheM |= (ulong)b << (64 - _haveBitsM);
             _crc16M = (ushort)((_crc16M << 8) ^ Crc16.Table[(_crc16M >> 8) ^ b]);
             result = _cacheM >> 56;
@@ -424,11 +429,15 @@ internal unsafe class BitReader
                 var origBptr = bptr;
                 while ((bits = unaryTable[cache >> 56]) == 8)
                 {
-                    if (bptr >= bend)
+                    // Zero-pad past the end (matching Fill()); the terminating 1-bit of a valid
+                    // unary code lives in real data already cached. Only after 8 padding bytes
+                    // can the cache be all zero, which means the stream is truncated/corrupt.
+                    if (bptr >= bend + 8)
                         throw new InvalidDataException("FLAC bitstream truncated (rice read past end of buffer)");
 
                     cache <<= 8;
-                    var b = *(bptr++);
+                    var b = bptr < bend ? *bptr : (byte)0;
+                    bptr++;
                     cache |= (ulong)b << (64 - haveBits);
                     crc = (ushort)((crc << 8) ^ t[(crc >> 8) ^ b]);
                 }

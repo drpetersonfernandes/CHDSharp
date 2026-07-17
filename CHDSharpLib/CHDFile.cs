@@ -4,19 +4,45 @@ using CHDSharp.Utils;
 namespace CHDSharp;
 
 /// <summary>
-/// Provides read-only random access to a CHD file (V1-V5), including parent /
-/// child differential CHD chains.
-///
+/// Provides read-only random access to a CHD (Compressed Hunks of Data) file,
+/// supporting format versions 1-5 and parent/child differential CHD chains.
+/// </summary>
+/// <remarks>
+/// <para>
 /// Open a standalone CHD with <see cref="Open(string, out ChdFile)"/>. For a
 /// child (differential) CHD, supply its parent with
 /// <see cref="Open(string, string, out ChdFile)"/> or
 /// <see cref="Open(string, ChdFile, out ChdFile)"/>. Then decompress individual
-/// hunks with <see cref="ReadHunk"/> or read arbitrary byte ranges with
-/// <see cref="Read"/>.
+/// hunks with <see cref="ReadHunk"/>, read arbitrary byte ranges with
+/// <see cref="Read"/>, or iterate the whole image with <see cref="EnumerateHunks"/>.
+/// Async variants of every operation are available (<see cref="OpenAsync(string)"/>,
+/// <see cref="ReadHunkAsync"/>, <see cref="ReadAsync"/>).
+/// </para>
+/// <para>
+/// Always dispose the instance (<c>using</c> / <c>await using</c>); this closes the
+/// underlying stream (unless opened with <c>leaveOpen: true</c>) and any internally
+/// opened parent CHD.
+/// </para>
+/// <para>
+/// <b>Thread safety:</b> an instance is NOT thread-safe. It seeks a shared stream and
+/// mutates shared per-hunk buffers, so all calls must be serialized by the caller.
+/// Multiple <see cref="ChdFile"/> instances over separate streams may be used in parallel.
+/// </para>
+/// </remarks>
+/// <example>
+/// <code>
+/// var err = ChdFile.Open("game.chd", out var chd);
+/// if (err != ChdError.Chderrnone) return;
+/// using (chd)
+/// {
+///     var hunk = new byte[chd.HunkBytes];
+///     chd.ReadHunk(0, hunk);          // first decompressed hunk
 ///
-/// NOTE: an instance is NOT thread-safe. It seeks a shared stream and mutates
-/// shared per-hunk buffers, so all calls must be serialized by the caller.
-/// </summary>
+///     var buf = new byte[1024];
+///     chd.Read(0x10000, buf, 0, buf.Length); // arbitrary byte range
+/// }
+/// </code>
+/// </example>
 public sealed class ChdFile : IDisposable, IAsyncDisposable
 {
     private readonly Stream _stream;
@@ -61,13 +87,20 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <summary>Number of hunks (blocks) in the image.</summary>
     public uint HunkCount => _chd.Totalblocks;
 
-    /// <summary>SHA1 of the full image (including metadata for V4/V5), or the raw SHA1 when that is all that is available. May be null for V1/V2.</summary>
+    /// <summary>
+    /// SHA1 of the full image including metadata (V4/V5), or the raw SHA1 when that is
+    /// all the format provides (V3). All-zero or <c>null</c> for V1/V2, which predate SHA1 hashes.
+    /// </summary>
     public byte[] Sha1 => _chd.Sha1;
 
-    /// <summary>SHA1 of ONLY the raw (decompressed) image data, excluding metadata. This is what a full sequential read of the image hashes to. Null for V1/V2.</summary>
+    /// <summary>
+    /// SHA1 of ONLY the raw (decompressed) image data, excluding metadata (V3-V5).
+    /// This is what a full sequential read of the image hashes to.
+    /// All-zero or <c>null</c> for V1/V2.
+    /// </summary>
     public byte[] RawSha1 => _chd.Rawsha1;
 
-    /// <summary>MD5 of the raw image data (V1-V3). Null for V4/V5.</summary>
+    /// <summary>MD5 of the raw image data (V1-V3). All-zero or <c>null</c> for V4/V5, which dropped MD5.</summary>
     public byte[] Md5 => _chd.Md5;
 
     /// <summary>True if this CHD is a differential child that requires a parent CHD to read.</summary>
@@ -121,6 +154,8 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     }
 
     /// <inheritdoc cref="Open(string,out ChdFile)"/>
+    /// <summary>Asynchronously opens a standalone CHD file from disk (see <see cref="Open(string,out ChdFile)"/>).</summary>
+    /// <returns>A task producing a tuple of the <see cref="ChdError"/> result and the opened <see cref="ChdFile"/> (or <c>null</c> on error).</returns>
     public static Task<(ChdError error, ChdFile? file)> OpenAsync(string filename)
     {
         return Task.Run(() =>
@@ -131,6 +166,9 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     }
 
     /// <inheritdoc cref="Open(string,string,out ChdFile)"/>
+    /// <summary>Asynchronously opens a (possibly child) CHD from disk, resolving parent references against
+    /// the CHD at <paramref name="parentFilename"/> (see <see cref="Open(string,string,out ChdFile)"/>).</summary>
+    /// <returns>A task producing a tuple of the <see cref="ChdError"/> result and the opened <see cref="ChdFile"/> (or <c>null</c> on error).</returns>
     public static Task<(ChdError error, ChdFile? file)> OpenAsync(string filename, string? parentFilename)
     {
         return Task.Run(() =>
@@ -141,6 +179,9 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     }
 
     /// <inheritdoc cref="Open(string,ChdFile,out ChdFile)"/>
+    /// <summary>Asynchronously opens a (possibly child) CHD from disk against an already-open parent
+    /// (see <see cref="Open(string,ChdFile,out ChdFile)"/>).</summary>
+    /// <returns>A task producing a tuple of the <see cref="ChdError"/> result and the opened <see cref="ChdFile"/> (or <c>null</c> on error).</returns>
     public static Task<(ChdError error, ChdFile? file)> OpenAsync(string filename, ChdFile? parent)
     {
         return Task.Run(() =>
@@ -151,6 +192,9 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     }
 
     /// <inheritdoc cref="Open(Stream,bool,out ChdFile)"/>
+    /// <summary>Asynchronously opens a standalone CHD from an existing seekable stream
+    /// (see <see cref="Open(Stream,bool,out ChdFile)"/>).</summary>
+    /// <returns>A task producing a tuple of the <see cref="ChdError"/> result and the opened <see cref="ChdFile"/> (or <c>null</c> on error).</returns>
     public static Task<(ChdError error, ChdFile? file)> OpenAsync(Stream stream, bool leaveOpen)
     {
         return Task.Run(() =>
@@ -161,22 +205,28 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     }
 
     /// <inheritdoc cref="ReadHunk"/>
+    /// <summary>Asynchronously decompresses a single hunk into <paramref name="buffer"/> (see <see cref="ReadHunk"/>).</summary>
+    /// <returns>A task producing the <see cref="ChdError"/> result.</returns>
     public Task<ChdError> ReadHunkAsync(uint hunknum, byte[] buffer)
     {
         return Task.Run(() => ReadHunk(hunknum, buffer));
     }
 
     /// <inheritdoc cref="Read"/>
+    /// <summary>Asynchronously reads a byte range from the decompressed image (see <see cref="Read"/>).</summary>
+    /// <returns>A task producing the <see cref="ChdError"/> result.</returns>
     public Task<ChdError> ReadAsync(ulong byteOffset, byte[] destination, int destinationOffset, int count)
     {
         return Task.Run(() => Read(byteOffset, destination, destinationOffset, count));
     }
 
     /// <summary>
-    /// Decompresses the entire CHD image into a single byte array. Returns
-    /// <see cref="ChdError.Chderrnone"/> on success. Be cautious: CHD images
-    /// can be tens of gigabytes.
+    /// Decompresses the entire CHD image into a single byte array.
     /// </summary>
+    /// <param name="data">When this method returns, contains the full decompressed image on success; an empty array on failure.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; <see cref="ChdError.Chderroutofmemory"/>
+    /// if the image is larger than 2 GiB (<see cref="int.MaxValue"/> bytes); otherwise a read/decompression error code.</returns>
+    /// <remarks>Be cautious: CHD images can be tens of gigabytes. Prefer <see cref="EnumerateHunks"/> or <see cref="Read"/> for large images.</remarks>
     public ChdError ReadAllBytes(out byte[] data)
     {
         data = [];
@@ -210,6 +260,11 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// Opens a standalone CHD file from disk for random access. Fails with
     /// <see cref="ChdError.Chderrrequiresparent"/> if the file is a child CHD.
     /// </summary>
+    /// <param name="filename">Path to the CHD file to open.</param>
+    /// <param name="chdFile">When this method returns, contains the opened <see cref="ChdFile"/>, or <c>null</c> on error.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code
+    /// (e.g. <see cref="ChdError.Chderrfilenotfound"/>, <see cref="ChdError.Chderrinvalidfile"/>,
+    /// <see cref="ChdError.Chderrrequiresparent"/>).</returns>
     public static ChdError Open(string filename, out ChdFile? chdFile)
     {
         return Open(filename, (ChdFile?)null, out chdFile);
@@ -220,6 +275,11 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// against the parent CHD at <paramref name="parentFilename"/>. The parent is
     /// opened internally and disposed together with the returned instance.
     /// </summary>
+    /// <param name="filename">Path to the CHD file to open.</param>
+    /// <param name="parentFilename">Path to the parent CHD, or <c>null</c>/empty for a standalone CHD.</param>
+    /// <param name="chdFile">When this method returns, contains the opened <see cref="ChdFile"/>, or <c>null</c> on error.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code
+    /// (e.g. <see cref="ChdError.Chderrinvalidparent"/> if the parent's hashes do not match).</returns>
     public static ChdError Open(string filename, string? parentFilename, out ChdFile? chdFile)
     {
         chdFile = null;
@@ -254,6 +314,11 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// ownership of <paramref name="parent"/> (it is not disposed by this
     /// instance). Pass null for a standalone CHD.
     /// </summary>
+    /// <param name="filename">Path to the CHD file to open.</param>
+    /// <param name="parent">An already-open parent <see cref="ChdFile"/>, or <c>null</c> for a standalone CHD.
+    /// The same parent instance may be shared by multiple children as long as all access is single-threaded.</param>
+    /// <param name="chdFile">When this method returns, contains the opened <see cref="ChdFile"/>, or <c>null</c> on error.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
     public static ChdError Open(string filename, ChdFile? parent, out ChdFile? chdFile)
     {
         chdFile = null;
@@ -282,6 +347,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <param name="stream">Seekable, readable stream positioned anywhere; it will be seeked as needed.</param>
     /// <param name="leaveOpen">If false, the stream is disposed when this instance is disposed.</param>
     /// <param name="chdFile">When this method returns, contains the opened <see cref="ChdFile"/> instance, or <c>null</c> on error.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
     public static ChdError Open(Stream stream, bool leaveOpen, out ChdFile? chdFile)
     {
         return Open(stream, leaveOpen, null, out chdFile);
@@ -291,6 +357,11 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// Opens a (possibly child) CHD from an existing seekable stream, resolving
     /// parent references against <paramref name="parent"/> (null = standalone).
     /// </summary>
+    /// <param name="stream">Seekable, readable stream positioned anywhere; it will be seeked as needed.</param>
+    /// <param name="leaveOpen">If false, the stream is disposed when this instance is disposed.</param>
+    /// <param name="parent">An already-open parent <see cref="ChdFile"/>, or <c>null</c> for a standalone CHD. The caller retains ownership.</param>
+    /// <param name="chdFile">When this method returns, contains the opened <see cref="ChdFile"/> instance, or <c>null</c> on error.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
     public static ChdError Open(Stream stream, bool leaveOpen, ChdFile? parent, out ChdFile? chdFile)
     {
         chdFile = null;
@@ -300,7 +371,6 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         stream.Seek(0, SeekOrigin.Begin);
         if (!Chd.CheckHeader(stream, out _, out var version))
         {
-            BugReporter.TryReport(ChdError.Chderrinvalidfile, null, null, null);
             return ChdError.Chderrinvalidfile;
         }
 
@@ -316,13 +386,11 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                 case 4: valid = ChdHeaders.ReadHeaderV4(stream, out chd); break;
                 case 5: valid = ChdHeaders.ReadHeaderV5(stream, out chd); break;
                 default:
-                    BugReporter.TryReport(ChdError.Chderrunsupportedversion, null, version, null);
                     return ChdError.Chderrunsupportedversion;
             }
         }
-        catch (Exception headerEx)
+        catch (Exception)
         {
-            BugReporter.TryReport(ChdError.Chderrinvaliddata, null, version, headerEx);
             return ChdError.Chderrinvaliddata;
         }
 
@@ -384,8 +452,15 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <summary>
     /// Decompresses a single hunk into <paramref name="buffer"/>.
     /// </summary>
-    /// <param name="hunknum">Zero-based hunk index.</param>
+    /// <param name="hunknum">Zero-based hunk index (0 to <see cref="HunkCount"/> - 1).</param>
     /// <param name="buffer">Destination buffer of at least <see cref="HunkBytes"/> bytes.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success;
+    /// <see cref="ChdError.Chderrhunkoutofrange"/> if <paramref name="hunknum"/> is out of range;
+    /// <see cref="ChdError.Chderrinvalidparameter"/> if <paramref name="buffer"/> is too small;
+    /// <see cref="ChdError.Chderrrequiresparent"/> if the hunk references a missing parent;
+    /// <see cref="ChdError.Chderrdecompressionerror"/> if the compressed data is corrupt.</returns>
+    /// <remarks>The final hunk of an image whose size is not a multiple of <see cref="HunkBytes"/> is
+    /// still <see cref="HunkBytes"/> long (padded as stored in the file).</remarks>
     public ChdError ReadHunk(uint hunknum, byte[] buffer)
     {
         if (hunknum >= _chd.Totalblocks)
@@ -422,13 +497,10 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             }
 
             var rbErr = ChdBlockRead.ReadBlock(me, null!, _chd.ChdReader, _codec, buffer, (int)_chd.Blocksize);
-            if (rbErr != ChdError.Chderrnone)
-                BugReporter.TryReport(rbErr, null, Version, null);
             return rbErr;
         }
-        catch (Exception hunkEx)
+        catch (Exception)
         {
-            BugReporter.TryReport(ChdError.Chderrdecompressionerror, null, Version, hunkEx);
             return ChdError.Chderrdecompressionerror;
         }
         finally
@@ -501,8 +573,15 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <summary>
     /// Reads <paramref name="count"/> bytes from the decompressed image starting
     /// at <paramref name="byteOffset"/>, decompressing hunks on demand. A single
-    /// hunk is cached so sequential reads within the same hunk avoid re-decoding.
+    /// hunk is cached, so sequential reads within the same hunk avoid re-decoding.
     /// </summary>
+    /// <param name="byteOffset">Byte offset into the decompressed image (0 to <see cref="TotalBytes"/> - 1).</param>
+    /// <param name="destination">Destination buffer.</param>
+    /// <param name="destinationOffset">Offset in <paramref name="destination"/> at which to start writing.</param>
+    /// <param name="count">Number of bytes to read.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success;
+    /// <see cref="ChdError.Chderrinvalidparameter"/> if the requested range is outside the image or
+    /// the destination bounds; otherwise a decompression error code.</returns>
     public ChdError Read(ulong byteOffset, byte[] destination, int destinationOffset, int count)
     {
         if (destinationOffset < 0 || count < 0 ||
@@ -539,7 +618,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         return ChdError.Chderrnone;
     }
 
-    /// <inheritdoc cref="Dispose"/>
+    /// <summary>Asynchronously releases the underlying stream (unless opened with <c>leaveOpen: true</c>) and any internally-owned parent instance.</summary>
     public async ValueTask DisposeAsync()
     {
         if (!_leaveOpen)
@@ -560,7 +639,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         }
     }
 
-    /// <summary>Releases the underlying stream (if not left open) and any internally-owned parent instance.</summary>
+    /// <summary>Releases the underlying stream (unless opened with <c>leaveOpen: true</c>) and any internally-owned parent instance.</summary>
     public void Dispose()
     {
         if (!_leaveOpen)

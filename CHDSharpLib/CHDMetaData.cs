@@ -23,6 +23,11 @@ internal static class ChdMetaData
 
     internal static ChdError ReadMetaData(Stream file, ChdHeader chd)
     {
+        // The combined raw+meta SHA1 only exists in V4/V5 headers. V1/V2 have no metadata at all
+        // and V3 stores only the raw data SHA1, so there is nothing to validate here for V1-V3.
+        if (chd.Rawsha1 is not { Length: 20 } || chd.Sha1 is not { Length: 20 } || Util.IsAllZeroArray(chd.Sha1))
+            return ChdError.Chderrnone;
+
         var metaHashes = new List<byte[]>();
 
         foreach (var entry in ReadMetaDataInternal(file, chd, collectHashes: true))

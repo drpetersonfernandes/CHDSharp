@@ -319,7 +319,7 @@ internal static class Program
 
     private static void WriteManifest()
     {
-        string json = JsonSerializer.Serialize(Manifest, ManifestJsonOptions);
+        var json = JsonSerializer.Serialize(Manifest, ManifestJsonOptions);
         File.WriteAllText(Path.Combine(_outDir, "manifest.json"), json);
     }
 }

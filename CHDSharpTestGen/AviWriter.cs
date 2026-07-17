@@ -26,89 +26,89 @@ internal static class AviWriter
         var hdrlSizePos = BeginList(w, "hdrl");
 
         // avih
-        Chunk(w, "avih", () =>
+        Chunk(w, "avih", bw =>
         {
-            w.Write((uint)(1_000_000 / fps));           // dwMicroSecPerFrame
-            w.Write((uint)(frameBytes * fps));          // dwMaxBytesPerSec
-            w.Write(0u);                                // dwPaddingGranularity
-            w.Write(0x10u);                             // dwFlags = AVIF_HASINDEX
-            w.Write((uint)frames);                      // dwTotalFrames
-            w.Write(0u);                                // dwInitialFrames
-            w.Write(2u);                                // dwStreams
-            w.Write((uint)frameBytes);                  // dwSuggestedBufferSize
-            w.Write((uint)width);
-            w.Write((uint)height);
-            w.Write(0u);
-            w.Write(0u);
-            w.Write(0u);
-            w.Write(0u);
+            bw.Write((uint)(1_000_000 / fps));           // dwMicroSecPerFrame
+            bw.Write((uint)(frameBytes * fps));          // dwMaxBytesPerSec
+            bw.Write(0u);                                // dwPaddingGranularity
+            bw.Write(0x10u);                             // dwFlags = AVIF_HASINDEX
+            bw.Write((uint)frames);                      // dwTotalFrames
+            bw.Write(0u);                                // dwInitialFrames
+            bw.Write(2u);                                // dwStreams
+            bw.Write((uint)frameBytes);                  // dwSuggestedBufferSize
+            bw.Write((uint)width);
+            bw.Write((uint)height);
+            bw.Write(0u);
+            bw.Write(0u);
+            bw.Write(0u);
+            bw.Write(0u);
         });
 
         // video stream
         var strlVSizePos = BeginList(w, "strl");
-        Chunk(w, "strh", () =>
+        Chunk(w, "strh", bw =>
         {
-            w.Write("vids"u8);                          // fccType
-            w.Write("YUY2"u8);                          // fccHandler
-            w.Write(0u);                                // dwFlags
-            w.Write((ushort)0);
-            w.Write((ushort)0);     // priority, language
-            w.Write(0u);                                // dwInitialFrames
-            w.Write(1u);                                // dwScale
-            w.Write((uint)fps);                         // dwRate
-            w.Write(0u);                                // dwStart
-            w.Write((uint)frames);                      // dwLength
-            w.Write((uint)frameBytes);                  // dwSuggestedBufferSize
-            w.Write(0xFFFFFFFFu);                       // dwQuality
-            w.Write(0u);                                // dwSampleSize
-            w.Write((short)0);
-            w.Write((short)0);       // rcFrame
-            w.Write((short)width);
-            w.Write((short)height);
+            bw.Write("vids"u8);                          // fccType
+            bw.Write("YUY2"u8);                          // fccHandler
+            bw.Write(0u);                                // dwFlags
+            bw.Write((ushort)0);
+            bw.Write((ushort)0);     // priority, language
+            bw.Write(0u);                                // dwInitialFrames
+            bw.Write(1u);                                // dwScale
+            bw.Write((uint)fps);                         // dwRate
+            bw.Write(0u);                                // dwStart
+            bw.Write((uint)frames);                      // dwLength
+            bw.Write((uint)frameBytes);                  // dwSuggestedBufferSize
+            bw.Write(0xFFFFFFFFu);                       // dwQuality
+            bw.Write(0u);                                // dwSampleSize
+            bw.Write((short)0);
+            bw.Write((short)0);       // rcFrame
+            bw.Write((short)width);
+            bw.Write((short)height);
         });
-        Chunk(w, "strf", () =>
+        Chunk(w, "strf", bw =>
         {
-            w.Write(40u);                               // biSize
-            w.Write(width);
-            w.Write(height);
-            w.Write((ushort)1);                         // biPlanes
-            w.Write((ushort)16);                        // biBitCount
-            w.Write("YUY2"u8);                          // biCompression
-            w.Write((uint)frameBytes);                  // biSizeImage
-            w.Write(0);
-            w.Write(0);
-            w.Write(0u);
-            w.Write(0u);
+            bw.Write(40u);                               // biSize
+            bw.Write(width);
+            bw.Write(height);
+            bw.Write((ushort)1);                         // biPlanes
+            bw.Write((ushort)16);                        // biBitCount
+            bw.Write("YUY2"u8);                          // biCompression
+            bw.Write((uint)frameBytes);                  // biSizeImage
+            bw.Write(0);
+            bw.Write(0);
+            bw.Write(0u);
+            bw.Write(0u);
         });
         EndList(w, strlVSizePos);
 
         // audio stream
         var strlASizePos = BeginList(w, "strl");
-        Chunk(w, "strh", () =>
+        Chunk(w, "strh", bw =>
         {
-            w.Write("auds"u8);                          // fccType
-            w.Write(0u);                                // fccHandler
-            w.Write(0u);                                // dwFlags
-            w.Write((ushort)0);
-            w.Write((ushort)0);
-            w.Write(0u);                                // dwInitialFrames
-            w.Write(1u);                                // dwScale
-            w.Write((uint)sampleRate);                  // dwRate
-            w.Write(0u);                                // dwStart
-            w.Write((uint)totalSamples);                // dwLength
-            w.Write((uint)(samplesPerFrame * 2));       // dwSuggestedBufferSize
-            w.Write(0xFFFFFFFFu);                       // dwQuality
-            w.Write(2u);                                // dwSampleSize (block align)
-            w.Write(0L);                                // rcFrame
+            bw.Write("auds"u8);                          // fccType
+            bw.Write(0u);                                // fccHandler
+            bw.Write(0u);                                // dwFlags
+            bw.Write((ushort)0);
+            bw.Write((ushort)0);
+            bw.Write(0u);                                // dwInitialFrames
+            bw.Write(1u);                                // dwScale
+            bw.Write((uint)sampleRate);                  // dwRate
+            bw.Write(0u);                                // dwStart
+            bw.Write((uint)totalSamples);                // dwLength
+            bw.Write((uint)(samplesPerFrame * 2));       // dwSuggestedBufferSize
+            bw.Write(0xFFFFFFFFu);                       // dwQuality
+            bw.Write(2u);                                // dwSampleSize (block align)
+            bw.Write(0L);                                // rcFrame
         });
-        Chunk(w, "strf", () =>
+        Chunk(w, "strf", bw =>
         {
-            w.Write((ushort)1);                         // wFormatTag = PCM
-            w.Write((ushort)1);                         // nChannels
-            w.Write((uint)sampleRate);
-            w.Write((uint)(sampleRate * 2));            // nAvgBytesPerSec
-            w.Write((ushort)2);                         // nBlockAlign
-            w.Write((ushort)16);                        // wBitsPerSample
+            bw.Write((ushort)1);                         // wFormatTag = PCM
+            bw.Write((ushort)1);                         // nChannels
+            bw.Write((uint)sampleRate);
+            bw.Write((uint)(sampleRate * 2));            // nAvgBytesPerSec
+            bw.Write((ushort)2);                         // nBlockAlign
+            bw.Write((ushort)16);                        // wBitsPerSample
         });
         EndList(w, strlASizePos);
 
@@ -136,14 +136,14 @@ internal static class AviWriter
         EndList(w, moviSizePos);
 
         // idx1
-        Chunk(w, "idx1", () =>
+        Chunk(w, "idx1", bw =>
         {
             foreach (var (id, offset, length) in index)
             {
-                w.Write(id);
-                w.Write(0x10u); // AVIIF_KEYFRAME
-                w.Write(offset);
-                w.Write(length);
+                bw.Write(id);
+                bw.Write(0x10u); // AVIIF_KEYFRAME
+                bw.Write(offset);
+                bw.Write(length);
             }
         });
 
@@ -202,12 +202,12 @@ internal static class AviWriter
         PatchSize((MemoryStream)w.BaseStream, sizePos);
     }
 
-    private static void Chunk(BinaryWriter w, string id, Action body)
+    private static void Chunk(BinaryWriter w, string id, Action<BinaryWriter> body)
     {
         w.Write(System.Text.Encoding.ASCII.GetBytes(id));
         var sizePos = w.BaseStream.Position;
         w.Write(0);
-        body();
+        body(w);
         PatchSize((MemoryStream)w.BaseStream, sizePos);
         if ((w.BaseStream.Position & 1) == 1)
             w.Write((byte)0); // chunks are word-aligned

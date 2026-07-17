@@ -88,6 +88,7 @@ public sealed class CorpusTests
     [MemberData(nameof(ChildFiles))]
     public void Requires_parent(Entry entry, string childPath, string _)
     {
+        Assert.NotNull(entry.Parent); // manifest sanity: only children reach this theory
         var err = ChdFile.Open(childPath, out var chd);
         Assert.Equal(ChdError.Chderrrequiresparent, err);
         Assert.Null(chd);
@@ -105,7 +106,7 @@ public sealed class CorpusTests
     [Fact]
     public void V5_tiny_rejected_gracefully()
     {
-        string path = Path.Combine(TestDataDir, "v5_tiny.chd");
+        var path = Path.Combine(TestDataDir, "v5_tiny.chd");
         var err = Chd.CheckFile(File.OpenRead(path), path, deepCheck: false, out _, out _, out _);
         Assert.NotEqual(ChdError.Chderrnone, err);
     }

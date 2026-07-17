@@ -7,6 +7,8 @@
 
 **Pure C# CHD (Compressed Hunks of Data) reader — V1–V5, all 10 codecs, parent/child chaining, 100% byte-for-byte match with MAME `chdman`.**
 
+> Fork of [RomVault/CHDSharp](https://github.com/RomVault/CHDSharp) by [Gordon Jefferyes](https://github.com/gjefferyes) — extended with Zstd, AVHuff, parallel verification, async APIs, metadata support, and a comprehensive test suite.
+
 ---
 
 ## Installation
@@ -202,16 +204,17 @@ Requires [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) or lat
 
 ## License
 
-MIT License — see [LICENSE](LICENSE).
+MIT License — see [LICENSE](LICENSE.txt).
 
-> A fork of [RomVault/CHDSharp](https://github.com/RomVault/CHDSharp) by [Gordon Jefferyes](https://github.com/gjefferyes), extended with Zstd, AVHuff, V5 compressed map, random-access API, parent/child chaining, parallel verification, and a comprehensive test suite cross-checked against MAME `chdman`.
+### Special Thanks
+
+**Gordon Jefferyes ([@gjefferyes](https://github.com/gjefferyes))** — the original author of [RomVault/CHDSharp](https://github.com/RomVault/CHDSharp), which this project is forked from. Gordon built the foundational C# CHD reader (V1–V5 headers, zlib/lzma/huffman/flac codecs, and a custom LZMA/FLAC stack) that this project extends with Zstd, AVHuff, parallel verification, async APIs, metadata support, and comprehensive testing.
 
 ### Acknowledgments
 
 - **[MAME](https://www.mamedev.org/)** — CHD format specification and `chdman` reference implementation
 - **[libchdr](https://github.com/rtissera/libchdr)** — C reference library by Romain Tisseraud
 - **[ZstdSharp.Port](https://github.com/oleg-st/ZstdSharp)** — pure C# Zstd decompressor by Oleg Stepanischev
-- **[RomVault/CHDSharp](https://github.com/RomVault/CHDSharp)** — original C# implementation by Gordon Jefferyes
 
 ---
 

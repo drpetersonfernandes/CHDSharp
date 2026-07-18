@@ -197,6 +197,7 @@ All `Open` overloads seek from the start. The reader is **not thread-safe** — 
 | `TotalBytes` | `ulong` | Decompressed image size. |
 | `HunkBytes` | `uint` | Size of one hunk. |
 | `HunkCount` | `uint` | Total number of hunks. |
+| `UnitBytes` | `uint` | Unit size for parent block address translation. V5 reads from header; V1-V4 derives from metadata (HDD BPS, CD 2448, or HunkBytes). |
 | `Sha1` | `byte[]?` | Combined SHA1 (image + metadata). |
 | `RawSha1` | `byte[]?` | Raw image data SHA1. |
 | `Md5` | `byte[]?` | Raw image MD5. |

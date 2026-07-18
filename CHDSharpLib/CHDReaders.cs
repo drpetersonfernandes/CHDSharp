@@ -175,7 +175,7 @@ internal static partial class ChdReaders
 
     private const int CdMaxSectorData = 2352;
     private const int CdMaxSubcodeData = 96;
-    private const int CdFrameSize = CdMaxSectorData + CdMaxSubcodeData;
+    internal const int CdFrameSize = CdMaxSectorData + CdMaxSubcodeData;
 
     private static readonly byte[] SCdSyncHeader = [0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00];
 

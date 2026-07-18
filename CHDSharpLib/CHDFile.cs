@@ -65,6 +65,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 
     private List<ChdMetadataEntry>? _metadata;
     private bool _metadataLoaded;
+    private uint? _unitBytes;
 
     private ChdFile(Stream stream, bool leaveOpen, ChdHeader chd, uint version)
     {
@@ -83,6 +84,30 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 
     /// <summary>Size in bytes of a single hunk (block).</summary>
     public uint HunkBytes => _chd.Blocksize;
+
+    /// <summary>
+    /// Size in bytes of a unit used for parent block address translation.
+    /// In V5 this is read from the header. In V1-V4 the concept does not
+    /// exist in the header, so it is derived from metadata: hard disk metadata
+    /// ("GDDD" tag) provides the bytes-per-sector value; CD/GD-ROM metadata
+    /// ("CHCD", "CHTR", "CHT2", "CHGT", "CHGD" tags) produces the CD frame
+    /// size (2448); otherwise defaults to <see cref="HunkBytes"/>.
+    /// </summary>
+    public uint UnitBytes
+    {
+        get
+        {
+            if (_unitBytes.HasValue)
+                return _unitBytes.Value;
+
+            if (Version >= 5)
+                _unitBytes = _chd.Unitbytes;
+            else
+                _unitBytes = GuessUnitBytes();
+
+            return _unitBytes.Value;
+        }
+    }
 
     /// <summary>Number of hunks (blocks) in the image.</summary>
     public uint HunkCount => _chd.Totalblocks;
@@ -151,6 +176,39 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             // Silently return empty list if metadata can't be read.
             _metadata = [];
         }
+    }
+
+    private uint GuessUnitBytes()
+    {
+        EnsureMetadataLoaded();
+
+        if (_metadata is { Count: > 0 })
+        {
+            foreach (var entry in _metadata)
+            {
+                if (entry.Tag == "GDDD" && entry.IsText)
+                {
+                    var parts = entry.GetText().Split(',');
+                    foreach (var p in parts)
+                    {
+                        var trimmed = p.Trim();
+                        if (trimmed.StartsWith("BPS:", StringComparison.Ordinal) &&
+                            uint.TryParse(trimmed.AsSpan(4), out var bps) && bps > 0)
+                            return bps;
+                    }
+
+                    break;
+                }
+            }
+
+            foreach (var entry in _metadata)
+            {
+                if (entry.Tag is "CHCD" or "CHTR" or "CHT2" or "CHGT" or "CHGD")
+                    return ChdReaders.CdFrameSize;
+            }
+        }
+
+        return _chd.Blocksize;
     }
 
     /// <inheritdoc cref="Open(string,out ChdFile)"/>

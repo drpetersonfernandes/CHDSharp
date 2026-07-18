@@ -101,9 +101,13 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                 return _unitBytes.Value;
 
             if (Version >= 5)
+            {
                 _unitBytes = _chd.Unitbytes;
+            }
             else
+            {
                 _unitBytes = GuessUnitBytes();
+            }
 
             return _unitBytes.Value;
         }
@@ -186,7 +190,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         {
             foreach (var entry in _metadata)
             {
-                if (entry.Tag == "GDDD" && entry.IsText)
+                if (entry is { Tag: "GDDD", IsText: true })
                 {
                     var parts = entry.GetText().Split(',');
                     foreach (var p in parts)

@@ -13,8 +13,6 @@
         <FileVersion>1.1.0</FileVersion>
         <NeutralLanguage>en</NeutralLanguage>
         <RootNamespace>CHDSharp</RootNamespace>
-        <DebugType>embedded</DebugType>
-        <DebugSymbols>true</DebugSymbols>
     </PropertyGroup>
 
     <PropertyGroup>

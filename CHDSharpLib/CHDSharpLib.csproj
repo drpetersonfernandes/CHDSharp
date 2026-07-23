@@ -18,7 +18,7 @@
         <PackageProjectUrl>https://github.com/drpetersonfernandes/CHDSharp</PackageProjectUrl>
         <RepositoryUrl>https://github.com/drpetersonfernandes/CHDSharp</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
-        <PackageReleaseNotes>v1.2.0: Added UnitBytes property for sector size detection. Refactored codebase for consistent style. Embedded debug symbols for easier debugging. Includes companion CHDSharpEncoder library with CRC16, SHA1, and Deflate support.</PackageReleaseNotes>
+        <PackageReleaseNotes>v1.2.0: CD/GD-ROM track (TOC) parsing with full track layout and sector type information via ChdTrackInfo and ChdTocParser. New ChdTrackType and ChdSubType enums. Improved UnitBytes property detects sector sizes from metadata for all CHD versions. Centralized versioning via Directory.Build.props. Deterministic and reproducible builds with embedded SourceLink.</PackageReleaseNotes>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <WarningsAsErrors>$(WarningsAsErrors);CS1591</WarningsAsErrors>
     </PropertyGroup>

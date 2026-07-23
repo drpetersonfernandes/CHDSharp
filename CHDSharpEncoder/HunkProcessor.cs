@@ -14,8 +14,8 @@ public class HunkProcessor
         if (rawHunk.Length != _hunkBytes)
             throw new ArgumentException($"Hunk size mismatch: expected {_hunkBytes}, got {rawHunk.Length}");
 
-        ushort crc16 = Crc16.Compute(rawHunk);
-        byte[]? compressed = RawDeflate.Compress(rawHunk);
+        var crc16 = Crc16.Compute(rawHunk);
+        var compressed = RawDeflate.Compress(rawHunk);
 
         if (compressed != null && compressed.Length < _hunkBytes)
         {

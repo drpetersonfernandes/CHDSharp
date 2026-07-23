@@ -6,11 +6,10 @@ public class Huffman16_8
     public const int MAX_BITS = 8;
 
     private readonly int[] _histogram = new int[NUM_CODES];
-    private readonly int[] _numbits = new int[NUM_CODES];
-    private readonly uint[] _codes = new uint[NUM_CODES];
 
-    public int[] NumBits => _numbits;
-    public uint[] Codes => _codes;
+    public int[] NumBits { get; } = new int[NUM_CODES];
+
+    public uint[] Codes { get; } = new uint[NUM_CODES];
 
     public void ResetHistogram()
     {
@@ -20,33 +19,37 @@ public class Huffman16_8
     public void CountSymbol(uint symbol)
     {
         if (symbol < NUM_CODES)
+        {
             _histogram[symbol]++;
+        }
     }
 
     public void BuildTree()
     {
-        int totalData = 0;
-        for (int i = 0; i < NUM_CODES; i++)
+        var totalData = 0;
+        for (var i = 0; i < NUM_CODES; i++)
+        {
             totalData += _histogram[i];
+        }
 
-        Array.Clear(_codes);
+        Array.Clear(Codes);
 
         if (totalData == 0)
         {
-            Array.Clear(_numbits);
+            Array.Clear(NumBits);
             return;
         }
 
-        Array.Clear(_numbits);
+        Array.Clear(NumBits);
 
-        int lower = 0;
-        int upper = totalData * 2;
-        int bestWeight = totalData;
+        var lower = 0;
+        var upper = totalData * 2;
+        var bestWeight = totalData;
 
-        for (int iter = 0; iter < 32; iter++)
+        for (var iter = 0; iter < 32; iter++)
         {
-            int curWeight = (lower + upper) / 2;
-            int maxbits = BuildWeightedTree(curWeight, totalData);
+            var curWeight = (lower + upper) / 2;
+            var maxbits = BuildWeightedTree(curWeight, totalData);
 
             if (maxbits <= MAX_BITS)
             {
@@ -70,10 +73,10 @@ public class Huffman16_8
 
     public void ExportTreeRle(BitStreamOut bs)
     {
-        int numbits = MAX_BITS >= 16 ? 5 : MAX_BITS >= 8 ? 4 : 3;
+        var numbits = MAX_BITS >= 16 ? 5 : MAX_BITS >= 8 ? 4 : 3;
 
-        int lastVal = -1;
-        int repCount = 0;
+        var lastVal = -1;
+        var repCount = 0;
 
         void Flush(int val)
         {
@@ -82,11 +85,13 @@ public class Huffman16_8
             repCount = 0;
         }
 
-        for (int i = 0; i < NUM_CODES; i++)
+        for (var i = 0; i < NUM_CODES; i++)
         {
-            int val = _numbits[i];
+            var val = NumBits[i];
             if (val == lastVal)
+            {
                 repCount++;
+            }
             else
             {
                 Flush(lastVal);
@@ -101,8 +106,8 @@ public class Huffman16_8
     {
         if (symbol >= NUM_CODES)
             return;
-        if (_numbits[symbol] > 0)
-            bs.Write(_codes[symbol], _numbits[symbol]);
+        if (NumBits[symbol] > 0)
+            bs.Write(Codes[symbol], NumBits[symbol]);
     }
 
     private int BuildWeightedTree(int totalWeight, int totalData)
@@ -110,60 +115,69 @@ public class Huffman16_8
         var nodes = new TreeNode[32];
         var activeIndices = new List<int>(16);
 
-        for (int i = 0; i < NUM_CODES; i++)
+        for (var i = 0; i < NUM_CODES; i++)
         {
             if (_histogram[i] != 0)
             {
-                int w = (int)((long)_histogram[i] * (long)totalWeight / (long)totalData);
-                if (w == 0) w = 1;
+                var w = (int)((long)_histogram[i] * (long)totalWeight / (long)totalData);
+                if (w == 0)
+                {
+                    w = 1;
+                }
+
                 nodes[i].Weight = w;
                 nodes[i].Parent = -1;
                 activeIndices.Add(i);
             }
             else
             {
-                _numbits[i] = 0;
+                NumBits[i] = 0;
             }
         }
 
         SortByWeight(nodes, activeIndices);
 
-        int nextAlloc = NUM_CODES;
+        var nextAlloc = NUM_CODES;
         while (activeIndices.Count > 1)
         {
-            int idx0 = activeIndices[activeIndices.Count - 1];
+            var idx0 = activeIndices[activeIndices.Count - 1];
             activeIndices.RemoveAt(activeIndices.Count - 1);
-            int idx1 = activeIndices[activeIndices.Count - 1];
+            var idx1 = activeIndices[activeIndices.Count - 1];
             activeIndices.RemoveAt(activeIndices.Count - 1);
 
-            int newIdx = nextAlloc++;
+            var newIdx = nextAlloc++;
             nodes[newIdx].Weight = nodes[idx0].Weight + nodes[idx1].Weight;
             nodes[newIdx].Parent = -1;
             nodes[idx0].Parent = newIdx;
             nodes[idx1].Parent = newIdx;
 
-            int insertPos = 0;
+            var insertPos = 0;
             while (insertPos < activeIndices.Count &&
                    nodes[newIdx].Weight <= nodes[activeIndices[insertPos]].Weight)
+            {
                 insertPos++;
+            }
+
             activeIndices.Insert(insertPos, newIdx);
         }
 
-        int maxBits = 0;
-        for (int i = 0; i < NUM_CODES; i++)
+        var maxBits = 0;
+        for (var i = 0; i < NUM_CODES; i++)
         {
             if (_histogram[i] != 0)
             {
-                int depth = 0;
-                int current = i;
+                var depth = 0;
+                var current = i;
                 while (nodes[current].Parent >= 0)
                 {
                     depth++;
                     current = nodes[current].Parent;
                 }
-                _numbits[i] = depth == 0 ? 1 : depth;
-                if (_numbits[i] > maxBits)
-                    maxBits = _numbits[i];
+                NumBits[i] = depth == 0 ? 1 : depth;
+                if (NumBits[i] > maxBits)
+                {
+                    maxBits = NumBits[i];
+                }
             }
         }
 
@@ -177,26 +191,30 @@ public class Huffman16_8
 
     private void AssignCanonicalCodes()
     {
-        int[] bithisto = new int[33];
-        for (int i = 0; i < NUM_CODES; i++)
+        var bithisto = new int[33];
+        for (var i = 0; i < NUM_CODES; i++)
         {
-            int nb = _numbits[i];
+            var nb = NumBits[i];
             if (nb > 0 && nb <= 32)
+            {
                 bithisto[nb]++;
+            }
         }
 
         uint curstart = 0;
-        for (int codelen = 32; codelen > 0; codelen--)
+        for (var codelen = 32; codelen > 0; codelen--)
         {
-            uint nextstart = (uint)((curstart + bithisto[codelen]) >> 1);
+            var nextstart = (uint)((curstart + bithisto[codelen]) >> 1);
             bithisto[codelen] = (int)curstart;
             curstart = nextstart;
         }
 
-        for (int i = 0; i < NUM_CODES; i++)
+        for (var i = 0; i < NUM_CODES; i++)
         {
-            if (_numbits[i] > 0)
-                _codes[i] = (uint)bithisto[_numbits[i]]++;
+            if (NumBits[i] > 0)
+            {
+                Codes[i] = (uint)bithisto[NumBits[i]]++;
+            }
         }
     }
 
@@ -217,7 +235,7 @@ public class Huffman16_8
             }
             else
             {
-                int reps = Math.Min(repCount - 3, (1 << numbits) - 1);
+                var reps = Math.Min(repCount - 3, (1 << numbits) - 1);
                 bs.Write(1, numbits);
                 bs.Write((uint)value, numbits);
                 bs.Write((uint)reps, numbits);

@@ -39,7 +39,7 @@ public class ChdHeaderV5
         w.WriteBytes(Sha1);
         w.WriteBytes(ParentSha1);
 
-        byte[] result = w.ToArray();
+        var result = w.ToArray();
         if (result.Length != LENGTH)
             throw new InvalidOperationException($"Serialized header is {result.Length} bytes, expected {LENGTH}");
 
@@ -48,7 +48,7 @@ public class ChdHeaderV5
 
     public void WriteToStream(Stream stream)
     {
-        byte[] data = Serialize();
+        var data = Serialize();
         stream.Write(data, 0, data.Length);
     }
 
@@ -90,7 +90,10 @@ public class ChdHeaderV5
         };
     }
 
-    private static bool IsCompressedCheck(uint compressor0) => compressor0 != CodecTags.NONE;
+    private static bool IsCompressedCheck(uint compressor0)
+    {
+        return compressor0 != CodecTags.NONE;
+    }
 
     private static uint ReadU32BE(byte[] data, int offset)
     {

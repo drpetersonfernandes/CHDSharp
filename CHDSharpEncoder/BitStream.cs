@@ -3,19 +3,18 @@ namespace CHDSharpEncoder;
 public class BitStreamOut
 {
     private byte[] _buffer;
-    private int _bytePos;
     private uint _bitBuf;
     private int _bitsInBuf;
 
     public BitStreamOut(int capacityBytes)
     {
         _buffer = new byte[capacityBytes];
-        _bytePos = 0;
+        ByteLength = 0;
         _bitBuf = 0;
         _bitsInBuf = 0;
     }
 
-    public int ByteLength => _bytePos;
+    public int ByteLength { get; private set; }
 
     public void Write(uint value, int numBits)
     {
@@ -29,14 +28,14 @@ public class BitStreamOut
             while (_bitsInBuf >= 8)
             {
                 EnsureByte();
-                _buffer[_bytePos++] = (byte)(_bitBuf >> 24);
+                _buffer[ByteLength++] = (byte)(_bitBuf >> 24);
                 _bitBuf <<= 8;
                 _bitsInBuf -= 8;
             }
 
             if (_bitsInBuf + numBits >= 32)
             {
-                int rem = Math.Min(32 - _bitsInBuf, numBits);
+                var rem = Math.Min(32 - _bitsInBuf, numBits);
                 _bitBuf |= value >> _bitsInBuf;
                 _bitsInBuf += rem;
                 value <<= rem;
@@ -56,29 +55,32 @@ public class BitStreamOut
         while (_bitsInBuf > 0)
         {
             EnsureByte();
-            _buffer[_bytePos++] = (byte)(_bitBuf >> 24);
+            _buffer[ByteLength++] = (byte)(_bitBuf >> 24);
             _bitBuf <<= 8;
             _bitsInBuf -= 8;
         }
         _bitBuf = 0;
-        return _bytePos;
+        return ByteLength;
     }
 
     public byte[] ToArray()
     {
-        byte[] result = new byte[_bytePos];
-        Array.Copy(_buffer, result, _bytePos);
+        var result = new byte[ByteLength];
+        Array.Copy(_buffer, result, ByteLength);
         return result;
     }
 
     private void EnsureByte()
     {
-        if (_bytePos < _buffer.Length)
+        if (ByteLength < _buffer.Length)
             return;
 
-        int newSize = _buffer.Length * 2;
+        var newSize = _buffer.Length * 2;
         if (newSize < _buffer.Length + 256)
+        {
             newSize = _buffer.Length + 256;
+        }
+
         Array.Resize(ref _buffer, newSize);
     }
 }

@@ -9,9 +9,12 @@ public class ChdEncoder
         if (hunkBytes == 0 || unitBytes == 0 || hunkBytes % unitBytes != 0)
             throw new ArgumentException($"hunkBytes ({hunkBytes}) must be a multiple of unitBytes ({unitBytes})");
 
-        ulong logicalBytes = (ulong)sourceStream.Length;
-        uint hunkCount = (uint)((logicalBytes + hunkBytes - 1) / hunkBytes);
-        if (hunkCount == 0) hunkCount = 1;
+        var logicalBytes = (ulong)sourceStream.Length;
+        var hunkCount = (uint)((logicalBytes + hunkBytes - 1) / hunkBytes);
+        if (hunkCount == 0)
+        {
+            hunkCount = 1;
+        }
 
         var entries = new MapEntry[hunkCount];
         var blockList = new List<byte[]>();
@@ -19,17 +22,17 @@ public class ChdEncoder
         long currentOffset = ChdHeaderV5.LENGTH;
         var processor = new HunkProcessor(hunkBytes);
 
-        byte[] readBuffer = new byte[hunkBytes];
+        var readBuffer = new byte[hunkBytes];
 
         for (uint h = 0; h < hunkCount; h++)
         {
             Array.Clear(readBuffer, 0, (int)hunkBytes);
 
-            long streamOffset = (long)h * hunkBytes;
+            var streamOffset = (long)h * hunkBytes;
             if (streamOffset < (long)logicalBytes)
             {
                 sourceStream.Position = streamOffset;
-                int bytesRead = sourceStream.Read(readBuffer, 0, (int)hunkBytes);
+                var bytesRead = sourceStream.Read(readBuffer, 0, (int)hunkBytes);
                 // remaining bytes stay zero (default)
             }
 
@@ -41,10 +44,10 @@ public class ChdEncoder
             currentOffset += data.Length;
         }
 
-        byte[] rawSha1 = sha1.Finish();
+        var rawSha1 = sha1.Finish();
 
-        byte[] compressedMap = MapCompressor.Compress(entries, hunkCount, hunkBytes, unitBytes);
-        ulong mapOffset = (ulong)currentOffset;
+        var compressedMap = MapCompressor.Compress(entries, hunkCount, hunkBytes, unitBytes);
+        var mapOffset = (ulong)currentOffset;
 
         // Write file
         using var fs = new FileStream(chdPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
@@ -52,7 +55,7 @@ public class ChdEncoder
         var header = ChdHeaderV5.CreateRaw(CodecTags.ZLIB, logicalBytes, hunkBytes, unitBytes);
         header.WriteToStream(fs);
 
-        foreach (byte[] block in blockList)
+        foreach (var block in blockList)
             fs.Write(block, 0, block.Length);
 
         fs.Write(compressedMap, 0, compressedMap.Length);
@@ -68,7 +71,7 @@ public class ChdEncoder
         fs.Write(rawSha1, 0, 20);
 
         // Patch sha1 (combined raw+meta, with no metadata: SHA1(rawSha1))
-        byte[] combinedSha1 = Sha1.Compute(rawSha1);
+        var combinedSha1 = Sha1.Compute(rawSha1);
         fs.Position = 84;
         fs.Write(combinedSha1, 0, 20);
     }

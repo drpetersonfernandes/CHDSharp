@@ -27,7 +27,7 @@ public class Sha1
     {
         _totalBits += (ulong)length * 8;
 
-        for (int i = 0; i < length; i++)
+        for (var i = 0; i < length; i++)
         {
             _block[_blockPos++] = data[offset + i];
             if (_blockPos == 64)
@@ -40,19 +40,24 @@ public class Sha1
 
     public byte[] Finish()
     {
-        byte[] digest = new byte[20];
+        var digest = new byte[20];
 
         _block[_blockPos++] = 0x80;
         if (_blockPos > 56)
         {
             while (_blockPos < 64)
+            {
                 _block[_blockPos++] = 0;
+            }
+
             ProcessBlock(_block);
             _blockPos = 0;
         }
 
         while (_blockPos < 56)
+        {
             _block[_blockPos++] = 0;
+        }
 
         WriteU64BE(_block, 56, _totalBits);
         ProcessBlock(_block);
@@ -75,9 +80,9 @@ public class Sha1
 
     private void ProcessBlock(byte[] block)
     {
-        uint[] w = new uint[80];
+        var w = new uint[80];
 
-        for (int t = 0; t < 16; t++)
+        for (var t = 0; t < 16; t++)
         {
             w[t] = ((uint)block[t * 4] << 24) |
                    ((uint)block[t * 4 + 1] << 16) |
@@ -85,15 +90,15 @@ public class Sha1
                    (uint)block[t * 4 + 3];
         }
 
-        for (int t = 16; t < 80; t++)
+        for (var t = 16; t < 80; t++)
         {
-            uint temp = w[t - 3] ^ w[t - 8] ^ w[t - 14] ^ w[t - 16];
+            var temp = w[t - 3] ^ w[t - 8] ^ w[t - 14] ^ w[t - 16];
             w[t] = (temp << 1) | (temp >> 31);
         }
 
         uint a = _h0, b = _h1, c = _h2, d = _h3, e = _h4;
 
-        for (int t = 0; t < 80; t++)
+        for (var t = 0; t < 80; t++)
         {
             uint k, f;
             if (t < 20)
@@ -117,7 +122,7 @@ public class Sha1
                 k = 0xCA62C1D6;
             }
 
-            uint temp = ((a << 5) | (a >> 27)) + f + e + k + w[t];
+            var temp = ((a << 5) | (a >> 27)) + f + e + k + w[t];
             e = d;
             d = c;
             c = (b << 30) | (b >> 2);

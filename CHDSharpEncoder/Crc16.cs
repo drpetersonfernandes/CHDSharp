@@ -7,9 +7,9 @@ public static class Crc16
     public static ushort Compute(ReadOnlySpan<byte> data)
     {
         ushort crc = 0xFFFF;
-        for (int i = 0; i < data.Length; i++)
+        for (var i = 0; i < data.Length; i++)
         {
-            int index = ((crc >> 8) ^ data[i]) & 0xFF;
+            var index = ((crc >> 8) ^ data[i]) & 0xFF;
             crc = (ushort)((crc << 8) ^ _table[index]);
         }
         return crc;
@@ -23,15 +23,19 @@ public static class Crc16
     private static ushort[] GenerateTable()
     {
         var table = new ushort[256];
-        for (int i = 0; i < 256; i++)
+        for (var i = 0; i < 256; i++)
         {
-            ushort crc = (ushort)(i << 8);
-            for (int bit = 0; bit < 8; bit++)
+            var crc = (ushort)(i << 8);
+            for (var bit = 0; bit < 8; bit++)
             {
                 if ((crc & 0x8000) != 0)
+                {
                     crc = (ushort)((crc << 1) ^ 0x1021);
+                }
                 else
+                {
                     crc <<= 1;
+                }
             }
             table[i] = crc;
         }

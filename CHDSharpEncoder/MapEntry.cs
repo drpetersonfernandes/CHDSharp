@@ -17,7 +17,7 @@ public struct MapEntry
 
     public static void WriteRawMapEntry(byte[] rawMap, int entryIndex, MapEntry entry)
     {
-        int baseOffset = entryIndex * 12;
+        var baseOffset = entryIndex * 12;
         rawMap[baseOffset] = entry.Compression;
         WriteU24BE(rawMap, baseOffset + 1, entry.CompLength);
         WriteU48BE(rawMap, baseOffset + 4, entry.Offset);

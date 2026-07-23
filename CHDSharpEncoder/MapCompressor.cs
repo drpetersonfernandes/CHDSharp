@@ -13,21 +13,23 @@ public static class MapCompressor
         for (uint i = 0; i < hunkCount; i++)
         {
             if (entries[i].Compression <= MapEntry.COMPRESSION_TYPE_3)
+            {
                 maxCompLen = Math.Max(maxCompLen, entries[i].CompLength);
+            }
         }
-        byte lengthBits = BitsForValue(maxCompLen);
+        var lengthBits = BitsForValue(maxCompLen);
 
         var huff = new Huffman16_8();
-        foreach (byte sym in rleList)
+        foreach (var sym in rleList)
             huff.CountSymbol(sym);
         huff.BuildTree();
 
-        int nbitsNeeded = (8 * 16) + (12 + Math.Max(lengthBits + 16, 0)) * (int)hunkCount;
+        var nbitsNeeded = (8 * 16) + (12 + Math.Max(lengthBits + 16, 0)) * (int)hunkCount;
         var bs = new BitStreamOut(nbitsNeeded / 8 + 1 + 256);
 
         huff.ExportTreeRle(bs);
 
-        foreach (byte sym in rleList)
+        foreach (var sym in rleList)
             huff.Encode(bs, sym);
 
         ulong firstOffset = 0;
@@ -42,21 +44,29 @@ public static class MapCompressor
                 case MapEntry.COMPRESSION_TYPE_3:
                     bs.Write(entry.CompLength, lengthBits);
                     bs.Write(entry.Crc16, 16);
-                    if (firstOffset == 0) firstOffset = entry.Offset;
+                    if (firstOffset == 0)
+                    {
+                        firstOffset = entry.Offset;
+                    }
+
                     break;
                 case MapEntry.COMPRESSION_NONE:
                     bs.Write(entry.Crc16, 16);
-                    if (firstOffset == 0) firstOffset = entry.Offset;
+                    if (firstOffset == 0)
+                    {
+                        firstOffset = entry.Offset;
+                    }
+
                     break;
             }
         }
 
-        int compressedDataLen = bs.Flush();
+        var compressedDataLen = bs.Flush();
 
-        byte[] rawMap = new byte[hunkCount * 12];
+        var rawMap = new byte[hunkCount * 12];
         for (uint i = 0; i < hunkCount; i++)
             MapEntry.WriteRawMapEntry(rawMap, (int)i, entries[i]);
-        ushort mapCrc = Crc16.Compute(rawMap);
+        var mapCrc = Crc16.Compute(rawMap);
 
         var headerW = new BigEndianWriter(16);
         headerW.WriteU32((uint)compressedDataLen);
@@ -67,9 +77,9 @@ public static class MapCompressor
         headerW.WriteU8(0);
         headerW.WriteU8(0);
 
-        byte[] header = headerW.ToArray();
-        byte[] compressedData = bs.ToArray();
-        byte[] result = new byte[header.Length + compressedData.Length];
+        var header = headerW.ToArray();
+        var compressedData = bs.ToArray();
+        var result = new byte[header.Length + compressedData.Length];
         Array.Copy(header, 0, result, 0, header.Length);
         Array.Copy(compressedData, 0, result, header.Length, compressedData.Length);
         return result;
@@ -79,13 +89,15 @@ public static class MapCompressor
     {
         var rleList = new List<byte>((int)hunkCount + 4);
         byte lastcomp = 0;
-        int count = 0;
+        var count = 0;
 
         for (uint i = 0; i < hunkCount; i++)
         {
-            byte curcomp = entries[i].Compression;
+            var curcomp = entries[i].Compression;
             if (curcomp == lastcomp)
+            {
                 count++;
+            }
             else
             {
                 Flush(count);
@@ -104,7 +116,7 @@ public static class MapCompressor
 
             rleList.Add(lastcomp);
 
-            int repCount = totalCount - 1;
+            var repCount = totalCount - 1;
             while (repCount > 0)
             {
                 if (repCount < 3)
@@ -120,7 +132,7 @@ public static class MapCompressor
                 }
                 else
                 {
-                    int n = Math.Min(repCount, 3 + 16 + 255);
+                    var n = Math.Min(repCount, 3 + 16 + 255);
                     rleList.Add(COMPRESSION_RLE_LARGE);
                     rleList.Add((byte)((n - 3 - 16) >> 4));
                     rleList.Add((byte)((n - 3 - 16) & 15));

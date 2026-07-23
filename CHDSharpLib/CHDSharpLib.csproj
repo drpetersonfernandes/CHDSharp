@@ -9,8 +9,8 @@
         <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
         <IsPackable>true</IsPackable>
         <Company>PureLogicCode.com</Company>
-        <AssemblyVersion>1.1.0</AssemblyVersion>
-        <FileVersion>1.1.0</FileVersion>
+        <AssemblyVersion>1.2.0</AssemblyVersion>
+        <FileVersion>1.2.0</FileVersion>
         <NeutralLanguage>en</NeutralLanguage>
         <RootNamespace>CHDSharp</RootNamespace>
         <DebugType>embedded</DebugType>
@@ -19,7 +19,7 @@
 
     <PropertyGroup>
         <PackageId>CHDSharp</PackageId>
-        <Version>1.1.0</Version>
+        <Version>1.2.0</Version>
         <Authors>Peterson Fernandes</Authors>
         <Description>Pure C# read-only CHD (Compressed Hunks of Data) reader library. Supports MAME CHD formats V1-V5 and all 10 compression codecs (zlib, lzma, huffman, flac, zstd, avhu + CD variants).</Description>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>

@@ -3,33 +3,22 @@
     <PropertyGroup>
         <OutputType>Library</OutputType>
         <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <LangVersion>14</LangVersion>
         <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
         <IsPackable>true</IsPackable>
-        <Company>PureLogicCode.com</Company>
-        <AssemblyVersion>1.2.0</AssemblyVersion>
-        <FileVersion>1.2.0</FileVersion>
-        <NeutralLanguage>en</NeutralLanguage>
         <RootNamespace>CHDSharp</RootNamespace>
-        <DebugType>embedded</DebugType>
-        <DebugSymbols>true</DebugSymbols>
     </PropertyGroup>
 
     <PropertyGroup>
         <PackageId>CHDSharp</PackageId>
-        <Version>1.2.0</Version>
         <Authors>Peterson Fernandes</Authors>
         <Description>Pure C# read-only CHD (Compressed Hunks of Data) reader library. Supports MAME CHD formats V1-V5 and all 10 compression codecs (zlib, lzma, huffman, flac, zstd, avhu + CD variants).</Description>
-        <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageIcon>chd.png</PackageIcon>
         <PackageTags>chd;mame;compression;emulation;disk-image;zstd;lzma;flac;huffman;avhuff</PackageTags>
         <PackageProjectUrl>https://github.com/drpetersonfernandes/CHDSharp</PackageProjectUrl>
         <RepositoryUrl>https://github.com/drpetersonfernandes/CHDSharp</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
-        <PackageReleaseNotes>Initial release: CHD V1-V5 reading, all 10 codecs, parent/child chaining, parallel verification, random-access API, async API, and metadata support.</PackageReleaseNotes>
+        <PackageReleaseNotes>v1.2.0: Added UnitBytes property for sector size detection. Refactored codebase for consistent style. Embedded debug symbols for easier debugging. Includes companion CHDSharpEncoder library with CRC16, SHA1, and Deflate support.</PackageReleaseNotes>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <WarningsAsErrors>$(WarningsAsErrors);CS1591</WarningsAsErrors>
     </PropertyGroup>
@@ -39,7 +28,8 @@
         <EmbedUntrackedSources>true</EmbedUntrackedSources>
         <IncludeSymbols>true</IncludeSymbols>
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-        <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+        <Deterministic>true</Deterministic>
+        <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
     </PropertyGroup>
 
     <ItemGroup>

@@ -3,19 +3,10 @@
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
         <TargetFramework>net10.0-windows</TargetFramework>
-        <Nullable>enable</Nullable>
-        <ImplicitUsings>enable</ImplicitUsings>
         <UseWPF>true</UseWPF>
         <RootNamespace>CHDSharpTester</RootNamespace>
-        <Company>PureLogicCode.com</Company>
-        <AssemblyVersion>1.2.0</AssemblyVersion>
-        <FileVersion>1.2.0</FileVersion>
-        <NeutralLanguage>en</NeutralLanguage>
         <ApplicationIcon>Icon\chd.ico</ApplicationIcon>
         <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
-        <IsPackable>false</IsPackable>
-        <DebugType>embedded</DebugType>
-        <DebugSymbols>true</DebugSymbols>
     </PropertyGroup>
 
     <ItemGroup>

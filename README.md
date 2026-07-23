@@ -46,6 +46,11 @@ using (chd)
     foreach (var meta in chd.Metadata)
         Console.WriteLine(meta);  // e.g. "GAME: gauntlet"
 
+    // Parse CD/GD-ROM track layout (TOC)
+    var tracks = chd.GetTrackInfo();
+    foreach (var track in tracks)
+        Console.WriteLine($"Track {track.TrackNumber}: {track.GetTypeString()}");
+
     // Read hunk #42
     var hunk = new byte[chd.HunkBytes];
     chd.ReadHunk(42, hunk);
@@ -83,6 +88,15 @@ CHDSharpCli --random game.chd
 
 # Verify a child CHD against its parent
 CHDSharpCli --parent child.chd parent.chd
+
+# Print CD/GD-ROM table of contents
+CHDSharpCli --toc game.chd
+
+# Generate CUE sheet for CD CHDs
+CHDSharpCli --cue game.chd
+
+# Classify CHD media type
+CHDSharpCli --classify game.chd
 ```
 
 ---
@@ -95,6 +109,7 @@ CHDSharpCli --parent child.chd parent.chd
 - **Async API** — `OpenAsync`, `ReadHunkAsync`, `ReadAsync`, `IAsyncDisposable`
 - **Parallel verification** — multi-threaded `CheckFile` with bounded memory, configurable thread count
 - **Parent/child chaining** — transparent differential CHD support with wrong-parent detection
+- **Track info** — parse CD/GD-ROM table of contents (track types, sector sizes, pregap/postgap, frame offsets)
 - **Metadata** — expose game name, disc labels, and other CHD header metadata
 - **100% chdman match** — cross-checked against `chdman info`, `verify`, and `extractraw` (MAME 0.288)
 - **Pluggable logging** — `Microsoft.Extensions.Logging` integration; silent by default

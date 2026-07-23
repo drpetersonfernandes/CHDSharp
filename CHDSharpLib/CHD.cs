@@ -345,6 +345,42 @@ public static class Chd
         return IsChdFile(path, out _);
     }
 
+    /// <summary>Quickly classify a CHD file as CD, DVD, HDD, GD-ROM, or unknown without full decompression.</summary>
+    /// <param name="filename">Path to the CHD file.</param>
+    /// <param name="classification">When this method returns, contains "cd", "dvd", "hdd", "gd-rom", or <c>null</c> for unknown types.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
+    public static ChdError Classify(string filename, out string? classification)
+    {
+        classification = null;
+        var err = ChdFile.Open(filename, out var chd);
+        if (err != ChdError.Chderrnone || chd == null) return err;
+
+        using (chd)
+        {
+            if (chd.IsGdRom)
+            {
+                classification = "gd-rom";
+            }
+            else if (chd.IsCd)
+            {
+                classification = "cd";
+            }
+            else if (chd.IsDvd)
+            {
+                classification = "dvd";
+            }
+            else if (chd.IsHdd)
+            {
+                classification = "hdd";
+            }
+            else
+            {
+                classification = null;
+            }
+        }
+        return ChdError.Chderrnone;
+    }
+
     private static readonly uint[] HeaderLengths = [0, 76, 80, 120, 108, 124];
 
     private static readonly byte[] Id = "MComprHD"u8.ToArray();

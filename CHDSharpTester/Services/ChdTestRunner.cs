@@ -371,11 +371,157 @@ public class ChdTestRunner
         // Tests 7-14: ReadHunk / Read API tests
         RunReadHunkApiTests(entry, progress, fileIndex, totalFiles, result);
 
+        // Test 15: Track info / CUE sheet validation (CD/GD-ROM only)
+        RunTrackInfoTests(entry, progress, fileIndex, totalFiles, result);
+
         result.ElapsedSeconds = sw.Elapsed.TotalSeconds;
         Log.Information("[{Status}] {File} ({Time:N1}s)",
             result.AllPassed ? "PASS" : "FAIL", entry.FileName, result.ElapsedSeconds);
 
         return result;
+    }
+
+    // ── Track info / CUE sheet tests (per-file) ───────────────────────────
+
+    private static void RunTrackInfoTests(
+        ChdFileEntry entry,
+        IProgress<TestProgress>? progress,
+        int fileIndex,
+        int totalFiles,
+        PerFileResult result)
+    {
+        Report(progress, entry.FileName, fileIndex + 1, totalFiles, "Track Info",
+            "Validating track metadata and CUE/GDI generation...");
+
+        var tSw = Stopwatch.StartNew();
+        var detail = new List<string>();
+        var failures = 0;
+
+        var openErr = ChdFile.Open(entry.FilePath, out var chd);
+        if (openErr != ChdError.Chderrnone || chd == null)
+        {
+            result.SubTests.Add(new SubTestResult
+            {
+                TestName = "Track Info Tests",
+                Status = TestStatus.Failed,
+                Detail = $"Failed to open: {openErr}",
+                ElapsedSeconds = tSw.Elapsed.TotalSeconds
+            });
+            return;
+        }
+
+        using (chd)
+        {
+            // Check classification properties are consistent
+            var isCd = chd.IsCd;
+            var isGdRom = chd.IsGdRom;
+            var isDvd = chd.IsDvd;
+            var isHdd = chd.IsHdd;
+            var tracks = chd.Tracks;
+
+            detail.Add($"Type flags: IsCd={isCd}, IsGdRom={isGdRom}, IsDvd={isDvd}, IsHdd={isHdd}");
+
+            if (tracks is { Count: > 0 })
+            {
+                detail.Add($"Track count: {tracks.Count}");
+
+                foreach (var t in tracks)
+                {
+                    detail.Add($"  Track {t.TrackNumber}: {t.GetTypeString()} " +
+                               $"{t.Frames:N0} frames @ offset {t.StartFrame} " +
+                               $"(pregap={t.PreGap}, postgap={t.PostGap}, extra={t.ExtraFrames})");
+                }
+
+                // Validate track ordering
+                for (var i = 1; i < tracks.Count; i++)
+                {
+                    if (tracks[i].StartFrame <= tracks[i - 1].StartFrame)
+                    {
+                        detail.Add($"ERROR: Track {i + 1} StartFrame not monotonic");
+                        failures++;
+                    }
+                }
+
+                // Validate 4-frame alignment
+                foreach (var t in tracks)
+                {
+                    if ((t.Frames + t.ExtraFrames) % 4 != 0)
+                    {
+                        detail.Add($"ERROR: Track {t.TrackNumber} not aligned to 4-frame boundary");
+                        failures++;
+                    }
+                }
+
+                // Validate total frames vs image size
+                var totalFrames = tracks.Aggregate(0UL, (acc, t) => acc + (ulong)(t.Frames + t.ExtraFrames));
+                var totalBytes = totalFrames * chd.UnitBytes;
+                if (totalBytes != chd.TotalBytes)
+                {
+                    detail.Add($"ERROR: Track frame total ({totalFrames}) * unit ({chd.UnitBytes}) = {totalBytes} != TotalBytes ({chd.TotalBytes})");
+                    failures++;
+                }
+
+                // Generate CUE sheet and validate
+                if (isCd && !isGdRom)
+                {
+                    try
+                    {
+                        var cue = chd.GenerateCueSheet("test.bin");
+                        var hasFile = cue.Contains("FILE");
+                        var hasTrack1 = cue.Contains("TRACK 01");
+                        if (!hasFile || !hasTrack1)
+                        {
+                            detail.Add("ERROR: CUE sheet missing FILE or TRACK 01");
+                            failures++;
+                        }
+                        else
+                        {
+                            detail.Add($"CUE sheet: {cue.Split('\n').Length} lines (FILE/TRACK present)");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        detail.Add($"ERROR: GenerateCueSheet threw: {ex.Message}");
+                        failures++;
+                    }
+                }
+
+                // Generate ExportToc and validate
+                var toc = chd.ExportToc();
+                var hasVersion = toc.Contains("Version:");
+                var hasType = toc.Contains("Type:");
+                if (!hasVersion || !hasType)
+                {
+                    detail.Add("ERROR: ExportToc missing Version or Type");
+                    failures++;
+                }
+                else
+                {
+                    detail.Add($"ExportToc: OK ({toc.Split('\n').Length} lines)");
+                }
+            }
+            else if (isDvd)
+            {
+                detail.Add("DVD metadata detected (no tracks)");
+            }
+            else if (isHdd)
+            {
+                detail.Add("HDD metadata detected (no tracks)");
+            }
+            else
+            {
+                detail.Add("No CD/GD-ROM track metadata (raw/child/other)");
+            }
+        }
+
+        tSw.Stop();
+        result.SubTests.Add(new SubTestResult
+        {
+            TestName = "Track Info Tests",
+            Status = failures == 0 ? TestStatus.Passed : TestStatus.Failed,
+            Detail = string.Join("\n", detail),
+            ElapsedSeconds = tSw.Elapsed.TotalSeconds
+        });
     }
 
     private static void RunRandomAccessTest(

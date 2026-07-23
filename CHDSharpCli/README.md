@@ -19,6 +19,15 @@ CHDSharpCli --list chd_paths.txt
 
 # Verify a child (differential) CHD against its parent
 CHDSharpCli --parent child.chd parent.chd
+
+# Print table of contents for CD/GD-ROM CHD
+CHDSharpCli --toc game.chd
+
+# Generate CUE sheet for CD CHD
+CHDSharpCli --cue game.chd [optional .bin filename]
+
+# Classify CHD type (cd/dvd/hdd/gd-rom)
+CHDSharpCli --classify game.chd
 ```
 
 ### Commands
@@ -29,6 +38,9 @@ CHDSharpCli --parent child.chd parent.chd
 | `--random <file.chd>` | Opens a single CHD, reads hunk 0, mid, and last, then reads the entire decompressed image sequentially while computing SHA1/MD5 and comparing against the header. |
 | `--list <file.txt>` | Reads a text file of CHD paths (one per line) and verifies each, reporting per-file results with a summary. |
 | `--parent <child.chd> <parent.chd>` | Opens a child CHD with its parent, reads hunks, and calls `CheckFileWithParent` for full verification. Also tests that opening without the parent returns `CHDERR_REQUIRES_PARENT`. |
+| `--toc <file.chd>` | Parses and prints the table of contents for CD-ROM and GD-ROM CHD files, showing track numbers, types, sector sizes, and frame counts. |
+| `--cue <file.chd> [binfile]` | Generates a CUE sheet for CD-ROM CHDs. Optionally specify a custom .bin filename (defaults to the CHD filename with .bin extension). |
+| `--classify <file.chd>` | Detects and prints the CHD media type: CD-ROM, DVD-ROM, HDD, GD-ROM, or unknown/raw. |
 
 ---
 
@@ -66,6 +78,35 @@ Parent: parent.chd
   ReadHunk(61439) => CHDERR_NONE
   CheckFileWithParent => CHDERR_NONE  (V5, sha1=abc123...)
   Open(child, no parent) => CHDERR_REQUIRES_PARENT  (expected)
+```
+
+### TOC (table of contents)
+
+```
+CD-ROM: 2 tracks
+Total frames: 152262, 2448 bytes/frame (2352 data + 96 subcode)
+ROM
+Track  1: MODE1/2048  RW              frames=   6576 pre=    0 post=    0 pgtype=MODE1/2048 po=   0
+Track  2: AUDIO       RW_RAW          frames=  43493 pre=  150 post=    0 pgtype=AUDIO       po=   2
+```
+
+### CUE sheet
+
+```
+FILE "game.bin" BINARY
+  TRACK 01 MODE1/2048
+    INDEX 01 00:00:00
+  TRACK 02 AUDIO
+    PREGAP 00:02:00
+    INDEX 01 01:27:66
+```
+
+### Classify
+
+```
+game.chd: cd-rom
+parent.chd: hdd
+grom.chd: gd-rom
 ```
 
 ---

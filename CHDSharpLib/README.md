@@ -99,6 +99,21 @@ using (chd)
 }
 ```
 
+### Get CD/GD-ROM track layout (TOC)
+
+```csharp
+ChdFile.Open("game.chd", out var chd);
+using (chd)
+{
+    var tracks = chd.GetTrackInfo();
+    foreach (var track in tracks)
+    {
+        Console.WriteLine($"Track {track.TrackNumber}: {track.GetTypeString()} " +
+                          $"{track.Frames} frames, pregap={track.PreGap}");
+    }
+}
+```
+
 ### Iterate hunks one at a time
 
 ```csharp
@@ -187,6 +202,7 @@ All `Open` overloads seek from the start. The reader is **not thread-safe** — 
 | **EnumerateHunks** | `IEnumerable<byte[]> EnumerateHunks()` | Yield each decompressed hunk. Buffer reused — copy if needed. |
 | **ReadHunkAsync** | `Task<ChdError> ReadHunkAsync(uint, byte[])` | Async hunk read. |
 | **ReadAsync** | `Task<ChdError> ReadAsync(ulong, byte[], int, int)` | Async byte range read. |
+| **GetTrackInfo** | `IReadOnlyList<ChdTrackInfo>? GetTrackInfo()` | Parse CD/GD-ROM table of contents from CHD metadata. Returns null if no TOC found. |
 | **Dispose** / **DisposeAsync** | `void Dispose()` / `ValueTask DisposeAsync()` | Release stream and parent. |
 
 #### Properties
@@ -214,6 +230,28 @@ All `Open` overloads seek from the start. The reader is **not thread-safe** — 
 | `IsText` | `bool` | True if data is printable ASCII. |
 | `GetText()` | `string` | ASCII text representation. |
 | `ToString()` | `string` | Human-readable: `GAME: gauntlet`. |
+
+### `ChdTrackInfo` — Track record
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `TrackNumber` | `int` | 1-based track number. |
+| `TrackType` | `ChdTrackType` | CD track data type (Mode1, Audio, etc.). |
+| `SubType` | `ChdSubType` | Subcode type for this track. |
+| `DataSize` | `int` | Bytes per sector (2048, 2352, etc.). |
+| `SubSize` | `int` | Subcode bytes per sector (0 or 96). |
+| `Frames` | `int` | Number of frames in this track. |
+| `ExtraFrames` | `int` | Padding frames for 4-frame alignment. |
+| `PreGap` | `int` | Pregap frames (index 00 to index 01). |
+| `PostGap` | `int` | Postgap frames. |
+| `PreGapType` | `ChdTrackType` | Track type of pregap sectors. |
+| `PreGapSubType` | `ChdSubType` | Subcode type of pregap sectors. |
+| `PreGapDataSize` | `int` | Bytes per sector for pregap data. |
+| `PreGapSubSize` | `int` | Subcode bytes per sector for pregap. |
+| `PadFrames` | `int` | GD-ROM pad frames (GD-ROM only). |
+| `StartFrame` | `ulong` | CHD frame offset where this track starts. |
+| `GetTypeString()` | `string` | e.g. "MODE1/2048", "AUDIO". |
+| `GetSubTypeString()` | `string` | e.g. "RW", "RW_RAW", "NONE". |
 
 ### `ChdError.GetMessage()` — Extension method
 

@@ -10,6 +10,9 @@
 |-------|------|-------------|
 | `HeaderAndApiTests` | Unit | Header magic validation, version detection, `CheckHeader`, `IsChdFile`, open/read error paths |
 | `ChecksumTests` | Unit | CRC-32 and CRC-16 test vectors |
+| `TrackInfoTests` | Unit | CD/GD-ROM TOC parsing across all metadata formats (CHTR, CHT2, CHCD, CHGD, CHGT) |
+| `TrackInfoEdgeCaseTests` | Unit | Edge cases: missing/invalid metadata, GD-ROM pad frames, binary track parsing |
+| `CliIntegrationTests` | Integration | End-to-end CLI tool tests (directory scan, --random, --list, --parent) |
 | `CorpusTests` | Corpus | Runs `CheckFile` and reads metadata from all 29 corpus CHD files in `TestData/`, validates expected version, handles expected-failure entries |
 
 ### Test Corpus

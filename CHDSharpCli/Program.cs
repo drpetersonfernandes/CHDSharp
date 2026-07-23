@@ -27,6 +27,9 @@ internal class Program
             serilogLogger.Information("  CHDSharpCli --random <file.chd>                Random-access read test on a single CHD");
             serilogLogger.Information("  CHDSharpCli --list <listfile.txt>              Verify every .chd path listed in a text file");
             serilogLogger.Information("  CHDSharpCli --parent <child.chd> <parent.chd>  Verify a child (differential) CHD against its parent");
+            serilogLogger.Information("  CHDSharpCli --toc <file.chd>                   Print table-of-contents for CD/GD-ROM CHD");
+            serilogLogger.Information("  CHDSharpCli --cue <file.chd> [<binfile>]       Generate CUE sheet for CD CHD");
+            serilogLogger.Information("  CHDSharpCli --classify <file.chd>              Classify CHD type (cd/dvd/hdd/gd-rom)");
             return;
         }
 
@@ -51,6 +54,27 @@ internal class Program
                 return;
             case "--parent":
                 ParentTest(args[1].Replace("\"", ""), args[2].Replace("\"", ""));
+                serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
+            case "--toc" when args.Length < 2:
+                serilogLogger.Information("--toc requires a .chd file path");
+                return;
+            case "--toc":
+                TocTest(args[1].Replace("\"", ""));
+                serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
+            case "--cue" when args.Length < 2:
+                serilogLogger.Information("--cue requires a .chd file path");
+                return;
+            case "--cue":
+                CueTest(args[1].Replace("\"", ""), args.Length >= 3 ? args[2].Replace("\"", "") : null);
+                serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
+            case "--classify" when args.Length < 2:
+                serilogLogger.Information("--classify requires a .chd file path");
+                return;
+            case "--classify":
+                ClassifyTest(args[1].Replace("\"", ""));
                 serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
                 return;
         }
@@ -201,8 +225,8 @@ internal class Program
 
                 var expectedSha1 = chd.RawSha1;
                 var expectedMd5 = chd.Md5;
-                var haveSha1 = expectedSha1 != null && !IsAllZero(expectedSha1);
-                var haveMd5 = expectedMd5 != null && !IsAllZero(expectedMd5);
+                var haveSha1 = !IsAllZero(expectedSha1);
+                var haveMd5 = !IsAllZero(expectedMd5);
 
                 if (!haveSha1 && !haveMd5)
                 {
@@ -236,19 +260,19 @@ internal class Program
 
                 if (haveSha1)
                 {
-                    var match = expectedSha1 != null && sha1 is { Hash: not null } && ByteEquals(sha1.Hash, expectedSha1);
+                    var match = sha1 is { Hash: not null } && ByteEquals(sha1.Hash, expectedSha1);
                     log.Information("  Full-image raw SHA1 {Result} header raw SHA1", match ? "MATCHES" : "DIFFERS from");
                     if (sha1 is { Hash: not null }) log.Information("    computed: {Hash}", ToHex(sha1.Hash));
-                    if (expectedSha1 != null) log.Information("    header:   {Hash}", ToHex(expectedSha1));
+                    log.Information("    header:   {Hash}", ToHex(expectedSha1));
                 }
 
                 if (haveMd5)
                 {
-                    var match = expectedMd5 != null && md5 is { Hash: not null } && ByteEquals(md5.Hash, expectedMd5);
+                    var match = md5 is { Hash: not null } && ByteEquals(md5.Hash, expectedMd5);
                     log.Information("  Full-image MD5 {Result} header MD5", match ? "MATCHES" : "DIFFERS from");
                     if (md5?.Hash != null)
                         log.Information("    computed: {Hash}", ToHex(md5.Hash));
-                    if (expectedMd5 != null) log.Information("    header:   {Hash}", ToHex(expectedMd5));
+                    log.Information("    header:   {Hash}", ToHex(expectedMd5));
                 }
             }
         }
@@ -263,7 +287,7 @@ internal class Program
 
     private static bool ByteEquals(byte[] a, byte[] b)
     {
-        if (a == null || b == null || a.Length != b.Length) return false;
+        if (a.Length != b.Length) return false;
 
         for (var i = 0; i < a.Length; i++) if (a[i] != b[i]) return false;
 
@@ -272,8 +296,6 @@ internal class Program
 
     private static string ToHex(byte[] a)
     {
-        if (a == null) return "(null)";
-
         return Convert.ToHexString(a).ToLowerInvariant();
     }
 
@@ -291,5 +313,61 @@ internal class Program
         {
             Checkdir(d);
         }
+    }
+
+    private static void TocTest(string file)
+    {
+        var log = Log.Logger;
+        var err = ChdFile.Open(file, out var chd);
+        if (err != ChdError.Chderrnone)
+        {
+            log.Information("Open failed: {Error}", err);
+            return;
+        }
+
+        using (chd)
+        {
+            Console.WriteLine(chd?.ExportToc() ?? "Unable to read CHD.");
+        }
+    }
+
+    private static void CueTest(string file, string? binFileName)
+    {
+        var log = Log.Logger;
+        var err = ChdFile.Open(file, out var chd);
+        if (err != ChdError.Chderrnone)
+        {
+            log.Information("Open failed: {Error}", err);
+            return;
+        }
+
+        using (chd)
+        {
+            if (chd == null) return;
+
+            binFileName ??= Path.GetFileNameWithoutExtension(file) + ".bin";
+            try
+            {
+                Console.WriteLine(chd.GenerateCueSheet(binFileName));
+            }
+            catch (InvalidOperationException ex)
+            {
+                Console.WriteLine("CUE generation failed: " + ex.Message);
+            }
+        }
+    }
+
+    private static void ClassifyTest(string file)
+    {
+        var err = Chd.Classify(file, out var classification);
+        if (err != ChdError.Chderrnone)
+        {
+            Console.WriteLine("Classify failed: " + err);
+            return;
+        }
+
+        Console.WriteLine("{0}: {1}",
+            Path.GetFileName(file),
+            classification ?? "unknown/raw");
     }
 }

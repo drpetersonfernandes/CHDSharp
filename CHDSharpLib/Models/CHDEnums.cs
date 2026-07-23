@@ -69,6 +69,47 @@ public enum MapEntryFlag
     Mapentrytypeparenthunk = 0x0005 /* same as a hunk in the parent file */
 }
 
+/// <summary>CD-ROM track types. Matches MAME cdrom.h CD_TRACK_* values.</summary>
+public enum ChdTrackType
+{
+    /// <summary>Mode 1, 2048 bytes per sector.</summary>
+    Mode1 = 0,
+
+    /// <summary>Mode 1 raw, 2352 bytes per sector.</summary>
+    Mode1Raw = 1,
+
+    /// <summary>Mode 2, 2336 bytes per sector.</summary>
+    Mode2 = 2,
+
+    /// <summary>Mode 2 Form 1, 2048 bytes per sector.</summary>
+    Mode2Form1 = 3,
+
+    /// <summary>Mode 2 Form 2, 2324 bytes per sector.</summary>
+    Mode2Form2 = 4,
+
+    /// <summary>Mode 2 Form Mix, 2336 bytes per sector.</summary>
+    Mode2FormMix = 5,
+
+    /// <summary>Mode 2 raw, 2352 bytes per sector.</summary>
+    Mode2Raw = 6,
+
+    /// <summary>Audio track, 2352 bytes per sector.</summary>
+    Audio = 7
+}
+
+/// <summary>CD-ROM subcode types. Matches MAME cdrom.h CD_SUB_* values.</summary>
+public enum ChdSubType
+{
+    /// <summary>No subcode data.</summary>
+    None = 0,
+
+    /// <summary>Normal subcode (cooked, 96 bytes per sector).</summary>
+    Normal = 1,
+
+    /// <summary>Raw uninterleaved subcode (raw, 96 bytes per sector).</summary>
+    Raw = 2
+}
+
 /// <summary>Represents the compression type for a hunk in the V5 CHD format.</summary>
 public enum CompressionType
 {

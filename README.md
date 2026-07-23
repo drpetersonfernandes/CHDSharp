@@ -13,7 +13,7 @@
 
 ## What's New in v1.2.0
 
-- **CD/GD-ROM track (TOC) parsing** — Full track layout, sector types, pregap/postgap, GD-ROM support via `GetTrackInfo()`
+- **CD/GD-ROM track (TOC) parsing** — Full track layout, sector types, pregap/postgap, GD-ROM support via `Tracks` property / `GenerateCueSheet()` / `ExportToc()`
 - **`UnitBytes` property** — Derives sector size from metadata for all CHD versions (HDD 512B, CD 2448B, V5 header)
 - **New enums** — `ChdTrackType` (Mode1, Mode2, Audio, etc.) and `ChdSubType` (None, Normal, Raw)
 - **Centralized versioning** — All 7 projects share version `1.2.0` via `Directory.Build.props`
@@ -60,9 +60,9 @@ using (chd)
         Console.WriteLine(meta);  // e.g. "GAME: gauntlet"
 
     // Parse CD/GD-ROM track layout (TOC)
-    var tracks = chd.GetTrackInfo();
-    foreach (var track in tracks)
-        Console.WriteLine($"Track {track.TrackNumber}: {track.GetTypeString()}");
+    if (chd.Tracks is { } tracks)
+        foreach (var track in tracks)
+            Console.WriteLine($"Track {track.TrackNumber}: {track.GetTypeString()}");
 
     // Read hunk #42
     var hunk = new byte[chd.HunkBytes];

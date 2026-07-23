@@ -12,7 +12,7 @@
 
 ## What's New in v1.2.0
 
-- **CD/GD-ROM track (TOC) parsing** — Full track layout via `GetTrackInfo()` using `ChdTocParser`, exposing `ChdTrackInfo` with track type, sector sizes, pregap/postgap, and GD-ROM support
+- **CD/GD-ROM track (TOC) parsing** — Full track layout via `Tracks` property backed by `ChdTocParser`, exposing `ChdTrackInfo` with track type, sector sizes, pregap/postgap, and GD-ROM support. Includes `GenerateCueSheet()`, `GenerateGdiDescriptor()`, `ExportToc()`, `ExtractToDirectory()`.
 - **`UnitBytes` property** — Derives sector size from metadata for all CHD versions: V5 reads from header, V1-V4 detects HDD (512B) or CD (2448B) from metadata tags
 - **New enums** — `ChdTrackType` (matches MAME `cdrom.h`: Mode1, Mode2, Audio, etc.) and `ChdSubType` (None, Normal, Raw)
 - **Deterministic reproducible builds** — Byte-for-byte reproducible via `<Deterministic>true</Deterministic>` with embedded SourceLink and debug symbols
@@ -114,7 +114,7 @@ using (chd)
 ChdFile.Open("game.chd", out var chd);
 using (chd)
 {
-    var tracks = chd.GetTrackInfo();
+    if (chd.Tracks is not { } tracks) return;
     foreach (var track in tracks)
     {
         Console.WriteLine($"Track {track.TrackNumber}: {track.GetTypeString()} " +
@@ -199,6 +199,7 @@ All `Open` overloads seek from the start. The reader is **not thread-safe** — 
 | `Open(string path, string parentPath, out ChdFile? chd)` | Child CHD; parent opened and owned internally. |
 | `Open(string path, ChdFile? parent, out ChdFile? chd)` | Child with external parent. Pass null for standalone. |
 | `Open(Stream s, bool leaveOpen, out ChdFile? chd)` | From seekable stream. |
+| `Open(Stream s, bool leaveOpen, ChdFile? parent, out ChdFile? chd)` | From stream with external parent. |
 | `OpenAsync(...)` | Async overloads for all `Open` variants. |
 
 #### Instance methods
@@ -211,7 +212,10 @@ All `Open` overloads seek from the start. The reader is **not thread-safe** — 
 | **EnumerateHunks** | `IEnumerable<byte[]> EnumerateHunks()` | Yield each decompressed hunk. Buffer reused — copy if needed. |
 | **ReadHunkAsync** | `Task<ChdError> ReadHunkAsync(uint, byte[])` | Async hunk read. |
 | **ReadAsync** | `Task<ChdError> ReadAsync(ulong, byte[], int, int)` | Async byte range read. |
-| **GetTrackInfo** | `IReadOnlyList<ChdTrackInfo>? GetTrackInfo()` | Parse CD/GD-ROM table of contents from CHD metadata. Returns null if no TOC found. |
+| **GenerateCueSheet** | `string GenerateCueSheet(string)` | Generate CUE sheet for CD CHDs. |
+| **GenerateGdiDescriptor** | `string GenerateGdiDescriptor(string[])` | Generate GDI descriptor for GD-ROM CHDs. |
+| **ExportToc** | `string ExportToc()` | Export TOC as human-readable text. |
+| **ExtractToDirectory** | `List<string> ExtractToDirectory(string, string)` | Extract CHD tracks to directory. Returns file paths. |
 | **Dispose** / **DisposeAsync** | `void Dispose()` / `ValueTask DisposeAsync()` | Release stream and parent. |
 
 #### Properties
@@ -228,6 +232,11 @@ All `Open` overloads seek from the start. The reader is **not thread-safe** — 
 | `Md5` | `byte[]?` | Raw image MD5. |
 | `RequiresParent` | `bool` | True if differential child. |
 | `IsChild` | `bool` | Alias for `RequiresParent`. |
+| `Tracks` | `IReadOnlyList<ChdTrackInfo>?` | CD/GD-ROM track layout. `null` if not a CD/GD-ROM image. |
+| `IsCd` | `bool` | True if CD-ROM track metadata present. |
+| `IsGdRom` | `bool` | True if GD-ROM (Sega Dreamcast) image. |
+| `IsDvd` | `bool` | True if DVD metadata present. |
+| `IsHdd` | `bool` | True if hard disk geometry metadata present. |
 | `Metadata` | `IReadOnlyList<ChdMetadataEntry>` | CHD metadata entries (game name, disc type, etc.). Lazy-loaded. |
 
 ### `ChdMetadataEntry` — Metadata record

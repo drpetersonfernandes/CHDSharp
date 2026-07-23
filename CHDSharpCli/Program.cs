@@ -6,8 +6,19 @@ using Serilog.Extensions.Logging;
 
 namespace CHDSharp;
 
+/// <summary>
+/// Command-line entry point for CHDSharp. Provides file verification, random-access testing,
+/// CD TOC inspection, CUE sheet generation, CHD classification, and parent/child CHD validation.
+/// Uses Serilog for console logging throughout.
+/// </summary>
 internal class Program
 {
+    /// <summary>
+    /// Application entry point. Parses command-line arguments and dispatches to the
+    /// appropriate operation: directory scanning, random-access test, list-based verification,
+    /// parent/child test, TOC dump, CUE sheet generation, or CHD classification.
+    /// </summary>
+    /// <param name="args">Command-line arguments defining the operation and its parameters.</param>
     private static void Main(string[] args)
     {
         var serilogLogger = new LoggerConfiguration()
@@ -89,6 +100,12 @@ internal class Program
         serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
     }
 
+    /// <summary>
+    /// Verifies a child (differential) CHD file against its parent.
+    /// Opens the child with its parent, reads sample hunks, and runs <see cref="Chd.CheckFileWithParent"/>.
+    /// </summary>
+    /// <param name="childPath">Path to the child CHD file.</param>
+    /// <param name="parentPath">Path to the parent CHD file.</param>
     private static void ParentTest(string childPath, string parentPath)
     {
         var log = Log.Logger;
@@ -131,6 +148,11 @@ internal class Program
         log.Information("  Open(child, no parent) => {Error}  (expected CHDERR_REQUIRES_PARENT if this is a child)", noParent);
     }
 
+    /// <summary>
+    /// Verifies all CHD files listed in a text file (one path per line).
+    /// Each file is fully decompressed and verified using <see cref="Chd.CheckFile"/>.
+    /// </summary>
+    /// <param name="listFile">Path to a text file containing one CHD path per line.</param>
     private static void VerifyList(string listFile)
     {
         var log = Log.Logger;
@@ -192,6 +214,12 @@ internal class Program
             log.Information("  FAIL: {Failure}", f);
     }
 
+    /// <summary>
+    /// Performs a random-access read test on a single CHD file.
+    /// Reads sample hunks (first, middle, last) and computes the full-image raw SHA1 and MD5
+    /// to compare against the hashes stored in the CHD header.
+    /// </summary>
+    /// <param name="file">Path to the CHD file to test.</param>
     private static void RandomAccessTest(string file)
     {
         var log = Log.Logger;
@@ -278,6 +306,11 @@ internal class Program
         }
     }
 
+    /// <summary>
+    /// Checks whether every byte in the specified array is zero.
+    /// </summary>
+    /// <param name="a">The byte array to check.</param>
+    /// <returns><c>true</c> if all bytes are zero; otherwise <c>false</c>.</returns>
     private static bool IsAllZero(byte[] a)
     {
         foreach (var b in a) if (b != 0) return false;
@@ -285,6 +318,12 @@ internal class Program
         return true;
     }
 
+    /// <summary>
+    /// Compares two byte arrays for equality.
+    /// </summary>
+    /// <param name="a">The first byte array.</param>
+    /// <param name="b">The second byte array.</param>
+    /// <returns><c>true</c> if the arrays have identical length and content; otherwise <c>false</c>.</returns>
     private static bool ByteEquals(byte[] a, byte[] b)
     {
         if (a.Length != b.Length) return false;
@@ -294,11 +333,21 @@ internal class Program
         return true;
     }
 
+    /// <summary>
+    /// Converts a byte array to a lowercase hexadecimal string.
+    /// </summary>
+    /// <param name="a">The byte array to convert.</param>
+    /// <returns>The lowercase hexadecimal representation of the byte array.</returns>
     private static string ToHex(byte[] a)
     {
         return Convert.ToHexString(a).ToLowerInvariant();
     }
 
+    /// <summary>
+    /// Recursively scans a directory for <c>*.chd</c> files and runs <see cref="Chd.CheckFile"/>
+    /// on each one found.
+    /// </summary>
+    /// <param name="di">The directory to scan.</param>
     private static void Checkdir(DirectoryInfo di)
     {
         var fi = di.GetFiles("*.chd");
@@ -315,6 +364,10 @@ internal class Program
         }
     }
 
+    /// <summary>
+    /// Opens a CHD file and prints its table of contents (track layout) to the console.
+    /// </summary>
+    /// <param name="file">Path to the CHD file.</param>
     private static void TocTest(string file)
     {
         var log = Log.Logger;
@@ -331,6 +384,11 @@ internal class Program
         }
     }
 
+    /// <summary>
+    /// Opens a CD CHD file and generates a CUE sheet, printing it to the console.
+    /// </summary>
+    /// <param name="file">Path to the CHD file.</param>
+    /// <param name="binFileName">Optional target bin file name for the CUE sheet. Defaults to the CHD filename with a .bin extension.</param>
     private static void CueTest(string file, string? binFileName)
     {
         var log = Log.Logger;
@@ -357,6 +415,11 @@ internal class Program
         }
     }
 
+    /// <summary>
+    /// Opens a CHD file and classifies its media type (cd, dvd, hdd, or gd-rom).
+    /// Prints the classification to the console.
+    /// </summary>
+    /// <param name="file">Path to the CHD file.</param>
     private static void ClassifyTest(string file)
     {
         var err = Chd.Classify(file, out var classification);

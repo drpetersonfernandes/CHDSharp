@@ -36,10 +36,8 @@ public class ChdmanWrapper : IDisposable
         /// <summary>The total number of hunks in the image.</summary>
         internal uint TotalHunks;
 
-        /// <summary>The compression codec(s) used by the CHD.</summary>
-#pragma warning disable CA1051
+        /// <summary>The string description of compression codec(s) used by the CHD (e.g. "zstd", "cdzs", "cdzl,cdfl").</summary>
         public string Compression = null!;
-#pragma warning restore CA1051
 
         /// <summary>The overall SHA1 hash (raw data + metadata), or null if not present.</summary>
         internal string? Sha1;

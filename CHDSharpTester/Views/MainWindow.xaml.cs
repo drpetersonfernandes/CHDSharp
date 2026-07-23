@@ -6,6 +6,7 @@ namespace CHDSharpTester.Views;
 
 internal partial class MainWindow
 {
+    /// <summary>Initializes a new instance of the <see cref="MainWindow"/> WPF window.</summary>
     public MainWindow()
     {
         InitializeComponent();

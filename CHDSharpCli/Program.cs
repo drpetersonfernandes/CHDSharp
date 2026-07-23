@@ -102,7 +102,7 @@ internal class Program
 
     /// <summary>
     /// Verifies a child (differential) CHD file against its parent.
-    /// Opens the child with its parent, reads sample hunks, and runs <see cref="Chd.CheckFileWithParent"/>.
+    /// Opens the child with its parent, reads sample hunks, and runs <see cref="Chd.CheckFileWithParent(string, string?)"/>.
     /// </summary>
     /// <param name="childPath">Path to the child CHD file.</param>
     /// <param name="parentPath">Path to the parent CHD file.</param>
@@ -150,7 +150,7 @@ internal class Program
 
     /// <summary>
     /// Verifies all CHD files listed in a text file (one path per line).
-    /// Each file is fully decompressed and verified using <see cref="Chd.CheckFile"/>.
+    /// Each file is fully decompressed and verified using <see cref="Chd.CheckFile(Stream, string, bool)"/>.
     /// </summary>
     /// <param name="listFile">Path to a text file containing one CHD path per line.</param>
     private static void VerifyList(string listFile)
@@ -344,7 +344,7 @@ internal class Program
     }
 
     /// <summary>
-    /// Recursively scans a directory for <c>*.chd</c> files and runs <see cref="Chd.CheckFile"/>
+    /// Recursively scans a directory for <c>*.chd</c> files and runs <see cref="Chd.CheckFile(Stream, string, bool)"/>
     /// on each one found.
     /// </summary>
     /// <param name="di">The directory to scan.</param>

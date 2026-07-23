@@ -10,6 +10,15 @@
 
 ---
 
+## What's New in v1.2.0
+
+- **CD/GD-ROM track (TOC) parsing** — Full track layout via `GetTrackInfo()` using `ChdTocParser`, exposing `ChdTrackInfo` with track type, sector sizes, pregap/postgap, and GD-ROM support
+- **`UnitBytes` property** — Derives sector size from metadata for all CHD versions: V5 reads from header, V1-V4 detects HDD (512B) or CD (2448B) from metadata tags
+- **New enums** — `ChdTrackType` (matches MAME `cdrom.h`: Mode1, Mode2, Audio, etc.) and `ChdSubType` (None, Normal, Raw)
+- **Deterministic reproducible builds** — Byte-for-byte reproducible via `<Deterministic>true</Deterministic>` with embedded SourceLink and debug symbols
+
+---
+
 ## Installation
 
 ```bash

@@ -11,6 +11,19 @@
 
 ---
 
+## What's New in v1.2.0
+
+- **CD/GD-ROM track (TOC) parsing** — Full track layout, sector types, pregap/postgap, GD-ROM support via `GetTrackInfo()`
+- **`UnitBytes` property** — Derives sector size from metadata for all CHD versions (HDD 512B, CD 2448B, V5 header)
+- **New enums** — `ChdTrackType` (Mode1, Mode2, Audio, etc.) and `ChdSubType` (None, Normal, Raw)
+- **Centralized versioning** — All 7 projects share version `1.2.0` via `Directory.Build.props`
+- **Deterministic builds** — Reproducible byte-for-byte builds with embedded SourceLink
+- **Embedded debug symbols** — Easier NuGet debugging with `<DebugType>embedded</DebugType>`
+- **Companion library** — `CHDSharpEncoder` with CRC16, SHA1, and Deflate support
+- **Code refactoring** — Consistent code style across the entire codebase
+
+---
+
 ## Installation
 
 ```bash

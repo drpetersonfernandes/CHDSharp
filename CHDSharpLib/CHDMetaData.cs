@@ -21,16 +21,20 @@ internal static class ChdMetaData
 
     internal static readonly uint ChdMdflagsChecksum = 0x01;
 
+    private const uint MaxMetadataEntryBytes = 1024 * 1024;
+
     internal static ChdError ReadMetaData(Stream file, ChdHeader chd)
     {
-        // The combined raw+meta SHA1 only exists in V4/V5 headers. V1/V2 have no metadata at all
-        // and V3 stores only the raw data SHA1, so there is nothing to validate here for V1-V3.
         if (chd.Rawsha1 is not { Length: 20 } || chd.Sha1 is not { Length: 20 } || Util.IsAllZeroArray(chd.Sha1))
             return ChdError.Chderrnone;
 
         var metaHashes = new List<byte[]>();
 
-        foreach (var entry in ReadMetaDataInternal(file, chd, collectHashes: true))
+        var metaErr = ReadMetaDataInternal(file, chd, collectHashes: true, out var entries, out _);
+        if (metaErr != ChdError.Chderrnone)
+            return metaErr;
+
+        foreach (var entry in entries)
         {
             if (entry.Hash != null)
                 metaHashes.Add(entry.Hash);
@@ -57,7 +61,9 @@ internal static class ChdMetaData
         out List<ChdMetadataEntry> entries)
     {
         entries = [];
-        ReadMetaDataInternal(file, chd, collectHashes: false, out var internalEntries);
+        var metaErr = ReadMetaDataInternal(file, chd, collectHashes: false, out var internalEntries, out _);
+        if (metaErr != ChdError.Chderrnone)
+            return metaErr;
         foreach (var e in internalEntries)
         {
             entries.Add(new ChdMetadataEntry((e.Tag), e.Data));
@@ -65,18 +71,17 @@ internal static class ChdMetaData
         return ChdError.Chderrnone;
     }
 
-    private static List<InternalEntry> ReadMetaDataInternal(Stream file, ChdHeader chd,
-        bool collectHashes, out List<InternalEntry> entries)
+    private static ChdError ReadMetaDataInternal(Stream file, ChdHeader chd,
+        bool collectHashes, out List<InternalEntry> entries, out List<InternalEntry> results)
     {
         entries = [];
+        results = [];
         using var br = new BinaryReader(file, Encoding.UTF8, true);
-        var results = new List<InternalEntry>();
 
         var currentOffset = chd.Metaoffset;
         var visitedOffsets = new HashSet<ulong>();
         while (currentOffset != 0)
         {
-            // guard against crafted files with cyclic metadata chains
             if (!visitedOffsets.Add(currentOffset))
                 break;
 
@@ -86,6 +91,9 @@ internal static class ChdMetaData
             var metaNext = br.ReadUInt64Be();
             var metaFlags = metaLength >> 24;
             metaLength &= 0x00ffffff;
+
+            if (metaLength > MaxMetadataEntryBytes)
+                return ChdError.Chderrinvaliddata;
 
             var metaData = new byte[metaLength];
             file.ReadExactly(metaData, 0, metaData.Length);
@@ -110,12 +118,13 @@ internal static class ChdMetaData
         }
 
         entries = results;
-        return results;
+        return ChdError.Chderrnone;
     }
 
     private static List<InternalEntry> ReadMetaDataInternal(Stream file, ChdHeader chd, bool collectHashes)
     {
-        return ReadMetaDataInternal(file, chd, collectHashes, out _);
+        var err = ReadMetaDataInternal(file, chd, collectHashes, out var entries, out _);
+        return err == ChdError.Chderrnone ? entries : [];
     }
 
     private static byte[] metadata_hash(uint metaTag, byte[] metaData)

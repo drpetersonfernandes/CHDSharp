@@ -7,9 +7,13 @@ namespace CHDSharp.Models;
 /// <param name="Data">The raw metadata payload bytes. May be ASCII text or binary data.</param>
 public sealed record ChdMetadataEntry(string Tag, byte[] Data)
 {
+    private const int MaxTextDataLength = 1024 * 1024;
+
     /// <summary>Returns the ASCII text representation of the metadata data, if applicable.</summary>
     public string GetText()
     {
+        if (Data.Length > MaxTextDataLength)
+            return string.Empty;
         return Encoding.ASCII.GetString(Data);
     }
 

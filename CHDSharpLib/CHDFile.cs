@@ -516,6 +516,10 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         if (valid != ChdError.Chderrnone)
             return valid;
 
+        valid = ChdHeaders.ValidateSizeLimits(chd);
+        if (valid != ChdError.Chderrnone)
+            return valid;
+
         var needsParent = !Util.IsAllZeroArray(chd.Parentmd5) || !Util.IsAllZeroArray(chd.Parentsha1);
         if (needsParent)
         {
@@ -741,10 +745,10 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         if (!_leaveOpen)
-            await CastAndDispose(_stream);
+            await CastAndDispose(_stream).ConfigureAwait(false);
 
         if (_ownsParent && _parent != null)
-            await _parent.DisposeAsync();
+            await _parent.DisposeAsync().ConfigureAwait(false);
         return;
 
         static ValueTask CastAndDispose(IDisposable resource)

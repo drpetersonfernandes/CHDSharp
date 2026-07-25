@@ -16,6 +16,8 @@ internal static partial class ChdTocParser
 
     private const int TrackPadding = 4;
 
+    private const int MaxKeyValueTextLength = 64 * 1024;
+
     private static readonly Regex KeyValueRegex = MyRegex();
 
     internal static List<ChdTrackInfo>? ParseTracks(IReadOnlyList<ChdMetadataEntry> metadata, out bool isGdRom)
@@ -152,6 +154,9 @@ internal static partial class ChdTocParser
     private static Dictionary<string, string> ParseKeyValueFields(string text)
     {
         var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        if (text.Length > MaxKeyValueTextLength)
+            return result;
+
         var matches = KeyValueRegex.Matches(text);
         foreach (Match m in matches)
         {

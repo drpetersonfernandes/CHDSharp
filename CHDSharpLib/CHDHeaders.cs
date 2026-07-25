@@ -8,6 +8,22 @@ namespace CHDSharp;
 /// <summary>Parses and validates CHD V1-V5 file headers, reading compression configuration, block maps, checksums, and metadata pointers from the stream.</summary>
 internal static class ChdHeaders
 {
+    private const uint MaxHunkBytes = 128 * 1024 * 1024;
+    private const ulong MaxLogicalBytes = 1024UL * 1024 * 1024 * 1024;
+
+    /// <summary>Validates that the hunk size and logical size are within safe limits.</summary>
+    /// <param name="chd">The parsed header to validate.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> if sizes are acceptable; otherwise <see cref="ChdError.Chderrinvaliddata"/>.</returns>
+    internal static ChdError ValidateSizeLimits(ChdHeader chd)
+    {
+        if (chd.Blocksize == 0 || chd.Blocksize > MaxHunkBytes)
+            return ChdError.Chderrinvaliddata;
+
+        if (chd.Totalbytes > MaxLogicalBytes)
+            return ChdError.Chderrinvaliddata;
+
+        return ChdError.Chderrnone;
+    }
     /// <summary>Reads and parses a V1 CHD header from the stream.</summary>
     /// <param name="file">The stream positioned immediately after the CHD magic and version fields.</param>
     /// <param name="chd">When this method returns, contains the parsed header data.</param>
@@ -239,6 +255,9 @@ internal static class ChdHeaders
 
         chd.Totalblocks = (uint)((chd.Totalbytes + chd.Blocksize - 1) / chd.Blocksize);
 
+        if ((ulong)chd.Totalblocks > (ulong)file.Length * 8)
+            return ChdError.Chderrinvaliddata;
+
         var chdCompressed = chd.Compression[0] != ChdCodec.None;
         chd.UncompressedMap = !chdCompressed;
 
@@ -250,6 +269,15 @@ internal static class ChdHeaders
 
     private static ChdError uncompressed_v5_map(BinaryReader br, ulong mapoffset, uint totalblocks, uint blocksize, bool hasParent, out MapEntry[] map)
     {
+        var streamLen = (ulong)br.BaseStream.Length;
+        var mapSize = (ulong)totalblocks * 4;
+
+        if (mapoffset + mapSize < mapoffset || mapoffset + mapSize > streamLen)
+        {
+            map = [];
+            return ChdError.Chderrinvaliddata;
+        }
+
         br.BaseStream.Seek((long)mapoffset, SeekOrigin.Begin);
 
         map = new MapEntry[totalblocks];
@@ -289,17 +317,21 @@ internal static class ChdHeaders
 
     private static ChdError compressed_v5_map(BinaryReader br, ulong mapoffset, uint totalBlocks, uint blocksize, uint unitbytes, out MapEntry[] map)
     {
+        var streamLen = (ulong)br.BaseStream.Length;
+
         map = new MapEntry[totalBlocks];
 
-        /* read the reader */
         br.BaseStream.Seek((long)mapoffset, SeekOrigin.Begin);
-        var mapbytes = br.ReadUInt32Be(); //0
-        var firstoffs = br.ReadUInt48Be(); //4
-        var mapcrc = br.ReadUInt16Be(); //10
-        var lengthbits = br.ReadByte(); //12
-        var selfbits = br.ReadByte(); //13
-        var parentbits = br.ReadByte(); //14
+        var mapbytes = br.ReadUInt32Be();
+        var firstoffs = br.ReadUInt48Be();
+        var mapcrc = br.ReadUInt16Be();
+        var lengthbits = br.ReadByte();
+        var selfbits = br.ReadByte();
+        var parentbits = br.ReadByte();
         br.ReadByte(); //15 not used
+
+        if (mapoffset + 16 + mapbytes < mapoffset || mapoffset + 16 + mapbytes > streamLen)
+            return ChdError.Chderrinvaliddata;
 
         var compressedArr = new byte[mapbytes];
         br.BaseStream.ReadExactly(compressedArr, 0, (int)mapbytes);
@@ -411,7 +443,7 @@ internal static class ChdHeaders
 
 
         /* verify the final CRC */
-        var rawmap = new byte[totalBlocks * 12];
+        var rawmap = new byte[checked(totalBlocks * 12)];
         for (var blockIndex = 0; blockIndex < totalBlocks; blockIndex++)
         {
             var rawmapIndex = blockIndex * 12;

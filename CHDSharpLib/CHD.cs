@@ -177,6 +177,12 @@ public static class Chd
             return valid;
         }
 
+        if (chd != null && ChdHeaders.ValidateSizeLimits(chd) != ChdError.Chderrnone)
+        {
+            LogHeaderReadFailed(Log, ChdError.Chderrinvaliddata, null);
+            return ChdError.Chderrinvaliddata;
+        }
+
         if (chd != null)
         {
             chdSha1 = chd.Sha1;

@@ -267,18 +267,24 @@ internal static class CdRom
      */
     private static void ecc_compute_bytes(byte[] data, int sectorOffset, ushort[] row, int rowlen, int val1Index, int val2Index)
     {
-        int component;
-        data[val1Index] = 0;
-        data[val2Index] = 0;
-        for (component = 0; component < rowlen; component++)
-        {
-            data[val1Index] ^= ecc_source_byte(data, sectorOffset, row[component]);
-            data[val2Index] ^= ecc_source_byte(data, sectorOffset, row[component]);
-            data[val1Index] = Ecclow[data[val1Index]];
-        }
+        var (val1, val2) = ecc_compute_bytes_result(data, sectorOffset, row, rowlen);
+        data[val1Index] = val1;
+        data[val2Index] = val2;
+    }
 
-        data[val1Index] = Ecchigh[Ecclow[data[val1Index]] ^ data[val2Index]];
-        data[val2Index] ^= data[val1Index];
+    private static (byte val1, byte val2) ecc_compute_bytes_result(byte[] data, int sectorOffset, ushort[] row, int rowlen)
+    {
+        byte val1 = 0;
+        byte val2 = 0;
+        for (var component = 0; component < rowlen; component++)
+        {
+            val1 ^= ecc_source_byte(data, sectorOffset, row[component]);
+            val2 ^= ecc_source_byte(data, sectorOffset, row[component]);
+            val1 = Ecclow[val1];
+        }
+        val1 = Ecchigh[Ecclow[val1] ^ val2];
+        val2 ^= val1;
+        return (val1, val2);
     }
 
     /**
@@ -296,12 +302,44 @@ internal static class CdRom
     /// <param name="sectorOffset">The zero-based offset within <paramref name="data"/> where the sector begins.</param>
     public static void EccGenerate(byte[] data, int sectorOffset)
     {
-        /* first verify P is */
         for (var i = 0; i < EccPNumBytes; i++)
             ecc_compute_bytes(data, sectorOffset, Poffsets[i], EccPComp, sectorOffset + EccPOffset + i, sectorOffset + EccPOffset + EccPNumBytes + i);
 
-        /* then verify Q is */
         for (var i = 0; i < EccQNumBytes; i++)
             ecc_compute_bytes(data, sectorOffset, Qoffsets[i], EccQComp, sectorOffset + EccQOffset + i, sectorOffset + EccQOffset + EccQNumBytes + i);
+    }
+
+    /// <summary>Verifies that the P and Q ECC codes in a CD-ROM sector match freshly computed values.</summary>
+    /// <param name="data">The byte array containing the sector data.</param>
+    /// <param name="sectorOffset">The zero-based offset within <paramref name="data"/> where the sector begins.</param>
+    /// <returns><c>true</c> if both P and Q parity bytes match recalculated values; <c>false</c> otherwise.</returns>
+    public static bool EccVerify(byte[] data, int sectorOffset)
+    {
+        for (var i = 0; i < EccPNumBytes; i++)
+        {
+            var (val1, val2) = ecc_compute_bytes_result(data, sectorOffset, Poffsets[i], EccPComp);
+            if (data[sectorOffset + EccPOffset + i] != val1 ||
+                data[sectorOffset + EccPOffset + EccPNumBytes + i] != val2)
+                return false;
+        }
+
+        for (var i = 0; i < EccQNumBytes; i++)
+        {
+            var (val1, val2) = ecc_compute_bytes_result(data, sectorOffset, Qoffsets[i], EccQComp);
+            if (data[sectorOffset + EccQOffset + i] != val1 ||
+                data[sectorOffset + EccQOffset + EccQNumBytes + i] != val2)
+                return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>Zeroes out the P and Q ECC parity bytes in a CD-ROM sector.</summary>
+    /// <param name="data">The byte array containing the sector data.</param>
+    /// <param name="sectorOffset">The zero-based offset within <paramref name="data"/> where the sector begins.</param>
+    public static void EccClear(byte[] data, int sectorOffset)
+    {
+        Array.Clear(data, sectorOffset + EccPOffset, 2 * EccPNumBytes);
+        Array.Clear(data, sectorOffset + EccQOffset, 2 * EccQNumBytes);
     }
 }

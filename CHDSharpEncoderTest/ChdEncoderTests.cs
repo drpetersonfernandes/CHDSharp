@@ -13,7 +13,6 @@ public class ChdEncoderTests
         try
         {
             using var ms = new MemoryStream(source);
-            var encoder = new ChdEncoder();
             ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512);
 
             byte[] chd = File.ReadAllBytes(chdPath);
@@ -43,7 +42,7 @@ public class ChdEncoderTests
         try
         {
             using var ms = new MemoryStream(source);
-            new ChdEncoder().EncodeRaw(ms, chdPath, 4096, 512);
+            ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512);
 
             byte[] chd = File.ReadAllBytes(chdPath);
             ulong logical = ReadU64BE(chd, 32);
@@ -64,7 +63,7 @@ public class ChdEncoderTests
         try
         {
             using var ms = new MemoryStream(source);
-            new ChdEncoder().EncodeRaw(ms, chdPath, 4096, 512);
+            ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512);
 
             byte[] chd = File.ReadAllBytes(chdPath);
             ulong mapOffset = ReadU64BE(chd, 40);
@@ -85,7 +84,7 @@ public class ChdEncoderTests
         try
         {
             using var ms = new MemoryStream(source);
-            new ChdEncoder().EncodeRaw(ms, chdPath, 4096, 512);
+            ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512);
 
             byte[] chd = File.ReadAllBytes(chdPath);
 
@@ -110,7 +109,7 @@ public class ChdEncoderTests
         try
         {
             using var ms = new MemoryStream(source);
-            new ChdEncoder().EncodeRaw(ms, chdPath, 4096, 512);
+            ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512);
 
             byte[] chd = File.ReadAllBytes(chdPath);
             Assert.True(chd.Length > ChdHeaderV5.LENGTH);
@@ -131,7 +130,7 @@ public class ChdEncoderTests
         try
         {
             using var ms = new MemoryStream(source);
-            new ChdEncoder().EncodeRaw(ms, chdPath, 4096, 512);
+            ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512);
 
             byte[] chd = File.ReadAllBytes(chdPath);
 
@@ -159,7 +158,7 @@ public class ChdEncoderTests
         try
         {
             using var ms = new MemoryStream(source);
-            new ChdEncoder().EncodeRaw(ms, chdPath, 4096, 512);
+            ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512);
 
             byte[] chd = File.ReadAllBytes(chdPath);
             Assert.True(chd.Length > ChdHeaderV5.LENGTH);
@@ -177,7 +176,6 @@ public class ChdEncoderTests
     public void InvalidHunkUnitRatio_throws()
     {
         using var ms = new MemoryStream(new byte[4096]);
-        var encoder = new ChdEncoder();
         Assert.Throws<ArgumentException>(() => ChdEncoder.EncodeRaw(ms, Path.GetTempFileName(), 4096, 1000));
     }
 
@@ -193,7 +191,7 @@ public class ChdEncoderTests
             for (int i = 0; i < source.Length; i++) source[i] = (byte)((i * 3 + 1) & 0xFF);
             File.WriteAllBytes(srcPath, source);
 
-            new ChdEncoder().EncodeRaw(srcPath, chdPath, 4096, 512);
+            ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512);
 
             byte[] chd = File.ReadAllBytes(chdPath);
             Assert.Equal("MComprHD", System.Text.Encoding.ASCII.GetString(chd, 0, 8));

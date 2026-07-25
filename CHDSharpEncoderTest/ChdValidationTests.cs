@@ -24,7 +24,7 @@ public class ChdValidationTests
 
         try
         {
-            new ChdEncoder().EncodeRaw(srcPath, chdPath, 4096, 512);
+            ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512);
 
             var err = ChdFile.Open(chdPath, out var chdFile);
             Assert.Equal(ChdError.Chderrnone, err);
@@ -51,7 +51,7 @@ public class ChdValidationTests
 
         try
         {
-            new ChdEncoder().EncodeRaw(srcPath, chdPath, 4096, 512);
+            ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512);
 
             var err = ChdFile.Open(chdPath, out var chdFile);
             Assert.Equal(ChdError.Chderrnone, err);
@@ -86,7 +86,6 @@ public class ChdValidationTests
 
         try
         {
-            var encoder = new ChdEncoder();
             using var ms = new MemoryStream(source);
             ChdEncoder.EncodeRaw(ms, chdPath, 65536, 4096);
 
@@ -124,7 +123,7 @@ public class ChdValidationTests
 
         try
         {
-            new ChdEncoder().EncodeRaw(srcPath, chdPath, 4096, 512);
+            ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512);
 
             var err = ChdFile.Open(chdPath, out var chdFile);
             Assert.Equal(ChdError.Chderrnone, err);
@@ -150,7 +149,7 @@ public class ChdValidationTests
 
         try
         {
-            new ChdEncoder().EncodeRaw(srcPath, chdPath, 4096, 512);
+            ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512);
 
             var err = ChdFile.Open(chdPath, out var chdFile);
             Assert.Equal(ChdError.Chderrnone, err);
@@ -178,7 +177,7 @@ public class ChdValidationTests
 
         try
         {
-            new ChdEncoder().EncodeRaw(srcPath, chdPath, 4096, 512);
+            ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512);
 
             var err = ChdFile.Open(chdPath, out var chdFile);
             Assert.Equal(ChdError.Chderrnone, err);
@@ -208,7 +207,7 @@ public class ChdValidationTests
 
         try
         {
-            new ChdEncoder().EncodeRaw(srcPath, chdPath, 4096, 512);
+            ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512);
 
             var err = ChdFile.Open(chdPath, out var chdFile);
             Assert.Equal(ChdError.Chderrnone, err);
@@ -239,7 +238,7 @@ public class ChdValidationTests
 
         try
         {
-            new ChdEncoder().EncodeRaw(srcPath, chdPath, 4096, 512);
+            ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512);
 
             var chd = File.ReadAllBytes(chdPath);
 

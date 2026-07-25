@@ -30,7 +30,7 @@ public class ChdmanValidationTests : IDisposable
         string chdPath = Path.Combine(TestDataDir, "info.chd");
         File.WriteAllBytes(srcPath, source);
 
-        new ChdEncoder().EncodeRaw(srcPath, chdPath, 4096, 512);
+        ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512);
 
         var (exitCode, stdout, stderr) = RunChdman("info", "-i", chdPath);
         Assert.True(exitCode == 0, $"chdman info exit code: {exitCode}\nstdout: {stdout}\nstderr: {stderr}");
@@ -51,7 +51,7 @@ public class ChdmanValidationTests : IDisposable
         string chdPath = Path.Combine(TestDataDir, "verify.chd");
         File.WriteAllBytes(srcPath, source);
 
-        new ChdEncoder().EncodeRaw(srcPath, chdPath, 4096, 512);
+        ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512);
 
         var (verifyExit, vstdout, vstderr) = RunChdman("verify", "-i", chdPath);
         Assert.True(verifyExit == 0, $"verify failed (exit={verifyExit})\nstdout: {vstdout}\nstderr: {vstderr}");
@@ -68,7 +68,7 @@ public class ChdmanValidationTests : IDisposable
         string extractedPath = Path.Combine(TestDataDir, "extracted.raw");
         File.WriteAllBytes(srcPath, source);
 
-        new ChdEncoder().EncodeRaw(srcPath, chdPath, 4096, 512);
+        ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512);
 
         var (exitCode, estdout, estderr) = RunChdman("extractraw", "-i", chdPath, "-o", extractedPath, "-f");
         Assert.True(exitCode == 0, $"extractraw failed (exit={exitCode})\nstdout: {estdout}\nstderr: {estderr}");
@@ -90,7 +90,7 @@ public class ChdmanValidationTests : IDisposable
         string chdmanExtract = Path.Combine(TestDataDir, "cross_chdman_extracted.raw");
         File.WriteAllBytes(srcPath, source);
 
-        new ChdEncoder().EncodeRaw(srcPath, ourChd, 4096, 512);
+        ChdEncoder.EncodeRaw(srcPath, ourChd, 4096, 512);
 
         var (createExit, cstdout, cstderr) = RunChdman(
             "createraw", "-i", srcPath, "-o", chdmanChd, "-c", "zlib", "-hs", "4096", "-us", "512", "-f");
@@ -124,7 +124,7 @@ public class ChdmanValidationTests : IDisposable
         string extractedPath = Path.Combine(TestDataDir, "na_extracted.raw");
         File.WriteAllBytes(srcPath, source);
 
-        new ChdEncoder().EncodeRaw(srcPath, chdPath, 4096, 512);
+        ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512);
 
         var (exitCode, nastdout, nastderr) = RunChdman("extractraw", "-i", chdPath, "-o", extractedPath, "-f");
         Assert.True(exitCode == 0, $"extractraw failed (exit={exitCode})\nstdout: {nastdout}\nstderr: {nastderr}");

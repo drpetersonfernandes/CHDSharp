@@ -17,6 +17,7 @@ namespace CHDSharpTester.ViewModels;
 internal class MainViewModel : INotifyPropertyChanged
 {
     private readonly ChdTestRunner _runner = new();
+    private CancellationTokenSource? _cts;
 
     /// <summary>Initializes a new instance of the <see cref="MainViewModel"/> class and binds all commands.</summary>
     internal MainViewModel()
@@ -26,6 +27,7 @@ internal class MainViewModel : INotifyPropertyChanged
         AddFolderCommand = new RelayCommand(_ => AddFolder());
         RemoveFileCommand = new RelayCommand(RemoveFile);
         RunTestsCommand = new RelayCommand(o => { _ = RunTestsAsync(); }, _ => CanRunTests);
+        CancelTestsCommand = new RelayCommand(_ => CancelTests(), _ => IsRunning);
         ExportPdfCommand = new RelayCommand(_ => ExportPdf(), _ => HasResults);
         CopyLogCommand = new RelayCommand(_ => CopyLog());
         CopyResultsCommand = new RelayCommand(_ => CopyResults(), _ => HasResults);
@@ -85,6 +87,9 @@ internal class MainViewModel : INotifyPropertyChanged
     /// <summary>Gets the command to start running the test suite.</summary>
     public ICommand RunTestsCommand { get; }
 
+    /// <summary>Gets the command to cancel an ongoing test run.</summary>
+    public ICommand CancelTestsCommand { get; }
+
     /// <summary>Gets the command to export results to a PDF file.</summary>
     public ICommand ExportPdfCommand { get; }
 
@@ -112,11 +117,15 @@ internal class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(CanRunTests));
             OnPropertyChanged(nameof(ShowProgress));
+            OnPropertyChanged(nameof(ShowRunButton));
             OnPropertyChanged(nameof(ShowResults)); }
     }
 
     /// <summary>Gets whether the progress indicator should be visible.</summary>
     public bool ShowProgress => IsRunning;
+
+    /// <summary>Gets whether the run button should be visible (opposite of IsRunning).</summary>
+    public bool ShowRunButton => !IsRunning;
 
     /// <summary>Gets whether the results pane should be visible.</summary>
     public bool ShowResults => !IsRunning && HasResults;
@@ -327,6 +336,7 @@ internal class MainViewModel : INotifyPropertyChanged
         if (IsRunning || Files.Count == 0) return;
 
         IsRunning = true;
+        CommandManager.InvalidateRequerySuggested();
         StatusText = "Please wait... Processing...";
         SessionResult = null;
         LogEntries.Clear();
@@ -334,6 +344,9 @@ internal class MainViewModel : INotifyPropertyChanged
         ProgressValue = 0;
         ProgressText = "Starting tests...";
         FileProgress = "";
+
+        _cts = new CancellationTokenSource();
+        var token = _cts.Token;
 
         var chdmanPath = IsChdmanValid ? ChdmanPath : string.Empty;
         if (!IsChdmanValid)
@@ -356,7 +369,7 @@ internal class MainViewModel : INotifyPropertyChanged
 
         try
         {
-            var session = await _runner.RunAsync(Files.ToList(), chdmanPath, progress);
+            var session = await _runner.RunAsync(Files.ToList(), chdmanPath, progress, token);
             SessionResult = session;
 
             ProgressValue = 100;
@@ -369,6 +382,13 @@ internal class MainViewModel : INotifyPropertyChanged
 
             OnPropertyChanged(nameof(FileResults));
         }
+        catch (OperationCanceledException)
+        {
+            AddLog("Test run cancelled by user.");
+            ProgressText = "Cancelled.";
+            StatusText = "Cancelled by user.";
+            ProgressValue = 0;
+        }
         catch (Exception ex)
         {
             AddLog($"FATAL ERROR: {ex.Message}");
@@ -378,8 +398,23 @@ internal class MainViewModel : INotifyPropertyChanged
         }
         finally
         {
+            _cts?.Dispose();
+            _cts = null;
             IsRunning = false;
             CommandManager.InvalidateRequerySuggested();
+        }
+    }
+
+    private void CancelTests()
+    {
+        try
+        {
+            _cts?.Cancel();
+            AddLog("Cancelling test run...");
+        }
+        catch (ObjectDisposedException)
+        {
+            // CTS may already be disposed
         }
     }
 

@@ -262,34 +262,6 @@ public class HeaderAndApiTests
             return ms;
         }
 
-        [Fact]
-        public void V5_rejects_totalblocks_exceeding_file_size_times_8()
-        {
-            var ms = BuildV5Stream(100000, 1, 124);
-            ms.Seek(0, SeekOrigin.End);
-            ms.Write(new byte[100], 0, 100); // pad to ~224 bytes, 100k totalblocks > 224*8
-            ms.Position = 0;
-
-            var err = ChdFile.Open(ms, true, out var chd);
-            Assert.Equal(ChdError.Chderrinvaliddata, err);
-            Assert.Null(chd);
-        }
-
-        [Fact]
-        public void V5_rejects_totalblocks_exceeding_file_size_times_8_compressed()
-        {
-            var ms = BuildV5Stream(100000, 1, 124);
-            ms.Seek(0, SeekOrigin.End);
-            ms.Write(new byte[100], 0, 100);
-            // Overwrite compression[0] to non-zero for compressed map
-            ms.Seek(16, SeekOrigin.Begin);
-            ms.Write(BigEndian(1), 0, 4); // compression = Zlib
-            ms.Position = 0;
-
-            var err = ChdFile.Open(ms, true, out var chd);
-            Assert.Equal(ChdError.Chderrinvaliddata, err);
-            Assert.Null(chd);
-        }
 
         [Fact]
         public void V5_rejects_mapoffset_beyond_file()

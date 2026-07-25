@@ -171,7 +171,14 @@ Command="{Binding DataContext.RemoveFileCommand,
                                IsEnabled="{Binding CanRunTests}"
                                Appearance="Primary" FontSize="14"
                                HorizontalAlignment="Center" MinWidth="180"
-                               Height="40" />
+                               Height="40"
+                               Visibility="{Binding ShowRunButton, Converter={StaticResource BoolToVis}}" />
+                    <ui:Button Content="Cancel" Margin="0,12,0,0"
+                               Command="{Binding CancelTestsCommand}"
+                               Appearance="Danger" FontSize="14"
+                               HorizontalAlignment="Center" MinWidth="180"
+                               Height="40"
+                               Visibility="{Binding IsRunning, Converter={StaticResource BoolToVis}}" />
                 </StackPanel>
             </Border>
 

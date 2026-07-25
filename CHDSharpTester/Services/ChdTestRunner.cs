@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
+using System.Threading;
 using CHDSharp;
 using CHDSharp.Models;
 using CHDSharpTester.Models;
@@ -24,7 +25,8 @@ public class ChdTestRunner
     public async Task<TestSessionResult> RunAsync(
         List<ChdFileEntry> files,
         string chdmanPath,
-        IProgress<TestProgress>? progress = null)
+        IProgress<TestProgress>? progress = null,
+        CancellationToken cancellationToken = default)
     {
         var session = new TestSessionResult();
         var chdmanAvailable = File.Exists(chdmanPath);
@@ -50,23 +52,26 @@ public class ChdTestRunner
 
         for (var i = 0; i < files.Count; i++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var file = files[i];
             progress?.Report(new TestProgress(file.FileName, i + 1, files.Count,
                 "Starting", $"Testing {file.FileName}..."));
 
-            var result = await Task.Run(() => TestSingleFile(file, chdman, progress, i, files.Count));
+            var result = await Task.Run(() => TestSingleFile(file, chdman, progress, i, files.Count), cancellationToken);
             session.FileResults.Add(result);
         }
 
         // Session-level tests: Zstd codec
         if (chdman is { Available: true })
         {
+            cancellationToken.ThrowIfCancellationRequested();
             await Task.Run(() => RunZstdCodecTests(files, chdman, progress, session));
         }
 
         // Session-level tests: Parent chain
         if (chdman is { Available: true })
         {
+            cancellationToken.ThrowIfCancellationRequested();
             await Task.Run(() => RunParentChainTests(files, chdman, progress, session));
         }
 

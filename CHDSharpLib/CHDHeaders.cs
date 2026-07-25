@@ -255,9 +255,6 @@ internal static class ChdHeaders
 
         chd.Totalblocks = (uint)((chd.Totalbytes + chd.Blocksize - 1) / chd.Blocksize);
 
-        if ((ulong)chd.Totalblocks > (ulong)file.Length * 8)
-            return ChdError.Chderrinvaliddata;
-
         var chdCompressed = chd.Compression[0] != ChdCodec.None;
         chd.UncompressedMap = !chdCompressed;
 

@@ -5,6 +5,7 @@ using CHDSharp.Models;
 using CHDSharp.Models.Flac.FlacDeps;
 using CHDSharp.Models.Utils;
 using CHDSharp.Utils;
+using ZstdSharp;
 
 namespace CHDSharp;
 
@@ -14,6 +15,12 @@ internal delegate ChdError ChdReader(byte[] buffIn, int buffInLength, byte[] buf
 /// <summary>Contains all CHD decompression codec implementations as reader delegates: zlib, LZMA, Huffman, FLAC, Zstd, and their CD-sector variants.</summary>
 internal static partial class ChdReaders
 {
+    /// <summary>Dummy reader for unused / error codec slots; always returns <see cref="ChdError.Chderrdecompressionerror"/>.</summary>
+    internal static ChdError None(byte[] buffIn, int buffInLength, byte[] buffOut, int buffOutLength, ChdCodecState codec)
+    {
+        return ChdError.Chderrdecompressionerror;
+    }
+
     /// <summary>Decompresses a DEFLATE (zlib) compressed hunk from <paramref name="buffIn"/> into <paramref name="buffOut"/>.</summary>
     internal static ChdError Zlib(byte[] buffIn, int buffInLength, byte[] buffOut, int buffOutLength, ChdCodecState codec)
     {
@@ -55,7 +62,11 @@ internal static partial class ChdReaders
             if (written != buffOutLength)
                 return ChdError.Chderrdecompressionerror;
         }
-        catch
+        catch (ZstdException)
+        {
+            return ChdError.Chderrdecompressionerror;
+        }
+        catch (Exception)
         {
             return ChdError.Chderrdecompressionerror;
         }

@@ -339,8 +339,9 @@ public static class Chd
             using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
             return CheckHeader(fs, out _, out version);
         }
-        catch
+        catch (Exception ex)
         {
+            Log.LogWarning(ex, "IsChdFile failed for path '{Path}'", path);
             return false;
         }
     }
@@ -499,11 +500,12 @@ public static class Chd
                     for (var i = 0; i < taskCount; i++)
                         blocksToDecompress.Add(-1, ct);
                 }
-                catch
+                catch (OperationCanceledException)
                 {
-                    if (ct.IsCancellationRequested)
-                        return;
-
+                    return;
+                }
+                catch (Exception)
+                {
                     if (errMaster == ChdError.Chderrnone)
                     {
                         errMaster = ChdError.Chderrinvalidfile;
@@ -549,11 +551,12 @@ public static class Chd
                             }
                         }
                     }
-                    catch
+                    catch (OperationCanceledException)
                     {
-                        if (ct.IsCancellationRequested)
-                            return;
-
+                        return;
+                    }
+                    catch (Exception)
+                    {
                         if (errMaster == ChdError.Chderrnone)
                         {
                             errMaster = ChdError.Chderrdecompressionerror;
@@ -599,11 +602,12 @@ public static class Chd
                         }
                     }
                 }
-                catch
+                catch (OperationCanceledException)
                 {
-                    if (ct.IsCancellationRequested)
-                        return;
-
+                    return;
+                }
+                catch (Exception)
+                {
                     if (errMaster == ChdError.Chderrnone)
                     {
                         errMaster = ChdError.Chderrdecompressionerror;

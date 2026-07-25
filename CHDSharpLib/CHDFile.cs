@@ -1,7 +1,9 @@
 using System.Globalization;
+using System.IO;
 using System.Text;
 using CHDSharp.Models;
 using CHDSharp.Utils;
+using Microsoft.Extensions.Logging;
 
 namespace CHDSharp;
 
@@ -219,10 +221,13 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                 ChdMetaData.ReadMetaDataEntries(_stream, _chd, out _metadata);
             }
         }
-        catch
+        catch (IOException ex)
         {
-            // Silently return empty list if metadata can't be read.
-            _metadata = [];
+            ChdLogger.GetLogger(nameof(ChdFile)).LogWarning(ex, "Failed to read CHD metadata (IO error)");
+        }
+        catch (InvalidDataException ex)
+        {
+            ChdLogger.GetLogger(nameof(ChdFile)).LogWarning(ex, "Failed to read CHD metadata (invalid data)");
         }
     }
 
@@ -449,7 +454,15 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         {
             fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 4096);
         }
-        catch
+        catch (FileNotFoundException)
+        {
+            return ChdError.Chderrfilenotfound;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return ChdError.Chderrcannotopenfile;
+        }
+        catch (IOException)
         {
             return ChdError.Chderrcannotopenfile;
         }
@@ -751,6 +764,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <summary>Asynchronously releases the underlying stream (unless opened with <c>leaveOpen: true</c>) and any internally-owned parent instance.</summary>
     public async ValueTask DisposeAsync()
     {
+        _codec.Dispose();
         if (!_leaveOpen)
             await CastAndDispose(_stream).ConfigureAwait(false);
 
@@ -769,9 +783,10 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         }
     }
 
-    /// <summary>Releases the underlying stream (unless opened with <c>leaveOpen: true</c>) and any internally-owned parent instance.</summary>
+    /// <summary>Releases the underlying stream (unless opened with <c>leaveOpen: true</c>), the parent reference if owned, and codec resources.</summary>
     public void Dispose()
     {
+        _codec.Dispose();
         if (!_leaveOpen)
             _stream?.Dispose();
         if (_ownsParent)

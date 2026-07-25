@@ -189,6 +189,8 @@ internal static class ChdBlockRead
             case ChdCodec.Cdflac: return ChdReaders.Cdflac;
             case ChdCodec.Cdzstd: return ChdReaders.Cdzstd;
             case ChdCodec.Avhuff: return ChdReaders.AvHuff;
+            case ChdCodec.None:
+            case ChdCodec.Error: return ChdReaders.None;
             default: throw new NotSupportedException($"Unknown CHD codec: {chdCodec}");
         }
     }

@@ -1,11 +1,12 @@
 using CHDSharp.Flac;
+using CHDSharp.Interfaces.Flac.FlacDeps;
 using CHDSharp.Models.Flac.FlacDeps;
 using ZstdSharp;
 
 namespace CHDSharp.Models;
 
 /// <summary>Holds per-codec state and scratch buffers used across multiple hunk decompressions, avoiding repeated allocations.</summary>
-internal class ChdCodecState
+internal class ChdCodecState : IDisposable
 {
     /// <summary>FLAC audio configuration (16-bit, 2-channel, 44100 Hz).</summary>
     internal AudioPcmConfig? FlacSettings;
@@ -43,4 +44,16 @@ internal class ChdCodecState
     internal ushort[]? BHuffmanCb;
     /// <summary>Huffman lookup table for AVHuff video Cr (chroma red) channel.</summary>
     internal ushort[]? BHuffmanCr;
+
+    public void Dispose()
+    {
+        BZstd?.Dispose();
+        BZstd = null;
+
+        FlacAudioDecoder?.Close();
+        FlacAudioDecoder = null;
+
+        AvhuffAudioDecoder?.Close();
+        AvhuffAudioDecoder = null;
+    }
 }

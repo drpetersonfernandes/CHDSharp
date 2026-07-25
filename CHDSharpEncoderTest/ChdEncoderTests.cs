@@ -14,7 +14,7 @@ public class ChdEncoderTests
         {
             using var ms = new MemoryStream(source);
             var encoder = new ChdEncoder();
-            encoder.EncodeRaw(ms, chdPath, 4096, 512);
+            ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512);
 
             byte[] chd = File.ReadAllBytes(chdPath);
             Assert.True(chd.Length > 124);
@@ -178,7 +178,7 @@ public class ChdEncoderTests
     {
         using var ms = new MemoryStream(new byte[4096]);
         var encoder = new ChdEncoder();
-        Assert.Throws<ArgumentException>(() => encoder.EncodeRaw(ms, Path.GetTempFileName(), 4096, 1000));
+        Assert.Throws<ArgumentException>(() => ChdEncoder.EncodeRaw(ms, Path.GetTempFileName(), 4096, 1000));
     }
 
     [Fact]

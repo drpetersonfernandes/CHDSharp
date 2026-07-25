@@ -88,7 +88,7 @@ public class ChdValidationTests
         {
             var encoder = new ChdEncoder();
             using var ms = new MemoryStream(source);
-            encoder.EncodeRaw(ms, chdPath, 65536, 4096);
+            ChdEncoder.EncodeRaw(ms, chdPath, 65536, 4096);
 
             var err = ChdFile.Open(chdPath, out var chdFile);
             Assert.Equal(ChdError.Chderrnone, err);

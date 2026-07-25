@@ -1,11 +1,10 @@
 namespace CHDSharpEncoder;
 
-public class ChdEncoder
+internal class ChdEncoder
 {
-    public void EncodeRaw(Stream sourceStream, string chdPath, uint hunkBytes = 4096, uint unitBytes = 512)
+    public static void EncodeRaw(Stream sourceStream, string chdPath, uint hunkBytes = 4096, uint unitBytes = 512)
     {
-        if (sourceStream == null)
-            throw new ArgumentNullException(nameof(sourceStream));
+        ArgumentNullException.ThrowIfNull(sourceStream);
         if (hunkBytes == 0 || unitBytes == 0 || hunkBytes % unitBytes != 0)
             throw new ArgumentException($"hunkBytes ({hunkBytes}) must be a multiple of unitBytes ({unitBytes})");
 
@@ -76,7 +75,7 @@ public class ChdEncoder
         fs.Write(combinedSha1, 0, 20);
     }
 
-    public void EncodeRaw(string sourcePath, string chdPath, uint hunkBytes = 4096, uint unitBytes = 512)
+    public static void EncodeRaw(string sourcePath, string chdPath, uint hunkBytes = 4096, uint unitBytes = 512)
     {
         using var fs = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         EncodeRaw(fs, chdPath, hunkBytes, unitBytes);

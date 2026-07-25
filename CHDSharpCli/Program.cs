@@ -313,7 +313,9 @@ internal class Program
     /// <returns><c>true</c> if all bytes are zero; otherwise <c>false</c>.</returns>
     private static bool IsAllZero(byte[] a)
     {
-        foreach (var b in a) if (b != 0) return false;
+        foreach (var b in a)
+            if (b != 0)
+                return false;
 
         return true;
     }
@@ -328,7 +330,9 @@ internal class Program
     {
         if (a.Length != b.Length) return false;
 
-        for (var i = 0; i < a.Length; i++) if (a[i] != b[i]) return false;
+        for (var i = 0; i < a.Length; i++)
+            if (a[i] != b[i])
+                return false;
 
         return true;
     }

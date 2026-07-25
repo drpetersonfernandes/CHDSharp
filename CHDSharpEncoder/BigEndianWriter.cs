@@ -1,6 +1,6 @@
 namespace CHDSharpEncoder;
 
-public class BigEndianWriter
+internal class BigEndianWriter
 {
     private byte[] _buffer;
 
@@ -10,18 +10,18 @@ public class BigEndianWriter
         Position = 0;
     }
 
-    public int Position { get; private set; }
+    internal int Position { get; private set; }
 
-    public void WriteU8(byte v)
+    internal void WriteU8(byte v)
     {
         EnsureCapacity(1);
         _buffer[Position++] = v;
     }
 
-    public void WriteU16(ushort v)
+    internal void WriteU16(ushort v)
     {
         EnsureCapacity(2);
-        _buffer[Position]     = (byte)(v >> 8);
+        _buffer[Position] = (byte)(v >> 8);
         _buffer[Position + 1] = (byte)v;
         Position += 2;
     }
@@ -29,7 +29,7 @@ public class BigEndianWriter
     public void WriteU24(uint v)
     {
         EnsureCapacity(3);
-        _buffer[Position]     = (byte)(v >> 16);
+        _buffer[Position] = (byte)(v >> 16);
         _buffer[Position + 1] = (byte)(v >> 8);
         _buffer[Position + 2] = (byte)v;
         Position += 3;
@@ -38,7 +38,7 @@ public class BigEndianWriter
     public void WriteU32(uint v)
     {
         EnsureCapacity(4);
-        _buffer[Position]     = (byte)(v >> 24);
+        _buffer[Position] = (byte)(v >> 24);
         _buffer[Position + 1] = (byte)(v >> 16);
         _buffer[Position + 2] = (byte)(v >> 8);
         _buffer[Position + 3] = (byte)v;
@@ -48,7 +48,7 @@ public class BigEndianWriter
     public void WriteU48(ulong v)
     {
         EnsureCapacity(6);
-        _buffer[Position]     = (byte)(v >> 40);
+        _buffer[Position] = (byte)(v >> 40);
         _buffer[Position + 1] = (byte)(v >> 32);
         _buffer[Position + 2] = (byte)(v >> 24);
         _buffer[Position + 3] = (byte)(v >> 16);
@@ -60,7 +60,7 @@ public class BigEndianWriter
     public void WriteU64(ulong v)
     {
         EnsureCapacity(8);
-        _buffer[Position]     = (byte)(v >> 56);
+        _buffer[Position] = (byte)(v >> 56);
         _buffer[Position + 1] = (byte)(v >> 48);
         _buffer[Position + 2] = (byte)(v >> 40);
         _buffer[Position + 3] = (byte)(v >> 32);

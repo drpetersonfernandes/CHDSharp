@@ -1,3 +1,4 @@
+using System;
 using CHDSharp.Models;
 using CHDSharp.Utils;
 using Microsoft.Extensions.Logging;
@@ -188,7 +189,7 @@ internal static class ChdBlockRead
             case ChdCodec.Cdflac: return ChdReaders.Cdflac;
             case ChdCodec.Cdzstd: return ChdReaders.Cdzstd;
             case ChdCodec.Avhuff: return ChdReaders.AvHuff;
-            default: return null!;
+            default: throw new NotSupportedException($"Unknown CHD codec: {chdCodec}");
         }
     }
 

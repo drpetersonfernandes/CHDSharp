@@ -349,19 +349,10 @@ public class ChdTestRunner
             });
         }
 
-        // Test 6: Random Access (only for small files / files with chdman)
-        if (chdman is { Available: true } && entry.IsSmall)
+        // Test 6: Random Access
+        if (chdman is { Available: true })
         {
             RunRandomAccessTest(entry, chdman, progress, fileIndex, totalFiles, result);
-        }
-        else if (!entry.IsSmall)
-        {
-            result.SubTests.Add(new SubTestResult
-            {
-                TestName = "Random Access",
-                Status = TestStatus.Skipped,
-                Detail = "File >= 1 GB, skipped to keep runtime reasonable."
-            });
         }
         else
         {

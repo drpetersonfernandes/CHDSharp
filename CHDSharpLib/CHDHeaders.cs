@@ -50,6 +50,12 @@ internal static class ChdHeaders
         chd.Blocksize *= hardDiskSectorSize;
         chd.Unitbytes = chd.Blocksize;
 
+        if (chd.Blocksize == 0 || chd.Blocksize > MaxHunkBytes)
+            return ChdError.Chderrinvaliddata;
+
+        if ((ulong)chd.Totalblocks * chd.Blocksize > MaxLogicalBytes)
+            return ChdError.Chderrinvaliddata;
+
         chd.Map = new MapEntry[chd.Totalblocks];
 
         var mapBack = new Dictionary<ulong, int>();
@@ -105,6 +111,12 @@ internal static class ChdHeaders
         chd.Totalbytes = (ulong)cylinders * heads * sectors * seclen;
         chd.Blocksize = hunkSectors * seclen;
         chd.Unitbytes = chd.Blocksize;
+
+        if (chd.Blocksize == 0 || chd.Blocksize > MaxHunkBytes)
+            return ChdError.Chderrinvaliddata;
+
+        if ((ulong)chd.Totalblocks * chd.Blocksize > MaxLogicalBytes)
+            return ChdError.Chderrinvaliddata;
 
         chd.Map = new MapEntry[chd.Totalblocks];
 
@@ -239,7 +251,11 @@ internal static class ChdHeaders
         chd.Compression = new ChdCodec[4];
         for (var i = 0; i < 4; i++)
         {
-            chd.Compression[i] = (ChdCodec)br.ReadUInt32Be();
+            var codecValue = br.ReadUInt32Be();
+            if (!Enum.IsDefined(typeof(ChdCodec), (int)codecValue))
+                return ChdError.Chderrinvaliddata;
+
+            chd.Compression[i] = (ChdCodec)codecValue;
         }
 
         chd.Totalbytes = br.ReadUInt64Be(); // total byte size of the image

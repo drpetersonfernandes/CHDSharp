@@ -151,9 +151,11 @@ internal static partial class ChdReaders
 
         srcPos = buffInStart;
         var dstPos = 0;
-        //this may require some error handling. Hopefully the while condition is reliable
         while (dstPos < buffOutLength)
         {
+            if (srcPos >= buffInLength)
+                return ChdError.Chderrinvaliddata;
+
             var read = codec.FlacAudioDecoder.DecodeFrame(buffIn, srcPos, buffInLength - srcPos);
             codec.FlacAudioDecoder.Read(codec.FlacAudioBuffer, (int)codec.FlacAudioDecoder.Remaining);
             Array.Copy(codec.FlacAudioBuffer.Bytes, 0, buffOut, dstPos, codec.FlacAudioBuffer.ByteLength);

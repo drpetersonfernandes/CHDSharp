@@ -19,7 +19,4 @@ public class ChdFileEntry
         < 1024L * 1024 * 1024 => $"{new FileInfo(FilePath).Length / (1024.0 * 1024):F1} MB",
         _ => $"{new FileInfo(FilePath).Length / (1024.0 * 1024 * 1024):F2} GB"
     };
-
-    /// <summary>Gets whether the file is under 1 GB, suitable for expensive per-range tests.</summary>
-    public bool IsSmall => new FileInfo(FilePath).Length < 1_000_000_000L;
 }

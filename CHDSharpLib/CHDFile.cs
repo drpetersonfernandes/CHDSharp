@@ -537,7 +537,9 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         // Link COMPRESSION_SELF entries to their source map entry so ReadBlock
         // can resolve them. (Full repeat-block caching used by CheckFile is not
         // needed for random access and is deliberately skipped.)
-        LinkSelfBlocks(chd);
+        var linkErr = LinkSelfBlocks(chd);
+        if (linkErr != ChdError.Chderrnone)
+            return linkErr;
 
         chdFile = new ChdFile(stream, leaveOpen, chd, version);
         chdFile._parent = needsParent ? parent : null;
@@ -561,15 +563,20 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         return ChdError.Chderrnone;
     }
 
-    private static void LinkSelfBlocks(ChdHeader chd)
+    private static ChdError LinkSelfBlocks(ChdHeader chd)
     {
         foreach (var me in chd.Map)
         {
             if (me.Comptype == CompressionType.Compressionself)
             {
+                if (me.Offset >= (ulong)chd.Map.Length)
+                    return ChdError.Chderrinvaliddata;
+
                 me.SelfMapEntry = chd.Map[me.Offset];
             }
         }
+
+        return ChdError.Chderrnone;
     }
 
     /// <summary>

@@ -890,58 +890,105 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <summary>
     /// Extracts the entire CHD image to the specified directory.
     /// For CD/GD-ROM images, also writes a CUE sheet or GDI descriptor.
+    /// Throws <see cref="InvalidDataException"/> on any extraction failure.
     /// </summary>
     /// <param name="outputDir">Target directory. Created if it doesn't exist.</param>
     /// <param name="baseFileName">Base filename (without extension) for output files.</param>
     /// <returns>List of created file paths.</returns>
     public List<string> ExtractToDirectory(string outputDir, string baseFileName)
     {
+        var result = ExtractToDirectoryWithReporting(outputDir, baseFileName);
+        if (result.Error != ChdError.Chderrnone)
+            throw new InvalidDataException($"Extraction failed: {result.Error}");
+        if (result.HasTrackFailures)
+        {
+            var failed = result.TrackResults.Where(t => !t.IsSuccess).Select(t => $"track {t.TrackNumber}: {t.Error}");
+            throw new InvalidDataException($"Track extraction failures: {string.Join(", ", failed)}");
+        }
+        return result.CreatedFiles;
+    }
+
+    /// <summary>
+    /// Extracts the entire CHD image to the specified directory with per-track error reporting.
+    /// For GD-ROM images, each track is extracted individually and failures are reported per-track
+    /// rather than stopping at the first error. For all other image types, extraction is all-or-nothing.
+    /// </summary>
+    /// <param name="outputDir">Target directory. Created if it doesn't exist.</param>
+    /// <param name="baseFileName">Base filename (without extension) for output files.</param>
+    /// <returns>An <see cref="ExtractResult"/> with created files, per-track results, and overall error.</returns>
+    public ExtractResult ExtractToDirectoryWithReporting(string outputDir, string baseFileName)
+    {
         var created = new List<string>();
+        var trackResults = new List<TrackExtractResult>();
         Directory.CreateDirectory(outputDir);
 
         if (IsGdRom)
         {
-            for (var i = 0; i < Tracks!.Count; i++)
+            foreach (var track in Tracks!)
             {
-                var trackFile = Path.Combine(outputDir, $"track{Tracks[i].TrackNumber:D2}.bin");
-                WriteTrackToFile(Tracks[i], trackFile);
-                created.Add(trackFile);
+                var trackFile = Path.Combine(outputDir, $"track{track.TrackNumber:D2}.bin");
+                var err = TryWriteTrackToFile(track, trackFile);
+                trackResults.Add(new TrackExtractResult(track.TrackNumber, trackFile, err));
+                if (err == ChdError.Chderrnone)
+                    created.Add(trackFile);
             }
-            var gdiFile = Path.Combine(outputDir, $"{baseFileName}.gdi");
-            var trackNames = Tracks.Select(t => $"track{t.TrackNumber:D2}.bin").ToArray();
-            File.WriteAllText(gdiFile, GenerateGdiDescriptor(trackNames));
-            created.Add(gdiFile);
-        }
-        else if (IsCd)
-        {
-            var binFile = Path.Combine(outputDir, $"{baseFileName}.bin");
-            WriteAllBytesSlow(binFile);
-            created.Add(binFile);
 
-            var cueFile = Path.Combine(outputDir, $"{baseFileName}.cue");
-            File.WriteAllText(cueFile, GenerateCueSheet(Path.GetFileName(binFile)));
-            created.Add(cueFile);
-        }
-        else if (IsDvd)
-        {
-            var isoFile = Path.Combine(outputDir, $"{baseFileName}.iso");
-            WriteAllBytesSlow(isoFile);
-            created.Add(isoFile);
-        }
-        else if (IsHdd)
-        {
-            var imgFile = Path.Combine(outputDir, $"{baseFileName}.img");
-            WriteAllBytesSlow(imgFile);
-            created.Add(imgFile);
-        }
-        else
-        {
-            var rawFile = Path.Combine(outputDir, $"{baseFileName}.raw");
-            WriteAllBytesSlow(rawFile);
-            created.Add(rawFile);
+            try
+            {
+                var trackNames = Tracks.Select(t => $"track{t.TrackNumber:D2}.bin").ToArray();
+                var gdiFile = Path.Combine(outputDir, $"{baseFileName}.gdi");
+                File.WriteAllText(gdiFile, GenerateGdiDescriptor(trackNames));
+                created.Add(gdiFile);
+            }
+            catch (Exception)
+            {
+                return new ExtractResult(created, trackResults, ChdError.Chderrwriteerror);
+            }
+
+            return new ExtractResult(created, trackResults, ChdError.Chderrnone);
         }
 
-        return created;
+        try
+        {
+            string imageFile;
+            string? descriptorFile = null;
+
+            if (IsCd)
+            {
+                imageFile = Path.Combine(outputDir, $"{baseFileName}.bin");
+                WriteAllBytesSlow(imageFile);
+                created.Add(imageFile);
+
+                descriptorFile = Path.Combine(outputDir, $"{baseFileName}.cue");
+                File.WriteAllText(descriptorFile, GenerateCueSheet(Path.GetFileName(imageFile)));
+                created.Add(descriptorFile);
+            }
+            else if (IsDvd)
+            {
+                imageFile = Path.Combine(outputDir, $"{baseFileName}.iso");
+                WriteAllBytesSlow(imageFile);
+                created.Add(imageFile);
+            }
+            else if (IsHdd)
+            {
+                imageFile = Path.Combine(outputDir, $"{baseFileName}.img");
+                WriteAllBytesSlow(imageFile);
+                created.Add(imageFile);
+            }
+            else
+            {
+                imageFile = Path.Combine(outputDir, $"{baseFileName}.raw");
+                WriteAllBytesSlow(imageFile);
+                created.Add(imageFile);
+            }
+
+            return new ExtractResult(created, trackResults, ChdError.Chderrnone);
+        }
+        catch (Exception ex)
+        {
+            return new ExtractResult(created, trackResults,
+                ex is InvalidDataException ? ChdError.Chderrdecompressionerror : ChdError.Chderrwriteerror);
+        }
     }
 
     private void WriteAllBytesSlow(string path)
@@ -963,26 +1010,42 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 
     private void WriteTrackToFile(ChdTrackInfo track, string path)
     {
+        var err = TryWriteTrackToFile(track, path);
+        if (err != ChdError.Chderrnone)
+            throw new InvalidDataException($"Failed to write track {track.TrackNumber}: {err}");
+    }
+
+    private ChdError TryWriteTrackToFile(ChdTrackInfo track, string path)
+    {
         var unitBytes = UnitBytes;
         var startByte = track.StartFrame * unitBytes;
         var totalBytes = (ulong)(track.Frames + track.ExtraFrames) * unitBytes;
 
-        using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024);
-        var buf = new byte[HunkBytes];
-        var hunkSize = HunkBytes;
-        var remaining = totalBytes;
-        var offset = startByte;
-
-        while (remaining > 0)
+        try
         {
-            var toRead = (int)Math.Min(hunkSize, remaining);
-            var err = Read(offset, buf, 0, toRead);
-            if (err != ChdError.Chderrnone)
-                throw new InvalidDataException($"Failed to read track data at offset {offset}: {err}");
+            using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024);
+            var buf = new byte[HunkBytes];
+            var hunkSize = HunkBytes;
+            var remaining = totalBytes;
+            var offset = startByte;
 
-            fs.Write(buf, 0, toRead);
-            offset += (ulong)toRead;
-            remaining -= (ulong)toRead;
+            while (remaining > 0)
+            {
+                var toRead = (int)Math.Min(hunkSize, remaining);
+                var err = Read(offset, buf, 0, toRead);
+                if (err != ChdError.Chderrnone)
+                    return err;
+
+                fs.Write(buf, 0, toRead);
+                offset += (ulong)toRead;
+                remaining -= (ulong)toRead;
+            }
+
+            return ChdError.Chderrnone;
+        }
+        catch (Exception)
+        {
+            return ChdError.Chderrwriteerror;
         }
     }
 

@@ -118,7 +118,9 @@ public sealed class EccVerifyTests
         sector[0x00f] = 1;
 
         for (var i = 0x010; i < 0x80c; i++)
+        {
             sector[i] = (byte)(i & 0xff);
+        }
 
         CdRom.EccGenerate(sector, 0);
         Assert.True(CdRom.EccVerify(sector, 0));

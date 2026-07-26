@@ -73,7 +73,7 @@ internal static partial class ChdTocParser
             if (fields.Count == 0) continue;
 
             if (!fields.TryGetValue("TRACK", out var trackNumStr)) continue;
-            if (!int.TryParse(trackNumStr, out var trackNum)) continue;
+            if (!int.TryParse(trackNumStr, CultureInfo.InvariantCulture, out var trackNum)) continue;
             if (trackNum is < 1 or > 99) continue;
 
             if (!fields.TryGetValue("TYPE", out var typeStr)) continue;
@@ -99,7 +99,7 @@ internal static partial class ChdTocParser
                     var pgHasData = pgTypeStr.StartsWith('V');
                     if (pgHasData)
                     {
-                        pgTypeStr = pgTypeStr.Substring(1);
+                        pgTypeStr = pgTypeStr[1..];
                     }
 
                     (pgType, pgDataSize) = ParseTypeString(pgTypeStr);

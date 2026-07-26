@@ -18,8 +18,8 @@ public sealed class ExtractTests
             using (chd)
             {
                 var created = chd!.ExtractToDirectory(outputDir, "test");
-                Assert.Contains(created, f => f.EndsWith(".bin"));
-                Assert.Contains(created, f => f.EndsWith(".cue"));
+                Assert.Contains(created, f => f.EndsWith(".bin", StringComparison.Ordinal));
+                Assert.Contains(created, f => f.EndsWith(".cue", StringComparison.Ordinal));
                 Assert.True(File.Exists(Path.Combine(outputDir, "test.bin")));
                 Assert.True(File.Exists(Path.Combine(outputDir, "test.cue")));
             }
@@ -46,8 +46,8 @@ public sealed class ExtractTests
                 Assert.True(result.IsCompleteSuccess);
                 Assert.False(result.HasTrackFailures);
                 Assert.Empty(result.TrackResults);
-                Assert.Contains(result.CreatedFiles, f => f.EndsWith(".bin"));
-                Assert.Contains(result.CreatedFiles, f => f.EndsWith(".cue"));
+                Assert.Contains(result.CreatedFiles, f => f.EndsWith(".bin", StringComparison.Ordinal));
+                Assert.Contains(result.CreatedFiles, f => f.EndsWith(".cue", StringComparison.Ordinal));
             }
         }
         finally
@@ -72,7 +72,7 @@ public sealed class ExtractTests
                 Assert.True(result.IsCompleteSuccess);
                 Assert.False(result.HasTrackFailures);
                 Assert.Empty(result.TrackResults);
-                Assert.Contains(result.CreatedFiles, f => f.EndsWith(".raw"));
+                Assert.Contains(result.CreatedFiles, f => f.EndsWith(".raw", StringComparison.Ordinal));
                 Assert.True(File.Exists(Path.Combine(outputDir, "test.raw")));
             }
         }

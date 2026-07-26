@@ -17,7 +17,7 @@ public sealed class CliIntegrationTests
                 StringComparison.OrdinalIgnoreCase);
             if (testBinIdx >= 0)
             {
-                var slnRoot = baseDir.Substring(0, testBinIdx);
+                var slnRoot = baseDir[..testBinIdx];
                 return Path.Combine(slnRoot, "CHDSharpCli", "bin", "Debug",
                     "net10.0", "CHDSharpCli.dll");
             }
@@ -54,10 +54,10 @@ public sealed class CliIntegrationTests
 
         Assert.Equal(0, exitCode);
         // Serilog debug output may prepend metadata dump; check the actual TOC content
-        Assert.Contains("CD-ROM", output);
-        Assert.Contains("MODE1/2048", output);
-        Assert.Contains("AUDIO", output);
-        Assert.Contains("Track", output);
+        Assert.Contains("CD-ROM", output, StringComparison.Ordinal);
+        Assert.Contains("MODE1/2048", output, StringComparison.Ordinal);
+        Assert.Contains("AUDIO", output, StringComparison.Ordinal);
+        Assert.Contains("Track", output, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public sealed class CliIntegrationTests
         var (exitCode, output) = RunCli("--toc", $"\"{path}\"");
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("No CD/GD-ROM track metadata", output);
+        Assert.Contains("No CD/GD-ROM track metadata", output, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -77,9 +77,9 @@ public sealed class CliIntegrationTests
         var (exitCode, output) = RunCli("--cue", $"\"{path}\"");
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("TRACK 01 MODE1/2048", output);
-        Assert.Contains("TRACK 02 AUDIO", output);
-        Assert.Contains("INDEX 01 00:00:00", output);
+        Assert.Contains("TRACK 01 MODE1/2048", output, StringComparison.Ordinal);
+        Assert.Contains("TRACK 02 AUDIO", output, StringComparison.Ordinal);
+        Assert.Contains("INDEX 01 00:00:00", output, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -89,7 +89,7 @@ public sealed class CliIntegrationTests
         var (exitCode, output) = RunCli("--cue", $"\"{path}\"", "custom.bin");
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("FILE \"custom.bin\"", output);
+        Assert.Contains("FILE \"custom.bin\"", output, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -99,7 +99,7 @@ public sealed class CliIntegrationTests
         var (exitCode, output) = RunCli("--cue", $"\"{path}\"");
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("CUE generation failed", output);
+        Assert.Contains("CUE generation failed", output, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public sealed class CliIntegrationTests
         var (exitCode, output) = RunCli("--classify", $"\"{path}\"");
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("cd", output);
+        Assert.Contains("cd", output, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -119,7 +119,7 @@ public sealed class CliIntegrationTests
         var (exitCode, output) = RunCli("--classify", $"\"{path}\"");
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("unknown/raw", output);
+        Assert.Contains("unknown/raw", output, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public sealed class CliIntegrationTests
         var (exitCode, output) = RunCli("--classify", $"\"{path}\"");
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("Classify failed", output);
+        Assert.Contains("Classify failed", output, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -138,8 +138,8 @@ public sealed class CliIntegrationTests
         var (exitCode, output) = RunCli();
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("--toc", output);
-        Assert.Contains("--cue", output);
-        Assert.Contains("--classify", output);
+        Assert.Contains("--toc", output, StringComparison.Ordinal);
+        Assert.Contains("--cue", output, StringComparison.Ordinal);
+        Assert.Contains("--classify", output, StringComparison.Ordinal);
     }
 }

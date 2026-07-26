@@ -49,9 +49,9 @@ public sealed class CorpusTests
     public void Deep_verify(Entry entry, string path)
     {
         using var fs = File.OpenRead(path);
-        var err = Chd.CheckFile(fs, path, deepCheck: true, out var ver, out _, out _);
+        var err = Chd.CheckFile(fs, path, true, out var ver, out _, out _);
 
-        if (entry.Expect == "invalid")
+        if (string.Equals(entry.Expect, "invalid", StringComparison.Ordinal))
         {
             Assert.NotEqual(ChdError.Chderrnone, err);
         }
@@ -69,7 +69,7 @@ public sealed class CorpusTests
         var err = ChdFile.Open(path, out var chd);
         using (chd)
         {
-            if (entry.Expect == "invalid")
+            if (string.Equals(entry.Expect, "invalid", StringComparison.Ordinal))
             {
                 Assert.NotEqual(ChdError.Chderrnone, err);
                 return;
@@ -107,7 +107,7 @@ public sealed class CorpusTests
     public void V5_tiny_rejected_gracefully()
     {
         var path = Path.Combine(TestDataDir, "v5_tiny.chd");
-        var err = Chd.CheckFile(File.OpenRead(path), path, deepCheck: false, out _, out _, out _);
+        var err = Chd.CheckFile(File.OpenRead(path), path, false, out _, out _, out _);
         Assert.NotEqual(ChdError.Chderrnone, err);
     }
 }

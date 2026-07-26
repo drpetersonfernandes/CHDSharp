@@ -19,7 +19,7 @@ internal static class ChdMetaData
     private static readonly Action<ILogger, int, Exception?> LogMetaDataBinary =
         LoggerMessage.Define<int>(LogLevel.Debug, new EventId(3), "Data: Binary Data Length {Length}");
 
-    private static readonly uint ChdMdflagsChecksum = 0x01;
+    private const uint ChdMdflagsChecksum = 0x01;
 
     private const uint MaxMetadataEntryBytes = 1024 * 1024;
 

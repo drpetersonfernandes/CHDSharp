@@ -50,7 +50,7 @@ internal class Decoder
     /// <summary>Closes and disposes the input stream.</summary>
     internal void CloseStream()
     {
-        Stream?.Dispose();
+        Stream.Dispose();
     }
 
     /// <summary>Normalises the range by reading bytes from the stream until <see cref="Range"/> >= <see cref="KTopValue"/>.</summary>

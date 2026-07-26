@@ -15,8 +15,8 @@ public sealed class TrackInfoEdgeCaseTests
         using (chd)
         {
             var cue = chd!.GenerateCueSheet("test.bin");
-            Assert.Contains("MODE1/2048", cue);
-            Assert.Contains("AUDIO", cue);
+            Assert.Contains("MODE1/2048", cue, StringComparison.Ordinal);
+            Assert.Contains("AUDIO", cue, StringComparison.Ordinal);
         }
     }
 
@@ -33,8 +33,8 @@ public sealed class TrackInfoEdgeCaseTests
         using (chd)
         {
             var cue = chd!.GenerateCueSheet("test.bin");
-            Assert.DoesNotContain("PREGAP", cue);
-            Assert.DoesNotContain("POSTGAP", cue);
+            Assert.DoesNotContain("PREGAP", cue, StringComparison.Ordinal);
+            Assert.DoesNotContain("POSTGAP", cue, StringComparison.Ordinal);
         }
     }
 
@@ -46,8 +46,8 @@ public sealed class TrackInfoEdgeCaseTests
         using (chd)
         {
             var cue = chd!.GenerateCueSheet("test.bin");
-            Assert.Contains("TRACK 01", cue);
-            Assert.Contains("INDEX 01 00:00:00", cue);
+            Assert.Contains("TRACK 01", cue, StringComparison.Ordinal);
+            Assert.Contains("INDEX 01 00:00:00", cue, StringComparison.Ordinal);
         }
     }
 
@@ -242,15 +242,15 @@ public sealed class TrackInfoEdgeCaseTests
         using (chd)
         {
             var toc = chd!.ExportToc();
-            Assert.Contains("Version: V5", toc);
-            Assert.Contains("Type: CD-ROM", toc);
-            Assert.Contains("Hunk size:", toc);
-            Assert.Contains("Unit size:", toc);
-            Assert.Contains("Track", toc);
-            Assert.Contains("Type", toc);
-            Assert.Contains("Frames", toc);
-            Assert.Contains("Start", toc);
-            Assert.Contains("Sector Size", toc);
+            Assert.Contains("Version: V5", toc, StringComparison.Ordinal);
+            Assert.Contains("Type: CD-ROM", toc, StringComparison.Ordinal);
+            Assert.Contains("Hunk size:", toc, StringComparison.Ordinal);
+            Assert.Contains("Unit size:", toc, StringComparison.Ordinal);
+            Assert.Contains("Track", toc, StringComparison.Ordinal);
+            Assert.Contains("Type", toc, StringComparison.Ordinal);
+            Assert.Contains("Frames", toc, StringComparison.Ordinal);
+            Assert.Contains("Start", toc, StringComparison.Ordinal);
+            Assert.Contains("Sector Size", toc, StringComparison.Ordinal);
         }
     }
 
@@ -262,7 +262,7 @@ public sealed class TrackInfoEdgeCaseTests
         using (chd)
         {
             var toc = chd!.ExportToc();
-            Assert.Contains("CD-ROM", toc);
+            Assert.Contains("CD-ROM", toc, StringComparison.Ordinal);
         }
     }
 
@@ -307,10 +307,10 @@ public sealed class TrackInfoEdgeCaseTests
             var cue = chd!.GenerateCueSheet("test.bin");
 
             // Track 1: 600 frames = 8 minutes
-            Assert.Contains("00:08:00", cue);
+            Assert.Contains("00:08:00", cue, StringComparison.Ordinal);
 
             // Track 1 starts at frame 0 = 00:00:00
-            Assert.Contains("00:00:00", cue);
+            Assert.Contains("00:00:00", cue, StringComparison.Ordinal);
         }
     }
 

@@ -613,7 +613,7 @@ public static class Chd
             }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
             allTasks.Add(hashingThread);
 
-            Task.WaitAll(allTasks.ToArray());
+            Task.WaitAll(allTasks.ToArray(), ct);
 
 
             LogVerifyingComplete(Log, null);
@@ -629,8 +629,8 @@ public static class Chd
                 return errMaster;
 
             var tmp = Array.Empty<byte>();
-            md5Check?.TransformFinalBlock(tmp, 0, 0);
-            sha1Check?.TransformFinalBlock(tmp, 0, 0);
+            md5Check.TransformFinalBlock(tmp, 0, 0);
+            sha1Check.TransformFinalBlock(tmp, 0, 0);
 
             // here it is now using the rawsha1 value from the header to validate the raw binary data.
             if (!Util.IsAllZeroArray(chd.Md5) && md5Check is { Hash: not null } && !Util.ByteArrEquals(chd.Md5, md5Check.Hash))
@@ -648,7 +648,7 @@ public static class Chd
         finally
         {
             ts.Cancel();
-            Task.WaitAll(allTasks.ToArray());
+            Task.WaitAll(allTasks.ToArray(), ts.Token);
             ts.Dispose();
             blocksToDecompress.Dispose();
             blocksToHash.Dispose();

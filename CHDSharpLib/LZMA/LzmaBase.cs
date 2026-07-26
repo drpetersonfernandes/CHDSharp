@@ -74,7 +74,7 @@ internal abstract class Base
     internal const uint KNumMidLenSymbols = 1 << KNumMidLenBits;
     /// <summary>Total number of length symbols.</summary>
     internal const uint KNumLenSymbols = KNumLowLenSymbols + KNumMidLenSymbols +
-                                       (1 << KNumHighLenBits);
+                                         (1 << KNumHighLenBits);
     /// <summary>Maximum match length.</summary>
     internal const uint KMatchMaxLen = KMatchMinLen + KNumLenSymbols - 1;
 }

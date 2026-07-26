@@ -13,7 +13,8 @@ public class BoundsValidationTests
 
     private static byte[] Be64(ulong v)
     {
-        return [
+        return
+        [
             (byte)(v >> 56), (byte)(v >> 48), (byte)(v >> 40), (byte)(v >> 32),
             (byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v
         ];
@@ -135,7 +136,7 @@ public class BoundsValidationTests
     [Fact]
     public void Flac_no_input_data_returns_invalid_data()
     {
-        var buffIn = new byte[] { (byte)'L' };
+        var buffIn = new[] { (byte)'L' };
         var buffOut = new byte[4096];
         var codec = new ChdCodecState();
 
@@ -169,23 +170,23 @@ public class BoundsValidationTests
     public void LinkSelfBlocks_offset_beyond_map_rejected_via_open()
     {
         var ms = MakeV3Stream(
-            totalblocks: 2,
-            blocksize: 512,
-            totalbytes: 1024,
-            writeMapEntries: stream =>
+            2,
+            512,
+            1024,
+            stream =>
             {
                 // Entry 0: valid compressed hunk at offset 256
                 WriteMapEntryV3(stream,
-                    offset: 256,
-                    crc: 0,
-                    lenByte0: 0, lenByte1: 2, lenByte2: 0, // length = 512
-                    flags: (byte)MapEntryFlag.Mapentrytypecompressed);
+                    256,
+                    0,
+                    0, 2, 0, // length = 512
+                    (byte)MapEntryFlag.Mapentrytypecompressed);
                 // Entry 1: self-reference with offset 999 (way beyond map length of 2)
                 WriteMapEntryV3(stream,
-                    offset: 999,
-                    crc: 0,
-                    lenByte0: 0, lenByte1: 0, lenByte2: 0, // length = 0
-                    flags: (byte)MapEntryFlag.Mapentrytypeselfhunk);
+                    999,
+                    0,
+                    0, 0, 0, // length = 0
+                    (byte)MapEntryFlag.Mapentrytypeselfhunk);
             });
 
         // Append enough padding so stream doesn't trim
@@ -202,23 +203,23 @@ public class BoundsValidationTests
     public void Self_reference_with_valid_offset_succeeds()
     {
         var ms = MakeV3Stream(
-            totalblocks: 2,
-            blocksize: 512,
-            totalbytes: 1024,
-            writeMapEntries: stream =>
+            2,
+            512,
+            1024,
+            stream =>
             {
                 // Entry 0: valid compressed hunk
                 WriteMapEntryV3(stream,
-                    offset: 256,
-                    crc: 0,
-                    lenByte0: 0, lenByte1: 2, lenByte2: 0,
-                    flags: (byte)MapEntryFlag.Mapentrytypecompressed);
+                    256,
+                    0,
+                    0, 2, 0,
+                    (byte)MapEntryFlag.Mapentrytypecompressed);
                 // Entry 1: self-reference to entry 0
                 WriteMapEntryV3(stream,
-                    offset: 0,
-                    crc: 0,
-                    lenByte0: 0, lenByte1: 0, lenByte2: 0,
-                    flags: (byte)MapEntryFlag.Mapentrytypeselfhunk);
+                    0,
+                    0,
+                    0, 0, 0,
+                    (byte)MapEntryFlag.Mapentrytypeselfhunk);
             });
 
         ms.Seek(0, SeekOrigin.End);

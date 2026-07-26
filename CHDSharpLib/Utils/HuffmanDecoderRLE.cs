@@ -39,14 +39,14 @@ internal class HuffmanDecoderRle : HuffmanDecoder
         if (data < 0x100)
         {
             _prevdata += data;
-            return _prevdata;
         }
         else
         {
             _rlecount = CodeToRleCount((int)data);
             _rlecount--;
-            return _prevdata;
         }
+
+        return _prevdata;
     }
 
     /// <summary>Converts a Huffman symbol to its corresponding RLE repeat count.</summary>

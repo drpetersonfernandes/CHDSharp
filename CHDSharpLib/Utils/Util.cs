@@ -9,7 +9,8 @@ internal static class Util
     internal static bool IsAllZeroArray(byte[] b)
     {
         foreach (var t in b)
-            if (t != 0) return false;
+            if (t != 0)
+                return false;
 
         return true;
     }

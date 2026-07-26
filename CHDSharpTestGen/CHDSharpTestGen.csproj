@@ -10,4 +10,11 @@
         <ProjectReference Include="..\CHDSharpLib\CHDSharpLib.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Update="Meziantou.Analyzer" Version="3.0.126">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
+    </ItemGroup>
+
 </Project>

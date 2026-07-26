@@ -38,6 +38,10 @@
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" Condition="'$(TargetFramework)' == 'net10.0'" />
       <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.301" PrivateAssets="All" />
       <PackageReference Include="ZstdSharp.Port" Version="0.8.8" />
+      <PackageReference Update="Meziantou.Analyzer" Version="3.0.126">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
     </ItemGroup>
 
     <ItemGroup>

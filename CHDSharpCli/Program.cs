@@ -26,12 +26,13 @@ internal class Program
             .WriteTo.Console(formatProvider: null, outputTemplate: "{Message:lj}{NewLine}{Exception}")
             .CreateLogger();
 
+        Log.Logger = serilogLogger;
         Chd.LoggerFactory = new SerilogLoggerFactory(serilogLogger);
 
         var sw = new Stopwatch();
         sw.Start();
 
-        if (args.Length == 0)
+        if (args.Length == 0 || args[0] is "--help" or "-h" or "-?")
         {
             serilogLogger.Information("Usage:");
             serilogLogger.Information("  CHDSharpCli <directory> [<directory> ...]      Verify all .chd files in directories");
@@ -47,42 +48,42 @@ internal class Program
         switch (args[0])
         {
             case "--random" when args.Length < 2:
-                serilogLogger.Information("--random requires a .chd file path");
+                serilogLogger.Warning("--random requires a .chd file path");
                 return;
             case "--random":
                 RandomAccessTest(args[1].Replace("\"", ""));
                 serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
                 return;
             case "--list" when args.Length < 2:
-                serilogLogger.Information("--list requires a text file of .chd paths");
+                serilogLogger.Warning("--list requires a text file of .chd paths");
                 return;
             case "--list":
                 VerifyList(args[1].Replace("\"", ""));
                 serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
                 return;
             case "--parent" when args.Length < 3:
-                serilogLogger.Information("--parent requires <child.chd> <parent.chd>");
+                serilogLogger.Warning("--parent requires <child.chd> <parent.chd>");
                 return;
             case "--parent":
                 ParentTest(args[1].Replace("\"", ""), args[2].Replace("\"", ""));
                 serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
                 return;
             case "--toc" when args.Length < 2:
-                serilogLogger.Information("--toc requires a .chd file path");
+                serilogLogger.Warning("--toc requires a .chd file path");
                 return;
             case "--toc":
                 TocTest(args[1].Replace("\"", ""));
                 serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
                 return;
             case "--cue" when args.Length < 2:
-                serilogLogger.Information("--cue requires a .chd file path");
+                serilogLogger.Warning("--cue requires a .chd file path");
                 return;
             case "--cue":
                 CueTest(args[1].Replace("\"", ""), args.Length >= 3 ? args[2].Replace("\"", "") : null);
                 serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
                 return;
             case "--classify" when args.Length < 2:
-                serilogLogger.Information("--classify requires a .chd file path");
+                serilogLogger.Warning("--classify requires a .chd file path");
                 return;
             case "--classify":
                 ClassifyTest(args[1].Replace("\"", ""));
@@ -93,6 +94,11 @@ internal class Program
         foreach (var arg in args)
         {
             var sDir = arg.Replace("\"", "");
+            if (!Directory.Exists(sDir))
+            {
+                serilogLogger.Warning("Directory not found: {Path}", sDir);
+                continue;
+            }
             var di = new DirectoryInfo(sDir);
             Checkdir(di);
         }
@@ -115,7 +121,7 @@ internal class Program
         var err = ChdFile.Open(childPath, parentPath, out var chd);
         if (err != ChdError.Chderrnone)
         {
-            log.Information("  Open(child, parent) => {Error}", err);
+            log.Warning("  Open(child, parent) => {Error}", err);
             return;
         }
 
@@ -156,13 +162,16 @@ internal class Program
     private static void VerifyList(string listFile)
     {
         var log = Log.Logger;
-        if (!File.Exists(listFile))
+        string[] lines;
+        try
         {
-            log.Information("List file not found: {Path}", listFile);
+            lines = File.ReadAllLines(listFile);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            log.Warning("Cannot read list file {Path}: {Message}", listFile, ex.Message);
             return;
         }
-
-        var lines = File.ReadAllLines(listFile);
         int pass = 0, fail = 0, skip = 0;
         var failures = new List<string>();
 
@@ -189,8 +198,11 @@ internal class Program
             }
             catch (Exception ex)
             {
-                result = new ChdResult(ChdError.Chderrdecompressionerror, null, null, null);
-                log.Information("       exception: {Message}", ex.Message);
+                var errCode = ex is IOException or UnauthorizedAccessException
+                    ? ChdError.Chderrfilenotfound
+                    : ChdError.Chderrdecompressionerror;
+                result = new ChdResult(errCode, null, null, null);
+                log.Warning("       exception: {Message}", ex.Message);
             }
 
             fileSw.Stop();
@@ -226,82 +238,81 @@ internal class Program
         var err = ChdFile.Open(file, out var chd);
         if (err != ChdError.Chderrnone)
         {
-            log.Information("Open failed: {Error}", err);
+            log.Warning("Open failed: {Error}", err);
             return;
         }
 
         using (chd)
         {
-            if (chd != null)
+            if (chd == null) return;
+
+            log.Information("Opened {Info}", chd.ToString());
+            log.Information("  IsChild={IsChild}, Metadata entries={Count}", chd.IsChild, chd.Metadata.Count);
+            foreach (var meta in chd.Metadata)
+                log.Information("    {Meta}", meta.ToString());
+
+            var hbuf = new byte[chd.HunkBytes];
+            var probes = chd.HunkCount <= 1
+                ? new uint[] { 0 }
+                : new uint[] { 0, chd.HunkCount / 2, chd.HunkCount - 1 };
+            foreach (var h in probes)
             {
-                log.Information("Opened {Info}", chd.ToString());
-                log.Information("  IsChild={IsChild}, Metadata entries={Count}", chd.IsChild, chd.Metadata.Count);
-                foreach (var meta in chd.Metadata)
-                    log.Information("    {Meta}", meta.ToString());
+                err = chd.ReadHunk(h, hbuf);
+                log.Information("  ReadHunk({Hunk}) => {Error}", h, err);
+                if (err != ChdError.Chderrnone)
+                    return;
+            }
 
-                var hbuf = new byte[chd.HunkBytes];
-                var probes = chd.HunkCount <= 1
-                    ? new uint[] { 0 }
-                    : new uint[] { 0, chd.HunkCount / 2, chd.HunkCount - 1 };
-                foreach (var h in probes)
+            var expectedSha1 = chd.RawSha1;
+            var expectedMd5 = chd.Md5;
+            var haveSha1 = !IsAllZero(expectedSha1);
+            var haveMd5 = !IsAllZero(expectedMd5);
+
+            if (!haveSha1 && !haveMd5)
+            {
+                log.Information("  No raw-data hash stored in header; skipping full-image validation.");
+                return;
+            }
+
+            using var sha1 = haveSha1 ? SHA1.Create() : null;
+            using var md5 = haveMd5 ? MD5.Create() : null;
+            var buf = new byte[chd.HunkBytes];
+            var remaining = chd.TotalBytes;
+            ulong offset = 0;
+            while (remaining > 0)
+            {
+                var chunk = (int)Math.Min((ulong)buf.Length, remaining);
+                err = chd.Read(offset, buf, 0, chunk);
+                if (err != ChdError.Chderrnone)
                 {
-                    err = chd.ReadHunk(h, hbuf);
-                    log.Information("  ReadHunk({Hunk}) => {Error}", h, err);
-                    if (err != ChdError.Chderrnone)
-                        return;
-                }
-
-                var expectedSha1 = chd.RawSha1;
-                var expectedMd5 = chd.Md5;
-                var haveSha1 = !IsAllZero(expectedSha1);
-                var haveMd5 = !IsAllZero(expectedMd5);
-
-                if (!haveSha1 && !haveMd5)
-                {
-                    log.Information("  No raw-data hash stored in header; skipping full-image validation.");
+                    log.Warning("  Read(offset={Offset}) => {Error}", offset, err);
                     return;
                 }
 
-                using var sha1 = haveSha1 ? SHA1.Create() : null;
-                using var md5 = haveMd5 ? MD5.Create() : null;
-                var buf = new byte[chd.HunkBytes];
-                var remaining = chd.TotalBytes;
-                ulong offset = 0;
-                while (remaining > 0)
-                {
-                    var chunk = (int)Math.Min((ulong)buf.Length, remaining);
-                    err = chd.Read(offset, buf, 0, chunk);
-                    if (err != ChdError.Chderrnone)
-                    {
-                        log.Information("  Read(offset={Offset}) => {Error}", offset, err);
-                        return;
-                    }
+                sha1?.TransformBlock(buf, 0, chunk, null, 0);
+                md5?.TransformBlock(buf, 0, chunk, null, 0);
+                offset += (ulong)chunk;
+                remaining -= (ulong)chunk;
+            }
 
-                    sha1?.TransformBlock(buf, 0, chunk, null, 0);
-                    md5?.TransformBlock(buf, 0, chunk, null, 0);
-                    offset += (ulong)chunk;
-                    remaining -= (ulong)chunk;
-                }
+            sha1?.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+            md5?.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
 
-                sha1?.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
-                md5?.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+            if (haveSha1)
+            {
+                var match = sha1 is { Hash: not null } && ByteEquals(sha1.Hash, expectedSha1);
+                log.Information("  Full-image raw SHA1 {Result} header raw SHA1", match ? "MATCHES" : "DIFFERS from");
+                if (sha1 is { Hash: not null }) log.Information("    computed: {Hash}", ToHex(sha1.Hash));
+                log.Information("    header:   {Hash}", ToHex(expectedSha1));
+            }
 
-                if (haveSha1)
-                {
-                    var match = sha1 is { Hash: not null } && ByteEquals(sha1.Hash, expectedSha1);
-                    log.Information("  Full-image raw SHA1 {Result} header raw SHA1", match ? "MATCHES" : "DIFFERS from");
-                    if (sha1 is { Hash: not null }) log.Information("    computed: {Hash}", ToHex(sha1.Hash));
-                    log.Information("    header:   {Hash}", ToHex(expectedSha1));
-                }
-
-                if (haveMd5)
-                {
-                    var match = md5 is { Hash: not null } && ByteEquals(md5.Hash, expectedMd5);
-                    log.Information("  Full-image MD5 {Result} header MD5", match ? "MATCHES" : "DIFFERS from");
-                    if (md5?.Hash != null)
-                        log.Information("    computed: {Hash}", ToHex(md5.Hash));
-                    log.Information("    header:   {Hash}", ToHex(expectedMd5));
-                }
+            if (haveMd5)
+            {
+                var match = md5 is { Hash: not null } && ByteEquals(md5.Hash, expectedMd5);
+                log.Information("  Full-image MD5 {Result} header MD5", match ? "MATCHES" : "DIFFERS from");
+                if (md5 is { Hash: not null })
+                    log.Information("    computed: {Hash}", ToHex(md5.Hash));
+                log.Information("    header:   {Hash}", ToHex(expectedMd5));
             }
         }
     }
@@ -311,8 +322,10 @@ internal class Program
     /// </summary>
     /// <param name="a">The byte array to check.</param>
     /// <returns><c>true</c> if all bytes are zero; otherwise <c>false</c>.</returns>
-    private static bool IsAllZero(byte[] a)
+    private static bool IsAllZero(byte[]? a)
     {
+        if (a == null) return true;
+
         foreach (var b in a)
             if (b != 0)
                 return false;
@@ -326,8 +339,10 @@ internal class Program
     /// <param name="a">The first byte array.</param>
     /// <param name="b">The second byte array.</param>
     /// <returns><c>true</c> if the arrays have identical length and content; otherwise <c>false</c>.</returns>
-    private static bool ByteEquals(byte[] a, byte[] b)
+    private static bool ByteEquals(byte[]? a, byte[]? b)
     {
+        if (a == null && b == null) return true;
+        if (a == null || b == null) return false;
         if (a.Length != b.Length) return false;
 
         for (var i = 0; i < a.Length; i++)
@@ -354,14 +369,45 @@ internal class Program
     /// <param name="di">The directory to scan.</param>
     private static void Checkdir(DirectoryInfo di)
     {
-        var fi = di.GetFiles("*.chd");
-        foreach (var f in fi)
+        FileInfo[] fi;
+        try
         {
-            using Stream s = new FileStream(f.FullName, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 4096);
-            Chd.CheckFile(s, f.Name, true);
+            fi = di.GetFiles("*.chd");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Log.Logger.Warning("Access denied listing {Dir}: {Message}", di.FullName, ex.Message);
+            return;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return;
         }
 
-        var arrdi = di.GetDirectories();
+        foreach (var f in fi)
+        {
+            try
+            {
+                using Stream s = new FileStream(f.FullName, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 4096);
+                Chd.CheckFile(s, f.Name, true);
+            }
+            catch (Exception ex)
+            {
+                Log.Logger.Warning("[FAIL] {Name}: {Message}", f.Name, ex.Message);
+            }
+        }
+
+        DirectoryInfo[] arrdi;
+        try
+        {
+            arrdi = di.GetDirectories();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Log.Logger.Warning("Access denied listing subdirs of {Dir}: {Message}", di.FullName, ex.Message);
+            return;
+        }
+
         foreach (var d in arrdi)
         {
             Checkdir(d);
@@ -378,13 +424,15 @@ internal class Program
         var err = ChdFile.Open(file, out var chd);
         if (err != ChdError.Chderrnone)
         {
-            log.Information("Open failed: {Error}", err);
+            log.Warning("Open failed: {Error}", err);
             return;
         }
 
         using (chd)
         {
-            Console.WriteLine(chd?.ExportToc() ?? "Unable to read CHD.");
+            if (chd == null) return;
+
+            log.Information("{Toc}", chd.ExportToc());
         }
     }
 
@@ -399,7 +447,7 @@ internal class Program
         var err = ChdFile.Open(file, out var chd);
         if (err != ChdError.Chderrnone)
         {
-            log.Information("Open failed: {Error}", err);
+            log.Warning("Open failed: {Error}", err);
             return;
         }
 
@@ -410,11 +458,11 @@ internal class Program
             binFileName ??= Path.GetFileNameWithoutExtension(file) + ".bin";
             try
             {
-                Console.WriteLine(chd.GenerateCueSheet(binFileName));
+                log.Information("{Cue}", chd.GenerateCueSheet(binFileName));
             }
             catch (InvalidOperationException ex)
             {
-                Console.WriteLine("CUE generation failed: " + ex.Message);
+                log.Warning("CUE generation failed: {Message}", ex.Message);
             }
         }
     }
@@ -426,14 +474,15 @@ internal class Program
     /// <param name="file">Path to the CHD file.</param>
     private static void ClassifyTest(string file)
     {
+        var log = Log.Logger;
         var err = Chd.Classify(file, out var classification);
         if (err != ChdError.Chderrnone)
         {
-            Console.WriteLine("Classify failed: " + err);
+            log.Warning("Classify failed: {Error}", err);
             return;
         }
 
-        Console.WriteLine("{0}: {1}",
+        log.Information("{File}: {Classification}",
             Path.GetFileName(file),
             classification ?? "unknown/raw");
     }

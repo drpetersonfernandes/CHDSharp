@@ -347,4 +347,4 @@ public class HeaderAndApiTests
         Assert.Equal(ChdError.Chderrinvaliddata, err);
         Assert.Empty(entries);
     }
-    }
+}

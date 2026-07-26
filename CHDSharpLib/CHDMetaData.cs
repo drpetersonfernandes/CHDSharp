@@ -30,7 +30,7 @@ internal static class ChdMetaData
 
         var metaHashes = new List<byte[]>();
 
-        var metaErr = ReadMetaDataInternal(file, chd, true, out var entries, out _);
+        var metaErr = ReadMetaDataInternal(file, chd, true, out var entries);
         if (metaErr != ChdError.Chderrnone)
             return metaErr;
 
@@ -61,7 +61,7 @@ internal static class ChdMetaData
         out List<ChdMetadataEntry> entries)
     {
         entries = [];
-        var metaErr = ReadMetaDataInternal(file, chd, false, out var internalEntries, out _);
+        var metaErr = ReadMetaDataInternal(file, chd, false, out var internalEntries);
         if (metaErr != ChdError.Chderrnone)
             return metaErr;
 
@@ -73,10 +73,9 @@ internal static class ChdMetaData
     }
 
     private static ChdError ReadMetaDataInternal(Stream file, ChdHeader chd,
-        bool collectHashes, out List<InternalEntry> entries, out List<InternalEntry> results)
+        bool collectHashes, out List<InternalEntry> entries)
     {
         entries = [];
-        results = [];
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
         var currentOffset = chd.Metaoffset;
@@ -113,18 +112,17 @@ internal static class ChdMetaData
                 hash = metadata_hash(metaTag, metaData);
             }
 
-            results.Add(new InternalEntry { Tag = tag, Data = metaData, Hash = hash });
+            entries.Add(new InternalEntry { Tag = tag, Data = metaData, Hash = hash });
 
             currentOffset = metaNext;
         }
 
-        entries = results;
         return ChdError.Chderrnone;
     }
 
     private static List<InternalEntry> ReadMetaDataInternal(Stream file, ChdHeader chd, bool collectHashes)
     {
-        var err = ReadMetaDataInternal(file, chd, collectHashes, out var entries, out _);
+        var err = ReadMetaDataInternal(file, chd, collectHashes, out var entries);
         return err == ChdError.Chderrnone ? entries : [];
     }
 

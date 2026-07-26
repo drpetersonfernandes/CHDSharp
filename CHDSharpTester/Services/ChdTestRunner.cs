@@ -20,6 +20,7 @@ public class ChdTestRunner
     /// <param name="files">The list of CHD file entries to test.</param>
     /// <param name="chdmanPath">The path to the chdman executable (can be empty if chdman is unavailable).</param>
     /// <param name="progress">An optional progress reporter for UI updates.</param>
+    /// <param name="cancellationToken">A token to cancel the test run.</param>
     /// <returns>A <see cref="TestSessionResult"/> containing aggregated results for all files.</returns>
     public async Task<TestSessionResult> RunAsync(
         List<ChdFileEntry> files,

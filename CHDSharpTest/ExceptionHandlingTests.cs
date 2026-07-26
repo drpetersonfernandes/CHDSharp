@@ -159,11 +159,10 @@ public class ExceptionHandlingTests
     }
 
     [Fact]
-    public void ChdFile_dispose_async_calls_codec_dispose()
+    public async Task ChdFile_dispose_async_calls_codec_dispose()
     {
         var chd = OpenMinimalV5Chd();
-        var task = chd.DisposeAsync();
-        task.AsTask().GetAwaiter().GetResult();
+        await chd.DisposeAsync();
         // No exception means codec was disposed cleanly.
     }
 }

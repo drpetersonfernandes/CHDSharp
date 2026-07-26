@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using CHDSharp.Models;
 
 namespace CHDSharpTestGen;
 
@@ -47,21 +48,50 @@ internal static class Program
             Directory.Delete(_work, true);
         Directory.CreateDirectory(_work);
 
-        if (args.Contains("--avitest"))
-            return AviTest();
+        try
+        {
+            if (args.Contains("--avitest"))
+                return AviTest();
 
-        if (args.Contains("--hunkdebug"))
-            return HunkDebug(args[Array.IndexOf(args, "--hunkdebug") + 1]);
+            var hunkDebugIdx = Array.IndexOf(args, "--hunkdebug");
+            if (hunkDebugIdx >= 0)
+            {
+                if (hunkDebugIdx + 1 >= args.Length)
+                {
+                    Console.Error.WriteLine("--hunkdebug requires a CHD file path argument");
+                    return 1;
+                }
+                return HunkDebug(args[hunkDebugIdx + 1]);
+            }
 
-        BuildSources();
-        GenerateV1V2();
-        GenerateV3();
-        GenerateV4();
-        GenerateV5();
-        WriteManifest();
-        Directory.Delete(_work, true);
-        Console.WriteLine($"\ndone: {Manifest.Count} corpus files in {_outDir}");
-        return 0;
+            BuildSources();
+            GenerateV1V2();
+            GenerateV3();
+            GenerateV4();
+            GenerateV5();
+            WriteManifest();
+            Console.WriteLine($"\ndone: {Manifest.Count} corpus files in {_outDir}");
+            return 0;
+        }
+        finally
+        {
+            if (Directory.Exists(_work))
+                Directory.Delete(_work, true);
+        }
+    }
+
+    private static CHDSharp.ChdReader GetReaderForCodec(ChdCodec codec)
+    {
+        // ReSharper disable once SwitchExpressionHandlesSomeKnownEnumValuesWithExceptionInDefault
+        return codec switch
+        {
+            ChdCodec.Zlib => CHDSharp.ChdReaders.Zlib,
+            ChdCodec.Lzma => CHDSharp.ChdReaders.Lzma,
+            ChdCodec.Huffman => CHDSharp.ChdReaders.Huffman,
+            ChdCodec.Flac => CHDSharp.ChdReaders.Flac,
+            ChdCodec.Zstd => CHDSharp.ChdReaders.Zstd,
+            _ => throw new NotSupportedException($"Unsupported codec for hunk debug: {codec}")
+        };
     }
 
     private static int HunkDebug(string chdPath)
@@ -72,25 +102,35 @@ internal static class Program
         fs.Position = 16; // skip magic + length + version
         CHDSharp.ChdHeaders.ReadHeaderV5(fs, out var hdr);
 
+        var codec0 = hdr.Compression[0];
+        var reader = GetReaderForCodec(codec0);
+        Console.WriteLine($"codec slot 0: {codec0}");
+
         var buffer = new byte[hdr.Blocksize];
         var failures = 0;
         for (uint h = 0; h < hdr.Totalblocks; h++)
         {
             var me = hdr.Map[h];
-            if (me.Comptype != CHDSharp.Models.CompressionType.Compressiontype0)
+            if (me.Comptype != CompressionType.Compressiontype0)
                 continue;
 
             var buffIn = new byte[me.Length];
             fs.Position = (long)me.Offset;
             fs.ReadExactly(buffIn, 0, (int)me.Length);
 
-            var state = new CHDSharp.Models.ChdCodecState();
+            var state = new ChdCodecState();
             Array.Clear(buffer);
             try
             {
-                var err = CHDSharp.ChdReaders.Flac(buffIn, (int)me.Length, buffer, (int)hdr.Blocksize, state);
+                var err = reader(buffIn, (int)me.Length, buffer, (int)hdr.Blocksize, state);
+                if (h >= SourceData.RawHunks)
+                {
+                    failures++;
+                    Console.WriteLine($"hunk {h}: hunk index exceeds raw image size ({SourceData.RawHunks} hunks)");
+                    continue;
+                }
                 var match = buffer.AsSpan().SequenceEqual(raw.AsSpan((int)(h * hdr.Blocksize), (int)hdr.Blocksize));
-                if (err != CHDSharp.Models.ChdError.Chderrnone || !match)
+                if (err != ChdError.Chderrnone || !match)
                 {
                     failures++;
                     var firstDiff = -1;
@@ -109,7 +149,7 @@ internal static class Program
                 Console.WriteLine($"hunk {h}: EXCEPTION {ex.GetType().Name}: {ex.Message}");
             }
         }
-        Console.WriteLine($"{failures} failing flac hunks of {hdr.Totalblocks}");
+        Console.WriteLine($"{failures} failing {codec0} hunks of {hdr.Totalblocks}");
         return 0;
     }
 

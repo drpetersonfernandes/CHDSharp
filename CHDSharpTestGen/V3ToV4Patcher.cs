@@ -69,9 +69,10 @@ internal static class V3ToV4Patcher
         var offsetIter = metaOffset == 0 ? 0 : metaOffset - Delta;
         while (offsetIter != 0)
         {
-            var next = BinaryPrimitives.ReadUInt64BigEndian(dst.AsSpan((int)offsetIter + 8));
+            var pos = checked((int)offsetIter);
+            var next = BinaryPrimitives.ReadUInt64BigEndian(dst.AsSpan(pos + 8));
             if (next != 0)
-                BinaryPrimitives.WriteUInt64BigEndian(dst.AsSpan((int)offsetIter + 8), next - Delta);
+                BinaryPrimitives.WriteUInt64BigEndian(dst.AsSpan(pos + 8), next - Delta);
             offsetIter = next == 0 ? 0 : next - Delta;
         }
 
@@ -87,7 +88,7 @@ internal static class V3ToV4Patcher
         var offset = BinaryPrimitives.ReadUInt64BigEndian(file.AsSpan(36));
         while (offset != 0)
         {
-            var pos = (int)offset;
+            var pos = checked((int)offset);
             var tag = BinaryPrimitives.ReadUInt32BigEndian(file.AsSpan(pos));
             var lengthField = BinaryPrimitives.ReadUInt32BigEndian(file.AsSpan(pos + 4));
             var next = BinaryPrimitives.ReadUInt64BigEndian(file.AsSpan(pos + 8));
@@ -108,11 +109,11 @@ internal static class V3ToV4Patcher
 
         hashes.Sort((a, b) => a.AsSpan().SequenceCompareTo(b));
 
-        using var sha1 = SHA1.Create();
+        using var sha1 = SHA1.Create() ?? throw new InvalidOperationException("SHA1.Create() returned null");
         sha1.TransformBlock(rawSha1, 0, 20, null, 0);
         foreach (var entry in hashes)
             sha1.TransformBlock(entry, 0, 24, null, 0);
         sha1.TransformFinalBlock([], 0, 0);
-        return sha1.Hash!;
+        return sha1.Hash ?? throw new InvalidOperationException("SHA1 hash computation returned null");
     }
 }

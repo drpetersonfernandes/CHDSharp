@@ -7,7 +7,10 @@ internal static class AviWriter
     public static void Write(string path, int width, int height, int fps, int frames, int sampleRate)
     {
         var frameBytes = width * height * 2;
-        var samplesPerFrame = sampleRate / fps; // must divide exactly (44100 / 60 = 735)
+        if (sampleRate % fps != 0)
+            throw new ArgumentException($"sampleRate ({sampleRate}) must be evenly divisible by fps ({fps})");
+
+        var samplesPerFrame = sampleRate / fps;
         var totalSamples = samplesPerFrame * frames;
 
         var videoFrames = BuildVideoFrames(width, height, frames);
@@ -199,7 +202,7 @@ internal static class AviWriter
 
     private static void EndList(BinaryWriter w, long sizePos)
     {
-        PatchSize((MemoryStream)w.BaseStream, sizePos);
+        PatchSize(w.BaseStream as MemoryStream ?? throw new InvalidOperationException("writer must wrap a MemoryStream"), sizePos);
     }
 
     private static void Chunk(BinaryWriter w, string id, Action<BinaryWriter> body)
@@ -208,7 +211,7 @@ internal static class AviWriter
         var sizePos = w.BaseStream.Position;
         w.Write(0);
         body(w);
-        PatchSize((MemoryStream)w.BaseStream, sizePos);
+        PatchSize(w.BaseStream as MemoryStream ?? throw new InvalidOperationException("writer must wrap a MemoryStream"), sizePos);
         if ((w.BaseStream.Position & 1) == 1)
             w.Write((byte)0); // chunks are word-aligned
     }

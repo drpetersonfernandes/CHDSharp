@@ -27,6 +27,7 @@ internal sealed class DetRng
 
     public int Next(int maxExclusive)
     {
+        ArgumentOutOfRangeException.ThrowIfLessThanOrEqual(maxExclusive, 0);
         return (int)(NextU64() % (uint)maxExclusive);
     }
 

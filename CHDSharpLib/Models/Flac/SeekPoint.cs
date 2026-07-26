@@ -1,8 +1,11 @@
+using System.Runtime.InteropServices;
+
 namespace CHDSharp.Models.Flac;
 
 /// <summary>
 /// Represents a single entry in a FLAC seek table, mapping sample numbers to byte offsets.
 /// </summary>
+[StructLayout(LayoutKind.Auto)]
 internal struct SeekPoint
 {
     /// <summary>

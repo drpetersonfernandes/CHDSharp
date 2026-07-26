@@ -19,10 +19,6 @@ internal static class Util
     /// <returns><c>true</c> if both arrays are non-null and contain identical bytes; otherwise <c>false</c>.</returns>
     internal static bool ByteArrEquals(byte[] b0, byte[] b1)
     {
-        if ((b0 == null) || (b1 == null))
-        {
-            return false;
-        }
         if (b0.Length != b1.Length)
         {
             return false;

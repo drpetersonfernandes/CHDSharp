@@ -18,5 +18,6 @@ internal class InvalidParamException : Exception
 {
     /// <summary>Initializes a new instance of the <see cref="InvalidParamException"/> class.</summary>
     internal InvalidParamException() : base("Invalid Parameter")
-    { }
+    {
+    }
 }

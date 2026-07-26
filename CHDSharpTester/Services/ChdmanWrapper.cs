@@ -171,7 +171,10 @@ public class ChdmanWrapper : IDisposable
         }
         finally
         {
-            try { File.Delete(tempFile); }
+            try
+            {
+                File.Delete(tempFile);
+            }
             catch
             {
                 // ignored

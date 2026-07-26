@@ -39,9 +39,6 @@ public enum ChdCodec
     /// <summary>Error / unknown codec.</summary>
     Error = 0x0eeeeeee
 }
-
-/// <summary>Bitmask flags for V3 and V4 CHD map entries, indicating hunk type and CRC presence.</summary>
-[Flags]
 public enum MapEntryFlag
 {
     /// <summary>Mask to isolate the hunk type from a map entry.</summary>

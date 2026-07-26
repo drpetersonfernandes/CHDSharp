@@ -177,7 +177,7 @@ public sealed class ExtractTests
             new(2, null, ChdError.Chderrdecompressionerror)
         };
         var result = new ExtractResult(
-            new List<string> { "track01.bin" },
+            ["track01.bin"],
             trackResults,
             ChdError.Chderrnone);
         Assert.False(result.IsCompleteSuccess);
@@ -189,7 +189,7 @@ public sealed class ExtractTests
     {
         var trackResults = new List<TrackExtractResult>();
         var result = new ExtractResult(
-            new List<string>(),
+            [],
             trackResults,
             ChdError.Chderrwriteerror);
         Assert.False(result.IsCompleteSuccess);
@@ -240,8 +240,8 @@ public sealed class ExtractTests
                 chd!.ExtractToDirectoryWithReporting(dir2, "test");
             }
 
-            var files1 = Directory.GetFiles(dir1).Select(f => Path.GetFileName(f)!).OrderBy(f => f).ToList();
-            var files2 = Directory.GetFiles(dir2).Select(f => Path.GetFileName(f)!).OrderBy(f => f).ToList();
+            var files1 = Directory.GetFiles(dir1).Select(f => Path.GetFileName(f)).OrderBy(f => f, StringComparer.Ordinal).ToList();
+            var files2 = Directory.GetFiles(dir2).Select(f => Path.GetFileName(f)).OrderBy(f => f, StringComparer.Ordinal).ToList();
             Assert.Equal(files1, files2);
 
             foreach (var f in files1)

@@ -229,6 +229,6 @@ public class BoundsValidationTests
         var err = ChdFile.Open(ms, true, out var chd);
         Assert.Equal(ChdError.Chderrnone, err);
         Assert.NotNull(chd);
-        chd?.Dispose();
+        chd.Dispose();
     }
 }

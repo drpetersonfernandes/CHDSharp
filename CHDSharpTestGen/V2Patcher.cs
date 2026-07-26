@@ -17,7 +17,7 @@ internal static class V2Patcher
         var src = File.ReadAllBytes(v1Path);
 
         if (src.Length < V1HeaderSize ||
-            System.Text.Encoding.ASCII.GetString(src, 0, 8) != "MComprHD" ||
+            !string.Equals(System.Text.Encoding.ASCII.GetString(src, 0, 8), "MComprHD", StringComparison.Ordinal) ||
             BinaryPrimitives.ReadUInt32BigEndian(src.AsSpan(12)) != 1)
             throw new InvalidDataException($"{v1Path} is not a V1 CHD");
 
@@ -26,8 +26,8 @@ internal static class V2Patcher
         var dst = new byte[src.Length + 4];
         // header
         Array.Copy(src, 0, dst, 0, V1HeaderSize);
-        BinaryPrimitives.WriteUInt32BigEndian(dst.AsSpan(8), V2HeaderSize);   // length
-        BinaryPrimitives.WriteUInt32BigEndian(dst.AsSpan(12), 2);             // version
+        BinaryPrimitives.WriteUInt32BigEndian(dst.AsSpan(8), V2HeaderSize); // length
+        BinaryPrimitives.WriteUInt32BigEndian(dst.AsSpan(12), 2); // version
         BinaryPrimitives.WriteUInt32BigEndian(dst.AsSpan(V1HeaderSize), SectorSize); // seclen
 
         // body (map + data) shifted by +4

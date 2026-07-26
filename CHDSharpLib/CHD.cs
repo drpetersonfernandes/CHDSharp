@@ -652,8 +652,8 @@ public static class Chd
             ts.Dispose();
             blocksToDecompress.Dispose();
             blocksToHash.Dispose();
-            md5Check?.Dispose();
-            sha1Check?.Dispose();
+            md5Check.Dispose();
+            sha1Check.Dispose();
         }
     }
 }

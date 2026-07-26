@@ -19,7 +19,7 @@ internal static class V3ToV4Patcher
     {
         var src = File.ReadAllBytes(v3Path);
 
-        if (System.Text.Encoding.ASCII.GetString(src, 0, 8) != "MComprHD" ||
+        if (!string.Equals(System.Text.Encoding.ASCII.GetString(src, 0, 8), "MComprHD", StringComparison.Ordinal) ||
             BinaryPrimitives.ReadUInt32BigEndian(src.AsSpan(12)) != 3)
             throw new InvalidDataException($"{v3Path} is not a V3 CHD");
 

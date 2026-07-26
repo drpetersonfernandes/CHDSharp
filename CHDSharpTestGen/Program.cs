@@ -95,8 +95,11 @@ internal static class Program
                     failures++;
                     var firstDiff = -1;
                     for (var i = 0; i < buffer.Length; i++)
-                        if (buffer[i] != raw[h * hdr.Blocksize + i]) { firstDiff = i;
-                            break; }
+                        if (buffer[i] != raw[h * hdr.Blocksize + i])
+                        {
+                            firstDiff = i;
+                            break;
+                        }
                     Console.WriteLine($"hunk {h}: err={err} match={match} firstDiff={firstDiff} complen={me.Length}");
                 }
             }

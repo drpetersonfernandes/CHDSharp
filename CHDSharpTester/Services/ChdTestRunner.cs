@@ -64,14 +64,14 @@ public class ChdTestRunner
         if (chdman is { Available: true })
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await Task.Run(() => RunZstdCodecTests(files, chdman, progress, session));
+            await Task.Run(() => RunZstdCodecTests(files, chdman, progress, session), cancellationToken);
         }
 
         // Session-level tests: Parent chain
         if (chdman is { Available: true })
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await Task.Run(() => RunParentChainTests(files, chdman, progress, session));
+            await Task.Run(() => RunParentChainTests(files, chdman, progress, session), cancellationToken);
         }
 
         progress?.Report(new TestProgress("Done", files.Count, files.Count,
@@ -150,52 +150,66 @@ public class ChdTestRunner
                         {
                             details.Add($"Version: V{chd.Version} ✓");
                         }
-                        else { details.Add($"Version: lib={chd.Version} chdman={info.Version} ✗");
-                            allMatch = false; }
+                        else
+                        {
+                            details.Add($"Version: lib={chd.Version} chdman={info.Version} ✗");
+                            allMatch = false;
+                        }
 
                         if (chd.HunkBytes == info.HunkBytes)
                         {
                             details.Add($"HunkBytes: {chd.HunkBytes} ✓");
                         }
-                        else { details.Add($"HunkBytes: lib={chd.HunkBytes} chdman={info.HunkBytes} ✗");
-                            allMatch = false; }
+                        else
+                        {
+                            details.Add($"HunkBytes: lib={chd.HunkBytes} chdman={info.HunkBytes} ✗");
+                            allMatch = false;
+                        }
 
                         if (chd.TotalBytes == info.LogicalBytes)
                         {
                             details.Add($"TotalBytes: {chd.TotalBytes} ✓");
                         }
-                        else { details.Add($"TotalBytes: lib={chd.TotalBytes} chdman={info.LogicalBytes} ✗");
-                            allMatch = false; }
+                        else
+                        {
+                            details.Add($"TotalBytes: lib={chd.TotalBytes} chdman={info.LogicalBytes} ✗");
+                            allMatch = false;
+                        }
 
                         if (chd.HunkCount == info.TotalHunks)
                         {
                             details.Add($"Hunks: {chd.HunkCount} ✓");
                         }
-                        else { details.Add($"Hunks: lib={chd.HunkCount} chdman={info.TotalHunks} ✗");
-                            allMatch = false; }
+                        else
+                        {
+                            details.Add($"Hunks: lib={chd.HunkCount} chdman={info.TotalHunks} ✗");
+                            allMatch = false;
+                        }
 
                         var libSha1 = HashUtil.ToHex(chd.Sha1);
-                        if (info.Sha1 != null && libSha1 == info.Sha1)
+                        if (info.Sha1 != null && string.Equals(libSha1, info.Sha1, StringComparison.Ordinal))
                         {
                             details.Add($"SHA1: {libSha1} ✓");
                         }
                         else if (info.Sha1 != null)
-                        { details.Add($"SHA1: lib={libSha1} chdman={info.Sha1} ✗");
-                            allMatch = false; }
+                        {
+                            details.Add($"SHA1: lib={libSha1} chdman={info.Sha1} ✗");
+                            allMatch = false;
+                        }
                         else
                         {
                             details.Add($"SHA1: {libSha1}");
                         }
 
                         var libDataSha1 = HashUtil.ToHex(chd.RawSha1);
-                        if (info.DataSha1 != null && libDataSha1 == info.DataSha1)
+                        if (info.DataSha1 != null && string.Equals(libDataSha1, info.DataSha1, StringComparison.Ordinal))
                         {
                             details.Add($"DataSHA1: {libDataSha1} ✓");
                         }
                         else if (info.DataSha1 != null)
                         { details.Add($"DataSHA1: lib={libDataSha1} chdman={info.DataSha1} ✗");
                             allMatch = false; }
-                        else if (libDataSha1 != "(none)" && !HashUtil.IsAllZero(chd.RawSha1))
+                        else if (!string.Equals(libDataSha1, "(none)", StringComparison.Ordinal) && !HashUtil.IsAllZero(chd.RawSha1))
                         {
                             details.Add($"DataSHA1: {libDataSha1}");
                         }
@@ -308,7 +322,7 @@ public class ChdTestRunner
             using (chd2)
             {
                 var rawSha1 = chd2.RawSha1;
-                if (rawSha1 == null || HashUtil.IsAllZero(rawSha1))
+                if (HashUtil.IsAllZero(rawSha1))
                 {
                     result.SubTests.Add(new SubTestResult
                     {
@@ -322,7 +336,7 @@ public class ChdTestRunner
                 {
                     var computed = ComputeFullImageSha1(chd2);
                     var hexExpected = HashUtil.ToHex(rawSha1);
-                    var match = computed == hexExpected;
+                    var match = string.Equals(computed, hexExpected, StringComparison.Ordinal);
                     t1Sw.Stop();
                     result.SubTests.Add(new SubTestResult
                     {
@@ -462,8 +476,8 @@ public class ChdTestRunner
                     try
                     {
                         var cue = chd.GenerateCueSheet("test.bin");
-                        var hasFile = cue.Contains("FILE");
-                        var hasTrack1 = cue.Contains("TRACK 01");
+                        var hasFile = cue.Contains("FILE", StringComparison.Ordinal);
+                        var hasTrack1 = cue.Contains("TRACK 01", StringComparison.Ordinal);
                         if (!hasFile || !hasTrack1)
                         {
                             detail.Add("ERROR: CUE sheet missing FILE or TRACK 01");
@@ -483,8 +497,8 @@ public class ChdTestRunner
 
                 // Generate ExportToc and validate
                 var toc = chd.ExportToc();
-                var hasVersion = toc.Contains("Version:");
-                var hasType = toc.Contains("Type:");
+                var hasVersion = toc.Contains("Version:", StringComparison.Ordinal);
+                var hasType = toc.Contains("Type:", StringComparison.Ordinal);
                 if (!hasVersion || !hasType)
                 {
                     detail.Add("ERROR: ExportToc missing Version or Type");
@@ -903,7 +917,10 @@ public class ChdTestRunner
             var e = ChdFile.Open(f.FilePath, out var c);
             if (e != ChdError.Chderrnone) return false;
 
-            using (c) { return c != null && c.HunkBytes % 2448 == 0; }
+            using (c)
+            {
+                return c != null && c.HunkBytes % 2448 == 0;
+            }
         });
         if (cdSource == null)
         {
@@ -952,8 +969,9 @@ public class ChdTestRunner
                         subTests.Add(new SubTestResult
                         {
                             TestName = "cdzs decode",
-                            Status = computed == srcRawSha1 ? TestStatus.Passed : TestStatus.Failed,
-                            Detail = computed == srcRawSha1
+                            Status = string.Equals(computed, srcRawSha1, StringComparison.Ordinal) ? TestStatus.Passed : TestStatus.Failed,
+                            Detail = string.Equals(computed, srcRawSha1
+, StringComparison.Ordinal)
                                 ? $"SHA1={computed} ✓"
                                 : $"Expected={srcRawSha1} Computed={computed} ✗",
                             ElapsedSeconds = t1Sw.Elapsed.TotalSeconds
@@ -1044,8 +1062,9 @@ public class ChdTestRunner
                             subTests.Add(new SubTestResult
                             {
                                 TestName = "zstd decode",
-                                Status = computed == zstdRawSha1 ? TestStatus.Passed : TestStatus.Failed,
-                                Detail = computed == zstdRawSha1
+                                Status = string.Equals(computed, zstdRawSha1, StringComparison.Ordinal) ? TestStatus.Passed : TestStatus.Failed,
+                                Detail = string.Equals(computed, zstdRawSha1
+                                    , StringComparison.Ordinal)
                                     ? $"SHA1={computed} ✓"
                                     : $"Expected={zstdRawSha1} Computed={computed} ✗",
                                 ElapsedSeconds = t1Sw.Elapsed.TotalSeconds
@@ -1116,8 +1135,14 @@ public class ChdTestRunner
         }
         finally
         {
-            try { if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true); }
-            catch { /* best effort */ }
+            try
+            {
+                if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+            }
+            catch
+            {
+                /* best effort */
+            }
         }
     }
 
@@ -1140,7 +1165,10 @@ public class ChdTestRunner
             var e = ChdFile.Open(f.FilePath, out var c);
             if (e != ChdError.Chderrnone) return false;
 
-            using (c) { return c != null && c.HunkBytes % 2448 == 0; }
+            using (c)
+            {
+                return c != null && c.HunkBytes % 2448 == 0;
+            }
         });
         if (source == null)
         {
@@ -1294,8 +1322,9 @@ public class ChdTestRunner
                     subTests.Add(new SubTestResult
                     {
                         TestName = "Child full read matches source",
-                        Status = computed == srcRawSha1 ? TestStatus.Passed : TestStatus.Failed,
-                        Detail = computed == srcRawSha1
+                        Status = string.Equals(computed, srcRawSha1, StringComparison.Ordinal) ? TestStatus.Passed : TestStatus.Failed,
+                        Detail = string.Equals(computed, srcRawSha1
+                            , StringComparison.Ordinal)
                             ? $"SHA1={computed} ✓"
                             : $"Expected={srcRawSha1} Computed={computed} ✗",
                         ElapsedSeconds = tSw.Elapsed.TotalSeconds
@@ -1354,8 +1383,13 @@ public class ChdTestRunner
         }
         finally
         {
-            try { if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true); }
-            catch { /* best effort */ }
+            try
+            {
+                if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true); }
+            catch
+            {
+                /* best effort */
+            }
         }
     }
 

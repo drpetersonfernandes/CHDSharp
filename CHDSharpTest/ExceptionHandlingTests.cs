@@ -4,14 +4,19 @@ namespace CHDSharp.Tests;
 
 public class ExceptionHandlingTests
 {
-    private static byte[] Be(uint v) =>
-        [(byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v];
+    private static byte[] Be(uint v)
+    {
+        return [(byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v];
+    }
 
-    private static byte[] Be64(ulong v) =>
-    [
-        (byte)(v >> 56), (byte)(v >> 48), (byte)(v >> 40), (byte)(v >> 32),
-        (byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v
-    ];
+    private static byte[] Be64(ulong v)
+    {
+        return
+        [
+            (byte)(v >> 56), (byte)(v >> 48), (byte)(v >> 40), (byte)(v >> 32),
+            (byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v
+        ];
+    }
 
     [Fact]
     public void Open_with_nonexistent_path_returns_file_not_found()
@@ -52,7 +57,7 @@ public class ExceptionHandlingTests
 
     private static ChdFile OpenMinimalV5Chd()
     {
-        // Minimal V5 header with Zlib compression, 1 hunk, uncompressed map, 
+        // Minimal V5 header with Zlib compression, 1 hunk, uncompressed map,
         // and a metaoffset pointing to position 999 (stream only has ~140 bytes).
         // When EnsureMetadataLoaded tries to read metadata, it hits end of stream
         // and the IOException/InvalidDataException is caught.
@@ -98,7 +103,9 @@ public class ExceptionHandlingTests
     public void Zstd_corrupt_data_returns_decompression_error()
     {
         var buffIn = new byte[16];
-        buffIn[0] = 0x28; buffIn[1] = 0xB5; buffIn[2] = 0x2F; buffIn[3] = 0xFD; // zstd magic
+        buffIn[0] = 0x28;
+        buffIn[1] = 0xB5;
+        buffIn[2] = 0x2F; buffIn[3] = 0xFD; // zstd magic
         var buffOut = new byte[4096];
         var codec = new ChdCodecState();
 

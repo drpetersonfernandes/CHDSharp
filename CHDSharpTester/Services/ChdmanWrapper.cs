@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 namespace CHDSharpTester.Services;
 
 /// <summary>Wraps the chdman.exe command-line tool to cross-check the C# CHD reader via info, verify, and extractraw operations.</summary>
-public class ChdmanWrapper : IDisposable
+public class ChdmanWrapper
 {
     private readonly string _chdmanPath;
 
@@ -84,6 +84,7 @@ public class ChdmanWrapper : IDisposable
         var tOut = p.StandardOutput.ReadToEndAsync();
         var tErr = p.StandardError.ReadToEndAsync();
         p.WaitForExit();
+        Task.WaitAll(tOut, tErr);
         return new Result { ExitCode = p.ExitCode, StdOut = tOut.Result, StdErr = tErr.Result };
     }
 
@@ -118,6 +119,8 @@ public class ChdmanWrapper : IDisposable
         var psi = new ProcessStartInfo
         {
             FileName = _chdmanPath,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true
         };
@@ -131,7 +134,10 @@ public class ChdmanWrapper : IDisposable
         }
 
         using var p = Process.Start(psi)!;
+        var tOut = p.StandardOutput.ReadToEndAsync();
+        var tErr = p.StandardError.ReadToEndAsync();
         p.WaitForExit();
+        Task.WaitAll(tOut, tErr);
         return p.ExitCode == 0;
     }
 
@@ -148,6 +154,8 @@ public class ChdmanWrapper : IDisposable
             var psi = new ProcessStartInfo
             {
                 FileName = _chdmanPath,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
@@ -163,11 +171,17 @@ public class ChdmanWrapper : IDisposable
             psi.ArgumentList.Add("-f");
 
             using var p = Process.Start(psi)!;
+            var tOut = p.StandardOutput.ReadToEndAsync();
+            var tErr = p.StandardError.ReadToEndAsync();
             p.WaitForExit();
+            Task.WaitAll(tOut, tErr);
             if (p.ExitCode != 0)
                 return null;
 
-            return File.ReadAllBytes(tempFile);
+            using var fs = new FileStream(tempFile, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var buffer = new byte[fs.Length];
+            fs.ReadExactly(buffer);
+            return buffer;
         }
         finally
         {
@@ -191,29 +205,15 @@ public class ChdmanWrapper : IDisposable
     /// <returns><c>true</c> if chdman exits with code 0 and the output file exists; otherwise <c>false</c>.</returns>
     public bool Copy(string input, string output, string compression, string? parentOut = null)
     {
-        var psi = new ProcessStartInfo
-        {
-            FileName = _chdmanPath,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-        psi.ArgumentList.Add("copy");
-        psi.ArgumentList.Add("-i");
-        psi.ArgumentList.Add(input);
-        psi.ArgumentList.Add("-o");
-        psi.ArgumentList.Add(output);
-        psi.ArgumentList.Add("-c");
-        psi.ArgumentList.Add(compression);
-        psi.ArgumentList.Add("-f");
+        var args = new List<string> { "copy", "-i", input, "-o", output, "-c", compression, "-f" };
         if (parentOut != null)
         {
-            psi.ArgumentList.Add("-op");
-            psi.ArgumentList.Add(parentOut);
+            args.Add("-op");
+            args.Add(parentOut);
         }
 
-        using var p = Process.Start(psi)!;
-        p.WaitForExit();
-        return p.ExitCode == 0 && File.Exists(output);
+        var r = Run(args.ToArray());
+        return r.ExitCode == 0 && File.Exists(output);
     }
 
     /// <summary>Same as <see cref="Copy"/> but returns the full chdman result for diagnostics.</summary>
@@ -255,12 +255,6 @@ public class ChdmanWrapper : IDisposable
     {
         var m = Regex.Match(text, pattern);
         return m.Success ? m.Groups[1].Value.ToLowerInvariant() : null;
-    }
-
-    /// <summary>Releases all resources used by this wrapper.</summary>
-    public void Dispose()
-    {
-        GC.SuppressFinalize(this);
     }
 }
 

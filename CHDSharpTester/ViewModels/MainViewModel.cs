@@ -18,6 +18,10 @@ internal class MainViewModel : INotifyPropertyChanged
 {
     private readonly ChdTestRunner _runner = new();
     private CancellationTokenSource? _cts;
+    private readonly Lock _ctsLock = new();
+    private readonly StringBuilder _logBuffer = new();
+    private ObservableCollection<PerFileResult>? _cachedFileResults;
+    private Task? _runTask;
 
     /// <summary>Initializes a new instance of the <see cref="MainViewModel"/> class and binds all commands.</summary>
     internal MainViewModel()
@@ -26,7 +30,7 @@ internal class MainViewModel : INotifyPropertyChanged
         AddFilesCommand = new RelayCommand(_ => AddFiles());
         AddFolderCommand = new RelayCommand(_ => AddFolder());
         RemoveFileCommand = new RelayCommand(RemoveFile);
-        RunTestsCommand = new RelayCommand(o => { _ = RunTestsAsync(); }, _ => CanRunTests);
+        RunTestsCommand = new RelayCommand(_ => { _runTask = RunTestsAsync(); }, _ => CanRunTests);
         CancelTestsCommand = new RelayCommand(_ => CancelTests(), _ => IsRunning);
         ExportPdfCommand = new RelayCommand(_ => ExportPdf(), _ => HasResults);
         CopyLogCommand = new RelayCommand(_ => CopyLog());
@@ -224,6 +228,7 @@ internal class MainViewModel : INotifyPropertyChanged
         set
         {
             _sessionResult = value;
+            _cachedFileResults = null;
             OnPropertyChanged();
             OnPropertyChanged(nameof(HasResults));
             OnPropertyChanged(nameof(SummaryPassed));
@@ -266,9 +271,19 @@ internal class MainViewModel : INotifyPropertyChanged
     }
 
     /// <summary>Gets an observable collection of per-file results from the last session.</summary>
-    public ObservableCollection<PerFileResult> FileResults => SessionResult?.FileResults != null
-        ? new ObservableCollection<PerFileResult>(SessionResult.FileResults)
-        : [];
+    public ObservableCollection<PerFileResult> FileResults
+    {
+        get
+        {
+            if (_cachedFileResults == null)
+            {
+                _cachedFileResults = SessionResult?.FileResults != null
+                    ? new ObservableCollection<PerFileResult>(SessionResult.FileResults)
+                    : [];
+            }
+            return _cachedFileResults;
+        }
+    }
 
     private void BrowseChdman()
     {
@@ -349,7 +364,22 @@ internal class MainViewModel : INotifyPropertyChanged
 
     private void UpdateFilesSummary()
     {
-        var totalSize = Files.Sum(f => new FileInfo(f.FilePath).Length);
+        long totalSize = 0;
+        foreach (var f in Files)
+        {
+            try
+            {
+                totalSize += new FileInfo(f.FilePath).Length;
+            }
+            catch (FileNotFoundException)
+            {
+                // File may have been deleted since being added to the list
+            }
+            catch (IOException)
+            {
+                // File may be inaccessible
+            }
+        }
         var sizeStr = totalSize switch
         {
             < 1024 => $"{totalSize} B",
@@ -369,7 +399,9 @@ internal class MainViewModel : INotifyPropertyChanged
         CommandManager.InvalidateRequerySuggested();
         StatusText = "Please wait... Processing...";
         SessionResult = null;
+        _cachedFileResults = null;
         LogEntries.Clear();
+        _logBuffer.Clear();
         LogText = string.Empty;
         ProgressValue = 0;
         ProgressText = "Starting tests...";
@@ -386,15 +418,12 @@ internal class MainViewModel : INotifyPropertyChanged
 
         var progress = new Progress<TestProgress>(p =>
         {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                FileProgress = $"File {p.FileIndex}/{p.TotalFiles}";
-                ProgressValue = p.TotalFiles > 0 ? (double)p.FileIndex / p.TotalFiles * 100 : 0;
-                ProgressText = p.StatusText;
-                CurrentTest = p.CurrentTest;
-                if (!string.IsNullOrEmpty(p.StatusText))
-                    AddLog(p.StatusText);
-            });
+            FileProgress = $"File {p.FileIndex}/{p.TotalFiles}";
+            ProgressValue = p.TotalFiles > 0 ? (double)p.FileIndex / p.TotalFiles * 100 : 0;
+            ProgressText = p.StatusText;
+            CurrentTest = p.CurrentTest;
+            if (!string.IsNullOrEmpty(p.StatusText))
+                AddLog(p.StatusText);
         });
 
         try
@@ -428,8 +457,11 @@ internal class MainViewModel : INotifyPropertyChanged
         }
         finally
         {
-            _cts?.Dispose();
-            _cts = null;
+            lock (_ctsLock)
+            {
+                _cts?.Dispose();
+                _cts = null;
+            }
             IsRunning = false;
             CommandManager.InvalidateRequerySuggested();
         }
@@ -437,50 +469,96 @@ internal class MainViewModel : INotifyPropertyChanged
 
     private void CancelTests()
     {
-        try
-        {
-            _cts?.Cancel();
-            AddLog("Cancelling test run...");
-        }
-        catch (ObjectDisposedException)
-        {
-            // CTS may already be disposed
-        }
-    }
-
-    private void ExportPdf()
-    {
-        if (SessionResult == null) return;
-
-        var dlg = new SaveFileDialog
-        {
-            Title = "Export Results to PDF",
-            Filter = "PDF files (*.pdf)|*.pdf",
-            FileName = $"CHDSharpTester_Results_{DateTime.Now:yyyyMMdd_HHmmss}.pdf"
-        };
-        if (dlg.ShowDialog() == true)
+        lock (_ctsLock)
         {
             try
             {
-                PdfExporter.Export(SessionResult, _runner.ChdmanVersion, dlg.FileName);
-                AddLog($"PDF exported: {dlg.FileName}");
-                MessageBox.Show($"Results exported successfully to:\n{dlg.FileName}",
-                    "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                _cts?.Cancel();
             }
-            catch (Exception ex)
+            catch (ObjectDisposedException)
             {
-                AddLog($"PDF export failed: {ex.Message}");
-                Log.Error(ex, "PDF export failed");
-                MessageBox.Show($"Export failed: {ex.Message}", "Export Error",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
+                // CTS may already be disposed
             }
+        }
+        AddLog("Cancelling test run...");
+    }
+
+    /// <summary>Cancels any running tests and waits for the background task to complete. Called when the window is closing.</summary>
+    internal async Task CancelAndShutdownAsync()
+    {
+        CancelTests();
+        if (_runTask is { IsCompleted: false })
+        {
+            try
+            {
+                await _runTask.ConfigureAwait(false);
+            }
+            catch
+            {
+                // Task may have been cancelled or faulted; we're shutting down
+            }
+        }
+    }
+
+    private async void ExportPdf()
+    {
+        try
+        {
+            if (SessionResult == null) return;
+
+            var dlg = new SaveFileDialog
+            {
+                Title = "Export Results to PDF",
+                Filter = "PDF files (*.pdf)|*.pdf",
+                FileName = $"CHDSharpTester_Results_{DateTime.Now:yyyyMMdd_HHmmss}.pdf"
+            };
+            if (dlg.ShowDialog() == true)
+            {
+                try
+                {
+                    StatusText = "Generating PDF...";
+                    var session = SessionResult;
+                    var version = _runner.ChdmanVersion;
+                    var path = dlg.FileName;
+                    await Task.Run(() => PdfExporter.Export(session, version, path));
+                    AddLog($"PDF exported: {path}");
+                    StatusText = "Ready.";
+                    MessageBox.Show($"Results exported successfully to:\n{path}",
+                        "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    AddLog($"PDF export failed: {ex.Message}");
+                    StatusText = "Ready.";
+                    Log.Error(ex, "PDF export failed");
+                    MessageBox.Show($"Export failed: {ex.Message}", "Export Error",
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            AddLog($"PDF export failed: {ex.Message}");
+            StatusText = "Ready.";
+            Log.Error(ex, "PDF export failed");
+            MessageBox.Show($"Export failed: {ex.Message}", "Export Error",
+                MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
     private void CopyLog()
     {
         if (!string.IsNullOrEmpty(LogText))
-            Clipboard.SetText(LogText);
+        {
+            try
+            {
+                Clipboard.SetText(LogText);
+            }
+            catch (System.Runtime.InteropServices.ExternalException)
+            {
+                AddLog("Failed to copy log to clipboard.");
+            }
+        }
     }
 
     private void CopyResults()
@@ -512,14 +590,22 @@ internal class MainViewModel : INotifyPropertyChanged
             sb.AppendLine();
         }
 
-        Clipboard.SetText(sb.ToString());
+        try
+        {
+            Clipboard.SetText(sb.ToString());
+        }
+        catch (System.Runtime.InteropServices.ExternalException)
+        {
+            AddLog("Failed to copy results to clipboard.");
+        }
     }
 
     private void AddLog(string message)
     {
         var ts = DateTime.Now.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
         LogEntries.Add(new LogEntry { Message = message, Timestamp = ts });
-        LogText += $"[{ts}] {message}\n";
+        _logBuffer.AppendLine($"[{ts}] {message}");
+        LogText = _logBuffer.ToString();
     }
 
     private static void ShowAbout()

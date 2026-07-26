@@ -11,10 +11,8 @@ namespace CHDSharpTester.Services;
 /// <summary>Executes a multi-test verification suite against a list of CHD files, cross-checking the C# reader against chdman when available.</summary>
 public class ChdTestRunner
 {
-    private static string? _chdmanVersion;
-
     /// <summary>Gets the detected chdman version string from the last run, or null if not yet detected.</summary>
-    public string? ChdmanVersion => _chdmanVersion;
+    public string? ChdmanVersion { get; private set; }
 
     /// <summary>Runs the full test suite against the specified files asynchronously.</summary>
     /// <param name="files">The list of CHD file entries to test.</param>
@@ -31,7 +29,7 @@ public class ChdTestRunner
         var session = new TestSessionResult();
         var chdmanAvailable = File.Exists(chdmanPath);
 
-        using var chdman = chdmanAvailable ? new ChdmanWrapper(chdmanPath) : null;
+        var chdman = chdmanAvailable ? new ChdmanWrapper(chdmanPath) : null;
 
         if (chdman != null)
         {
@@ -41,7 +39,7 @@ public class ChdTestRunner
                 if (r.ExitCode == 0)
                 {
                     var lines = r.StdOut.Split('\n');
-                    _chdmanVersion = lines.FirstOrDefault()?.Trim();
+                    ChdmanVersion = lines.FirstOrDefault()?.Trim();
                 }
             }
             catch
@@ -380,11 +378,8 @@ public class ChdTestRunner
             });
         }
 
-        // Tests 7-14: ReadHunk / Read API tests
-        RunReadHunkApiTests(entry, progress, fileIndex, totalFiles, result);
-
-        // Test 15: Track info / CUE sheet validation (CD/GD-ROM only)
-        RunTrackInfoTests(entry, progress, fileIndex, totalFiles, result);
+        // Tests 7-15: ReadHunk / Read API tests + Track info (shared file open)
+        RunReadHunkAndTrackInfoTests(entry, progress, fileIndex, totalFiles, result);
 
         result.ElapsedSeconds = sw.Elapsed.TotalSeconds;
         Log.Information("[{Status}] {File} ({Time:N1}s)",
@@ -393,9 +388,44 @@ public class ChdTestRunner
         return result;
     }
 
+    // ── ReadHunk / Read API + Track info tests (per-file, single open) ────
+
+    private static void RunReadHunkAndTrackInfoTests(
+        ChdFileEntry entry,
+        IProgress<TestProgress>? progress,
+        int fileIndex,
+        int totalFiles,
+        PerFileResult result)
+    {
+        var openErr = ChdFile.Open(entry.FilePath, out var chd);
+        if (openErr != ChdError.Chderrnone || chd == null)
+        {
+            result.SubTests.Add(new SubTestResult
+            {
+                TestName = "ReadHunk API Tests",
+                Status = TestStatus.Failed,
+                Detail = $"Failed to open: {openErr}"
+            });
+            result.SubTests.Add(new SubTestResult
+            {
+                TestName = "Track Info Tests",
+                Status = TestStatus.Failed,
+                Detail = $"Failed to open: {openErr}"
+            });
+            return;
+        }
+
+        using (chd)
+        {
+            RunReadHunkApiTests(chd, entry, progress, fileIndex, totalFiles, result);
+            RunTrackInfoTests(chd, entry, progress, fileIndex, totalFiles, result);
+        }
+    }
+
     // ── Track info / CUE sheet tests (per-file) ───────────────────────────
 
     private static void RunTrackInfoTests(
+        ChdFile chd,
         ChdFileEntry entry,
         IProgress<TestProgress>? progress,
         int fileIndex,
@@ -408,22 +438,6 @@ public class ChdTestRunner
         var tSw = Stopwatch.StartNew();
         var detail = new List<string>();
         var failures = 0;
-
-        var openErr = ChdFile.Open(entry.FilePath, out var chd);
-        if (openErr != ChdError.Chderrnone || chd == null)
-        {
-            result.SubTests.Add(new SubTestResult
-            {
-                TestName = "Track Info Tests",
-                Status = TestStatus.Failed,
-                Detail = $"Failed to open: {openErr}",
-                ElapsedSeconds = tSw.Elapsed.TotalSeconds
-            });
-            return;
-        }
-
-        using (chd)
-        {
             // Check classification properties are consistent
             var isCd = chd.IsCd;
             var isGdRom = chd.IsGdRom;
@@ -524,7 +538,6 @@ public class ChdTestRunner
             {
                 detail.Add("No CD/GD-ROM track metadata (raw/child/other)");
             }
-        }
 
         tSw.Stop();
         result.SubTests.Add(new SubTestResult
@@ -678,6 +691,7 @@ public class ChdTestRunner
     // ── ReadHunk / Read API tests (per-file) ─────────────────────────────
 
     private static void RunReadHunkApiTests(
+        ChdFile chd,
         ChdFileEntry entry,
         IProgress<TestProgress>? progress,
         int fileIndex,
@@ -691,20 +705,6 @@ public class ChdTestRunner
         var detail = new List<string>();
         var failures = 0;
 
-        var openErr = ChdFile.Open(entry.FilePath, out var chd);
-        if (openErr != ChdError.Chderrnone || chd == null)
-        {
-            result.SubTests.Add(new SubTestResult
-            {
-                TestName = "ReadHunk API Tests",
-                Status = TestStatus.Failed,
-                Detail = $"Failed to open: {openErr}",
-                ElapsedSeconds = tSw.Elapsed.TotalSeconds
-            });
-            return;
-        }
-
-        using (chd)
         {
             var hb = chd.HunkBytes;
             var hc = chd.HunkCount;
@@ -1013,11 +1013,7 @@ public class ChdTestRunner
                 {
                     FileName = "[Codec] cdzs",
                     FilePath = cdzsPath,
-                    FileSize = new FileInfo(cdzsPath).Length switch
-                    {
-                        < 1024 * 1024 => $"{new FileInfo(cdzsPath).Length / 1024.0:F1} KB",
-                        _ => $"{new FileInfo(cdzsPath).Length / (1024.0 * 1024):F1} MB"
-                    },
+                    FileSize = FormatFileSize(new FileInfo(cdzsPath).Length),
                     SubTests = subTests,
                     ElapsedSeconds = sw.Elapsed.TotalSeconds
                 };
@@ -1106,11 +1102,7 @@ public class ChdTestRunner
                     {
                         FileName = "[Codec] zstd",
                         FilePath = zstdPath,
-                        FileSize = new FileInfo(zstdPath).Length switch
-                        {
-                            < 1024 * 1024 => $"{new FileInfo(zstdPath).Length / 1024.0:F1} KB",
-                            _ => $"{new FileInfo(zstdPath).Length / (1024.0 * 1024):F1} MB"
-                        },
+                        FileSize = FormatFileSize(new FileInfo(zstdPath).Length),
                         SubTests = subTests,
                         ElapsedSeconds = sw.Elapsed.TotalSeconds
                     };
@@ -1379,7 +1371,7 @@ public class ChdTestRunner
             {
                 FileName = "[Chain] Parent/Child",
                 FilePath = $"{parentPath}, {childPath}",
-                FileSize = $"{new FileInfo(parentPath).Length / (1024.0 * 1024):F1} MB + {new FileInfo(childPath).Length / (1024.0 * 1024):F1} MB",
+                FileSize = $"{FormatFileSize(new FileInfo(parentPath).Length)} + {FormatFileSize(new FileInfo(childPath).Length)}",
                 SubTests = subTests,
                 ElapsedSeconds = sw.Elapsed.TotalSeconds
             });
@@ -1404,6 +1396,17 @@ public class ChdTestRunner
         var dir = Path.Combine(Path.GetTempPath(), "CHDSharpTester_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         return dir;
+    }
+
+    private static string FormatFileSize(long length)
+    {
+        return length switch
+        {
+            < 1024 => $"{length} B",
+            < 1024 * 1024 => $"{length / 1024.0:F1} KB",
+            < 1024L * 1024 * 1024 => $"{length / (1024.0 * 1024):F1} MB",
+            _ => $"{length / (1024.0 * 1024 * 1024):F2} GB"
+        };
     }
 
     private static string? RawSha1(string path)

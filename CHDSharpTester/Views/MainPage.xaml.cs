@@ -2,18 +2,16 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Windows.Data;
 using CHDSharpTester.Models;
-using CHDSharpTester.ViewModels;
 
 namespace CHDSharpTester.Views;
 
 /// <summary>The main page of the CHDSharp Tester, serving as the primary content for the <see cref="MainWindow"/>.</summary>
 internal partial class MainPage
 {
-    /// <summary>Initializes a new instance of the <see cref="MainPage"/> class and sets the data context to a new <see cref="MainViewModel"/>.</summary>
+    /// <summary>Initializes a new instance of the <see cref="MainPage"/> class.</summary>
     public MainPage()
     {
         InitializeComponent();
-        DataContext = new MainViewModel();
     }
 
     private void LogTextBox_OnTextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)

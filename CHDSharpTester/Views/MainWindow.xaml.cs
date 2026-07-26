@@ -6,29 +6,51 @@ namespace CHDSharpTester.Views;
 
 internal partial class MainWindow
 {
+    private bool _isClosing;
+
     /// <summary>Initializes a new instance of the <see cref="MainWindow"/> WPF window.</summary>
     public MainWindow()
     {
         InitializeComponent();
+        MainPageView.DataContext = new MainViewModel();
     }
 
-    protected override void OnClosing(CancelEventArgs e)
+    protected override async void OnClosing(CancelEventArgs e)
     {
-        if (MainPageView.DataContext is MainViewModel { IsRunning: true })
+        try
         {
-            var result = MessageBox.Show(
-                "A test run is currently in progress. Are you sure you want to exit?",
-                "Tests Running",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-
-            if (result != MessageBoxResult.Yes)
+            if (_isClosing)
             {
-                e.Cancel = true;
+                base.OnClosing(e);
                 return;
             }
-        }
 
-        base.OnClosing(e);
+            if (MainPageView.DataContext is MainViewModel { IsRunning: true } vm)
+            {
+                var result = MessageBox.Show(
+                    "A test run is currently in progress. Are you sure you want to exit?",
+                    "Tests Running",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (result != MessageBoxResult.Yes)
+                {
+                    e.Cancel = true;
+                    return;
+                }
+
+                _isClosing = true;
+                e.Cancel = true;
+                await vm.CancelAndShutdownAsync();
+                Close();
+                return;
+            }
+
+            base.OnClosing(e);
+        }
+        catch (Exception)
+        {
+            // ignore
+        }
     }
 }

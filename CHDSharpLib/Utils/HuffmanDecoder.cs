@@ -46,12 +46,7 @@ internal class HuffmanDecoder
     {
         /* limit to 24 bits */
         if (maxbits > 24)
-        {
-            _lookup = null!;
-            _huffnode = null!;
-            _bitbuf = null!;
-            return;
-        }
+            throw new ArgumentOutOfRangeException(nameof(maxbits), maxbits, "Huffman decoder supports at most 24 bits.");
 
         _numcodes = numcodes;
         _maxbits = maxbits;

@@ -80,7 +80,7 @@ public static class Chd
         set => ChdLogger.Factory = value;
     }
 
-    private static int _taskCount = 8;
+    private static volatile int _taskCount = 8;
 
     /// <summary>
     /// Number of parallel decompression tasks used during verification (default 8).
@@ -160,10 +160,10 @@ public static class Chd
                     valid = ChdHeaders.ReadHeaderV5(s, out chd);
                     break;
                 default:
-                    {
-                        LogUnknownVersion(Log, version, null);
-                        return ChdError.Chderrunsupportedversion;
-                    }
+                {
+                    LogUnknownVersion(Log, version, null);
+                    return ChdError.Chderrunsupportedversion;
+                }
             }
         }
         catch (Exception)
@@ -500,7 +500,6 @@ public static class Chd
                 }
                 catch (OperationCanceledException)
                 {
-                    return;
                 }
                 catch (Exception)
                 {
@@ -551,7 +550,6 @@ public static class Chd
                     }
                     catch (OperationCanceledException)
                     {
-                        return;
                     }
                     catch (Exception)
                     {
@@ -602,7 +600,6 @@ public static class Chd
                 }
                 catch (OperationCanceledException)
                 {
-                    return;
                 }
                 catch (Exception)
                 {

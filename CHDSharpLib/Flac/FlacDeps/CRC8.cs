@@ -7,16 +7,13 @@ internal class Crc8
 {
     private const ushort Poly8 = 0x07;
 
-    private static ushort[]? _table;
+    private static readonly ushort[] _table;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Crc8"/> class and builds the CRC lookup table on first initialization.
+    /// Initializes the CRC lookup table. Guaranteed by the CLR to run exactly once, even under concurrent access.
     /// </summary>
-    public Crc8()
+    static Crc8()
     {
-        if (_table != null)
-            return;
-
         _table = new ushort[256];
         const int bits = 8;
         const ushort poly = (ushort)(Poly8 + (1U << bits));
@@ -50,7 +47,7 @@ internal class Crc8
         ushort crc = 0;
         for (var i = pos; i < pos + count; i++)
         {
-            crc = _table![crc ^ bytes[i]];
+            crc = _table[crc ^ bytes[i]];
         }
 
         return (byte)crc;
@@ -68,7 +65,7 @@ internal class Crc8
         ushort crc = 0;
         for (var i = pos; i < pos + count; i++)
         {
-            crc = _table![crc ^ bytes[i]];
+            crc = _table[crc ^ bytes[i]];
         }
 
         return (byte)crc;

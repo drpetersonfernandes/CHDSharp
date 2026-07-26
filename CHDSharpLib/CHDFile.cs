@@ -920,7 +920,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <param name="outputDir">Target directory. Created if it doesn't exist.</param>
     /// <param name="baseFileName">Base filename (without extension) for output files.</param>
     /// <returns>List of created file paths.</returns>
-    public List<string> ExtractToDirectory(string outputDir, string baseFileName)
+    public IReadOnlyList<string> ExtractToDirectory(string outputDir, string baseFileName)
     {
         var result = ExtractToDirectoryWithReporting(outputDir, baseFileName);
         if (result.Error != ChdError.Chderrnone)

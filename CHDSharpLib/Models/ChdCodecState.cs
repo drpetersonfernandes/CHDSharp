@@ -55,5 +55,20 @@ internal class ChdCodecState : IDisposable
 
         AvhuffAudioDecoder?.Close();
         AvhuffAudioDecoder = null;
+
+        FlacSettings = null;
+        FlacAudioBuffer = null;
+        AvhuffSettings = null;
+
+        BSector = null;
+        BSubcode = null;
+        Blzma = null;
+
+        BHuffman = null;
+        BHuffmanHi = null;
+        BHuffmanLo = null;
+        BHuffmanY = null;
+        BHuffmanCb = null;
+        BHuffmanCr = null;
     }
 }

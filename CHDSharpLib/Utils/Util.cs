@@ -44,13 +44,15 @@ internal static class Util
     /// <returns>A negative value if <paramref name="x"/> is less than <paramref name="y"/>, zero if equal, or positive if greater.</returns>
     internal static int ByteArrCompare(byte[] x, byte[] y)
     {
-        for (var i = 0; i < x.Length; i++)
+        var minLen = Math.Min(x.Length, y.Length);
+        for (var i = 0; i < minLen; i++)
         {
             var v = x[i].CompareTo(y[i]);
             if (v != 0)
                 return v;
         }
-        return 0;
+
+        return x.Length.CompareTo(y.Length);
     }
 
     /// <summary>Checks whether the byte array contains only printable ASCII characters (including null bytes).</summary>

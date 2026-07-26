@@ -18,7 +18,9 @@ internal class MainViewModel : INotifyPropertyChanged
 {
     private readonly ChdTestRunner _runner = new();
     private CancellationTokenSource? _cts;
+#pragma warning disable MA0158 // Use System.Threading.Lock — not available on net8.0
     private readonly object _ctsLock = new();
+#pragma warning restore MA0158
     private readonly StringBuilder _logBuffer = new();
     private ObservableCollection<PerFileResult>? _cachedFileResults;
     private Task? _runTask;

@@ -1,7 +1,9 @@
 ﻿using System.Globalization;
 using System.IO;
 using System.Windows;
+using CHDSharp;
 using Serilog;
+using Serilog.Extensions.Logging;
 
 namespace CHDSharpTester;
 
@@ -25,6 +27,8 @@ public partial class App
                 outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}",
                 formatProvider: CultureInfo.InvariantCulture)
             .CreateLogger();
+
+        Chd.LoggerFactory = new SerilogLoggerFactory(Log.Logger);
 
         Log.Information("CHDSharpTester started");
     }

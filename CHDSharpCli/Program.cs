@@ -4,7 +4,8 @@ using CHDSharp.Models;
 using Serilog;
 using Serilog.Extensions.Logging;
 
-namespace CHDSharp;
+// ReSharper disable once CheckNamespace
+namespace CHDSharp.Cli;
 
 /// <summary>
 /// Command-line entry point for CHDSharp. Provides file verification, random-access testing,

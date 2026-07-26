@@ -47,42 +47,42 @@ public class CliAdditionalTests
     [Fact]
     public void Random_requires_file_path()
     {
-        var (exitCode, output) = RunCli("--random");
+        var (_, output) = RunCli("--random");
         Assert.Contains("requires", output, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public void List_requires_file_path()
     {
-        var (exitCode, output) = RunCli("--list");
+        var (_, output) = RunCli("--list");
         Assert.Contains("requires", output, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public void Parent_requires_two_paths()
     {
-        var (exitCode, output) = RunCli("--parent", "child.chd");
+        var (_, output) = RunCli("--parent", "child.chd");
         Assert.Contains("requires", output, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public void Toc_requires_file_path()
     {
-        var (exitCode, output) = RunCli("--toc");
+        var (_, output) = RunCli("--toc");
         Assert.Contains("requires", output, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public void Cue_requires_file_path()
     {
-        var (exitCode, output) = RunCli("--cue");
+        var (_, output) = RunCli("--cue");
         Assert.Contains("requires", output, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public void Classify_requires_file_path()
     {
-        var (exitCode, output) = RunCli("--classify");
+        var (_, output) = RunCli("--classify");
         Assert.Contains("requires", output, StringComparison.OrdinalIgnoreCase);
     }
 

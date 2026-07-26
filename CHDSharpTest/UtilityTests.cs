@@ -120,7 +120,7 @@ public class UtilityTests
     [Fact]
     public void IsAscii_with_null_bytes_returns_true()
     {
-        Assert.True(Util.IsAscii([0x41, 0x00, 0x42]));
+        Assert.True(Util.IsAscii("A\0B"u8.ToArray()));
     }
 
     [Fact]
@@ -187,7 +187,7 @@ public class UtilityTests
             {
                 var arr = pool.Rent();
                 pool.Return(arr);
-            });
+            }, TestContext.Current.CancellationToken);
         }
 
         await Task.WhenAll(tasks);

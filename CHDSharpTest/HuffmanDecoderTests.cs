@@ -39,7 +39,7 @@ public class HuffmanDecoderTests
         // Each code needs 'numbits' bits (3 bits for maxbits < 8)
         // Code 0: 2 bits, Code 1: 2 bits, Code 2: 2 bits, Code 3: 2 bits
         // Encoded as: 2, 2, 2, 2 (no RLE needed)
-        var writer = new BitStreamWrite(64);
+        var writer = new BitStreamWrite();
         writer.Write(2, 3); // code 0 = 2 bits
         writer.Write(2, 3); // code 1 = 2 bits
         writer.Write(2, 3); // code 2 = 2 bits
@@ -68,8 +68,6 @@ public class HuffmanDecoderTests
         private readonly List<byte> _data = new();
         private uint _buffer;
         private int _bits;
-
-        public BitStreamWrite(int capacity) { }
 
         public void Write(uint value, int numbits)
         {

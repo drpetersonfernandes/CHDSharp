@@ -245,7 +245,7 @@ public class ChdFileTests
         Assert.Equal(ChdError.Chderrnone, err);
 
         Assert.Throws<InvalidOperationException>(() => chd!.GenerateCueSheet("test.bin"));
-        chd.Dispose();
+        chd?.Dispose();
     }
 
     // ── ExportToc ──
@@ -304,7 +304,7 @@ public class ChdFileTests
         var (err, chd) = await ChdFile.OpenAsync(path);
         Assert.Equal(ChdError.Chderrnone, err);
         Assert.NotNull(chd);
-        Assert.Equal(5u, chd!.Version);
+        Assert.Equal(5u, chd.Version);
         await chd.DisposeAsync();
     }
 

@@ -82,7 +82,7 @@ public class ChdCommonTests
     public void ConvMapEntry_flag_with_nocrc_still_extracts_type()
     {
         // Mapentryflagnocrc | Mapentrytypecompressed = 0x0011
-        var flag = MapEntryFlag.Mapentryflagnocrc | MapEntryFlag.Mapentrytypecompressed;
+        const MapEntryFlag flag = MapEntryFlag.Mapentryflagnocrc | MapEntryFlag.Mapentrytypecompressed;
         Assert.Equal(CompressionType.Compressiontype0,
             ChdCommon.ConvMapEntryFlagtoCompressionType(flag));
     }

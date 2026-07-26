@@ -23,7 +23,7 @@ public class BigEndianTests
     [Fact]
     public void ReadUInt16Be_zero()
     {
-        byte[] data = [0x00, 0x00];
+        byte[] data = "\0\0"u8.ToArray();
         Assert.Equal(0, data.ReadUInt16Be(0));
     }
 

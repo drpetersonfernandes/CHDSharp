@@ -25,7 +25,7 @@ public class ErrorExtensionTests
     [Fact]
     public void GetMessage_undefined_enum_returns_unknown()
     {
-        var undefined = (ChdError)9999;
+        const ChdError undefined = (ChdError)9999;
         var msg = undefined.GetMessage();
         Assert.Contains("Unknown error", msg, StringComparison.Ordinal);
     }

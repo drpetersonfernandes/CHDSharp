@@ -111,7 +111,7 @@ public class ChdApiTests
     public void CheckHeader_truncated_magic_returns_false()
     {
         // Only 4 bytes of magic instead of 8
-        var ms = new MemoryStream([0x4D, 0x43, 0x6F, 0x6D]);
+        var ms = new MemoryStream("MCom"u8.ToArray());
         Assert.False(Chd.CheckHeader(ms, out _, out _));
     }
 
@@ -127,8 +127,8 @@ public class ChdApiTests
     {
         var ms = new MemoryStream();
         ms.Write("MComprHD"u8);
-        ms.Write([0x00, 0x00, 0x00, 0x4C]); // length = 76
-        ms.Write([0x00, 0x00, 0x00, 0x00]); // version = 0
+        ms.Write("\0\0\0L"u8); // length = 76
+        ms.Write("\0\0\0\0"u8); // version = 0
         ms.Position = 0;
         Assert.False(Chd.CheckHeader(ms, out _, out _));
     }
@@ -138,7 +138,7 @@ public class ChdApiTests
     {
         var ms = new MemoryStream();
         ms.Write("MComprHD"u8);
-        ms.Write([0x00, 0x00, 0x00, 0x7C]); // length = 124
+        ms.Write("\0\0\0|"u8); // length = 124
         ms.Write([0x00, 0x00, 0x00, 0x06]); // version = 6
         ms.Position = 0;
         Assert.False(Chd.CheckHeader(ms, out _, out _));

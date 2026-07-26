@@ -105,7 +105,8 @@ public class ExceptionHandlingTests
         var buffIn = new byte[16];
         buffIn[0] = 0x28;
         buffIn[1] = 0xB5;
-        buffIn[2] = 0x2F; buffIn[3] = 0xFD; // zstd magic
+        buffIn[2] = 0x2F;
+        buffIn[3] = 0xFD; // zstd magic
         var buffOut = new byte[4096];
         var codec = new ChdCodecState();
 

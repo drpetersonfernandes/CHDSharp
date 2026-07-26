@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using CHDSharpTester.Models;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -17,6 +18,7 @@ public static class PdfExporter
     /// <param name="session">The test session results to export.</param>
     /// <param name="chdmanVersion">The chdman version string to include in the report header, or null.</param>
     /// <param name="outputPath">The full path where the PDF file will be written.</param>
+    [SuppressMessage("ReSharper", "RedundantArgumentDefaultValue")]
     public static void Export(TestSessionResult session, string? chdmanVersion, string outputPath)
     {
         Document.Create(container =>
@@ -45,13 +47,13 @@ public static class PdfExporter
                         row.RelativeItem().Column(c =>
                         {
                             c.Item().Text($"Files: {session.TotalFiles}  |  " +
-                                $"Passed: {session.PassedFiles}  |  " +
-                                $"Failed: {session.FailedFiles}  |  " +
-                                $"Skipped: {session.SkippedFiles}").Bold();
+                                          $"Passed: {session.PassedFiles}  |  " +
+                                          $"Failed: {session.FailedFiles}  |  " +
+                                          $"Skipped: {session.SkippedFiles}").Bold();
                             c.Item().Text($"SubTests: {session.TotalSubTests} total, " +
-                                $"{session.PassedSubTests} passed, " +
-                                $"{session.FailedSubTests} failed, " +
-                                $"{session.SkippedSubTests} skipped").FontSize(8);
+                                          $"{session.PassedSubTests} passed, " +
+                                          $"{session.FailedSubTests} failed, " +
+                                          $"{session.SkippedSubTests} skipped").FontSize(8);
                         });
                         row.ConstantItem(100).Text($"Time: {session.TotalElapsedSeconds:N1}s")
                             .FontSize(8).FontColor(Colors.Grey.Darken1);

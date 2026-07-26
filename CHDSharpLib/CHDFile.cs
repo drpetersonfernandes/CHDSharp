@@ -1047,13 +1047,6 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         }
     }
 
-    private void WriteTrackToFile(ChdTrackInfo track, string path)
-    {
-        var err = TryWriteTrackToFile(track, path);
-        if (err != ChdError.Chderrnone)
-            throw new InvalidDataException($"Failed to write track {track.TrackNumber}: {err}");
-    }
-
     private ChdError TryWriteTrackToFile(ChdTrackInfo track, string path)
     {
         var unitBytes = UnitBytes;

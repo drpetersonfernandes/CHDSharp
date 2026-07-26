@@ -39,6 +39,7 @@ public enum ChdCodec
     /// <summary>Error / unknown codec.</summary>
     Error = 0x0eeeeeee
 }
+/// <summary>Flags describing the type and attributes of a V3/V4 CHD map entry.</summary>
 public enum MapEntryFlag
 {
     /// <summary>Mask to isolate the hunk type from a map entry.</summary>

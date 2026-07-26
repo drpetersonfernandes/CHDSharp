@@ -51,10 +51,13 @@ internal class MainViewModel : INotifyPropertyChanged
     public string ChdmanPath
     {
         get => _chdmanPath;
-        set { _chdmanPath = value;
+        set
+        {
+            _chdmanPath = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(IsChdmanValid));
-            OnPropertyChanged(nameof(CanRunTests)); }
+            OnPropertyChanged(nameof(CanRunTests));
+        }
     }
 
     /// <summary>Gets whether the configured chdman path points to an existing file.</summary>
@@ -68,8 +71,11 @@ internal class MainViewModel : INotifyPropertyChanged
     public string FilesSummary
     {
         get => _filesSummary;
-        set { _filesSummary = value;
-            OnPropertyChanged(); }
+        set
+        {
+            _filesSummary = value;
+            OnPropertyChanged();
+        }
     }
 
     /// <summary>Gets the command to browse for the chdman executable.</summary>
@@ -113,12 +119,15 @@ internal class MainViewModel : INotifyPropertyChanged
     public bool IsRunning
     {
         get => _isRunning;
-        set { _isRunning = value;
+        set
+        {
+            _isRunning = value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(CanRunTests));
             OnPropertyChanged(nameof(ShowProgress));
             OnPropertyChanged(nameof(ShowRunButton));
-            OnPropertyChanged(nameof(ShowResults)); }
+            OnPropertyChanged(nameof(ShowResults));
+        }
     }
 
     /// <summary>Gets whether the progress indicator should be visible.</summary>
@@ -136,8 +145,11 @@ internal class MainViewModel : INotifyPropertyChanged
     public double ProgressValue
     {
         get => _progressValue;
-        set { _progressValue = value;
-            OnPropertyChanged(); }
+        set
+        {
+            _progressValue = value;
+            OnPropertyChanged();
+        }
     }
 
     private string _statusText = "Ready.";
@@ -145,8 +157,11 @@ internal class MainViewModel : INotifyPropertyChanged
     public string StatusText
     {
         get => _statusText;
-        set { _statusText = value;
-            OnPropertyChanged(); }
+        set
+        {
+            _statusText = value;
+            OnPropertyChanged();
+        }
     }
 
     private string _progressText = "Ready.";
@@ -154,8 +169,11 @@ internal class MainViewModel : INotifyPropertyChanged
     public string ProgressText
     {
         get => _progressText;
-        set { _progressText = value;
-            OnPropertyChanged(); }
+        set
+        {
+            _progressText = value;
+            OnPropertyChanged();
+        }
     }
 
     private string _currentTest = string.Empty;
@@ -163,8 +181,11 @@ internal class MainViewModel : INotifyPropertyChanged
     public string CurrentTest
     {
         get => _currentTest;
-        set { _currentTest = value;
-            OnPropertyChanged(); }
+        set
+        {
+            _currentTest = value;
+            OnPropertyChanged();
+        }
     }
 
     private string _fileProgress = string.Empty;
@@ -172,8 +193,11 @@ internal class MainViewModel : INotifyPropertyChanged
     public string FileProgress
     {
         get => _fileProgress;
-        set { _fileProgress = value;
-            OnPropertyChanged(); }
+        set
+        {
+            _fileProgress = value;
+            OnPropertyChanged();
+        }
     }
 
     private string _logText = string.Empty;
@@ -181,8 +205,11 @@ internal class MainViewModel : INotifyPropertyChanged
     public string LogText
     {
         get => _logText;
-        set { _logText = value;
-            OnPropertyChanged(); }
+        set
+        {
+            _logText = value;
+            OnPropertyChanged();
+        }
     }
 
     /// <summary>Gets the collection of structured log entries for data-bound display.</summary>
@@ -231,8 +258,11 @@ internal class MainViewModel : INotifyPropertyChanged
     public string SummarySubText
     {
         get => _summarySubText;
-        set { _summarySubText = value;
-            OnPropertyChanged(); }
+        set
+        {
+            _summarySubText = value;
+            OnPropertyChanged();
+        }
     }
 
     /// <summary>Gets an observable collection of per-file results from the last session.</summary>
@@ -461,8 +491,8 @@ internal class MainViewModel : INotifyPropertyChanged
         sb.AppendLine("=== CHDSharp Tester Results ===");
         sb.AppendLine(CultureInfo.InvariantCulture, $"Date: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         sb.AppendLine(CultureInfo.InvariantCulture, $"Summary: {SessionResult.TotalFiles} files | " +
-                                                  $"{SessionResult.PassedSubTests} passed, {SessionResult.FailedSubTests} failed, " +
-                                                  $"{SessionResult.SkippedSubTests} skipped | {SessionResult.TotalElapsedSeconds:N1}s");
+                                                    $"{SessionResult.PassedSubTests} passed, {SessionResult.FailedSubTests} failed, " +
+                                                    $"{SessionResult.SkippedSubTests} skipped | {SessionResult.TotalElapsedSeconds:N1}s");
         sb.AppendLine();
 
         foreach (var file in SessionResult.FileResults)

@@ -207,8 +207,10 @@ public class ChdTestRunner
                             details.Add($"DataSHA1: {libDataSha1} ✓");
                         }
                         else if (info.DataSha1 != null)
-                        { details.Add($"DataSHA1: lib={libDataSha1} chdman={info.DataSha1} ✗");
-                            allMatch = false; }
+                        {
+                            details.Add($"DataSHA1: lib={libDataSha1} chdman={info.DataSha1} ✗");
+                            allMatch = false;
+                        }
                         else if (!string.Equals(libDataSha1, "(none)", StringComparison.Ordinal) && !HashUtil.IsAllZero(chd.RawSha1))
                         {
                             details.Add($"DataSHA1: {libDataSha1}");
@@ -971,7 +973,7 @@ public class ChdTestRunner
                             TestName = "cdzs decode",
                             Status = string.Equals(computed, srcRawSha1, StringComparison.Ordinal) ? TestStatus.Passed : TestStatus.Failed,
                             Detail = string.Equals(computed, srcRawSha1
-, StringComparison.Ordinal)
+                                , StringComparison.Ordinal)
                                 ? $"SHA1={computed} ✓"
                                 : $"Expected={srcRawSha1} Computed={computed} ✗",
                             ElapsedSeconds = t1Sw.Elapsed.TotalSeconds
@@ -1385,7 +1387,8 @@ public class ChdTestRunner
         {
             try
             {
-                if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true); }
+                if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+            }
             catch
             {
                 /* best effort */

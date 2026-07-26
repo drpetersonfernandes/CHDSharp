@@ -310,7 +310,7 @@ public class HeaderAndApiTests
     [Fact]
     public void ChdMetadataEntry_GetText_returns_text_for_small_data()
     {
-        var data = System.Text.Encoding.ASCII.GetBytes("Hello World");
+        var data = "Hello World"u8.ToArray();
         var entry = new ChdMetadataEntry("TEST", data);
 
         Assert.Equal("Hello World", entry.GetText());

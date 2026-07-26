@@ -194,7 +194,7 @@ internal class AudioPcmConfig
     public static int ChannelsInMask(SpeakerConfig mask)
     {
         var count = 0;
-        while (mask != 0)
+        while (mask != SpeakerConfig.Directout)
         {
             count++;
             mask &= mask - 1;
@@ -245,6 +245,6 @@ internal class AudioPcmConfig
         BitsPerSample = bitsPerSample;
         ChannelCount = channelCount;
         SampleRate = sampleRate;
-        ChannelMask = channelMask == 0 ? GetDefaultChannelMask(channelCount) : channelMask;
+        ChannelMask = channelMask == SpeakerConfig.Directout ? GetDefaultChannelMask(channelCount) : channelMask;
     }
 }

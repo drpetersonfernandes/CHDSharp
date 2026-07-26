@@ -176,7 +176,7 @@ internal static class ChdHeaders
             };
             var mapflag = (MapEntryFlag)br.ReadByte();
             chd.Map[i].Comptype = ChdCommon.ConvMapEntryFlagtoCompressionType(mapflag);
-            if ((mapflag & MapEntryFlag.Mapentryflagnocrc) != 0)
+            if ((mapflag & MapEntryFlag.Mapentryflagnocrc) != MapEntryFlag.Mapentrytypeinvalid)
             {
                 chd.Map[i].Crc = null;
             }
@@ -220,7 +220,7 @@ internal static class ChdHeaders
             };
             var mapflag = (MapEntryFlag)br.ReadByte();
             chd.Map[i].Comptype = ChdCommon.ConvMapEntryFlagtoCompressionType(mapflag);
-            if ((mapflag & MapEntryFlag.Mapentryflagnocrc) != 0)
+            if ((mapflag & MapEntryFlag.Mapentryflagnocrc) != MapEntryFlag.Mapentrytypeinvalid)
             {
                 chd.Map[i].Crc = null;
             }
@@ -349,7 +349,7 @@ internal static class ChdHeaders
         }
 
         var repcount = 0;
-        CompressionType lastcomp = 0;
+        CompressionType lastcomp = CompressionType.Compressiontype0;
         for (uint blockIndex = 0; blockIndex < totalBlocks; blockIndex++)
         {
             map[blockIndex] = new MapEntry();

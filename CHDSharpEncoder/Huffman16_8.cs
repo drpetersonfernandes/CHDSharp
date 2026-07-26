@@ -1,21 +1,30 @@
 namespace CHDSharpEncoder;
 
+/// <summary>Huffman encoder supporting up to 16 symbols with a maximum code length of 8 bits.</summary>
 public class Huffman16_8
 {
+    /// <summary>Number of distinct symbol codes supported.</summary>
     public const int NUM_CODES = 16;
+
+    /// <summary>Maximum allowed code length in bits.</summary>
     public const int MAX_BITS = 8;
 
     private readonly int[] _histogram = new int[NUM_CODES];
 
+    /// <summary>Gets the number of bits for each symbol's canonical Huffman code.</summary>
     public int[] NumBits { get; } = new int[NUM_CODES];
 
+    /// <summary>Gets the canonical Huffman code value for each symbol.</summary>
     public uint[] Codes { get; } = new uint[NUM_CODES];
 
+    /// <summary>Resets the internal symbol frequency histogram to zero.</summary>
     public void ResetHistogram()
     {
         Array.Clear(_histogram);
     }
 
+    /// <summary>Increments the frequency count for the given symbol.</summary>
+    /// <param name="symbol">The symbol whose count is incremented.</param>
     public void CountSymbol(uint symbol)
     {
         if (symbol < NUM_CODES)
@@ -24,6 +33,7 @@ public class Huffman16_8
         }
     }
 
+    /// <summary>Builds a canonical Huffman tree from the accumulated histogram and assigns codes.</summary>
     public void BuildTree()
     {
         var totalData = 0;
@@ -71,6 +81,8 @@ public class Huffman16_8
         AssignCanonicalCodes();
     }
 
+    /// <summary>Exports the tree structure using run-length encoding to the specified bit stream.</summary>
+    /// <param name="bs">The bit stream to write the RLE-encoded tree to.</param>
     public void ExportTreeRle(BitStreamOut bs)
     {
         var numbits = MAX_BITS >= 16 ? 5 : MAX_BITS >= 8 ? 4 : 3;
@@ -102,6 +114,9 @@ public class Huffman16_8
         Flush(lastVal);
     }
 
+    /// <summary>Encodes a symbol and writes its Huffman code to the bit stream.</summary>
+    /// <param name="bs">The bit stream to write to.</param>
+    /// <param name="symbol">The symbol to encode.</param>
     public void Encode(BitStreamOut bs, uint symbol)
     {
         if (symbol >= NUM_CODES)

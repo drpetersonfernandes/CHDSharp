@@ -4,7 +4,7 @@ internal class BigEndianWriter
 {
     private byte[] _buffer;
 
-    public BigEndianWriter(int capacity = 256)
+    internal BigEndianWriter(int capacity = 256)
     {
         _buffer = new byte[capacity];
         Position = 0;
@@ -26,7 +26,7 @@ internal class BigEndianWriter
         Position += 2;
     }
 
-    public void WriteU24(uint v)
+    internal void WriteU24(uint v)
     {
         EnsureCapacity(3);
         _buffer[Position] = (byte)(v >> 16);
@@ -35,7 +35,7 @@ internal class BigEndianWriter
         Position += 3;
     }
 
-    public void WriteU32(uint v)
+    internal void WriteU32(uint v)
     {
         EnsureCapacity(4);
         _buffer[Position] = (byte)(v >> 24);
@@ -45,7 +45,7 @@ internal class BigEndianWriter
         Position += 4;
     }
 
-    public void WriteU48(ulong v)
+    internal void WriteU48(ulong v)
     {
         EnsureCapacity(6);
         _buffer[Position] = (byte)(v >> 40);
@@ -57,7 +57,7 @@ internal class BigEndianWriter
         Position += 6;
     }
 
-    public void WriteU64(ulong v)
+    internal void WriteU64(ulong v)
     {
         EnsureCapacity(8);
         _buffer[Position] = (byte)(v >> 56);
@@ -71,28 +71,28 @@ internal class BigEndianWriter
         Position += 8;
     }
 
-    public void WriteBytes(ReadOnlySpan<byte> data)
+    internal void WriteBytes(ReadOnlySpan<byte> data)
     {
         EnsureCapacity(data.Length);
         data.CopyTo(_buffer.AsSpan(Position));
         Position += data.Length;
     }
 
-    public void WriteZeroes(int count)
+    internal void WriteZeroes(int count)
     {
         EnsureCapacity(count);
         Array.Clear(_buffer, Position, count);
         Position += count;
     }
 
-    public byte[] ToArray()
+    internal byte[] ToArray()
     {
         var result = new byte[Position];
         Array.Copy(_buffer, result, Position);
         return result;
     }
 
-    public Span<byte> AsSpan()
+    internal Span<byte> AsSpan()
     {
         return _buffer.AsSpan(0, Position);
     }

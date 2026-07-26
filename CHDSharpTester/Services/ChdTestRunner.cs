@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
-using System.Threading;
 using CHDSharp;
 using CHDSharp.Models;
 using CHDSharpTester.Models;

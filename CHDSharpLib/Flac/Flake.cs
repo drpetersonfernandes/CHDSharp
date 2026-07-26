@@ -27,28 +27,28 @@ internal class FlakeConstants
     /// <summary>
     /// Maximum block size in samples (65535).
     /// </summary>
-    public const int Maxblocksize = 65535;
+    internal const int Maxblocksize = 65535;
     /// <summary>
     /// Maximum Rice coding parameter (14).
     /// </summary>
-    public const int Maxriceparam = 14;
+    internal const int Maxriceparam = 14;
     /// <summary>
     /// Maximum partition order for Rice coding (8).
     /// </summary>
-    public const int Maxpartitionorder = 8;
+    internal const int Maxpartitionorder = 8;
     /// <summary>
     /// Maximum number of Rice coding partitions (256).
     /// </summary>
-    public const int Maxpartitions = 1 << Maxpartitionorder;
+    internal const int Maxpartitions = 1 << Maxpartitionorder;
 
     /// <summary>
     /// Table of FLAC block sizes indexed by the block size code from the frame header.
     /// </summary>
-    public static readonly int[] FlacBlocksizes = [0, 192, 576, 1152, 2304, 4608, 0, 0, 256, 512, 1024, 2048, 4096, 8192, 16384];
+    internal static readonly int[] FlacBlocksizes = [0, 192, 576, 1152, 2304, 4608, 0, 0, 256, 512, 1024, 2048, 4096, 8192, 16384];
     //0110 : get 8 bit (blocksize-1) from end of header
     //0111 : get 16 bit (blocksize-1) from end of header
     /// <summary>
     /// Table of FLAC bit depths indexed by the bits-per-sample code from the stream info header.
     /// </summary>
-    public static readonly int[] FlacBitdepths = [0, 8, 12, 0, 16, 20, 24, 0];
+    internal static readonly int[] FlacBitdepths = [0, 8, 12, 0, 16, 20, 24, 0];
 }

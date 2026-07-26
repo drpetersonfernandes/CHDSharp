@@ -8,19 +8,19 @@ internal class Lpc
     /// <summary>
     /// Maximum LPC order.
     /// </summary>
-    public const int Maxlpcorder = 32;
+    internal const int Maxlpcorder = 32;
     /// <summary>
     /// Maximum number of LPC windows.
     /// </summary>
-    public const int Maxlpcwindows = 16;
+    internal const int Maxlpcwindows = 16;
     /// <summary>
     /// Maximum number of LPC precisions.
     /// </summary>
-    public const int Maxlpcprecisions = 4;
+    internal const int Maxlpcprecisions = 4;
     /// <summary>
     /// Maximum number of LPC sections.
     /// </summary>
-    public const int Maxlpcsections = 128;
+    internal const int Maxlpcsections = 128;
 
     /**
      * Calculates autocorrelation data from audio samples
@@ -35,7 +35,7 @@ internal class Lpc
     /// <param name="min">Minimum lag to compute.</param>
     /// <param name="lag">Maximum lag to compute.</param>
     /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
-    public static unsafe void
+    internal static unsafe void
         ComputeAutocorr( /*const*/ int* data, float* window, int len, int min, int lag, double* autoc)
     {
         var data1 = stackalloc double[len];
@@ -75,7 +75,7 @@ internal class Lpc
     /// <param name="min">Minimum lag to compute.</param>
     /// <param name="lag">Maximum lag to compute.</param>
     /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
-    public static unsafe void
+    internal static unsafe void
         ComputeAutocorrWindowless( /*const*/ int* data, int len, int min, int lag, double* autoc)
     {
         for (var i = min; i <= lag; ++i)
@@ -106,7 +106,7 @@ internal class Lpc
     /// <param name="min">Minimum lag to compute.</param>
     /// <param name="lag">Maximum lag to compute.</param>
     /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
-    public static unsafe void
+    internal static unsafe void
         ComputeAutocorrWindowlessLarge( /*const*/ int* data, int len, int min, int lag, double* autoc)
     {
         for (var i = min; i <= lag; ++i)
@@ -139,7 +139,7 @@ internal class Lpc
     /// <param name="min">Minimum lag to compute.</param>
     /// <param name="lag">Maximum lag to compute.</param>
     /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
-    public static unsafe void
+    internal static unsafe void
         ComputeAutocorrGlue( /*const*/ int* data, float* window, int offs, int offs1, int min, int lag, double* autoc)
     {
         var data1 = stackalloc double[lag + lag];
@@ -169,7 +169,7 @@ internal class Lpc
     /// <param name="min">Minimum lag to compute.</param>
     /// <param name="lag">Maximum lag to compute.</param>
     /// <param name="autoc">Destination buffer for autocorrelation values (accumulated).</param>
-    public static unsafe void
+    internal static unsafe void
         ComputeAutocorrGlue( /*const*/ int* data, int min, int lag, double* autoc)
     {
         for (var i = min; i <= lag; ++i)
@@ -197,7 +197,7 @@ internal class Lpc
     /// <param name="reff">Pointer to reflection coefficients.</param>
     /// <param name="lpc">Destination buffer for LPC coefficients, stored as a flat array indexed by [order * MAX_LPC_ORDER + coefficient].</param>
     /// <exception cref="Exception">Thrown if <paramref name="maxOrder"/> exceeds <see cref="Maxlpcorder"/>.</exception>
-    public static unsafe void
+    internal static unsafe void
         ComputeLpcCoefs(uint maxOrder, double* reff, float* lpc /*[][MAX_LPC_ORDER]*/)
     {
         var lpcTmp = stackalloc double[Maxlpcorder];
@@ -241,7 +241,7 @@ internal class Lpc
     /// <param name="maxOrder">Maximum LPC order to compute.</param>
     /// <param name="reff">Destination buffer for reflection coefficients.</param>
     /// <param name="err">Destination buffer for prediction errors.</param>
-    public static unsafe void
+    internal static unsafe void
         ComputeSchurReflection( /*const*/ double* autoc, uint maxOrder,
             double* reff /*[][MAX_LPC_ORDER]*/, double* err)
     {
@@ -280,7 +280,7 @@ internal class Lpc
     /// <param name="order">LPC order used for prediction.</param>
     /// <param name="coefs">Pointer to quantized LPC coefficients.</param>
     /// <param name="shift">Right-shift amount applied to the prediction value.</param>
-    public static unsafe void
+    internal static unsafe void
         DecodeResidual(int* res, int* smp, int n, int order,
             int* coefs, int shift)
     {
@@ -473,7 +473,7 @@ internal class Lpc
     /// <param name="order">LPC order used for prediction.</param>
     /// <param name="coefs">Pointer to quantized LPC coefficients.</param>
     /// <param name="shift">Right-shift amount applied to the prediction value.</param>
-    public static unsafe void
+    internal static unsafe void
         DecodeResidualLong(int* res, int* smp, int n, int order,
             int* coefs, int shift)
     {

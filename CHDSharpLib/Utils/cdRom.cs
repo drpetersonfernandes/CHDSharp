@@ -300,7 +300,7 @@ internal static class CdRom
     /// <summary>Generates P and Q ECC codes for a CD-ROM sector, overwriting any existing ECC data in place.</summary>
     /// <param name="data">The byte array containing the sector data (must be at least 2352 bytes per sector).</param>
     /// <param name="sectorOffset">The zero-based offset within <paramref name="data"/> where the sector begins.</param>
-    public static void EccGenerate(byte[] data, int sectorOffset)
+    internal static void EccGenerate(byte[] data, int sectorOffset)
     {
         for (var i = 0; i < EccPNumBytes; i++)
             ecc_compute_bytes(data, sectorOffset, Poffsets[i], EccPComp, sectorOffset + EccPOffset + i, sectorOffset + EccPOffset + EccPNumBytes + i);
@@ -313,7 +313,7 @@ internal static class CdRom
     /// <param name="data">The byte array containing the sector data.</param>
     /// <param name="sectorOffset">The zero-based offset within <paramref name="data"/> where the sector begins.</param>
     /// <returns><c>true</c> if both P and Q parity bytes match recalculated values; <c>false</c> otherwise.</returns>
-    public static bool EccVerify(byte[] data, int sectorOffset)
+    internal static bool EccVerify(byte[] data, int sectorOffset)
     {
         for (var i = 0; i < EccPNumBytes; i++)
         {
@@ -337,7 +337,7 @@ internal static class CdRom
     /// <summary>Zeroes out the P and Q ECC parity bytes in a CD-ROM sector.</summary>
     /// <param name="data">The byte array containing the sector data.</param>
     /// <param name="sectorOffset">The zero-based offset within <paramref name="data"/> where the sector begins.</param>
-    public static void EccClear(byte[] data, int sectorOffset)
+    internal static void EccClear(byte[] data, int sectorOffset)
     {
         Array.Clear(data, sectorOffset + EccPOffset, 2 * EccPNumBytes);
         Array.Clear(data, sectorOffset + EccQOffset, 2 * EccQNumBytes);

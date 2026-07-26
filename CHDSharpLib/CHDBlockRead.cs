@@ -1,4 +1,3 @@
-using System;
 using CHDSharp.Models;
 using CHDSharp.Utils;
 using Microsoft.Extensions.Logging;
@@ -123,9 +122,6 @@ internal static class ChdBlockRead
         {
             if (me.Comptype != CompressionType.Compressionself)
                 return;
-            // this should never be true
-            if (me.SelfMapEntry == null)
-                return;
 
             if (me.SelfMapEntry.KeepBufferCopy)
                 return;
@@ -143,7 +139,7 @@ internal static class ChdBlockRead
     /// <param name="chd">The parsed CHD header.</param>
     /// <param name="me">The map entry to evaluate.</param>
     /// <returns>An integer weight where higher values indicate more expensive decompression.</returns>
-    internal static int GetWeigth(ChdHeader chd, MapEntry me)
+    private static int GetWeigth(ChdHeader chd, MapEntry me)
     {
         if (me.Comptype == CompressionType.Compressionnone)
             return 1;
@@ -213,62 +209,12 @@ internal static class ChdBlockRead
             case CompressionType.Compressiontype1:
             case CompressionType.Compressiontype2:
             case CompressionType.Compressiontype3:
-            {
-                lock (mapEntry)
-                {
-                    if (mapEntry.BuffOutCache == null)
-                    {
-                        var ret = compression[(int)mapEntry.Comptype].Invoke(mapEntry.BuffIn, (int)mapEntry.Length, buffOut, buffOutLength, codec);
-
-                        if (ret != ChdError.Chderrnone)
-                            return ret;
-
-                        // if this block is re-used keep a copy of it.
-                        if (mapEntry.UseCount > 0)
-                        {
-                            mapEntry.BuffOutCache = arrPool.Rent();
-                            Array.Copy(buffOut, 0, mapEntry.BuffOutCache, 0, buffOutLength);
-                        }
-
-                        break;
-                    }
-
-                    Array.Copy(mapEntry.BuffOutCache, 0, buffOut, 0, buffOutLength);
-
-                    Interlocked.Decrement(ref mapEntry.UseCount);
-                    if (mapEntry.UseCount == 0)
-                    {
-                        arrPool.Return(mapEntry.BuffOutCache);
-                        mapEntry.BuffOutCache = null!;
-                    }
-
-                    checkCrc = false;
-                }
-
-                break;
-            }
             case CompressionType.Compressionnone:
             {
                 lock (mapEntry)
                 {
-                    if (mapEntry.BuffOutCache == null)
-                    {
-                        if (mapEntry.BuffIn == null)
-                            return ChdError.Chderrdecompressionerror;
-
-                        Array.Copy(mapEntry.BuffIn, 0, buffOut, 0, buffOutLength);
-
-                        if (mapEntry.UseCount > 0)
-                        {
-                            mapEntry.BuffOutCache = arrPool.Rent();
-                            Array.Copy(buffOut, 0, mapEntry.BuffOutCache, 0, buffOutLength);
-                        }
-
-                        break;
-                    }
-
-
                     Array.Copy(mapEntry.BuffOutCache, 0, buffOut, 0, buffOutLength);
+
                     Interlocked.Decrement(ref mapEntry.UseCount);
                     if (mapEntry.UseCount == 0)
                     {

@@ -2,8 +2,12 @@ using System.IO.Compression;
 
 namespace CHDSharpEncoder;
 
+/// <summary>Provides raw DEFLATE compression and decompression utilities.</summary>
 public static class RawDeflate
 {
+    /// <summary>Compresses data using raw DEFLATE, stripping any Zlib header/trailer.</summary>
+    /// <param name="data">The uncompressed input data.</param>
+    /// <returns>The compressed bytes, or <c>null</c> if compression did not reduce size.</returns>
     public static byte[]? Compress(byte[] data)
     {
         using var ms = new MemoryStream(data.Length);
@@ -25,6 +29,10 @@ public static class RawDeflate
         return result;
     }
 
+    /// <summary>Decompresses raw DEFLATE data to the specified original size.</summary>
+    /// <param name="compressed">The compressed input data.</param>
+    /// <param name="originalSize">The expected number of uncompressed bytes.</param>
+    /// <returns>The decompressed byte array.</returns>
     public static byte[] Decompress(byte[] compressed, int originalSize)
     {
         using var ms = new MemoryStream(compressed);

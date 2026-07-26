@@ -24,10 +24,10 @@ internal static partial class ChdTocParser
     {
         isGdRom = false;
 
-        var cht2Entries = metadata.Where(m => m.Tag == CdRomTrackMetadata2Tag).ToList();
-        var chgdEntries = metadata.Where(m => m.Tag == GdRomTrackMetadataTag).ToList();
-        var chtrEntries = metadata.Where(m => m.Tag == CdRomTrackMetadataTag).ToList();
-        var chcdEntries = metadata.Where(m => m.Tag == CdRomOldMetadataTag).ToList();
+        var cht2Entries = metadata.Where(m => string.Equals(m.Tag, CdRomTrackMetadata2Tag, StringComparison.Ordinal)).ToList();
+        var chgdEntries = metadata.Where(m => string.Equals(m.Tag, GdRomTrackMetadataTag, StringComparison.Ordinal)).ToList();
+        var chtrEntries = metadata.Where(m => string.Equals(m.Tag, CdRomTrackMetadataTag, StringComparison.Ordinal)).ToList();
+        var chcdEntries = metadata.Where(m => string.Equals(m.Tag, CdRomOldMetadataTag, StringComparison.Ordinal)).ToList();
 
         if (chgdEntries.Count > 0)
         {
@@ -41,7 +41,7 @@ internal static partial class ChdTocParser
         if (chtrEntries.Count > 0)
             return ParseTextTracks(chtrEntries, TrackTypeParser.Chtr);
 
-        var chgtEntries = metadata.Where(m => m.Tag == GdRomOldMetadataTag).ToList();
+        var chgtEntries = metadata.Where(m => string.Equals(m.Tag, GdRomOldMetadataTag, StringComparison.Ordinal)).ToList();
         if (chgtEntries.Count > 0)
         {
             isGdRom = true;
@@ -54,9 +54,12 @@ internal static partial class ChdTocParser
         return null;
     }
 
-    private enum TrackTypeParser { Chtr,
+    private enum TrackTypeParser
+    {
+        Chtr,
         Cht2,
-        GdRom }
+        GdRom
+    }
 
     private static List<ChdTrackInfo> ParseTextTracks(
         List<ChdMetadataEntry> entries, TrackTypeParser parser)
@@ -268,12 +271,12 @@ internal static partial class ChdTocParser
 
     internal static bool HasDvdMetadata(IReadOnlyList<ChdMetadataEntry> metadata)
     {
-        return metadata.Any(m => m.Tag == DvdMetadataTag);
+        return metadata.Any(m => string.Equals(m.Tag, DvdMetadataTag, StringComparison.Ordinal));
     }
 
     internal static bool HasHddMetadata(IReadOnlyList<ChdMetadataEntry> metadata)
     {
-        return metadata.Any(m => m.Tag == HardDiskMetadataTag);
+        return metadata.Any(m => string.Equals(m.Tag, HardDiskMetadataTag, StringComparison.Ordinal));
     }
 
     [GeneratedRegex(@"(\w+) *: *([^ ]+)", RegexOptions.Compiled | RegexOptions.CultureInvariant)]

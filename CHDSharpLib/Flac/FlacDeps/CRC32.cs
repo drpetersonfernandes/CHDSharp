@@ -4,16 +4,16 @@ namespace CHDSharp.Flac.FlacDeps;
 internal static class Crc32
 {
     /// <summary>Precomputed CRC-32 lookup table (256 entries).</summary>
-    public static readonly uint[] Table;
+    internal static readonly uint[] Table;
 
     /// <summary>Computes a CRC-32 checksum for a single byte.</summary>
-    public static uint ComputeChecksum(uint crc, byte val)
+    internal static uint ComputeChecksum(uint crc, byte val)
     {
         return (crc >> 8) ^ Table[(crc & 0xff) ^ val];
     }
 
     /// <summary>Computes a CRC-32 checksum over a raw byte buffer.</summary>
-    public static unsafe uint ComputeChecksum(uint crc, byte* bytes, int count)
+    internal static unsafe uint ComputeChecksum(uint crc, byte* bytes, int count)
     {
         fixed (uint* t = Table)
         {
@@ -27,7 +27,7 @@ internal static class Crc32
     }
 
     /// <summary>Computes a CRC-32 checksum over a portion of a byte array.</summary>
-    public static unsafe uint ComputeChecksum(uint crc, byte[] bytes, int pos, int count)
+    internal static unsafe uint ComputeChecksum(uint crc, byte[] bytes, int pos, int count)
     {
         fixed (byte* pbytes = &bytes[pos])
         {

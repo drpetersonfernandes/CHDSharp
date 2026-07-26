@@ -8,7 +8,7 @@ internal static class BigEndian
     {
         /// <summary>Reads a big-endian <see cref="UInt16"/> from the stream.</summary>
         /// <returns>The unsigned 16-bit value read in big-endian order.</returns>
-        internal ushort ReadUInt16Be()
+        public ushort ReadUInt16Be()
         {
             return BitConverter.ToUInt16(binRdr.ReadBytesRequired(sizeof(ushort)).Reverse(), 0);
         }

@@ -4,20 +4,20 @@ namespace CHDSharp.LZMA.RangeCoder;
 internal class Decoder
 {
     /// <summary>Top value used for range normalisation.</summary>
-    public const uint KTopValue = (1 << 24);
+    internal const uint KTopValue = (1 << 24);
     /// <summary>Current range value.</summary>
-    public uint Range;
+    internal uint Range;
 
     /// <summary>Current code (compressed data) being decoded.</summary>
-    public uint Code;
+    internal uint Code;
 
     /// <summary>Input stream providing compressed data.</summary>
-    public Stream Stream = null!;
+    internal Stream Stream = null!;
     /// <summary>Total number of bytes consumed from the stream.</summary>
-    public long Total;
+    internal long Total;
 
     /// <summary>Reads the next byte from the stream, throwing <see cref="DataErrorException"/> on EOF (truncated stream).</summary>
-    public byte ReadByteChecked()
+    internal byte ReadByteChecked()
     {
         var b = Stream.ReadByte();
         if (b < 0)
@@ -27,7 +27,7 @@ internal class Decoder
     }
 
     /// <summary>Initialises the range decoder by reading the first five bytes from the stream.</summary>
-    public void Init(Stream stream)
+    internal void Init(Stream stream)
     {
         Stream = stream;
 
@@ -42,19 +42,19 @@ internal class Decoder
     }
 
     /// <summary>Releases the reference to the input stream.</summary>
-    public void ReleaseStream()
+    internal void ReleaseStream()
     {
         Stream = null!;
     }
 
     /// <summary>Closes and disposes the input stream.</summary>
-    public void CloseStream()
+    internal void CloseStream()
     {
         Stream?.Dispose();
     }
 
     /// <summary>Normalises the range by reading bytes from the stream until <see cref="Range"/> >= <see cref="KTopValue"/>.</summary>
-    public void Normalize()
+    internal void Normalize()
     {
         while (Range < KTopValue)
         {
@@ -65,7 +65,7 @@ internal class Decoder
     }
 
     /// <summary>Single-iteration normalise (used when only one byte may be needed).</summary>
-    public void Normalize2()
+    internal void Normalize2()
     {
         if (Range < KTopValue)
         {
@@ -76,7 +76,7 @@ internal class Decoder
     }
 
     /// <summary>Computes the threshold value for a given total frequency.</summary>
-    public uint GetThreshold(uint total)
+    internal uint GetThreshold(uint total)
     {
         if (total == 0)
             throw new DataErrorException();
@@ -85,7 +85,7 @@ internal class Decoder
     }
 
     /// <summary>Decodes a symbol given its frequency range.</summary>
-    public void Decode(uint start, uint size)
+    internal void Decode(uint start, uint size)
     {
         Code -= start * Range;
         Range *= size;
@@ -93,7 +93,7 @@ internal class Decoder
     }
 
     /// <summary>Decodes a specified number of raw (non-adaptive) bits.</summary>
-    public uint DecodeDirectBits(int numTotalBits)
+    internal uint DecodeDirectBits(int numTotalBits)
     {
         var range = Range;
         var code = Code;
@@ -119,7 +119,7 @@ internal class Decoder
     }
 
     /// <summary>Decodes a single adaptive bit using a probability model.</summary>
-    public uint DecodeBit(uint size0, int numTotalBits)
+    internal uint DecodeBit(uint size0, int numTotalBits)
     {
         var newBound = (Range >> numTotalBits) * size0;
         uint symbol;
@@ -140,5 +140,5 @@ internal class Decoder
     }
 
     /// <summary>Gets whether the decoder has finished (all data has been consumed).</summary>
-    public bool IsFinished => Code == 0;
+    internal bool IsFinished => Code == 0;
 }

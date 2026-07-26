@@ -8,8 +8,6 @@ internal static class Util
     /// <returns><c>true</c> if the array is null or all bytes are zero; otherwise <c>false</c>.</returns>
     internal static bool IsAllZeroArray(byte[] b)
     {
-        if (b == null) return true;
-
         foreach (var t in b)
             if (t != 0) return false;
 

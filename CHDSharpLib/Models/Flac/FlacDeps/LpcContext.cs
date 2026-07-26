@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using CHDSharp.Flac;
 using CHDSharp.Flac.FlacDeps;
 
@@ -42,6 +43,7 @@ internal class LpcSubframeInfo
 /// <summary>
 /// Represents a section of a window for LPC analysis, defining boundaries and the type of autocorrelation computation to use.
 /// </summary>
+[StructLayout(LayoutKind.Sequential)]
 internal unsafe struct LpcWindowSection
 {
     /// <summary>

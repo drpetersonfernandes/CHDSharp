@@ -19,7 +19,7 @@ internal static class ChdMetaData
     private static readonly Action<ILogger, int, Exception?> LogMetaDataBinary =
         LoggerMessage.Define<int>(LogLevel.Debug, new EventId(3), "Data: Binary Data Length {Length}");
 
-    internal static readonly uint ChdMdflagsChecksum = 0x01;
+    private static readonly uint ChdMdflagsChecksum = 0x01;
 
     private const uint MaxMetadataEntryBytes = 1024 * 1024;
 
@@ -30,7 +30,7 @@ internal static class ChdMetaData
 
         var metaHashes = new List<byte[]>();
 
-        var metaErr = ReadMetaDataInternal(file, chd, collectHashes: true, out var entries, out _);
+        var metaErr = ReadMetaDataInternal(file, chd, true, out var entries, out _);
         if (metaErr != ChdError.Chderrnone)
             return metaErr;
 
@@ -57,13 +57,14 @@ internal static class ChdMetaData
         return ChdError.Chderrnone;
     }
 
-    public static ChdError ReadMetaDataEntries(Stream file, ChdHeader chd,
+    internal static ChdError ReadMetaDataEntries(Stream file, ChdHeader chd,
         out List<ChdMetadataEntry> entries)
     {
         entries = [];
-        var metaErr = ReadMetaDataInternal(file, chd, collectHashes: false, out var internalEntries, out _);
+        var metaErr = ReadMetaDataInternal(file, chd, false, out var internalEntries, out _);
         if (metaErr != ChdError.Chderrnone)
             return metaErr;
+
         foreach (var e in internalEntries)
         {
             entries.Add(new ChdMetadataEntry((e.Tag), e.Data));

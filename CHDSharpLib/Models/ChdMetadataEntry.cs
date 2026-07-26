@@ -14,6 +14,7 @@ public sealed record ChdMetadataEntry(string Tag, byte[] Data)
     {
         if (Data.Length > MaxTextDataLength)
             return string.Empty;
+
         return Encoding.ASCII.GetString(Data);
     }
 

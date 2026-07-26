@@ -12,7 +12,7 @@ internal struct BitDecoder
     private uint _prob;
 
     /// <summary>Updates the probability model toward the decoded symbol value.</summary>
-    public void UpdateModel(int numMoveBits, uint symbol)
+    internal void UpdateModel(int numMoveBits, uint symbol)
     {
         if (symbol == 0)
         {
@@ -25,13 +25,13 @@ internal struct BitDecoder
     }
 
     /// <summary>Initialises the probability to the midpoint.</summary>
-    public void Init()
+    internal void Init()
     {
         _prob = KBitModelTotal >> 1;
     }
 
     /// <summary>Decodes a single adaptive bit from the range decoder.</summary>
-    public uint Decode(Decoder rangeDecoder)
+    internal uint Decode(Decoder rangeDecoder)
     {
         var newBound = (rangeDecoder.Range >> KNumBitModelTotalBits) * _prob;
         if (rangeDecoder.Code < newBound)

@@ -48,12 +48,12 @@ internal class AudioDecoder : IAudioSource
     /// <summary>
     /// Gets or sets whether CRC verification is performed during decoding.
     /// </summary>
-    public bool DoCrc { get; set; } = true;
+    internal bool DoCrc { get; set; } = true;
 
     /// <summary>
     /// Gets the decoded sample buffer containing the current frame's audio data.
     /// </summary>
-    public int[] Samples { get; }
+    internal int[] Samples { get; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AudioDecoder"/> class from a file path or stream.
@@ -61,7 +61,7 @@ internal class AudioDecoder : IAudioSource
     /// <param name="settings">Decoder configuration settings.</param>
     /// <param name="path">Path to the FLAC file, or null if reading from a stream.</param>
     /// <param name="io">Input stream. If null and path is provided, a <see cref="FileStream"/> is opened.</param>
-    public AudioDecoder(DecoderSettings settings, string? path, Stream? io = null)
+    internal AudioDecoder(DecoderSettings settings, string? path, Stream? io = null)
     {
         _mSettings = settings;
 
@@ -106,7 +106,7 @@ internal class AudioDecoder : IAudioSource
     /// Initializes a new instance of the <see cref="AudioDecoder"/> class with a given PCM configuration.
     /// </summary>
     /// <param name="pcm">PCM audio configuration specifying sample rate, bit depth, and channel count.</param>
-    public AudioDecoder(AudioPcmConfig pcm)
+    internal AudioDecoder(AudioPcmConfig pcm)
     {
         _framesBuffer = null!;
         _io = null!;
@@ -703,7 +703,7 @@ internal class AudioDecoder : IAudioSource
     /// <param name="pos">Starting position within the buffer.</param>
     /// <param name="len">Length of data available in the buffer.</param>
     /// <returns>The number of bytes consumed from the buffer.</returns>
-    public unsafe int DecodeFrame(byte[] buffer, int pos, int len)
+    internal unsafe int DecodeFrame(byte[] buffer, int pos, int len)
     {
         fixed (byte* buf = buffer)
         {

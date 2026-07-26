@@ -4,7 +4,7 @@
 internal class Crc
 {
     /// <summary>Precomputed CRC-32 lookup tables (8 tables, 256 entries each) for fast slicing.</summary>
-    public static readonly uint[] Crc32Lookup;
+    private static readonly uint[] Crc32Lookup;
     private uint _crc;
     private long _totalBytesRead;
 
@@ -55,7 +55,7 @@ internal class Crc
     /// <param name="block">The byte array containing the data to process.</param>
     /// <param name="offset">The zero-based offset in <paramref name="block"/> at which to begin processing.</param>
     /// <param name="count">The number of bytes to process.</param>
-    public void SlurpBlock(byte[] block, int offset, int count)
+    private void SlurpBlock(byte[] block, int offset, int count)
     {
         _totalBytesRead += count;
         var crc = _crc;
@@ -97,7 +97,7 @@ internal class Crc
     }
 
     /// <summary>Gets the CRC-32 result as an unsigned 32-bit integer.</summary>
-    public uint Crc32ResultU => ~_crc;
+    private uint Crc32ResultU => ~_crc;
 
     /// <summary>Calculates the CRC-32 digest of a data range without mutating instance state.</summary>
     /// <param name="data">The byte array containing the data.</param>

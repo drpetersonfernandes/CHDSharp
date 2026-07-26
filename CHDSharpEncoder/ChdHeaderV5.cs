@@ -1,24 +1,41 @@
 namespace CHDSharpEncoder;
 
+/// <summary>Represents the header structure for CHD version 5 files.</summary>
 public class ChdHeaderV5
 {
+    /// <summary>The CHD header tag as a string.</summary>
     public const string TAG_STRING = "MComprHD";
+    /// <summary>The CHD header tag as a byte array.</summary>
     public static readonly byte[] TAG = { (byte)'M', (byte)'C', (byte)'o', (byte)'m', (byte)'p', (byte)'r', (byte)'H', (byte)'D' };
+    /// <summary>The serialized header length in bytes.</summary>
     public const uint LENGTH = 124;
+    /// <summary>The CHD format version (5).</summary>
     public const uint VERSION = 5;
 
+    /// <summary>Gets or sets the four compressor codec tags.</summary>
     public uint[] Compressors { get; set; } = new uint[4];
+    /// <summary>Gets or sets the total logical (uncompressed) size in bytes.</summary>
     public ulong LogicalBytes { get; set; }
+    /// <summary>Gets or sets the byte offset of the hunk map within the file.</summary>
     public ulong MapOffset { get; set; }
+    /// <summary>Gets or sets the byte offset of metadata within the file.</summary>
     public ulong MetaOffset { get; set; }
+    /// <summary>Gets or sets the size of each hunk in bytes.</summary>
     public uint HunkBytes { get; set; }
+    /// <summary>Gets or sets the unit size in bytes.</summary>
     public uint UnitBytes { get; set; }
+    /// <summary>Gets or sets the SHA-1 hash of the raw (uncompressed) data.</summary>
     public byte[] RawSha1 { get; set; } = new byte[20];
+    /// <summary>Gets or sets the SHA-1 hash of the final CHD data.</summary>
     public byte[] Sha1 { get; set; } = new byte[20];
+    /// <summary>Gets or sets the SHA-1 hash of the parent CHD, if applicable.</summary>
     public byte[] ParentSha1 { get; set; } = new byte[20];
 
+    /// <summary>Gets a value indicating whether the image uses compression.</summary>
     public bool IsCompressed => Compressors[0] != CodecTags.NONE;
 
+    /// <summary>Serializes the header into a 124-byte array in big-endian format.</summary>
+    /// <returns>A byte array containing the serialized header.</returns>
     public byte[] Serialize()
     {
         var w = new BigEndianWriter(124);
@@ -46,12 +63,17 @@ public class ChdHeaderV5
         return result;
     }
 
+    /// <summary>Writes the serialized header to a stream.</summary>
+    /// <param name="stream">The output stream to write to.</param>
     public void WriteToStream(Stream stream)
     {
         var data = Serialize();
         stream.Write(data, 0, data.Length);
     }
 
+    /// <summary>Deserializes a CHD v5 header from a byte array.</summary>
+    /// <param name="data">The raw header bytes (at least 124 bytes).</param>
+    /// <returns>A <see cref="ChdHeaderV5"/> populated from the data.</returns>
     public static ChdHeaderV5 Deserialize(byte[] data)
     {
         if (data.Length < LENGTH)
@@ -77,6 +99,12 @@ public class ChdHeaderV5
         };
     }
 
+    /// <summary>Creates a header for a raw (uncompressed) CHD image.</summary>
+    /// <param name="compressors0">The primary compressor codec tag.</param>
+    /// <param name="logicalBytes">The total logical size in bytes.</param>
+    /// <param name="hunkBytes">The hunk size in bytes.</param>
+    /// <param name="unitBytes">The unit size in bytes.</param>
+    /// <returns>A new <see cref="ChdHeaderV5"/> configured for a raw image.</returns>
     public static ChdHeaderV5 CreateRaw(uint compressors0, ulong logicalBytes, uint hunkBytes, uint unitBytes)
     {
         return new ChdHeaderV5

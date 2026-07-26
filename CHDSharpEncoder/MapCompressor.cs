@@ -1,10 +1,17 @@
 namespace CHDSharpEncoder;
 
+/// <summary>Compresses a CHD v5 hunk map using RLE and Huffman encoding.</summary>
 public static class MapCompressor
 {
     private const byte COMPRESSION_RLE_SMALL = 7;
     private const byte COMPRESSION_RLE_LARGE = 8;
 
+    /// <summary>Compresses the hunk map entries into a compact binary representation.</summary>
+    /// <param name="entries">The array of map entries to compress.</param>
+    /// <param name="hunkCount">The number of hunks in the image.</param>
+    /// <param name="hunkBytes">The size of each hunk in bytes.</param>
+    /// <param name="unitBytes">The unit size in bytes.</param>
+    /// <returns>A byte array containing the compressed map data.</returns>
     public static byte[] Compress(MapEntry[] entries, uint hunkCount, uint hunkBytes, uint unitBytes)
     {
         var rleList = RleEncode(entries, hunkCount);

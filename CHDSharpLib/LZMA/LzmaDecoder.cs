@@ -187,7 +187,7 @@ internal class Decoder
     private uint _rep0, _rep1, _rep2, _rep3;
 
     /// <summary>Initialises a new LZMA decoder with all probability models set to their default states.</summary>
-    public Decoder()
+    internal Decoder()
     {
         _mDictionarySize = -1;
         for (var i = 0; i < Base.KNumLenToPosStates; i++)
@@ -376,7 +376,7 @@ internal class Decoder
     }
 
     /// <summary>Sets the LZMA decoder properties (lc, lp, pb) and optional dictionary size from a property byte array.</summary>
-    public void SetDecoderProperties(byte[] properties)
+    internal void SetDecoderProperties(byte[] properties)
     {
         if (properties.Length < 1)
             throw new InvalidParamException();

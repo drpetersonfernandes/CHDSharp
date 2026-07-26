@@ -10,7 +10,7 @@ internal static class Crc16
     /// <summary>
     /// Precomputed CRC-16 lookup table (256 entries).
     /// </summary>
-    public static ushort[] Table = new ushort[256];
+    internal static ushort[] Table = new ushort[256];
     private static readonly ushort[,] SubstractTable = new ushort[Gf2Dim, Gf2Dim];
 
     /// <summary>
@@ -21,7 +21,7 @@ internal static class Crc16
     /// <param name="pos">The starting position in the array.</param>
     /// <param name="count">The number of bytes to process.</param>
     /// <returns>The updated 16-bit CRC checksum.</returns>
-    public static unsafe ushort ComputeChecksum(ushort crc, byte[] bytes, int pos, int count)
+    internal static unsafe ushort ComputeChecksum(ushort crc, byte[] bytes, int pos, int count)
     {
         fixed (byte* bs = bytes)
         {
@@ -36,7 +36,7 @@ internal static class Crc16
     /// <param name="bytes">The source byte pointer.</param>
     /// <param name="count">The number of bytes to process.</param>
     /// <returns>The updated 16-bit CRC checksum.</returns>
-    public static unsafe ushort ComputeChecksum(ushort crc, byte* bytes, int count)
+    internal static unsafe ushort ComputeChecksum(ushort crc, byte* bytes, int count)
     {
         fixed (ushort* t = Table)
         {
@@ -121,7 +121,7 @@ internal static class Crc16
     /// </summary>
     /// <param name="crc">The CRC value to reflect.</param>
     /// <returns>The reflected 16-bit value.</returns>
-    public static ushort Reflect(ushort crc)
+    internal static ushort Reflect(ushort crc)
     {
         return (ushort)Crc32.Reflect(crc, 16);
     }
@@ -134,7 +134,7 @@ internal static class Crc16
     /// <param name="len2">The length of the data block to subtract in bytes.</param>
     /// <returns>The resulting CRC value after subtraction.</returns>
     /// <exception cref="ArgumentException">Thrown if <paramref name="len2"/> is negative.</exception>
-    public static unsafe ushort Subtract(ushort crc1, ushort crc2, long len2)
+    internal static unsafe ushort Subtract(ushort crc1, ushort crc2, long len2)
     {
         crc1 = Reflect(crc1);
         crc2 = Reflect(crc2);

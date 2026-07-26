@@ -6,7 +6,9 @@ namespace CHDSharp.LZMA;
 internal class DataErrorException : Exception
 {
     /// <summary>Initializes a new instance of the <see cref="DataErrorException"/> class with a default message.</summary>
-    public DataErrorException() : base("Data Error") { }
+    internal DataErrorException() : base("Data Error")
+    {
+    }
 }
 
 /// <summary>
@@ -15,5 +17,5 @@ internal class DataErrorException : Exception
 internal class InvalidParamException : Exception
 {
     /// <summary>Initializes a new instance of the <see cref="InvalidParamException"/> class.</summary>
-    public InvalidParamException() : base("Invalid Parameter") { }
+    internal InvalidParamException() : base("Invalid Parameter") { }
 }

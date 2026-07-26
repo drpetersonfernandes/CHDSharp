@@ -7,7 +7,7 @@ internal static class ChdLogger
 {
     private static volatile ILoggerFactory? _factory;
 
-    public static ILoggerFactory? Factory
+    internal static ILoggerFactory? Factory
     {
         get => _factory;
         set => _factory = value;
@@ -18,12 +18,12 @@ internal static class ChdLogger
     /// on every use. This makes it safe to capture the returned instance in
     /// <c>static readonly</c> fields before the factory has been assigned.
     /// </summary>
-    public static ILogger GetLogger(string category)
+    internal static ILogger GetLogger(string category)
     {
         return new LazyLogger(category);
     }
 
-    public static ILogger GetLogger<T>()
+    internal static ILogger GetLogger<T>()
     {
         return GetLogger(typeof(T).FullName!);
     }

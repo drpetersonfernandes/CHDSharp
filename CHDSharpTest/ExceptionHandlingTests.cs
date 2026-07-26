@@ -1,5 +1,4 @@
 using CHDSharp.Models;
-using ZstdSharp;
 
 namespace CHDSharp.Tests;
 

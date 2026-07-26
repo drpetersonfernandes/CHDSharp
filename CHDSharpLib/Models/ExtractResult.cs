@@ -1,5 +1,3 @@
-using System.Linq;
-
 namespace CHDSharp.Models;
 
 /// <summary>Represents the result of an <see cref="ChdFile"/> extraction to a directory, including per-track reporting for CD/GD-ROM images.</summary>

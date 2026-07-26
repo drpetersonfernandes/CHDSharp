@@ -12,12 +12,12 @@ internal class OutWindow
     private Stream _stream = null!;
 
     /// <summary>Total number of bytes written so far.</summary>
-    public long Total;
+    internal long Total;
     /// <summary>Maximum number of bytes allowed to be written.</summary>
-    public long Limit;
+    internal long Limit;
 
     /// <summary>Initialises or resizes the output window buffer.</summary>
-    public void Create(int windowSize, byte[]? buffer = null)
+    internal void Create(int windowSize, byte[]? buffer = null)
     {
         if (buffer != null)
         {
@@ -43,20 +43,20 @@ internal class OutWindow
     }
 
     /// <summary>Resets the window state.</summary>
-    public void Reset()
+    internal void Reset()
     {
         Create(_windowSize);
     }
 
     /// <summary>Sets the output stream and releases any previous stream.</summary>
-    public void Init(Stream stream)
+    internal void Init(Stream stream)
     {
         ReleaseStream();
         _stream = stream;
     }
 
     /// <summary>Pre-fills the window with the tail of the stream for dictionary training.</summary>
-    public void Train(Stream stream)
+    internal void Train(Stream stream)
     {
         var len = stream.Length;
         var size = (len < _windowSize) ? (int)len : _windowSize;
@@ -74,18 +74,15 @@ internal class OutWindow
     }
 
     /// <summary>Flushes pending data and releases the output stream reference.</summary>
-    public void ReleaseStream()
+    internal void ReleaseStream()
     {
         Flush();
         _stream = null!;
     }
 
     /// <summary>Writes buffered data to the output stream.</summary>
-    public void Flush()
+    internal void Flush()
     {
-        if (_stream == null)
-            return;
-
         var size = _pos - _streamPos;
         if (size == 0)
             return;
@@ -100,7 +97,7 @@ internal class OutWindow
     }
 
     /// <summary>Copies a previously emitted block of bytes (LZ77 back-reference).</summary>
-    public void CopyBlock(int distance, int len)
+    internal void CopyBlock(int distance, int len)
     {
         var size = len;
         var pos = _pos - distance - 1;
@@ -126,7 +123,7 @@ internal class OutWindow
     }
 
     /// <summary>Writes a single literal byte to the output window.</summary>
-    public void PutByte(byte b)
+    internal void PutByte(byte b)
     {
         _buffer[_pos++] = b;
         Total++;
@@ -135,7 +132,7 @@ internal class OutWindow
     }
 
     /// <summary>Reads a previously written byte at the given distance (for back-references).</summary>
-    public byte GetByte(int distance)
+    internal byte GetByte(int distance)
     {
         var pos = _pos - distance - 1;
         if (pos < 0)
@@ -147,7 +144,7 @@ internal class OutWindow
     }
 
     /// <summary>Copies raw data from a stream into the output window.</summary>
-    public int CopyStream(Stream stream, int len)
+    internal int CopyStream(Stream stream, int len)
     {
         var size = len;
         while (size > 0 && _pos < _windowSize && Total < Limit)
@@ -177,19 +174,19 @@ internal class OutWindow
     }
 
     /// <summary>Sets the maximum total number of bytes that can be produced.</summary>
-    public void SetLimit(long size)
+    internal void SetLimit(long size)
     {
         Limit = Total + size;
     }
 
     /// <summary>Gets whether the window has space to write more data.</summary>
-    public bool HasSpace => _pos < _windowSize && Total < Limit;
+    internal bool HasSpace => _pos < _windowSize && Total < Limit;
 
     /// <summary>Gets whether there is a pending copy-block operation.</summary>
-    public bool HasPending => _pendingLen > 0;
+    internal bool HasPending => _pendingLen > 0;
 
     /// <summary>Reads decoded data from the window into a byte array.</summary>
-    public int Read(byte[] buffer, int offset, int count)
+    internal int Read(byte[] buffer, int offset, int count)
     {
         if (_streamPos >= _pos)
             return 0;
@@ -211,12 +208,12 @@ internal class OutWindow
     }
 
     /// <summary>Completes any pending copy-block operation from a previous <see cref="CopyBlock"/> call.</summary>
-    public void CopyPending()
+    internal void CopyPending()
     {
         if (_pendingLen > 0)
             CopyBlock(_pendingDist, _pendingLen);
     }
 
     /// <summary>Gets the number of bytes available for reading from the window.</summary>
-    public int AvailableBytes => _pos - _streamPos;
+    internal int AvailableBytes => _pos - _streamPos;
 }

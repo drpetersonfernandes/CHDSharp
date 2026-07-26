@@ -1,5 +1,6 @@
 namespace CHDSharpEncoder;
 
+/// <summary>Computes SHA-1 (160-bit) hash digests.</summary>
 public class Sha1
 {
     private uint _h0 = 0x67452301;
@@ -12,6 +13,7 @@ public class Sha1
     private readonly byte[] _block = new byte[64];
     private int _blockPos;
 
+    /// <summary>Resets the hasher to its initial state for reuse.</summary>
     public void Reset()
     {
         _h0 = 0x67452301;
@@ -23,6 +25,10 @@ public class Sha1
         _blockPos = 0;
     }
 
+    /// <summary>Appends data to the hash computation.</summary>
+    /// <param name="data">The source byte array.</param>
+    /// <param name="offset">The starting offset within <paramref name="data"/>.</param>
+    /// <param name="length">The number of bytes to process.</param>
     public void Append(byte[] data, int offset, int length)
     {
         _totalBits += (ulong)length * 8;
@@ -38,6 +44,8 @@ public class Sha1
         }
     }
 
+    /// <summary>Finalizes the hash and returns the 20-byte SHA-1 digest.</summary>
+    /// <returns>A 20-byte array containing the SHA-1 hash.</returns>
     public byte[] Finish()
     {
         var digest = new byte[20];
@@ -71,6 +79,9 @@ public class Sha1
         return digest;
     }
 
+    /// <summary>Computes the SHA-1 hash of the given data in one call.</summary>
+    /// <param name="data">The data to hash.</param>
+    /// <returns>A 20-byte array containing the SHA-1 hash.</returns>
     public static byte[] Compute(byte[] data)
     {
         var sha = new Sha1();

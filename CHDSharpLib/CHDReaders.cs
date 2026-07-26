@@ -52,7 +52,7 @@ internal static partial class ChdReaders
 
     private static ChdError Zstd(byte[] buffIn, int buffInStart, int buffInLength, byte[] buffOut, int buffOutStart, int buffOutLength, ChdCodecState codec)
     {
-        codec.BZstd ??= new ZstdSharp.Decompressor();
+        codec.BZstd ??= new Decompressor();
 
         try
         {
@@ -342,7 +342,7 @@ internal static partial class ChdReaders
 
         codec.BSector ??= new byte[frames * CdMaxSectorData];
         codec.BSubcode ??= new byte[frames * CdMaxSubcodeData];
-        codec.BZstd ??= new ZstdSharp.Decompressor();
+        codec.BZstd ??= new Decompressor();
 
         var err = Zstd(buffIn, headerBytes, complenBase, codec.BSector, 0, frames * CdMaxSectorData, codec);
         if (err != ChdError.Chderrnone)

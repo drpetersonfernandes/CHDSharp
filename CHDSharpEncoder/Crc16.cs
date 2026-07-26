@@ -1,9 +1,13 @@
 namespace CHDSharpEncoder;
 
+/// <summary>Computes CRC-16 (CCITT) checksums using a table-driven approach.</summary>
 public static class Crc16
 {
     private static readonly ushort[] _table = GenerateTable();
 
+    /// <summary>Computes the CRC-16 checksum of a byte span.</summary>
+    /// <param name="data">The data to checksum.</param>
+    /// <returns>The 16-bit CRC value.</returns>
     public static ushort Compute(ReadOnlySpan<byte> data)
     {
         ushort crc = 0xFFFF;
@@ -15,6 +19,11 @@ public static class Crc16
         return crc;
     }
 
+    /// <summary>Computes the CRC-16 checksum of a byte array segment.</summary>
+    /// <param name="data">The source byte array.</param>
+    /// <param name="offset">The starting offset within the array.</param>
+    /// <param name="length">The number of bytes to include.</param>
+    /// <returns>The 16-bit CRC value.</returns>
     public static ushort Compute(byte[] data, int offset, int length)
     {
         return Compute(data.AsSpan(offset, length));

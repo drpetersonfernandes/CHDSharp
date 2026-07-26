@@ -34,7 +34,7 @@ internal unsafe class BitReader
     /// </summary>
     /// <param name="v">The input value.</param>
     /// <returns>The floor of log2 of the value.</returns>
-    public static int Log2I(ulong v)
+    internal static int Log2I(ulong v)
     {
         v |= v >> 1; // first round down to one less than a power of 2
         v |= v >> 2;
@@ -97,17 +97,17 @@ internal unsafe class BitReader
     /// <summary>
     /// Gets the current read position in bytes from the start of the buffer.
     /// </summary>
-    public int Position => (int)(_bptrM - Buffer - (_haveBitsM >> 3));
+    internal int Position => (int)(_bptrM - Buffer - (_haveBitsM >> 3));
 
     /// <summary>
     /// Gets a pointer to the underlying byte buffer.
     /// </summary>
-    public byte* Buffer { get; private set; }
+    internal byte* Buffer { get; private set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="BitReader"/> class with default values.
     /// </summary>
-    public BitReader()
+    internal BitReader()
     {
         Buffer = null;
         _bptrM = null;
@@ -124,7 +124,7 @@ internal unsafe class BitReader
     /// <param name="buffer">Pointer to the byte buffer.</param>
     /// <param name="pos">Starting position in the buffer.</param>
     /// <param name="len">Length of data available in the buffer.</param>
-    public BitReader(byte* buffer, int pos, int len)
+    internal BitReader(byte* buffer, int pos, int len)
     {
         Reset(buffer, pos, len);
     }
@@ -135,7 +135,7 @@ internal unsafe class BitReader
     /// <param name="buffer">Pointer to the byte buffer.</param>
     /// <param name="pos">Starting position in the buffer.</param>
     /// <param name="len">Number of bytes available starting at <paramref name="pos"/>.</param>
-    public void Reset(byte* buffer, int pos, int len)
+    internal void Reset(byte* buffer, int pos, int len)
     {
         Buffer = buffer;
         _bptrM = buffer + pos;
@@ -168,7 +168,7 @@ internal unsafe class BitReader
     /// Skips the specified number of bits by advancing the bit position.
     /// </summary>
     /// <param name="bits">Number of bits to skip.</param>
-    public void Skipbits(int bits)
+    internal void Skipbits(int bits)
     {
         while (bits > _haveBitsM)
         {
@@ -185,7 +185,7 @@ internal unsafe class BitReader
     /// Reads a 64-bit signed integer (big-endian).
     /// </summary>
     /// <returns>The decoded value.</returns>
-    public long ReadLong()
+    internal long ReadLong()
     {
         return ((long)Readbits(32) << 32) | Readbits(32);
     }
@@ -194,7 +194,7 @@ internal unsafe class BitReader
     /// Reads a 64-bit unsigned integer (big-endian).
     /// </summary>
     /// <returns>The decoded value.</returns>
-    public ulong ReadUlong()
+    internal ulong ReadUlong()
     {
         return ((ulong)Readbits(32) << 32) | Readbits(32);
     }
@@ -203,7 +203,7 @@ internal unsafe class BitReader
     /// Reads a 32-bit signed integer (big-endian).
     /// </summary>
     /// <returns>The decoded value.</returns>
-    public int ReadInt()
+    internal int ReadInt()
     {
         return (int)Readbits(32);
     }
@@ -212,7 +212,7 @@ internal unsafe class BitReader
     /// Reads a 32-bit unsigned integer (big-endian).
     /// </summary>
     /// <returns>The decoded value.</returns>
-    public uint ReadUint()
+    internal uint ReadUint()
     {
         return Readbits(32);
     }
@@ -221,7 +221,7 @@ internal unsafe class BitReader
     /// Reads a 16-bit signed integer (big-endian).
     /// </summary>
     /// <returns>The decoded value.</returns>
-    public short ReadShort()
+    internal short ReadShort()
     {
         return (short)Readbits(16);
     }
@@ -230,7 +230,7 @@ internal unsafe class BitReader
     /// Reads a 16-bit unsigned integer (big-endian).
     /// </summary>
     /// <returns>The decoded value.</returns>
-    public ushort ReadUshort()
+    internal ushort ReadUshort()
     {
         return (ushort)Readbits(16);
     }
@@ -240,7 +240,7 @@ internal unsafe class BitReader
     /// </summary>
     /// <param name="bits">Number of bits to read (1-32).</param>
     /// <returns>The value as a 32-bit unsigned integer.</returns>
-    public uint Readbits(int bits)
+    internal uint Readbits(int bits)
     {
         Fill();
         var result = (uint)(_cacheM >> (64 - bits));
@@ -253,7 +253,7 @@ internal unsafe class BitReader
     /// </summary>
     /// <param name="bits">Number of bits to read (1-64).</param>
     /// <returns>The value as a 64-bit unsigned integer.</returns>
-    public ulong Readbits64(int bits)
+    internal ulong Readbits64(int bits)
     {
         if (bits <= 32)
             return Readbits(bits);
@@ -265,7 +265,7 @@ internal unsafe class BitReader
     /// Reads a single bit from the stream.
     /// </summary>
     /// <returns>The bit value (0 or 1).</returns>
-    public uint Readbit()
+    internal uint Readbit()
     {
         return Readbits(1);
     }
@@ -274,7 +274,7 @@ internal unsafe class BitReader
     /// Reads a unary-coded value from the stream (count of leading zero bits followed by a one).
     /// </summary>
     /// <returns>The decoded unary value.</returns>
-    public uint ReadUnary()
+    internal uint ReadUnary()
     {
         Fill();
         uint val = 0;
@@ -304,7 +304,7 @@ internal unsafe class BitReader
     /// <summary>
     /// Flushes any remaining partial byte from the bit cache, aligning to a byte boundary.
     /// </summary>
-    public void Flush()
+    internal void Flush()
     {
         if ((_haveBitsM & 7) > 0)
         {
@@ -317,7 +317,7 @@ internal unsafe class BitReader
     /// Gets the CRC16 checksum of the data read so far.
     /// </summary>
     /// <returns>The CRC16 checksum.</returns>
-    public ushort GetCrc16()
+    internal ushort GetCrc16()
     {
         if (_haveBitsM == 0)
             return _crc16M;
@@ -337,7 +337,7 @@ internal unsafe class BitReader
     /// </summary>
     /// <param name="bits">Number of bits to read.</param>
     /// <returns>The sign-extended signed integer value.</returns>
-    public int ReadbitsSigned(int bits)
+    internal int ReadbitsSigned(int bits)
     {
         var val = (int)Readbits(bits);
         val <<= (32 - bits);
@@ -349,7 +349,7 @@ internal unsafe class BitReader
     /// Reads a UTF-8 encoded variable-length integer from the stream.
     /// </summary>
     /// <returns>The decoded unsigned integer.</returns>
-    public uint ReadUtf8()
+    internal uint ReadUtf8()
     {
         var x = Readbits(8);
         uint v;
@@ -396,7 +396,7 @@ internal unsafe class BitReader
         for (; i > 0; i--)
         {
             x = Readbits(8);
-            if (0x80 != (x & 0xC0))  /* 10xxxxxx */
+            if (0x80 != (x & 0xC0)) /* 10xxxxxx */
                 throw new InvalidDataException("invalid utf8 encoding");
 
             v <<= 6;
@@ -411,7 +411,7 @@ internal unsafe class BitReader
     /// <param name="n">Number of values to read.</param>
     /// <param name="k">Rice parameter.</param>
     /// <param name="r">Pointer to the output buffer for decoded residuals.</param>
-    public void ReadRiceBlock(int n, int k, int* r)
+    internal void ReadRiceBlock(int n, int k, int* r)
     {
         Fill();
         fixed (byte* unaryTable = ByteToUnaryTable)

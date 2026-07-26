@@ -7,17 +7,17 @@ internal class Crc8
 {
     private const ushort Poly8 = 0x07;
 
-    private static readonly ushort[] _table;
+    private static readonly ushort[] Table;
 
     /// <summary>
     /// Initializes the CRC lookup table. Guaranteed by the CLR to run exactly once, even under concurrent access.
     /// </summary>
     static Crc8()
     {
-        _table = new ushort[256];
+        Table = new ushort[256];
         const int bits = 8;
         const ushort poly = (ushort)(Poly8 + (1U << bits));
-        for (ushort i = 0; i < _table.Length; i++)
+        for (ushort i = 0; i < Table.Length; i++)
         {
             var crc = i;
             for (var j = 0; j < bits; j++)
@@ -31,7 +31,7 @@ internal class Crc8
                     crc <<= 1;
                 }
             }
-            _table[i] = (ushort)(crc & 0x00ff);
+            Table[i] = (ushort)(crc & 0x00ff);
         }
     }
 
@@ -42,12 +42,12 @@ internal class Crc8
     /// <param name="pos">The starting position in the array.</param>
     /// <param name="count">The number of bytes to process.</param>
     /// <returns>The 8-bit CRC checksum.</returns>
-    public byte ComputeChecksum(byte[] bytes, int pos, int count)
+    internal byte ComputeChecksum(byte[] bytes, int pos, int count)
     {
         ushort crc = 0;
         for (var i = pos; i < pos + count; i++)
         {
-            crc = _table[crc ^ bytes[i]];
+            crc = Table[crc ^ bytes[i]];
         }
 
         return (byte)crc;
@@ -60,12 +60,12 @@ internal class Crc8
     /// <param name="pos">The starting offset from the pointer.</param>
     /// <param name="count">The number of bytes to process.</param>
     /// <returns>The 8-bit CRC checksum.</returns>
-    public unsafe byte ComputeChecksum(byte* bytes, int pos, int count)
+    internal unsafe byte ComputeChecksum(byte* bytes, int pos, int count)
     {
         ushort crc = 0;
         for (var i = pos; i < pos + count; i++)
         {
-            crc = _table[crc ^ bytes[i]];
+            crc = Table[crc ^ bytes[i]];
         }
 
         return (byte)crc;

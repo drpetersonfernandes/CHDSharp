@@ -16,10 +16,7 @@ internal static class ChdHeaders
     /// <returns><see cref="ChdError.Chderrnone"/> if sizes are acceptable; otherwise <see cref="ChdError.Chderrinvaliddata"/>.</returns>
     internal static ChdError ValidateSizeLimits(ChdHeader chd)
     {
-        if (chd.Blocksize == 0 || chd.Blocksize > MaxHunkBytes)
-            return ChdError.Chderrinvaliddata;
-
-        if (chd.Totalbytes > MaxLogicalBytes)
+        if (chd.Blocksize == 0 || chd.Blocksize > MaxHunkBytes || chd.Totalbytes > MaxLogicalBytes)
             return ChdError.Chderrinvaliddata;
 
         return ChdError.Chderrnone;
@@ -28,7 +25,7 @@ internal static class ChdHeaders
     /// <param name="file">The stream positioned immediately after the CHD magic and version fields.</param>
     /// <param name="chd">When this method returns, contains the parsed header data.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success.</returns>
-    public static ChdError ReadHeaderV1(Stream file, out ChdHeader chd)
+    internal static ChdError ReadHeaderV1(Stream file, out ChdHeader chd)
     {
         chd = new ChdHeader();
 
@@ -50,10 +47,7 @@ internal static class ChdHeaders
         chd.Blocksize *= hardDiskSectorSize;
         chd.Unitbytes = chd.Blocksize;
 
-        if (chd.Blocksize == 0 || chd.Blocksize > MaxHunkBytes)
-            return ChdError.Chderrinvaliddata;
-
-        if ((ulong)chd.Totalblocks * chd.Blocksize > MaxLogicalBytes)
+        if (chd.Blocksize == 0 || chd.Blocksize > MaxHunkBytes || (ulong)chd.Totalblocks * chd.Blocksize > MaxLogicalBytes)
             return ChdError.Chderrinvaliddata;
 
         chd.Map = new MapEntry[chd.Totalblocks];
@@ -79,8 +73,8 @@ internal static class ChdHeaders
             chd.Map[i].Offset = tmpu & 0xfffffffffff;
             chd.Map[i].Length = (uint)(tmpu >> 44);
             chd.Map[i].Comptype = (chd.Map[i].Length == chd.Blocksize)
-                           ? CompressionType.Compressionnone
-                           : CompressionType.Compressiontype0;
+                ? CompressionType.Compressionnone
+                : CompressionType.Compressiontype0;
         }
 
         return ChdError.Chderrnone;
@@ -90,7 +84,7 @@ internal static class ChdHeaders
     /// <param name="file">The stream positioned immediately after the CHD magic and version fields.</param>
     /// <param name="chd">When this method returns, contains the parsed header data.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success.</returns>
-    public static ChdError ReadHeaderV2(Stream file, out ChdHeader chd)
+    internal static ChdError ReadHeaderV2(Stream file, out ChdHeader chd)
     {
         chd = new ChdHeader();
 
@@ -112,10 +106,7 @@ internal static class ChdHeaders
         chd.Blocksize = hunkSectors * seclen;
         chd.Unitbytes = chd.Blocksize;
 
-        if (chd.Blocksize == 0 || chd.Blocksize > MaxHunkBytes)
-            return ChdError.Chderrinvaliddata;
-
-        if ((ulong)chd.Totalblocks * chd.Blocksize > MaxLogicalBytes)
+        if (chd.Blocksize == 0 || chd.Blocksize > MaxHunkBytes || (ulong)chd.Totalblocks * chd.Blocksize > MaxLogicalBytes)
             return ChdError.Chderrinvaliddata;
 
         chd.Map = new MapEntry[chd.Totalblocks];
@@ -141,8 +132,8 @@ internal static class ChdHeaders
             chd.Map[i].Offset = tmpu & 0xfffffffffff;
             chd.Map[i].Length = (uint)(tmpu >> 44);
             chd.Map[i].Comptype = (chd.Map[i].Length == chd.Blocksize)
-                           ? CompressionType.Compressionnone
-                           : CompressionType.Compressiontype0;
+                ? CompressionType.Compressionnone
+                : CompressionType.Compressiontype0;
         }
 
 
@@ -153,7 +144,7 @@ internal static class ChdHeaders
     /// <param name="file">The stream positioned immediately after the CHD magic and version fields.</param>
     /// <param name="chd">When this method returns, contains the parsed header data.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success.</returns>
-    public static ChdError ReadHeaderV3(Stream file, out ChdHeader chd)
+    internal static ChdError ReadHeaderV3(Stream file, out ChdHeader chd)
     {
         chd = new ChdHeader();
         using var br = new BinaryReader(file, Encoding.UTF8, true);
@@ -198,7 +189,7 @@ internal static class ChdHeaders
     /// <param name="file">The stream positioned immediately after the CHD magic and version fields.</param>
     /// <param name="chd">When this method returns, contains the parsed header data.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success.</returns>
-    public static ChdError ReadHeaderV4(Stream file, out ChdHeader chd)
+    internal static ChdError ReadHeaderV4(Stream file, out ChdHeader chd)
     {
         chd = new ChdHeader();
         using var br = new BinaryReader(file, Encoding.UTF8, true);
@@ -243,7 +234,7 @@ internal static class ChdHeaders
     /// <param name="file">The stream positioned immediately after the CHD magic and version fields.</param>
     /// <param name="chd">When this method returns, contains the parsed header data.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code if the map is corrupt.</returns>
-    public static ChdError ReadHeaderV5(Stream file, out ChdHeader chd)
+    internal static ChdError ReadHeaderV5(Stream file, out ChdHeader chd)
     {
         chd = new ChdHeader();
         using var br = new BinaryReader(file, Encoding.UTF8, true);

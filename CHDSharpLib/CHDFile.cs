@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.IO;
 using System.Text;
 using CHDSharp.Models;
 using CHDSharp.Utils;
@@ -152,36 +151,51 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <summary>Track layout information. <c>null</c> if this CHD is not a CD/GD-ROM image.</summary>
     public IReadOnlyList<ChdTrackInfo>? Tracks
     {
-        get { EnsureTracksLoaded();
-            return _tracks?.AsReadOnly(); }
+        get
+        {
+            EnsureTracksLoaded();
+            return _tracks?.AsReadOnly();
+        }
     }
 
     /// <summary><c>true</c> if this CHD contains CD-ROM track metadata.</summary>
     public bool IsCd
     {
-        get { EnsureTracksLoaded();
-            return _isCd; }
+        get
+        {
+            EnsureTracksLoaded();
+            return _isCd;
+        }
     }
 
     /// <summary><c>true</c> if this CHD is a GD-ROM (Sega Dreamcast) image.</summary>
     public bool IsGdRom
     {
-        get { EnsureTracksLoaded();
-            return _isGdRom; }
+        get
+        {
+            EnsureTracksLoaded();
+            return _isGdRom;
+        }
     }
 
     /// <summary><c>true</c> if this CHD contains DVD metadata.</summary>
     public bool IsDvd
     {
-        get { EnsureTracksLoaded();
-            return _isDvd; }
+        get
+        {
+            EnsureTracksLoaded();
+            return _isDvd;
+        }
     }
 
     /// <summary><c>true</c> if this CHD contains hard disk geometry metadata.</summary>
     public bool IsHdd
     {
-        get { EnsureTracksLoaded();
-            return _isHdd; }
+        get
+        {
+            EnsureTracksLoaded();
+            return _isHdd;
+        }
     }
 
     /// <summary>
@@ -629,7 +643,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         {
             if (dataEntry.Length > 0)
             {
-                if (dataEntry.BuffIn == null || dataEntry.BuffIn.Length < dataEntry.Length)
+                if (dataEntry.BuffIn.Length < dataEntry.Length)
                 {
                     dataEntry.BuffIn = new byte[dataEntry.Length];
                 }
@@ -787,7 +801,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     {
         _codec.Dispose();
         if (!_leaveOpen)
-            _stream?.Dispose();
+            _stream.Dispose();
         if (_ownsParent)
             _parent?.Dispose();
     }
@@ -925,6 +939,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         var result = ExtractToDirectoryWithReporting(outputDir, baseFileName);
         if (result.Error != ChdError.Chderrnone)
             throw new InvalidDataException($"Extraction failed: {result.Error}");
+
         if (result.HasTrackFailures)
         {
             var failed = result.TrackResults.Where(t => !t.IsSuccess).Select(t => $"track {t.TrackNumber}: {t.Error}");
@@ -976,7 +991,6 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         try
         {
             string imageFile;
-            string? descriptorFile = null;
 
             if (IsCd)
             {
@@ -984,7 +998,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                 WriteAllBytesSlow(imageFile);
                 created.Add(imageFile);
 
-                descriptorFile = Path.Combine(outputDir, $"{baseFileName}.cue");
+                var descriptorFile = Path.Combine(outputDir, $"{baseFileName}.cue");
                 File.WriteAllText(descriptorFile, GenerateCueSheet(Path.GetFileName(imageFile)));
                 created.Add(descriptorFile);
             }

@@ -34,9 +34,9 @@ internal static class ChdBlockRead
             if (me.Comptype != CompressionType.Compressionself)
             {
                 var idx = (int)me.Comptype;
-                if (idx >= 0 && idx < 6)
+                if (idx is >= 0 and < 6)
                     Interlocked.Increment(ref compressionCount[idx]);
-                else if (me.Comptype == CompressionType.Compressiontype2nd)
+                else if (me.Comptype == CompressionType.Compressiontype2Nd)
                     Interlocked.Increment(ref compressionCount[5]);
                 return;
             }
@@ -49,7 +49,7 @@ internal static class ChdBlockRead
                 case CompressionType.Compressiontype2:
                 case CompressionType.Compressiontype3:
                 case CompressionType.Compressionnone:
-                case CompressionType.Compressiontype2nd:
+                case CompressionType.Compressiontype2Nd:
                     break;
                 default:
                     LogUnexpectedCompType(Log, me.SelfMapEntry.Comptype, null);
@@ -62,18 +62,18 @@ internal static class ChdBlockRead
                 if (me.SelfMapEntry.UseCount == 1)
                 {
                     var uniqueIdx = (int)me.SelfMapEntry.Comptype;
-                    if (uniqueIdx >= 0 && uniqueIdx < 6)
+                    if (uniqueIdx is >= 0 and < 6)
                         Interlocked.Increment(ref compressionUniqueCount[uniqueIdx]);
-                    else if (me.SelfMapEntry.Comptype == CompressionType.Compressiontype2nd)
+                    else if (me.SelfMapEntry.Comptype == CompressionType.Compressiontype2Nd)
                         Interlocked.Increment(ref compressionUniqueCount[5]);
                 }
             }
 
             {
                 var selfIdx = (int)me.SelfMapEntry.Comptype;
-                if (selfIdx >= 0 && selfIdx < 6)
+                if (selfIdx is >= 0 and < 6)
                     Interlocked.Increment(ref compressionSelfCount[selfIdx]);
-                else if (me.SelfMapEntry.Comptype == CompressionType.Compressiontype2nd)
+                else if (me.SelfMapEntry.Comptype == CompressionType.Compressiontype2Nd)
                     Interlocked.Increment(ref compressionSelfCount[5]);
             }
 
@@ -91,14 +91,16 @@ internal static class ChdBlockRead
             {
                 comp = chd.Compression[i].ToString();
             }
-            else if (i == 4)
-            {
-                comp = "NONE";
-            }
-            else if (i == 5)
-            {
-                comp = "2ND_COMPRESSED";
-            }
+            else
+                switch (i)
+                {
+                    case 4:
+                        comp = "NONE";
+                        break;
+                    case 5:
+                        comp = "2ND_COMPRESSED";
+                        break;
+                }
 
             LogCompressionStats(Log, i, comp, compressionCount[i], compressionUniqueCount[i], compressionSelfCount[i], null);
         }
@@ -166,33 +168,33 @@ internal static class ChdBlockRead
     /// <returns>An integer weight where higher values indicate more expensive decompression.</returns>
     private static int GetWeigth(ChdHeader chd, MapEntry me)
     {
-        if (me.Comptype == CompressionType.Compressionnone)
-            return 1;
-
-        if (me.Comptype == CompressionType.Compressiontype2nd)
+        switch (me.Comptype)
         {
-            return chd.SecondaryCodec switch
-            {
-                ChdCodec.Flac => 2,
-                ChdCodec.Lzma => 18,
-                ChdCodec.Zlib => 3,
-                _ => 1
-            };
-        }
+            case CompressionType.Compressionnone:
+                return 1;
+            case CompressionType.Compressiontype2Nd:
+                return chd.SecondaryCodec switch
+                {
+                    ChdCodec.Flac => 2,
+                    ChdCodec.Lzma => 18,
+                    ChdCodec.Zlib => 3,
+                    _ => 1
+                };
+            default:
+                switch (chd.Compression[(int)me.Comptype])
+                {
+                    case ChdCodec.Lzma: return 23;
+                    case ChdCodec.Zlib: return 1;
+                    case ChdCodec.Flac: return (me.Length == 41) ? 1 : 2;
+                    case ChdCodec.Huffman: return 64;
 
-        switch (chd.Compression[(int)me.Comptype])
-        {
-            case ChdCodec.Lzma: return 23;
-            case ChdCodec.Zlib: return 1;
-            case ChdCodec.Flac: return (me.Length == 41) ? 1 : 2;
-            case ChdCodec.Huffman: return 64;
+                    case ChdCodec.Avhuff: return 1;
 
-            case ChdCodec.Avhuff: return 1;
-
-            case ChdCodec.Cdflac: return (me.Length == 15) ? 1 : 2;
-            case ChdCodec.Cdlzma: return 18;
-            case ChdCodec.Cdzlib: return 3;
-            default: return 1;
+                    case ChdCodec.Cdflac: return (me.Length == 15) ? 1 : 2;
+                    case ChdCodec.Cdlzma: return 18;
+                    case ChdCodec.Cdzlib: return 3;
+                    default: return 1;
+                }
         }
     }
 
@@ -211,7 +213,7 @@ internal static class ChdBlockRead
             chd.SecondaryChdReader = GetReaderFromCodec(chd.SecondaryCodec);
             foreach (var me in chd.Map)
             {
-                if (me.Comptype == CompressionType.Compressiontype2nd)
+                if (me.Comptype == CompressionType.Compressiontype2Nd)
                 {
                     me.SecondaryReader = chd.SecondaryChdReader;
                 }
@@ -355,7 +357,7 @@ internal static class ChdBlockRead
                 break;
             }
 
-            case CompressionType.Compressiontype2nd:
+            case CompressionType.Compressiontype2Nd:
             {
                 if (mapEntry.SecondaryReader == null)
                     return ChdError.Chderrcodecerror;

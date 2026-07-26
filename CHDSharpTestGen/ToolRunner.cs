@@ -9,7 +9,7 @@ internal static class ToolRunner
     /// <summary>Runs a tool and throws if it fails. Returns captured stdout+stderr.</summary>
     public static string Run(string exe, string args, string workDir)
     {
-        Console.WriteLine($"  > {Path.GetFileName(exe)} {args}");
+        Console.WriteLine(FormattableString.Invariant($"  > {Path.GetFileName(exe)} {args}"));
         var psi = new ProcessStartInfo(exe, args)
         {
             WorkingDirectory = workDir,

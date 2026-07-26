@@ -37,7 +37,7 @@ internal static class Program
         foreach (var tool in new[] { _hdcompV1, _chdmanV3, _chdmanV4, _chdmanV5 })
             if (!File.Exists(tool))
             {
-                Console.Error.WriteLine($"missing tool: {tool}");
+                Console.Error.WriteLine(FormattableString.Invariant($"missing tool: {tool}"));
                 return 1;
             }
 
@@ -70,7 +70,7 @@ internal static class Program
             GenerateV4();
             GenerateV5();
             WriteManifest();
-            Console.WriteLine($"\ndone: {Manifest.Count} corpus files in {_outDir}");
+            Console.WriteLine(FormattableString.Invariant($"\ndone: {Manifest.Count} corpus files in {_outDir}"));
             return 0;
         }
         finally
@@ -104,7 +104,7 @@ internal static class Program
 
         var codec0 = hdr.Compression[0];
         var reader = GetReaderForCodec(codec0);
-        Console.WriteLine($"codec slot 0: {codec0}");
+        Console.WriteLine(FormattableString.Invariant($"codec slot 0: {codec0}"));
 
         var buffer = new byte[hdr.Blocksize];
         var failures = 0;
@@ -126,7 +126,7 @@ internal static class Program
                 if (h >= SourceData.RawHunks)
                 {
                     failures++;
-                    Console.WriteLine($"hunk {h}: hunk index exceeds raw image size ({SourceData.RawHunks} hunks)");
+                    Console.WriteLine(FormattableString.Invariant($"hunk {h}: hunk index exceeds raw image size ({SourceData.RawHunks} hunks)"));
                     continue;
                 }
                 var match = buffer.AsSpan().SequenceEqual(raw.AsSpan((int)(h * hdr.Blocksize), (int)hdr.Blocksize));
@@ -140,16 +140,16 @@ internal static class Program
                             firstDiff = i;
                             break;
                         }
-                    Console.WriteLine($"hunk {h}: err={err} match={match} firstDiff={firstDiff} complen={me.Length}");
+                    Console.WriteLine(FormattableString.Invariant($"hunk {h}: err={err} match={match} firstDiff={firstDiff} complen={me.Length}"));
                 }
             }
             catch (Exception ex)
             {
                 failures++;
-                Console.WriteLine($"hunk {h}: EXCEPTION {ex.GetType().Name}: {ex.Message}");
+                Console.WriteLine(FormattableString.Invariant($"hunk {h}: EXCEPTION {ex.GetType().Name}: {ex.Message}"));
             }
         }
-        Console.WriteLine($"{failures} failing {codec0} hunks of {hdr.Totalblocks}");
+        Console.WriteLine(FormattableString.Invariant($"{failures} failing {codec0} hunks of {hdr.Totalblocks}"));
         return 0;
     }
 
@@ -164,11 +164,11 @@ internal static class Program
             try
             {
                 ToolRunner.Run(_chdmanV4, $"-createav \"{avi}\" \"{outChd}\"", _work);
-                Console.WriteLine($"  OK {vw}x{vh}@{fps}");
+                Console.WriteLine(FormattableString.Invariant($"  OK {vw}x{vh}@{fps}"));
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"  FAIL {vw}x{vh}@{fps}: {ex.Message.Replace("\n", " | ")}");
+                Console.WriteLine(FormattableString.Invariant($"  FAIL {vw}x{vh}@{fps}: {ex.Message.Replace("\n", " | ")}"));
             }
         }
         return 0;
@@ -354,7 +354,7 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"  (skipped unaligned child: {ex.Message.Split('\n')[0]})");
+            Console.WriteLine(FormattableString.Invariant($"  (skipped unaligned child: {ex.Message.Split('\n')[0]})"));
         }
     }
 

@@ -33,7 +33,7 @@ internal static class ChdCommon
             case MapEntryFlag.Mapentrytypemini: return CompressionType.Compressionmini;
             case MapEntryFlag.Mapentrytypeselfhunk: return CompressionType.Compressionself;
             case MapEntryFlag.Mapentrytypeparenthunk: return CompressionType.Compressionparent;
-            case MapEntryFlag.Mapentrytype2ndcompressed: return CompressionType.Compressiontype2nd;
+            case MapEntryFlag.Mapentrytype2Ndcompressed: return CompressionType.Compressiontype2Nd;
             default:
                 return CompressionType.Compressionerror;
         }

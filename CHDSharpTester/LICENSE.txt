@@ -1,3 +1,17 @@
+CHDSharpTester
+Copyright (c) 2026 Peterson Fernandes
+
+Original developer:
+- Peterson Fernandes (@drpetersonfernandes)
+
+ATTRIBUTION REQUIREMENT:
+Any use of this software, whether in commercial or open source projects,
+must include the above attribution in a visible location (such as
+documentation, about dialog, or credits page).
+
+This software is licensed under the GNU General Public License v3.0.
+See below for the full license text.
+
                     GNU GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
 

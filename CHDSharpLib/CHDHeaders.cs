@@ -252,9 +252,6 @@ internal static class ChdHeaders
         for (var i = 0; i < 4; i++)
         {
             var codecValue = br.ReadUInt32Be();
-            if (!Enum.IsDefined(typeof(ChdCodec), (int)codecValue))
-                return ChdError.Chderrinvaliddata;
-
             chd.Compression[i] = (ChdCodec)codecValue;
         }
 

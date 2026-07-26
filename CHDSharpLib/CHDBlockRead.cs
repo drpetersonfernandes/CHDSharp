@@ -253,6 +253,9 @@ internal static class ChdBlockRead
                 {
                     if (mapEntry.BuffOutCache == null)
                     {
+                        if (mapEntry.BuffIn == null)
+                            return ChdError.Chderrdecompressionerror;
+
                         Array.Copy(mapEntry.BuffIn, 0, buffOut, 0, buffOutLength);
 
                         if (mapEntry.UseCount > 0)

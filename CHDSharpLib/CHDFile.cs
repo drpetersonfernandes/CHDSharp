@@ -639,7 +639,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                 loaded = true;
             }
 
-            var rbErr = ChdBlockRead.ReadBlock(me, null!, _chd.ChdReader, _codec, buffer, (int)_chd.Blocksize);
+            var rbErr = ChdBlockRead.ReadBlock(me, new ArrayPool(_chd.Blocksize), _chd.ChdReader, _codec, buffer, (int)_chd.Blocksize);
             return rbErr;
         }
         catch (Exception)
@@ -776,9 +776,8 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         {
             if (resource is IAsyncDisposable resourceAsyncDisposable)
                 return resourceAsyncDisposable.DisposeAsync();
-            else
-                resource.Dispose();
 
+            resource.Dispose();
             return ValueTask.CompletedTask;
         }
     }

@@ -439,8 +439,6 @@ public static class Chd
     [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
     private static ChdError DecompressDataParallel(Stream file, ChdHeader chd)
     {
-        using var br = new BinaryReader(file, Encoding.UTF8, true);
-
         var taskCount = TaskCount; // snapshot so a concurrent change cannot desync sentinels vs workers
         var md5Check = MD5.Create();
         var sha1Check = SHA1.Create();

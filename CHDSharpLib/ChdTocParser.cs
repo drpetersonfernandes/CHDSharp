@@ -163,11 +163,10 @@ internal static partial class ChdTocParser
         var matches = KeyValueRegex.Matches(text);
         foreach (Match m in matches)
         {
-            if (m.Groups.Count >= 3)
+            var key = m.Groups["key"].Value;
+            var value = m.Groups["value"].Value;
+            if (key.Length > 0 && value.Length > 0)
             {
-                var key = m.Groups[1].Value;
-                var value = m.Groups[2].Value;
-                // Trim trailing punctuation (e.g. period from truncated display)
                 value = value.TrimEnd('.');
                 result.TryAdd(key, value);
             }
@@ -279,6 +278,6 @@ internal static partial class ChdTocParser
         return metadata.Any(m => string.Equals(m.Tag, HardDiskMetadataTag, StringComparison.Ordinal));
     }
 
-    [GeneratedRegex(@"(\w+) *: *([^ ]+)", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture)]
+    [GeneratedRegex(@"(?<key>\w+) *: *(?<value>[^ ]+)", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.ExplicitCapture)]
     private static partial Regex MyRegex();
 }

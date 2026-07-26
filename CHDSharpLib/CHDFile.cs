@@ -643,7 +643,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         {
             if (dataEntry.Length > 0)
             {
-                if (dataEntry.BuffIn.Length < dataEntry.Length)
+                if (dataEntry.BuffIn == null || dataEntry.BuffIn.Length < dataEntry.Length)
                 {
                     dataEntry.BuffIn = new byte[dataEntry.Length];
                 }

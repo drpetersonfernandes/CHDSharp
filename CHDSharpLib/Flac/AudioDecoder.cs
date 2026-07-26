@@ -132,7 +132,7 @@ internal class AudioDecoder : IAudioSource
     /// </summary>
     public void Close()
     {
-        _io.Close();
+        _io?.Close();
     }
 
     /// <summary>

@@ -383,7 +383,7 @@ internal class AudioBuffer
     {
         get
         {
-            if (_samples.GetLength(0) < Length)
+            if (_samples == null || _samples.GetLength(0) < Length)
             {
                 _samples = new int[Size, Pcm.ChannelCount];
             }
@@ -402,7 +402,7 @@ internal class AudioBuffer
     {
         get
         {
-            if (_fsamples.GetLength(0) < Length)
+            if (_fsamples == null || _fsamples.GetLength(0) < Length)
             {
                 _fsamples = new float[Size, Pcm.ChannelCount];
             }
@@ -434,7 +434,7 @@ internal class AudioBuffer
     {
         get
         {
-            if (_bytes.Length < Length * Pcm.BlockAlign)
+            if (_bytes == null || _bytes.Length < Length * Pcm.BlockAlign)
             {
                 _bytes = new byte[Size * Pcm.BlockAlign];
             }

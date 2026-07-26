@@ -86,7 +86,8 @@ internal class LzmaStream : Stream
         {
             _dictionarySize = BitConverter.ToInt32(properties, 1);
             _outWindow.Create(_dictionarySize, outWindowBuff);
-            _outWindow.Train(presetDictionary);
+            if (presetDictionary != null)
+                _outWindow.Train(presetDictionary);
 
             _rangeDecoder.Init(inputStream);
 
@@ -103,8 +104,11 @@ internal class LzmaStream : Stream
             _dictionarySize <<= (properties[0] >> 1) + 11;
 
             _outWindow.Create(_dictionarySize);
-            _outWindow.Train(presetDictionary);
-            _needDictReset = false;
+            if (presetDictionary != null)
+            {
+                _outWindow.Train(presetDictionary);
+                _needDictReset = false;
+            }
 
             Properties = new byte[1];
             _availableBytes = 0;

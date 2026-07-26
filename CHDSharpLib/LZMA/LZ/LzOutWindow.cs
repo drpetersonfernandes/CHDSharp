@@ -83,6 +83,9 @@ internal class OutWindow
     /// <summary>Writes buffered data to the output stream.</summary>
     internal void Flush()
     {
+        if (_stream == null)
+            return;
+
         var size = _pos - _streamPos;
         if (size == 0)
             return;

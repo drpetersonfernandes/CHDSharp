@@ -162,6 +162,7 @@ internal static partial class ChdReaders
 
         srcPos = buffInStart;
         var dstPos = 0;
+        //this may require some error handling. Hopefully the while condition is reliable
         while (dstPos < buffOutLength)
         {
             if (srcPos >= buffInLength)

@@ -120,12 +120,6 @@ internal static class ChdMetaData
         return ChdError.Chderrnone;
     }
 
-    private static List<InternalEntry> ReadMetaDataInternal(Stream file, ChdHeader chd, bool collectHashes)
-    {
-        var err = ReadMetaDataInternal(file, chd, collectHashes, out var entries);
-        return err == ChdError.Chderrnone ? entries : [];
-    }
-
     private static byte[] metadata_hash(uint metaTag, byte[] metaData)
     {
         var metaHash = new byte[24];

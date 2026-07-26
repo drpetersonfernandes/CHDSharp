@@ -160,8 +160,6 @@ internal class Decoder
         }
     }
 
-    private OutWindow? _mOutWindow;
-
     private readonly BitDecoder[] _mIsMatchDecoders = new BitDecoder[Base.KNumStates << Base.KNumPosStatesBitsMax];
     private readonly BitDecoder[] _mIsRepDecoders = new BitDecoder[Base.KNumStates];
     private readonly BitDecoder[] _mIsRepG0Decoders = new BitDecoder[Base.KNumStates];
@@ -194,16 +192,6 @@ internal class Decoder
         {
             _mPosSlotDecoder[i] = new BitTreeDecoder(Base.KNumPosSlotBits);
         }
-    }
-
-    private void CreateDictionary()
-    {
-        if (_mDictionarySize < 0)
-            throw new InvalidParamException();
-
-        _mOutWindow = new OutWindow();
-        var blockSize = Math.Max(_mDictionarySize, (1 << 12));
-        _mOutWindow.Create(blockSize);
     }
 
     private void SetLiteralProperties(int lp, int lc)

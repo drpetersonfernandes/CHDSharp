@@ -64,7 +64,10 @@ public enum MapEntryFlag
     Mapentrytypeselfhunk = 0x0004, /* same as another hunk in this file */
 
     /// <summary>Parent reference: same data as a hunk in the parent CHD.</summary>
-    Mapentrytypeparenthunk = 0x0005 /* same as a hunk in the parent file */
+    Mapentrytypeparenthunk = 0x0005, /* same as a hunk in the parent file */
+
+    /// <summary>Secondary compressed hunk (V3/V4): compressed with the secondary algorithm, typically FLAC for CDDA audio.</summary>
+    Mapentrytype2ndcompressed = 0x0006 /* compressed with secondary algorithm (usually FLAC CDDA) */
 }
 
 /// <summary>CD-ROM track types. Matches MAME cdrom.h CD_TRACK_* values.</summary>
@@ -179,7 +182,11 @@ public enum CompressionType
 
     /* ADDED HERE: unallocated hunk in an uncompressed V5 CHD with no parent */
     /// <summary>Unallocated hunk that reads as all zero bytes (uncompressed V5 map entry 0 with no parent).</summary>
-    Compressionzero = 102
+    Compressionzero = 102,
+
+    /* ADDED HERE: V3/V4 secondary compressed hunk (type 6) */
+    /// <summary>Secondary compressed hunk in V3/V4 CHDs (type 6 map entry). Decompressed using the secondary codec (typically FLAC for CDDA audio).</summary>
+    Compressiontype2nd = 103
 }
 
 /// <summary>Error codes returned by CHD operations.</summary>

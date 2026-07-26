@@ -151,7 +151,11 @@ internal static class ChdHeaders
 
         br.ReadUInt32Be(); // flags
 
-        chd.Compression = [ChdCommon.CompTypeConv(br.ReadUInt32Be())];
+        var compressionType = br.ReadUInt32Be();
+        chd.Compression = [ChdCommon.CompTypeConv(compressionType)];
+        if (compressionType == 2)
+            ChdCommon.InitSecondaryCodec(chd);
+
         chd.Totalblocks = br.ReadUInt32Be(); // total number of CHD Blocks
 
         chd.Totalbytes = br.ReadUInt64Be(); // total byte size of the image
@@ -196,7 +200,11 @@ internal static class ChdHeaders
 
         br.ReadUInt32Be(); // flags
 
-        chd.Compression = [ChdCommon.CompTypeConv(br.ReadUInt32Be())];
+        var compressionType = br.ReadUInt32Be();
+        chd.Compression = [ChdCommon.CompTypeConv(compressionType)];
+        if (compressionType == 2)
+            ChdCommon.InitSecondaryCodec(chd);
+
         chd.Totalblocks = br.ReadUInt32Be(); // total number of CHD Blocks
 
         chd.Totalbytes = br.ReadUInt64Be(); // total byte size of the image

@@ -44,4 +44,10 @@ internal class ChdHeader
 
     /// <summary>File offset of the first metadata entry, or 0 if none.</summary>
     internal ulong Metaoffset;
+
+    /// <summary>The secondary compression codec used by V3/V4 <c>CHDCOMPRESSION_ZLIB_PLUS</c> files for type-6 (2ND_COMPRESSED) map entries.</summary>
+    internal ChdCodec SecondaryCodec;
+
+    /// <summary>The decompression delegate for the secondary codec used by type-6 map entries.</summary>
+    internal ChdReader? SecondaryChdReader;
 }

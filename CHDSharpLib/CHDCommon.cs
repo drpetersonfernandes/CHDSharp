@@ -33,6 +33,7 @@ internal static class ChdCommon
             case MapEntryFlag.Mapentrytypemini: return CompressionType.Compressionmini;
             case MapEntryFlag.Mapentrytypeselfhunk: return CompressionType.Compressionself;
             case MapEntryFlag.Mapentrytypeparenthunk: return CompressionType.Compressionparent;
+            case MapEntryFlag.Mapentrytype2ndcompressed: return CompressionType.Compressiontype2nd;
             default:
                 return CompressionType.Compressionerror;
         }
@@ -60,5 +61,16 @@ internal static class ChdCommon
             default:
                 return false;
         }
+    }
+
+    /// <summary>Initializes the secondary codec for V3/V4 <c>CHDCOMPRESSION_ZLIB_PLUS</c> files (compression type 2).</summary>
+    /// <param name="chd">The parsed header whose secondary codec will be set to <see cref="ChdCodec.Flac"/>.</param>
+    /// <remarks>
+    /// V3/V4 compression type 2 (<c>CHDCOMPRESSION_ZLIB_PLUS</c>) uses ZLIB as the primary codec (slot 0)
+    /// and FLAC as the secondary codec for type-6 (2ND_COMPRESSED) map entries, typically carrying CDDA audio data.
+    /// </remarks>
+    internal static void InitSecondaryCodec(ChdHeader chd)
+    {
+        chd.SecondaryCodec = ChdCodec.Flac;
     }
 }

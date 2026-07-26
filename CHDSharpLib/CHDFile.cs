@@ -600,6 +600,10 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                     return ChdError.Chderrinvaliddata;
 
                 me.SelfMapEntry = chd.Map[me.Offset];
+                if (me.SelfMapEntry.Comptype == CompressionType.Compressiontype2nd)
+                {
+                    me.SecondaryReader = me.SelfMapEntry.SecondaryReader;
+                }
             }
         }
 

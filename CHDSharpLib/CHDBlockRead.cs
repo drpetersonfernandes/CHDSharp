@@ -25,16 +25,19 @@ internal static class ChdBlockRead
     internal static void FindRepeatedBlocks(ChdHeader chd)
     {
         var totalFound = 0;
-        var compressionCount = new int[5];
-        var compressionSelfCount = new int[5];
-        var compressionUniqueCount = new int[5];
+        var compressionCount = new int[6];
+        var compressionSelfCount = new int[6];
+        var compressionUniqueCount = new int[6];
 
         Parallel.ForEach(chd.Map, me =>
         {
             if (me.Comptype != CompressionType.Compressionself)
             {
-                if ((int)me.Comptype < 5)
-                    Interlocked.Increment(ref compressionCount[(int)me.Comptype]);
+                var idx = (int)me.Comptype;
+                if (idx >= 0 && idx < 6)
+                    Interlocked.Increment(ref compressionCount[idx]);
+                else if (me.Comptype == CompressionType.Compressiontype2nd)
+                    Interlocked.Increment(ref compressionCount[5]);
                 return;
             }
 
@@ -46,6 +49,7 @@ internal static class ChdBlockRead
                 case CompressionType.Compressiontype2:
                 case CompressionType.Compressiontype3:
                 case CompressionType.Compressionnone:
+                case CompressionType.Compressiontype2nd:
                     break;
                 default:
                     LogUnexpectedCompType(Log, me.SelfMapEntry.Comptype, null);
@@ -56,15 +60,28 @@ internal static class ChdBlockRead
             {
                 Interlocked.Increment(ref me.SelfMapEntry.UseCount);
                 if (me.SelfMapEntry.UseCount == 1)
-                    Interlocked.Increment(ref compressionUniqueCount[(int)me.SelfMapEntry.Comptype]);
+                {
+                    var uniqueIdx = (int)me.SelfMapEntry.Comptype;
+                    if (uniqueIdx >= 0 && uniqueIdx < 6)
+                        Interlocked.Increment(ref compressionUniqueCount[uniqueIdx]);
+                    else if (me.SelfMapEntry.Comptype == CompressionType.Compressiontype2nd)
+                        Interlocked.Increment(ref compressionUniqueCount[5]);
+                }
             }
 
-            Interlocked.Increment(ref compressionSelfCount[(int)me.SelfMapEntry.Comptype]);
+            {
+                var selfIdx = (int)me.SelfMapEntry.Comptype;
+                if (selfIdx >= 0 && selfIdx < 6)
+                    Interlocked.Increment(ref compressionSelfCount[selfIdx]);
+                else if (me.SelfMapEntry.Comptype == CompressionType.Compressiontype2nd)
+                    Interlocked.Increment(ref compressionSelfCount[5]);
+            }
+
             Interlocked.Increment(ref totalFound);
         });
 
         LogBlockSummary(Log, chd.Map.Length, totalFound, chd.Blocksize, null);
-        for (var i = 0; i < 5; i++)
+        for (var i = 0; i < 6; i++)
         {
             if ((compressionCount[i] == 0) & (compressionSelfCount[i] == 0))
                 continue;
@@ -77,6 +94,10 @@ internal static class ChdBlockRead
             else if (i == 4)
             {
                 comp = "NONE";
+            }
+            else if (i == 5)
+            {
+                comp = "2ND_COMPRESSED";
             }
 
             LogCompressionStats(Log, i, comp, compressionCount[i], compressionUniqueCount[i], compressionSelfCount[i], null);
@@ -134,6 +155,7 @@ internal static class ChdBlockRead
             me.Offset = me.SelfMapEntry.Offset;
             me.Crc = me.SelfMapEntry.Crc;
             me.Crc16 = me.SelfMapEntry.Crc16;
+            me.SecondaryReader = me.SelfMapEntry.SecondaryReader;
             me.SelfMapEntry = null!;
         });
     }
@@ -146,6 +168,17 @@ internal static class ChdBlockRead
     {
         if (me.Comptype == CompressionType.Compressionnone)
             return 1;
+
+        if (me.Comptype == CompressionType.Compressiontype2nd)
+        {
+            return chd.SecondaryCodec switch
+            {
+                ChdCodec.Flac => 2,
+                ChdCodec.Lzma => 18,
+                ChdCodec.Zlib => 3,
+                _ => 1
+            };
+        }
 
         switch (chd.Compression[(int)me.Comptype])
         {
@@ -171,6 +204,18 @@ internal static class ChdBlockRead
         for (var i = 0; i < chd.Compression.Length; i++)
         {
             chd.ChdReader[i] = GetReaderFromCodec(chd.Compression[i]);
+        }
+
+        if (chd.SecondaryCodec != ChdCodec.None)
+        {
+            chd.SecondaryChdReader = GetReaderFromCodec(chd.SecondaryCodec);
+            foreach (var me in chd.Map)
+            {
+                if (me.Comptype == CompressionType.Compressiontype2nd)
+                {
+                    me.SecondaryReader = chd.SecondaryChdReader;
+                }
+            }
         }
     }
 
@@ -309,6 +354,45 @@ internal static class ChdBlockRead
                 checkCrc = false;
                 break;
             }
+
+            case CompressionType.Compressiontype2nd:
+            {
+                if (mapEntry.SecondaryReader == null)
+                    return ChdError.Chderrcodecerror;
+
+                lock (mapEntry)
+                {
+                    if (mapEntry.BuffOutCache == null)
+                    {
+                        var ret = mapEntry.SecondaryReader.Invoke(mapEntry.BuffIn, (int)mapEntry.Length, buffOut, buffOutLength, codec);
+
+                        if (ret != ChdError.Chderrnone)
+                            return ret;
+
+                        if (mapEntry.UseCount > 0)
+                        {
+                            mapEntry.BuffOutCache = arrPool.Rent();
+                            Array.Copy(buffOut, 0, mapEntry.BuffOutCache, 0, buffOutLength);
+                        }
+
+                        break;
+                    }
+
+                    Array.Copy(mapEntry.BuffOutCache, 0, buffOut, 0, buffOutLength);
+
+                    Interlocked.Decrement(ref mapEntry.UseCount);
+                    if (mapEntry.UseCount == 0)
+                    {
+                        arrPool.Return(mapEntry.BuffOutCache);
+                        mapEntry.BuffOutCache = null!;
+                    }
+
+                    checkCrc = false;
+                }
+
+                break;
+            }
+
             default:
                 return ChdError.Chderrdecompressionerror;
         }

@@ -41,4 +41,7 @@ internal class MapEntry
 
     /// <summary>Whether the decompressed data buffer should be kept in <see cref="BuffOutCache"/> for reuse.</summary>
     internal bool KeepBufferCopy;
+
+    /// <summary>The secondary decompression reader delegate for <see cref="CompressionType.Compressiontype2nd"/> entries (V3/V4 type 6).</summary>
+    internal ChdReader? SecondaryReader;
 }

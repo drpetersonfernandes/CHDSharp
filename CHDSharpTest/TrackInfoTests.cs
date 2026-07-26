@@ -3,6 +3,7 @@ using CHDSharp.Models;
 
 namespace CHDSharp.Tests;
 
+[Collection("TestData")]
 public sealed class TrackInfoTests
 {
     private static readonly string TestDataDir =
@@ -348,9 +349,9 @@ public sealed class TrackInfoTests
         using (chd)
         {
             var toc = chd!.ExportToc();
-            Assert.Contains("600", toc, StringComparison.Ordinal);
-            Assert.Contains("400", toc, StringComparison.Ordinal);
-            Assert.Contains("0", toc, StringComparison.Ordinal); // StartFrame of track 1 is 0
+            Assert.Contains(" 600 ", toc, StringComparison.Ordinal);
+            Assert.Contains(" 400 ", toc, StringComparison.Ordinal);
+            Assert.Contains("MODE1/2048", toc, StringComparison.Ordinal);
         }
     }
 
@@ -365,8 +366,8 @@ public sealed class TrackInfoTests
         using (chd)
         {
             var cue = chd!.GenerateCueSheet("test.bin");
-            Assert.Contains("00:00:00", cue, StringComparison.Ordinal); // track 1 start
-            Assert.Contains("00:08:00", cue, StringComparison.Ordinal); // track 2 start (600 frames / 75)
+            Assert.Contains("INDEX 01 00:00:00", cue, StringComparison.Ordinal);
+            Assert.Contains("INDEX 01 00:08:00", cue, StringComparison.Ordinal);
         }
     }
 

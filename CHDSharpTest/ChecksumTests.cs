@@ -10,7 +10,7 @@ public class ChecksumTests
 {
     /// <summary>Verifies that CRC-32 of the well-known "123456789" vector matches 0xCBF43926.</summary>
     [Fact]
-    public void Crc32KnownVectorMatchesStandard()
+    public void Crc32_known_vector_matches_standard()
     {
         // CRC-32 of ASCII "123456789" is the well-known 0xCBF43926.
         var data = "123456789"u8.ToArray();
@@ -20,7 +20,7 @@ public class ChecksumTests
 
     /// <summary>Verifies that CRC.VerifyDigest returns true for a matching digest and false for a mismatch.</summary>
     [Fact]
-    public void Crc32VerifyDigestTrueForMatchFalseForMismatch()
+    public void Crc32_verify_digest_true_for_match_false_for_mismatch()
     {
         var data = "The quick brown fox"u8.ToArray();
         var digest = Crc.CalculateDigest(data, 0, (uint)data.Length);
@@ -31,7 +31,7 @@ public class ChecksumTests
 
     /// <summary>Verifies that CRC calculates the same digest for a slice as for the inner data standalone.</summary>
     [Fact]
-    public void Crc32RespectsOffsetAndSize()
+    public void Crc32_respects_offset_and_size()
     {
         var full = "XX123456789YY"u8.ToArray();
         var inner = "123456789"u8.ToArray();
@@ -43,7 +43,7 @@ public class ChecksumTests
 
     /// <summary>Verifies that CRC16 produces deterministic results and differs for different inputs.</summary>
     [Fact]
-    public void Crc16EmptyAndKnownDataAreDeterministic()
+    public void Crc16_empty_and_known_data_are_deterministic()
     {
         var zeros = new byte[16];
         var a = Crc16.Calc(zeros, zeros.Length);

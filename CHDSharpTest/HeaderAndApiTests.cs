@@ -2,32 +2,19 @@ using CHDSharp.Models;
 
 namespace CHDSharp.Tests;
 
+[Collection("TestData")]
 public class HeaderAndApiTests
 {
     private const uint MaxHunkBytes = 128 * 1024 * 1024;
     private const ulong MaxLogicalBytes = 1024UL * 1024 * 1024 * 1024;
     private static readonly byte[] Magic = "MComprHD"u8.ToArray();
 
-    private static byte[] BigEndian(uint v)
-    {
-        return [(byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v];
-    }
-
-    private static byte[] BigEndian64(ulong v)
-    {
-        return
-        [
-            (byte)(v >> 56), (byte)(v >> 48), (byte)(v >> 40), (byte)(v >> 32),
-            (byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v
-        ];
-    }
-
     private static MemoryStream BuildHeader(uint length, uint version)
     {
         var ms = new MemoryStream();
         ms.Write(Magic, 0, Magic.Length);
-        ms.Write(BigEndian(length), 0, 4);
-        ms.Write(BigEndian(version), 0, 4);
+        ms.Write(EndianHelpers.Be(length), 0, 4);
+        ms.Write(EndianHelpers.Be(version), 0, 4);
         // pad a little so downstream readers don't immediately EOF
         ms.Write(new byte[64], 0, 64);
         ms.Position = 0;
@@ -36,7 +23,7 @@ public class HeaderAndApiTests
 
     /// <summary>Verifies that CheckHeader returns true and correct values for a valid V5 header.</summary>
     [Fact]
-    public void CheckHeaderValidV5ReturnsTrueWithVersion()
+    public void CheckHeader_valid_V5_returns_true_with_version()
     {
         using var ms = BuildHeader(124, 5); // 124 is the correct V5 header length
         var ok = Chd.CheckHeader(ms, out var length, out var version);
@@ -54,7 +41,7 @@ public class HeaderAndApiTests
     [InlineData(3, 120)]
     [InlineData(4, 108)]
     [InlineData(5, 124)]
-    public void CheckHeaderMatchesExpectedLengthPerVersion(uint version, uint length)
+    public void CheckHeader_matches_expected_length_per_version(uint version, uint length)
     {
         using var ms = BuildHeader(length, version);
         Assert.True(Chd.CheckHeader(ms, out var gotLen, out var gotVer));
@@ -64,7 +51,7 @@ public class HeaderAndApiTests
 
     /// <summary>Verifies that CheckHeader returns false for a stream with an incorrect magic value.</summary>
     [Fact]
-    public void CheckHeaderWrongMagicReturnsFalse()
+    public void CheckHeader_wrong_magic_returns_false()
     {
         var ms = new MemoryStream(new byte[128]); // all zeros, no magic
         Assert.False(Chd.CheckHeader(ms, out _, out _));
@@ -72,25 +59,16 @@ public class HeaderAndApiTests
 
     /// <summary>Verifies that CheckHeader returns false when the declared length doesn't match the version.</summary>
     [Fact]
-    public void CheckHeaderLengthMismatchReturnsFalse()
+    public void CheckHeader_length_mismatch_returns_false()
     {
         // Correct magic + version 5 but wrong declared length.
         using var ms = BuildHeader(999, 5);
         Assert.False(Chd.CheckHeader(ms, out _, out _));
     }
 
-    /// <summary>Verifies that ChdFile.Open returns Chderrfilenotfound for a missing file.</summary>
-    [Fact]
-    public void ChdFileOpenMissingFileReturnsFileNotFound()
-    {
-        var err = ChdFile.Open(@"Z:\definitely\does\not\exist.chd", out var chd);
-        Assert.Equal(ChdError.Chderrfilenotfound, err);
-        Assert.Null(chd);
-    }
-
     /// <summary>Verifies that ChdFile.Open returns Chderrinvalidfile for a stream without a CHD magic.</summary>
     [Fact]
-    public void ChdFileOpenNonChdStreamReturnsInvalidFile()
+    public void ChdFile_open_non_chd_stream_returns_invalid_file()
     {
         using var ms = new MemoryStream(new byte[256]); // no magic
         var err = ChdFile.Open(ms, true, out var chd);
@@ -100,7 +78,7 @@ public class HeaderAndApiTests
 
     /// <summary>Verifies that ChdFile.Open returns Chderrinvalidparameter for a non-seekable stream.</summary>
     [Fact]
-    public void ChdFileOpenNonSeekableStreamReturnsInvalidParameter()
+    public void ChdFile_open_non_seekable_stream_returns_invalid_parameter()
     {
         using var ns = new NonSeekableStream();
         var err = ChdFile.Open(ns, true, out var chd);
@@ -228,17 +206,39 @@ public class HeaderAndApiTests
     }
 
     [Fact]
+    public void CheckFile_rejects_zero_hunk_bytes_via_stream()
+    {
+        var ms = new MemoryStream();
+        ms.Write("MComprHD"u8);
+        ms.Write(EndianHelpers.Be(76), 0, 4);
+        ms.Write(EndianHelpers.Be(1), 0, 4);
+        ms.Write(EndianHelpers.Be(0), 0, 4);
+        ms.Write(EndianHelpers.Be(0), 0, 4);
+        ms.Write(EndianHelpers.Be(0), 0, 4); // hunkbytes = 0
+        ms.Write(EndianHelpers.Be(1), 0, 4);
+        ms.Write(new byte[48], 0, 48);
+        var pad = 1024 - (int)ms.Length;
+        ms.Write(new byte[pad], 0, pad);
+        ms.Position = 0;
+
+        var result = Chd.CheckFile(ms, "test.chd", false);
+        Assert.Equal(ChdError.Chderrinvaliddata, result.Error);
+    }
+
+    [Fact]
     public void CheckFile_rejects_excessive_hunk_bytes_via_stream()
     {
         var ms = new MemoryStream();
         ms.Write("MComprHD"u8);
-        ms.Write(BigEndian(76), 0, 4);
-        ms.Write(BigEndian(1), 0, 4);
-        ms.Write(BigEndian(0), 0, 4);
-        ms.Write(BigEndian(0), 0, 4);
-        ms.Write(BigEndian(0), 0, 4); // hunkbytes = 0
-        ms.Write(BigEndian(1), 0, 4);
-        ms.Write(new byte[48], 0, 48);
+        ms.Write(EndianHelpers.Be(124), 0, 4); // V5 header length
+        ms.Write(EndianHelpers.Be(5), 0, 4); // version 5
+        ms.Write(new byte[16], 0, 16); // compression[4] = all None
+        ms.Write(EndianHelpers.Be64(1000), 0, 8); // totalbytes
+        ms.Write(EndianHelpers.Be64(140), 0, 8); // mapoffset (just after header)
+        ms.Write(EndianHelpers.Be64(0), 0, 8); // metaoffset
+        ms.Write(EndianHelpers.Be(MaxHunkBytes + 1), 0, 4); // blocksize = max + 1
+        ms.Write(EndianHelpers.Be(512), 0, 4); // unitbytes
+        ms.Write(new byte[60], 0, 60); // sha1 * 3
         var pad = 1024 - (int)ms.Length;
         ms.Write(new byte[pad], 0, pad);
         ms.Position = 0;
@@ -251,14 +251,14 @@ public class HeaderAndApiTests
     {
         var ms = new MemoryStream();
         ms.Write("MComprHD"u8);
-        ms.Write(BigEndian(124), 0, 4);
-        ms.Write(BigEndian(5), 0, 4);
+        ms.Write(EndianHelpers.Be(124), 0, 4);
+        ms.Write(EndianHelpers.Be(5), 0, 4);
         ms.Write(new byte[16], 0, 16); // compression[4] = all None
-        ms.Write(BigEndian64(totalbytes), 0, 8); // logicalbytes
-        ms.Write(BigEndian64(mapoffset), 0, 8); // mapoffset
-        ms.Write(BigEndian64(0), 0, 8); // metaoffset
-        ms.Write(BigEndian(blocksize), 0, 4); // hunkbytes
-        ms.Write(BigEndian(2448), 0, 4); // unitbytes
+        ms.Write(EndianHelpers.Be64(totalbytes), 0, 8); // logicalbytes
+        ms.Write(EndianHelpers.Be64(mapoffset), 0, 8); // mapoffset
+        ms.Write(EndianHelpers.Be64(0), 0, 8); // metaoffset
+        ms.Write(EndianHelpers.Be(blocksize), 0, 4); // hunkbytes
+        ms.Write(EndianHelpers.Be(2448), 0, 4); // unitbytes
         ms.Write(new byte[60], 0, 60); // sha1 * 3
         ms.Position = 0;
         return ms;
@@ -284,10 +284,10 @@ public class HeaderAndApiTests
         var ms = BuildV5Stream(1000, 1000, 140); // mapoffset just after header
         // Overwrite compression[0] to non-zero
         ms.Seek(16, SeekOrigin.Begin);
-        ms.Write(BigEndian(1), 0, 4); // compression = Zlib
+        ms.Write(EndianHelpers.Be(1), 0, 4); // compression = Zlib
         // At mapoffset (position 140), write mapbytes = huge value
         ms.Seek(140, SeekOrigin.Begin);
-        ms.Write(BigEndian(0x7FFFFFFFu), 0, 4); // mapbytes = max signed int
+        ms.Write(EndianHelpers.Be(0x7FFFFFFFu), 0, 4); // mapbytes = max signed int
         ms.Write(new byte[12], 0, 12); // rest of 16-byte map header
         ms.Write(new byte[50], 0, 50); // some padding
         ms.Position = 0;
@@ -298,7 +298,7 @@ public class HeaderAndApiTests
     }
 
     [Fact]
-    public void ChdMetadataEntry_GetText_returns_empty_for_large_data()
+    public void ChdMetadataEntry_get_text_returns_empty_for_large_data()
     {
         var largeData = new byte[2 * 1024 * 1024];
         new Random(42).NextBytes(largeData);
@@ -308,7 +308,7 @@ public class HeaderAndApiTests
     }
 
     [Fact]
-    public void ChdMetadataEntry_GetText_returns_text_for_small_data()
+    public void ChdMetadataEntry_get_text_returns_text_for_small_data()
     {
         var data = "Hello World"u8.ToArray();
         var entry = new ChdMetadataEntry("TEST", data);
@@ -321,9 +321,9 @@ public class HeaderAndApiTests
     {
         var ms = new MemoryStream();
         ms.Write(new byte[16], 0, 16); // skip 16 bytes so Metaoffset=16 is meaningful
-        ms.Write(BigEndian(0x47414D45), 0, 4); // metaTag = "GAME"
-        ms.Write(BigEndian(0x00100001), 0, 4); // metaLength = 1 MB + 1 (flags=0)
-        ms.Write(BigEndian64(0), 0, 8); // next = 0
+        ms.Write(EndianHelpers.Be(0x47414D45), 0, 4); // metaTag = "GAME"
+        ms.Write(EndianHelpers.Be(0x00100001), 0, 4); // metaLength = 1 MB + 1 (flags=0)
+        ms.Write(EndianHelpers.Be64(0), 0, 8); // next = 0
         ms.Position = 0;
 
         var chd = new ChdHeader
@@ -346,5 +346,31 @@ public class HeaderAndApiTests
         var err = ChdMetaData.ReadMetaDataEntries(ms, chd, out var entries);
         Assert.Equal(ChdError.Chderrinvaliddata, err);
         Assert.Empty(entries);
+    }
+
+    [Fact]
+    public void ChdFile_open_leaveOpen_false_closes_stream()
+    {
+        var testDataDir = Path.Combine(AppContext.BaseDirectory, "TestData");
+        var path = Path.Combine(testDataDir, "v5_zlib.chd");
+        var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var err = ChdFile.Open(fs, false, out var chd);
+        Assert.Equal(ChdError.Chderrnone, err);
+        chd?.Dispose();
+        Assert.False(fs.CanRead);
+    }
+
+    [Fact]
+    public void ChdFile_read_beyond_total_bytes_returns_error()
+    {
+        var testDataDir = Path.Combine(AppContext.BaseDirectory, "TestData");
+        var err = ChdFile.Open(Path.Combine(testDataDir, "v5_zlib.chd"), out var chd);
+        Assert.Equal(ChdError.Chderrnone, err);
+        using (chd)
+        {
+            var buffer = new byte[chd!.HunkBytes];
+            var readErr = chd.Read(chd.TotalBytes + 1, buffer, 0, buffer.Length);
+            Assert.Equal(ChdError.Chderrinvalidparameter, readErr);
+        }
     }
 }

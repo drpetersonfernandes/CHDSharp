@@ -3,6 +3,7 @@ using CHDSharp.Models;
 
 namespace CHDSharp.Tests;
 
+[Collection("TestData")]
 public sealed class CorpusTests
 {
     public sealed record Entry(string File, uint Version, string? Parent, string Expect, string Note);
@@ -107,7 +108,8 @@ public sealed class CorpusTests
     public void V5_tiny_rejected_gracefully()
     {
         var path = Path.Combine(TestDataDir, "v5_tiny.chd");
-        var err = Chd.CheckFile(File.OpenRead(path), path, false, out _, out _, out _);
+        using var fs = File.OpenRead(path);
+        var err = Chd.CheckFile(fs, path, false, out _, out _, out _);
         Assert.NotEqual(ChdError.Chderrnone, err);
     }
 }

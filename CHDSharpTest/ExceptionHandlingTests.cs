@@ -2,22 +2,9 @@ using CHDSharp.Models;
 
 namespace CHDSharp.Tests;
 
+[Collection("TestData")]
 public class ExceptionHandlingTests
 {
-    private static byte[] Be(uint v)
-    {
-        return [(byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v];
-    }
-
-    private static byte[] Be64(ulong v)
-    {
-        return
-        [
-            (byte)(v >> 56), (byte)(v >> 48), (byte)(v >> 40), (byte)(v >> 32),
-            (byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v
-        ];
-    }
-
     [Fact]
     public void Open_with_nonexistent_path_returns_file_not_found()
     {
@@ -63,24 +50,24 @@ public class ExceptionHandlingTests
         // and the IOException/InvalidDataException is caught.
         var ms = new MemoryStream();
         ms.Write("MComprHD"u8);
-        ms.Write(Be(124), 0, 4);
-        ms.Write(Be(5), 0, 4);
-        ms.Write(Be((uint)ChdCodec.None), 0, 4);
-        ms.Write(Be((uint)ChdCodec.None), 0, 4);
-        ms.Write(Be((uint)ChdCodec.None), 0, 4);
-        ms.Write(Be((uint)ChdCodec.None), 0, 4);
-        ms.Write(Be64(4096), 0, 8); // totalbytes
-        ms.Write(Be64(124), 0, 8); // mapoffset = end of header
-        ms.Write(Be64(999), 0, 8); // metaoffset = 999 (beyond stream)
-        ms.Write(Be(4096), 0, 4); // blocksize
-        ms.Write(Be(4096), 0, 4); // unitbytes
+        ms.Write(EndianHelpers.Be(124), 0, 4);
+        ms.Write(EndianHelpers.Be(5), 0, 4);
+        ms.Write(EndianHelpers.Be((uint)ChdCodec.None), 0, 4);
+        ms.Write(EndianHelpers.Be((uint)ChdCodec.None), 0, 4);
+        ms.Write(EndianHelpers.Be((uint)ChdCodec.None), 0, 4);
+        ms.Write(EndianHelpers.Be((uint)ChdCodec.None), 0, 4);
+        ms.Write(EndianHelpers.Be64(4096), 0, 8); // totalbytes
+        ms.Write(EndianHelpers.Be64(124), 0, 8); // mapoffset = end of header
+        ms.Write(EndianHelpers.Be64(999), 0, 8); // metaoffset = 999 (beyond stream)
+        ms.Write(EndianHelpers.Be(4096), 0, 4); // blocksize
+        ms.Write(EndianHelpers.Be(4096), 0, 4); // unitbytes
         ms.Write(new byte[20], 0, 20); // rawsha1
         ms.Write(new byte[20], 0, 20); // sha1
         ms.Write(new byte[20], 0, 20); // parentsha1
         // Uncompressed map at offset 124: 0 entries, 0 first offset
         ms.Seek(124, SeekOrigin.Begin);
-        ms.Write(Be64(0), 0, 8);
-        ms.Write(Be64(0), 0, 8);
+        ms.Write(EndianHelpers.Be64(0), 0, 8);
+        ms.Write(EndianHelpers.Be64(0), 0, 8);
         // Pad so the stream is long enough but metaoffset is still out of range
         ms.Seek(0, SeekOrigin.End);
         ms.Write(new byte[100], 0, 100);
@@ -108,7 +95,7 @@ public class ExceptionHandlingTests
         buffIn[2] = 0x2F;
         buffIn[3] = 0xFD; // zstd magic
         var buffOut = new byte[4096];
-        var codec = new ChdCodecState();
+        using var codec = new ChdCodecState();
 
         var err = ChdReaders.Zstd(buffIn, buffIn.Length, buffOut, buffOut.Length, codec);
         Assert.Equal(ChdError.Chderrdecompressionerror, err);
@@ -161,8 +148,8 @@ public class ExceptionHandlingTests
     [Fact]
     public async Task ChdFile_dispose_async_calls_codec_dispose()
     {
-        var chd = OpenMinimalV5Chd();
-        await chd.DisposeAsync();
-        // No exception means codec was disposed cleanly.
+        await using var chd = OpenMinimalV5Chd();
+        // If we reach here without an unhandled exception, the codec was
+        // disposed successfully during ChdFile.DisposeAsync.
     }
 }

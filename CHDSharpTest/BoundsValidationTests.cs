@@ -2,38 +2,25 @@ using CHDSharp.Models;
 
 namespace CHDSharp.Tests;
 
+[Collection("TestData")]
 public class BoundsValidationTests
 {
     private static readonly byte[] Magic = "MComprHD"u8.ToArray();
-
-    private static byte[] Be(uint v)
-    {
-        return [(byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v];
-    }
-
-    private static byte[] Be64(ulong v)
-    {
-        return
-        [
-            (byte)(v >> 56), (byte)(v >> 48), (byte)(v >> 40), (byte)(v >> 32),
-            (byte)(v >> 24), (byte)(v >> 16), (byte)(v >> 8), (byte)v
-        ];
-    }
 
     private static MemoryStream MakeV3Stream(uint totalblocks, uint blocksize, uint totalbytes, Action<MemoryStream> writeMapEntries)
     {
         var ms = new MemoryStream();
         ms.Write(Magic, 0, Magic.Length);
-        ms.Write(Be(120), 0, 4); // V3 header length
-        ms.Write(Be(3), 0, 4); // version 3
-        ms.Write(Be(0), 0, 4); // flags
-        ms.Write(Be(1), 0, 4); // compression = 1 (zlib in V3 format)
-        ms.Write(Be(totalblocks), 0, 4);
-        ms.Write(Be64(totalbytes), 0, 8);
-        ms.Write(Be64(0), 0, 8); // metaoffset
+        ms.Write(EndianHelpers.Be(120), 0, 4); // V3 header length
+        ms.Write(EndianHelpers.Be(3), 0, 4); // version 3
+        ms.Write(EndianHelpers.Be(0), 0, 4); // flags
+        ms.Write(EndianHelpers.Be(1), 0, 4); // compression = 1 (zlib in V3 format)
+        ms.Write(EndianHelpers.Be(totalblocks), 0, 4);
+        ms.Write(EndianHelpers.Be64(totalbytes), 0, 8);
+        ms.Write(EndianHelpers.Be64(0), 0, 8); // metaoffset
         ms.Write(new byte[16], 0, 16); // md5
         ms.Write(new byte[16], 0, 16); // parentmd5
-        ms.Write(Be(blocksize), 0, 4);
+        ms.Write(EndianHelpers.Be(blocksize), 0, 4);
         ms.Write(new byte[20], 0, 20); // rawsha1
         ms.Write(new byte[20], 0, 20); // parentsha1
         writeMapEntries(ms);
@@ -43,8 +30,8 @@ public class BoundsValidationTests
 
     private static void WriteMapEntryV3(Stream ms, ulong offset, uint crc, byte lenByte0, byte lenByte1, byte lenByte2, byte flags)
     {
-        ms.Write(Be64(offset));
-        ms.Write(Be(crc));
+        ms.Write(EndianHelpers.Be64(offset));
+        ms.Write(EndianHelpers.Be(crc));
         ms.WriteByte(lenByte0);
         ms.WriteByte(lenByte1);
         ms.WriteByte(lenByte2);
@@ -55,13 +42,13 @@ public class BoundsValidationTests
     public void V1_zero_blocksize_returns_invalid_data()
     {
         var ms = new MemoryStream();
-        ms.Write(Be(0), 0, 4); // flags
-        ms.Write(Be(0), 0, 4); // compression
-        ms.Write(Be(0), 0, 4); // blocksize = 0
-        ms.Write(Be(1), 0, 4); // totalblocks
-        ms.Write(Be(1), 0, 4); // cylinders
-        ms.Write(Be(1), 0, 4); // heads
-        ms.Write(Be(1), 0, 4); // sectors
+        ms.Write(EndianHelpers.Be(0), 0, 4); // flags
+        ms.Write(EndianHelpers.Be(0), 0, 4); // compression
+        ms.Write(EndianHelpers.Be(0), 0, 4); // blocksize = 0
+        ms.Write(EndianHelpers.Be(1), 0, 4); // totalblocks
+        ms.Write(EndianHelpers.Be(1), 0, 4); // cylinders
+        ms.Write(EndianHelpers.Be(1), 0, 4); // heads
+        ms.Write(EndianHelpers.Be(1), 0, 4); // sectors
         ms.Write(new byte[16], 0, 16); // md5
         ms.Write(new byte[16], 0, 16); // parentmd5
         ms.Position = 0;
@@ -74,16 +61,16 @@ public class BoundsValidationTests
     public void V2_zero_hunk_sectors_returns_invalid_data()
     {
         var ms = new MemoryStream();
-        ms.Write(Be(0), 0, 4); // flags
-        ms.Write(Be(0), 0, 4); // compression
-        ms.Write(Be(0), 0, 4); // hunkSectors = 0
-        ms.Write(Be(1), 0, 4); // totalblocks
-        ms.Write(Be(1), 0, 4); // cylinders
-        ms.Write(Be(1), 0, 4); // heads
-        ms.Write(Be(1), 0, 4); // sectors
+        ms.Write(EndianHelpers.Be(0), 0, 4); // flags
+        ms.Write(EndianHelpers.Be(0), 0, 4); // compression
+        ms.Write(EndianHelpers.Be(0), 0, 4); // hunkSectors = 0
+        ms.Write(EndianHelpers.Be(1), 0, 4); // totalblocks
+        ms.Write(EndianHelpers.Be(1), 0, 4); // cylinders
+        ms.Write(EndianHelpers.Be(1), 0, 4); // heads
+        ms.Write(EndianHelpers.Be(1), 0, 4); // sectors
         ms.Write(new byte[16], 0, 16); // md5
         ms.Write(new byte[16], 0, 16); // parentmd5
-        ms.Write(Be(512), 0, 4); // seclen
+        ms.Write(EndianHelpers.Be(512), 0, 4); // seclen
         ms.Position = 0;
 
         var err = ChdHeaders.ReadHeaderV2(ms, out _);
@@ -94,16 +81,16 @@ public class BoundsValidationTests
     public void V2_zero_seclen_returns_invalid_data()
     {
         var ms = new MemoryStream();
-        ms.Write(Be(0), 0, 4); // flags
-        ms.Write(Be(0), 0, 4); // compression
-        ms.Write(Be(1), 0, 4); // hunkSectors
-        ms.Write(Be(1), 0, 4); // totalblocks
-        ms.Write(Be(1), 0, 4); // cylinders
-        ms.Write(Be(1), 0, 4); // heads
-        ms.Write(Be(1), 0, 4); // sectors
+        ms.Write(EndianHelpers.Be(0), 0, 4); // flags
+        ms.Write(EndianHelpers.Be(0), 0, 4); // compression
+        ms.Write(EndianHelpers.Be(1), 0, 4); // hunkSectors
+        ms.Write(EndianHelpers.Be(1), 0, 4); // totalblocks
+        ms.Write(EndianHelpers.Be(1), 0, 4); // cylinders
+        ms.Write(EndianHelpers.Be(1), 0, 4); // heads
+        ms.Write(EndianHelpers.Be(1), 0, 4); // sectors
         ms.Write(new byte[16], 0, 16); // md5
         ms.Write(new byte[16], 0, 16); // parentmd5
-        ms.Write(Be(0), 0, 4); // seclen = 0
+        ms.Write(EndianHelpers.Be(0), 0, 4); // seclen = 0
         ms.Position = 0;
 
         var err = ChdHeaders.ReadHeaderV2(ms, out _);
@@ -115,18 +102,18 @@ public class BoundsValidationTests
     {
         var ms = new MemoryStream();
         ms.Write(Magic, 0, Magic.Length);
-        ms.Write(Be(124), 0, 4);
-        ms.Write(Be(5), 0, 4);
+        ms.Write(EndianHelpers.Be(124), 0, 4);
+        ms.Write(EndianHelpers.Be(5), 0, 4);
         ms.Position = 16; // ReadHeaderV5 expects stream after the preamble (magic + length + version)
-        ms.Write(Be(0xDEADBEEF), 0, 4); // invalid codec
-        ms.Write(Be((uint)ChdCodec.None), 0, 4);
-        ms.Write(Be((uint)ChdCodec.None), 0, 4);
-        ms.Write(Be((uint)ChdCodec.None), 0, 4);
-        ms.Write(Be64(1000), 0, 8); // totalbytes
-        ms.Write(Be64(0), 0, 8); // mapoffset
-        ms.Write(Be64(0), 0, 8); // metaoffset
-        ms.Write(Be(1000), 0, 4); // blocksize
-        ms.Write(Be(2448), 0, 4); // unitbytes
+        ms.Write(EndianHelpers.Be(0xDEADBEEF), 0, 4); // invalid codec
+        ms.Write(EndianHelpers.Be((uint)ChdCodec.None), 0, 4);
+        ms.Write(EndianHelpers.Be((uint)ChdCodec.None), 0, 4);
+        ms.Write(EndianHelpers.Be((uint)ChdCodec.None), 0, 4);
+        ms.Write(EndianHelpers.Be64(1000), 0, 8); // totalbytes
+        ms.Write(EndianHelpers.Be64(0), 0, 8); // mapoffset
+        ms.Write(EndianHelpers.Be64(0), 0, 8); // metaoffset
+        ms.Write(EndianHelpers.Be(1000), 0, 4); // blocksize
+        ms.Write(EndianHelpers.Be(2448), 0, 4); // unitbytes
         ms.Write(new byte[60], 0, 60); // sha1 * 3
         ms.Position = 16;
 
@@ -135,14 +122,25 @@ public class BoundsValidationTests
     }
 
     [Fact]
-    public void Flac_no_input_data_returns_invalid_data()
+    public void Flac_single_byte_input_returns_invalid_data()
     {
         var buffIn = new[] { (byte)'L' };
         var buffOut = new byte[4096];
-        var codec = new ChdCodecState();
+        using var codec = new ChdCodecState();
 
         var err = ChdReaders.Flac(buffIn, buffIn.Length, buffOut, buffOut.Length, codec);
         Assert.Equal(ChdError.Chderrinvaliddata, err);
+    }
+
+    [Fact]
+    public void Flac_empty_input_returns_invalid_data()
+    {
+        var buffIn = Array.Empty<byte>();
+        var buffOut = new byte[4096];
+        using var codec = new ChdCodecState();
+
+        Assert.Throws<IndexOutOfRangeException>(() =>
+            ChdReaders.Flac(buffIn, 0, buffOut, buffOut.Length, codec));
     }
 
     [Fact]

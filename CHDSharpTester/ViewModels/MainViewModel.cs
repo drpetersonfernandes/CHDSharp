@@ -18,7 +18,7 @@ internal class MainViewModel : INotifyPropertyChanged
 {
     private readonly ChdTestRunner _runner = new();
     private CancellationTokenSource? _cts;
-    private readonly Lock _ctsLock = new();
+    private readonly object _ctsLock = new();
     private readonly StringBuilder _logBuffer = new();
     private ObservableCollection<PerFileResult>? _cachedFileResults;
     private Task? _runTask;

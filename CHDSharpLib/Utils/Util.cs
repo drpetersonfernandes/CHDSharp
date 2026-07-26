@@ -6,8 +6,11 @@ internal static class Util
     /// <summary>Determines whether every byte in the array is zero (or the array is null).</summary>
     /// <param name="b">The byte array to check.</param>
     /// <returns><c>true</c> if the array is null or all bytes are zero; otherwise <c>false</c>.</returns>
-    internal static bool IsAllZeroArray(byte[] b)
+    internal static bool IsAllZeroArray(byte[]? b)
     {
+        if (b is null)
+            return true;
+
         foreach (var t in b)
             if (t != 0)
                 return false;

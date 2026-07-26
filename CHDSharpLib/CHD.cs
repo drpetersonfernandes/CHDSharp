@@ -613,7 +613,7 @@ public static class Chd
             }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
             allTasks.Add(hashingThread);
 
-            Task.WaitAll(allTasks.ToArray(), ct);
+            Task.WaitAll(allTasks.ToArray());
 
 
             LogVerifyingComplete(Log, null);
@@ -648,7 +648,14 @@ public static class Chd
         finally
         {
             ts.Cancel();
-            Task.WaitAll(allTasks.ToArray(), ts.Token);
+            try
+            {
+                Task.WaitAll(allTasks.ToArray());
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected: tasks were cancelled via ts.Cancel()
+            }
             ts.Dispose();
             blocksToDecompress.Dispose();
             blocksToHash.Dispose();

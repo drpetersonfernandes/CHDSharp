@@ -117,6 +117,7 @@ public class BoundsValidationTests
         ms.Write(Magic, 0, Magic.Length);
         ms.Write(Be(124), 0, 4);
         ms.Write(Be(5), 0, 4);
+        ms.Position = 16; // ReadHeaderV5 expects stream after the preamble (magic + length + version)
         ms.Write(Be(0xDEADBEEF), 0, 4); // invalid codec
         ms.Write(Be((uint)ChdCodec.None), 0, 4);
         ms.Write(Be((uint)ChdCodec.None), 0, 4);
@@ -127,7 +128,7 @@ public class BoundsValidationTests
         ms.Write(Be(1000), 0, 4); // blocksize
         ms.Write(Be(2448), 0, 4); // unitbytes
         ms.Write(new byte[60], 0, 60); // sha1 * 3
-        ms.Position = 0;
+        ms.Position = 16;
 
         var err = ChdHeaders.ReadHeaderV5(ms, out _);
         Assert.Equal(ChdError.Chderrinvaliddata, err);

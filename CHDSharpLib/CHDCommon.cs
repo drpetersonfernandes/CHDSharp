@@ -37,4 +37,28 @@ internal static class ChdCommon
                 return CompressionType.Compressionerror;
         }
     }
+
+    /// <summary>Checks whether a <see cref="ChdCodec"/> value is a recognized codec.</summary>
+    /// <param name="codec">The codec value to validate.</param>
+    /// <returns><c>true</c> if the codec is a known value; otherwise <c>false</c>.</returns>
+    internal static bool IsValidCodec(ChdCodec codec)
+    {
+        switch (codec)
+        {
+            case ChdCodec.Zlib:
+            case ChdCodec.Lzma:
+            case ChdCodec.Huffman:
+            case ChdCodec.Flac:
+            case ChdCodec.Zstd:
+            case ChdCodec.Cdzlib:
+            case ChdCodec.Cdlzma:
+            case ChdCodec.Cdflac:
+            case ChdCodec.Cdzstd:
+            case ChdCodec.Avhuff:
+            case ChdCodec.Error:
+                return true;
+            default:
+                return false;
+        }
+    }
 }

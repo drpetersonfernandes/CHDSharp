@@ -244,6 +244,8 @@ internal static class ChdHeaders
         {
             var codecValue = br.ReadUInt32Be();
             chd.Compression[i] = (ChdCodec)codecValue;
+            if (chd.Compression[i] != ChdCodec.None && !ChdCommon.IsValidCodec(chd.Compression[i]))
+                return ChdError.Chderrinvaliddata;
         }
 
         chd.Totalbytes = br.ReadUInt64Be(); // total byte size of the image

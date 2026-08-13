@@ -2,7 +2,7 @@
 
 **Deterministic CHD test corpus generator for the CHDSharp xUnit test suite.**
 
-Generates the 29-file CHD corpus in `CHDSharpTest/TestData/`, covering every format version (V1–V5), all compression codecs (zlib, lzma, huffman, flac, zstd, avhu + CD variants), every map type, and parent/child chains. All source images are built deterministically (seeded PRNG) so regenerating the corpus produces byte-identical output.
+Generates the 30-file CHD corpus in `CHDSharpTest/TestData/`, covering every format version (V1–V5), all compression codecs (zlib, lzma, huffman, flac, zstd, avhu + CD variants), every map type, and parent/child chains. All source images are built deterministically (seeded PRNG) so regenerating the corpus produces byte-identical output.
 
 ---
 

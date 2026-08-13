@@ -186,6 +186,12 @@ Chd.LoggerFactory = new SerilogLoggerFactory(
 
 ---
 
+## Documentation
+
+The full wiki lives in [`docs/`](docs/README.md) — format reference, codecs, API reference, verification, extraction, performance, testing, and troubleshooting.
+
+---
+
 ## Full API
 
 See the [CHDSharpLib README](CHDSharpLib/README.md#api-reference) for the complete `Chd`, `ChdFile`, `ChdResult`, `ChdMetadataEntry`, and `ChdError` API reference, including all `Open` overloads, performance tuning (`Chd.TaskCount`), and usage patterns.

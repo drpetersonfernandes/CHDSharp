@@ -168,7 +168,15 @@ internal static partial class ChdReaders
         {
             var blockSize = (int)samples * 2;
 
-            codec.AvhuffSettings ??= new AudioPcmConfig(16, (int)channels, 44100);
+            // AVHuff FLAC streams are headerless (no STREAMINFO), one FLAC
+            // stream PER audio channel, so each stream is MONO regardless of
+            // the AVHuff header's total channel count. MAME encodes them with
+            // set_num_channels(1) and decodes them with flac_decoder::reset(
+            // 48000, 1, ...), so the decoder must be configured as 16-bit mono
+            // at 48 kHz. Configuring it with the header's channel count (e.g.
+            // 2 for stereo laserdiscs) makes DecodeFrame reject every frame
+            // with "invalid channel mode".
+            codec.AvhuffSettings ??= new AudioPcmConfig(16, 1, 48000);
             codec.AvhuffAudioDecoder ??= new AudioDecoder(codec.AvhuffSettings);
 
             // loop over channels
@@ -180,11 +188,6 @@ internal static partial class ChdReaders
                 var curdest = audioChannelDestStart[channelNumber];
                 if (curdest != null)
                 {
-                    // AVHuff FLAC streams are headerless (no STREAMINFO), one FLAC
-                    // stream PER audio channel, so channel count = 1 (mono). Sample
-                    // rate is irrelevant to decoding (see notes in CHDReaders.flac);
-                    // bit-depth is fixed at 16. These match how MAME encodes AVHuff
-                    // audio, so the values are correct for every AVHuff CHD.
                     var audioBuffer = new AudioBuffer(codec.AvhuffSettings, blockSize); //audio buffer to take decoded samples and read them to bytes.
                     var inPos = (int)buffInOffset;
                     var channelEnd = (int)(buffInOffset + sourceSize);

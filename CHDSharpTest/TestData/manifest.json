@@ -201,5 +201,12 @@
     "parent": null,
     "expect": "ok",
     "note": "laserdisc, avhuff codec"
+  },
+  {
+    "file": "v5_av_stereo.chd",
+    "version": 5,
+    "parent": null,
+    "expect": "ok",
+    "note": "laserdisc, avhuff codec, stereo (2-channel) FLAC audio"
   }
 ]

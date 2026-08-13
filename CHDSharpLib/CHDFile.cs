@@ -48,6 +48,8 @@ namespace CHDSharp;
 /// </example>
 public sealed class ChdFile : IDisposable, IAsyncDisposable
 {
+    private static readonly ILogger Log = ChdLogger.GetLogger(nameof(ChdFile));
+
     private readonly Stream _stream;
 
     private readonly bool _leaveOpen;
@@ -68,7 +70,10 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 
     private List<ChdMetadataEntry>? _metadata;
     private bool _metadataLoaded;
+    private ChdError _metadataError;
     private uint? _unitBytes;
+
+    private byte[]? _precache;
 
     private List<ChdTrackInfo>? _tracks;
     private bool _tracksLoaded;
@@ -201,7 +206,9 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <summary>
     /// Gets the list of metadata entries from the CHD header (game name,
     /// disc info, etc.). Lazy-loaded on first access; empty list if the CHD
-    /// has no metadata or an error occurs.
+    /// has no metadata or an error occurs. For V1/V2 CHDs (which have no
+    /// metadata section) a synthesized "GDDD" hard-disk entry is included,
+    /// matching libchdr behaviour.
     /// </summary>
     public IReadOnlyList<ChdMetadataEntry> Metadata
     {
@@ -209,6 +216,91 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         {
             EnsureMetadataLoaded();
             return _metadata!;
+        }
+    }
+
+    /// <summary>
+    /// Searches the metadata chain for an entry with the given four-character
+    /// <paramref name="tag"/> and occurrence <paramref name="index"/> (libchdr
+    /// <c>chd_get_metadata</c> parity). Pass <c>null</c> or an empty string as
+    /// <paramref name="tag"/> to match entries of any tag.
+    /// </summary>
+    /// <param name="tag">Four-character tag to search for (e.g. "GDDD", "CHT2"), or <c>null</c>/empty for a wildcard match.</param>
+    /// <param name="index">Zero-based occurrence index among the entries with the matching tag.</param>
+    /// <param name="entry">The matching entry, or <c>null</c> when not found or on error.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success;
+    /// <see cref="ChdError.Chderrmetadatanotfound"/> if no entry matches;
+    /// <see cref="ChdError.Chderrinvaliddata"/> or <see cref="ChdError.Chderrreaderror"/> if the metadata could not be read.</returns>
+    public ChdError GetMetadata(string? tag, uint index, out ChdMetadataEntry? entry)
+    {
+        entry = null;
+        var err = EnsureMetadataLoaded();
+        if (err != ChdError.Chderrnone)
+            return err;
+
+        foreach (var e in _metadata!)
+        {
+            if (string.IsNullOrEmpty(tag) || string.Equals(e.Tag, tag, StringComparison.Ordinal))
+            {
+                if (index == 0)
+                {
+                    entry = e;
+                    return ChdError.Chderrnone;
+                }
+
+                index--;
+            }
+        }
+
+        return ChdError.Chderrmetadatanotfound;
+    }
+
+    /// <summary>
+    /// Reads the entire compressed CHD file into memory so that subsequent hunk
+    /// reads are served from RAM instead of the underlying stream (libchdr
+    /// <c>chd_precache</c> parity). Useful for random-access workloads over
+    /// slow or remote streams. Idempotent: calling it again is a no-op.
+    /// The underlying stream's position is restored after precaching.
+    /// </summary>
+    /// <remarks>Like all <see cref="ChdFile"/> members, <c>Precache</c> must not be
+    /// called concurrently with other operations on the same instance.</remarks>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success (or if already precached);
+    /// <see cref="ChdError.Chderroutofmemory"/> if the file is larger than 2 GiB or cannot be allocated;
+    /// <see cref="ChdError.Chderrreaderror"/> if the file could not be read.</returns>
+    public ChdError Precache()
+    {
+        if (_precache != null)
+            return ChdError.Chderrnone;
+
+        try
+        {
+            var length = _stream.Length;
+            if (length > int.MaxValue)
+                return ChdError.Chderroutofmemory;
+
+            var buffer = new byte[(int)length];
+            var pos = _stream.Position;
+            try
+            {
+                _stream.Seek(0, SeekOrigin.Begin);
+                _stream.ReadExactly(buffer, 0, buffer.Length);
+            }
+            finally
+            {
+                _stream.Seek(pos, SeekOrigin.Begin);
+            }
+
+            _precache = buffer;
+            return ChdError.Chderrnone;
+        }
+        catch (OutOfMemoryException)
+        {
+            return ChdError.Chderroutofmemory;
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Failed to precache CHD file into memory");
+            return ChdError.Chderrreaderror;
         }
     }
 
@@ -221,28 +313,50 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         return $"V{Version}: {TotalBytes} bytes, {HunkCount} hunks x {HunkBytes}";
     }
 
-    private void EnsureMetadataLoaded()
+    private ChdError EnsureMetadataLoaded()
     {
         if (_metadataLoaded)
-            return;
+            return _metadataError;
 
         _metadataLoaded = true;
         _metadata = [];
+        _metadataError = ChdError.Chderrnone;
+
+        // V1/V2 CHDs have no metadata section. Synthesize a GDDD hard-disk
+        // entry from the obsolete header geometry fields (libchdr parity).
+        if (Version < 3 && _chd.ObsoleteHunksize > 0)
+        {
+            var bps = _chd.Blocksize / _chd.ObsoleteHunksize;
+            var gddd = $"CYLS:{_chd.ObsoleteCylinders},HEADS:{_chd.ObsoleteHeads},SECS:{_chd.ObsoleteSectors},BPS:{bps}";
+            _metadata.Add(new ChdMetadataEntry("GDDD", Encoding.ASCII.GetBytes(gddd)));
+        }
+
+        if (_chd.Metaoffset == 0)
+            return _metadataError;
+
         try
         {
-            if (_chd.Metaoffset != 0)
+            var err = ChdMetaData.ReadMetaDataEntries(_stream, _chd, out var entries);
+            if (err != ChdError.Chderrnone)
             {
-                ChdMetaData.ReadMetaDataEntries(_stream, _chd, out _metadata);
+                _metadataError = err;
+                return err;
             }
+
+            _metadata.AddRange(entries);
         }
         catch (IOException ex)
         {
-            ChdLogger.GetLogger(nameof(ChdFile)).LogWarning(ex, "Failed to read CHD metadata (IO error)");
+            Log.LogWarning(ex, "Failed to read CHD metadata (IO error)");
+            _metadataError = ChdError.Chderrreaderror;
         }
         catch (InvalidDataException ex)
         {
-            ChdLogger.GetLogger(nameof(ChdFile)).LogWarning(ex, "Failed to read CHD metadata (invalid data)");
+            Log.LogWarning(ex, "Failed to read CHD metadata (invalid data)");
+            _metadataError = ChdError.Chderrinvaliddata;
         }
+
+        return _metadataError;
     }
 
     private uint GuessUnitBytes()
@@ -338,6 +452,19 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         return Task.Run(() =>
         {
             var err = Open(stream, leaveOpen, out var chd);
+            return (err, chd);
+        });
+    }
+
+    /// <inheritdoc cref="Open(Stream,bool,ChdFile,out ChdFile)"/>
+    /// <summary>Asynchronously opens a (possibly child) CHD from an existing seekable stream
+    /// against an already-open parent (see <see cref="Open(Stream,bool,ChdFile,out ChdFile)"/>).</summary>
+    /// <returns>A task producing a tuple of the <see cref="ChdError"/> result and the opened <see cref="ChdFile"/> (or <c>null</c> on error).</returns>
+    public static Task<(ChdError error, ChdFile? file)> OpenAsync(Stream stream, bool leaveOpen, ChdFile? parent)
+    {
+        return Task.Run(() =>
+        {
+            var err = Open(stream, leaveOpen, parent, out var chd);
             return (err, chd);
         });
     }
@@ -514,9 +641,23 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         if (stream is not { CanRead: true } || !stream.CanSeek)
             return ChdError.Chderrinvalidparameter;
 
-        stream.Seek(0, SeekOrigin.Begin);
-        if (!Chd.CheckHeader(stream, out _, out var version))
+        uint version;
+        try
         {
+            stream.Seek(0, SeekOrigin.Begin);
+            if (!Chd.CheckHeader(stream, out _, out version))
+            {
+                return ChdError.Chderrinvalidfile;
+            }
+        }
+        catch (IOException ex)
+        {
+            Log.LogWarning(ex, "Failed to read CHD header from stream");
+            return ChdError.Chderrreaderror;
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Failed to read CHD header from stream");
             return ChdError.Chderrinvalidfile;
         }
 
@@ -648,20 +789,27 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             if (dataEntry.Length > 0)
             {
                 if (dataEntry.BuffIn == null || dataEntry.BuffIn.Length < dataEntry.Length)
-                {
                     dataEntry.BuffIn = new byte[dataEntry.Length];
+
+                if (_precache != null)
+                {
+                    Array.Copy(_precache, (int)dataEntry.Offset, dataEntry.BuffIn, 0, (int)dataEntry.Length);
+                }
+                else
+                {
+                    _stream.Seek((long)dataEntry.Offset, SeekOrigin.Begin);
+                    _stream.ReadExactly(dataEntry.BuffIn, 0, (int)dataEntry.Length);
                 }
 
-                _stream.Seek((long)dataEntry.Offset, SeekOrigin.Begin);
-                _stream.ReadExactly(dataEntry.BuffIn, 0, (int)dataEntry.Length);
                 loaded = true;
             }
 
             var rbErr = ChdBlockRead.ReadBlock(me, new ArrayPool(_chd.Blocksize), _chd.ChdReader, _codec, buffer, (int)_chd.Blocksize);
             return rbErr;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Log.LogWarning(ex, "Failed to decompress hunk {HunkNumber}", hunknum);
             return ChdError.Chderrdecompressionerror;
         }
         finally
@@ -949,6 +1097,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             var failed = result.TrackResults.Where(t => !t.IsSuccess).Select(t => $"track {t.TrackNumber}: {t.Error}");
             throw new InvalidDataException($"Track extraction failures: {string.Join(", ", failed)}");
         }
+
         return result.CreatedFiles;
     }
 

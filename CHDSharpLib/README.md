@@ -208,6 +208,8 @@ All `Open` overloads seek from the start. The reader is **not thread-safe** — 
 |--------|-----------|-------------|
 | **ReadHunk** | `ChdError ReadHunk(uint, byte[])` | Decompress a single hunk. |
 | **Read** | `ChdError Read(ulong, byte[], int, int)` | Read byte range. Caches last hunk. |
+| **Precache** | `ChdError Precache()` | Load the entire compressed file into memory for fast random access (libchdr `chd_precache` parity). Idempotent. |
+| **GetMetadata** | `ChdError GetMetadata(string?, uint, out ChdMetadataEntry?)` | Search metadata by tag + occurrence index (`null`/empty tag = wildcard). Returns `Chderrmetadatanotfound` when absent. |
 | **ReadAllBytes** | `ChdError ReadAllBytes(out byte[])` | Decompress entire image to a `byte[]`. |
 | **EnumerateHunks** | `IEnumerable<byte[]> EnumerateHunks()` | Yield each decompressed hunk. Buffer reused — copy if needed. |
 | **ReadHunkAsync** | `Task<ChdError> ReadHunkAsync(uint, byte[])` | Async hunk read. |
@@ -237,7 +239,7 @@ All `Open` overloads seek from the start. The reader is **not thread-safe** — 
 | `IsGdRom` | `bool` | True if GD-ROM (Sega Dreamcast) image. |
 | `IsDvd` | `bool` | True if DVD metadata present. |
 | `IsHdd` | `bool` | True if hard disk geometry metadata present. |
-| `Metadata` | `IReadOnlyList<ChdMetadataEntry>` | CHD metadata entries (game name, disc type, etc.). Lazy-loaded. |
+| `Metadata` | `IReadOnlyList<ChdMetadataEntry>` | CHD metadata entries (game name, disc type, etc.). Lazy-loaded. V1/V2 files include a synthesized `GDDD` entry. |
 
 ### `ChdMetadataEntry` — Metadata record
 
@@ -245,6 +247,7 @@ All `Open` overloads seek from the start. The reader is **not thread-safe** — 
 |----------|------|-------------|
 | `Tag` | `string` | 4-char tag (e.g. "GAME", "DISC", "HARD"). |
 | `Data` | `byte[]` | Raw metadata bytes. |
+| `Flags` | `byte` | Entry flags from the header (bit 0 = checksummed). |
 | `IsText` | `bool` | True if data is printable ASCII. |
 | `GetText()` | `string` | ASCII text representation. |
 | `ToString()` | `string` | Human-readable: `GAME: gauntlet`. |
@@ -444,7 +447,7 @@ dotnet pack CHDSharpLib/CHDSharpLib.csproj -c Release
 | Package | Version | Purpose |
 |---------|---------|---------|
 | [ZstdSharp.Port](https://www.nuget.org/packages/ZstdSharp.Port/) | 0.8.8 | Pure C# Zstd decompression |
-| [Microsoft.Extensions.Logging.Abstractions](https://www.nuget.org/packages/Microsoft.Extensions.Logging.Abstractions/) | 8.0.3 (net8.0) / 9.0.9 (net9.0) / 10.0.10 (net10.0) | Pluggable logging (optional) |
+| [Microsoft.Extensions.Logging.Abstractions](https://www.nuget.org/packages/Microsoft.Extensions.Logging.Abstractions/) | 10.0.10 (all TFMs: net8.0 / net9.0 / net10.0) | Pluggable logging (optional) |
 
 ---
 

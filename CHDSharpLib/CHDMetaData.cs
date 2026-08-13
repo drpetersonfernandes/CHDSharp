@@ -67,7 +67,7 @@ internal static class ChdMetaData
 
         foreach (var e in internalEntries)
         {
-            entries.Add(new ChdMetadataEntry((e.Tag), e.Data));
+            entries.Add(new ChdMetadataEntry((e.Tag), e.Data) { Flags = e.Flags });
         }
         return ChdError.Chderrnone;
     }
@@ -112,7 +112,7 @@ internal static class ChdMetaData
                 hash = metadata_hash(metaTag, metaData);
             }
 
-            entries.Add(new InternalEntry { Tag = tag, Data = metaData, Hash = hash });
+            entries.Add(new InternalEntry { Tag = tag, Data = metaData, Hash = hash, Flags = (byte)metaFlags });
 
             currentOffset = metaNext;
         }
@@ -142,5 +142,6 @@ internal static class ChdMetaData
         public required string Tag;
         public required byte[] Data;
         public byte[]? Hash;
+        public byte Flags;
     }
 }

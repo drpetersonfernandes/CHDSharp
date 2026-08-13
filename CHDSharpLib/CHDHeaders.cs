@@ -21,6 +21,7 @@ internal static class ChdHeaders
 
         return ChdError.Chderrnone;
     }
+
     /// <summary>Reads and parses a V1 CHD header from the stream.</summary>
     /// <param name="file">The stream positioned immediately after the CHD magic and version fields.</param>
     /// <param name="chd">When this method returns, contains the parsed header data.</param>
@@ -34,17 +35,17 @@ internal static class ChdHeaders
         chd.Compression = [ChdCodec.Zlib];
         br.ReadUInt32Be(); // flags
         br.ReadUInt32Be(); // compression
-        chd.Blocksize = br.ReadUInt32Be();
+        chd.ObsoleteHunksize = br.ReadUInt32Be(); // number of 512-byte sectors per hunk
         chd.Totalblocks = br.ReadUInt32Be();
-        var cylinders = br.ReadUInt32Be();
-        var heads = br.ReadUInt32Be();
-        var sectors = br.ReadUInt32Be();
+        chd.ObsoleteCylinders = br.ReadUInt32Be();
+        chd.ObsoleteHeads = br.ReadUInt32Be();
+        chd.ObsoleteSectors = br.ReadUInt32Be();
         chd.Md5 = br.ReadBytes(16);
         chd.Parentmd5 = br.ReadBytes(16);
 
         const int hardDiskSectorSize = 512;
-        chd.Totalbytes = (ulong)cylinders * heads * sectors * hardDiskSectorSize;
-        chd.Blocksize *= hardDiskSectorSize;
+        chd.Totalbytes = (ulong)chd.ObsoleteCylinders * chd.ObsoleteHeads * chd.ObsoleteSectors * hardDiskSectorSize;
+        chd.Blocksize = chd.ObsoleteHunksize * hardDiskSectorSize;
         chd.Unitbytes = chd.Blocksize;
 
         if (chd.Blocksize == 0 || chd.Blocksize > MaxHunkBytes || (ulong)chd.Totalblocks * chd.Blocksize > MaxLogicalBytes)
@@ -93,17 +94,17 @@ internal static class ChdHeaders
         chd.Compression = [ChdCodec.Zlib];
         br.ReadUInt32Be(); // flags
         br.ReadUInt32Be(); // compression
-        var hunkSectors = br.ReadUInt32Be(); // number of seclen-byte sectors per hunk
+        chd.ObsoleteHunksize = br.ReadUInt32Be(); // number of seclen-byte sectors per hunk
         chd.Totalblocks = br.ReadUInt32Be();
-        var cylinders = br.ReadUInt32Be();
-        var heads = br.ReadUInt32Be();
-        var sectors = br.ReadUInt32Be();
+        chd.ObsoleteCylinders = br.ReadUInt32Be();
+        chd.ObsoleteHeads = br.ReadUInt32Be();
+        chd.ObsoleteSectors = br.ReadUInt32Be();
         chd.Md5 = br.ReadBytes(16);
         chd.Parentmd5 = br.ReadBytes(16);
         var seclen = br.ReadUInt32Be(); // bytes per sector (added in V2)
 
-        chd.Totalbytes = (ulong)cylinders * heads * sectors * seclen;
-        chd.Blocksize = hunkSectors * seclen;
+        chd.Totalbytes = (ulong)chd.ObsoleteCylinders * chd.ObsoleteHeads * chd.ObsoleteSectors * seclen;
+        chd.Blocksize = chd.ObsoleteHunksize * seclen;
         chd.Unitbytes = chd.Blocksize;
 
         if (chd.Blocksize == 0 || chd.Blocksize > MaxHunkBytes || (ulong)chd.Totalblocks * chd.Blocksize > MaxLogicalBytes)

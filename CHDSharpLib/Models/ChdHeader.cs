@@ -50,4 +50,12 @@ internal class ChdHeader
 
     /// <summary>The decompression delegate for the secondary codec used by type-6 map entries.</summary>
     internal ChdReader? SecondaryChdReader;
+
+    /// <summary>Obsolete hard-disk geometry fields, only populated for V1/V2 headers. Used to synthesize GDDD metadata (libchdr parity).</summary>
+    internal uint ObsoleteCylinders;
+    internal uint ObsoleteHeads;
+    internal uint ObsoleteSectors;
+
+    /// <summary>Obsolete hunk size in sectors, only populated for V1/V2 headers. Bytes per sector = <see cref="Blocksize"/> / <see cref="ObsoleteHunksize"/>.</summary>
+    internal uint ObsoleteHunksize;
 }

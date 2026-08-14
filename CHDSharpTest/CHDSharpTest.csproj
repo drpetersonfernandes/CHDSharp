@@ -18,7 +18,7 @@
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="xunit.v3" Version="3.2.2" />
-        <PackageReference Update="Meziantou.Analyzer" Version="3.0.126">
+        <PackageReference Update="Meziantou.Analyzer" Version="3.0.151">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>

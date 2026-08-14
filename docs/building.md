@@ -102,8 +102,8 @@ The package (`CHDSharp.<version>.nupkg`) is written to `CHDSharpLib/bin/Release/
 | Package | Version | Purpose |
 |---------|---------|---------|
 | [ZstdSharp.Port](https://www.nuget.org/packages/ZstdSharp.Port/) | 0.8.8 | Pure C# Zstd decompression |
-| [Microsoft.Extensions.Logging.Abstractions](https://www.nuget.org/packages/Microsoft.Extensions.Logging.Abstractions/) | 10.0.10 (all TFMs) | Pluggable logging (optional) |
-| Microsoft.SourceLink.GitHub | 10.0.301 | SourceLink (build-time, `PrivateAssets=all`) |
+| [Microsoft.Extensions.Logging.Abstractions](https://www.nuget.org/packages/Microsoft.Extensions.Logging.Abstractions/) | 10.0.11 (all TFMs) | Pluggable logging (optional) |
+| Microsoft.SourceLink.GitHub | 10.0.400 | SourceLink (build-time, `PrivateAssets=all`) |
 
 `CHDSharpLib` also declares `InternalsVisibleTo` for `CHDSharpTest` and `CHDSharpTestGen` so the test projects can exercise internal members directly.
 

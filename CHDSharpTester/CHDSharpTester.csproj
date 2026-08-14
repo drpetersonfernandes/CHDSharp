@@ -19,8 +19,8 @@
         <PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
         <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
         <PackageReference Include="WPF-UI" Version="4.3.0" />
-        <PackageReference Include="QuestPDF" Version="2026.7.1" />
-        <PackageReference Update="Meziantou.Analyzer" Version="3.0.126">
+        <PackageReference Include="QuestPDF" Version="2026.7.3" />
+        <PackageReference Update="Meziantou.Analyzer" Version="3.0.151">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>

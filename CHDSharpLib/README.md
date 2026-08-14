@@ -447,7 +447,7 @@ dotnet pack CHDSharpLib/CHDSharpLib.csproj -c Release
 | Package | Version | Purpose |
 |---------|---------|---------|
 | [ZstdSharp.Port](https://www.nuget.org/packages/ZstdSharp.Port/) | 0.8.8 | Pure C# Zstd decompression |
-| [Microsoft.Extensions.Logging.Abstractions](https://www.nuget.org/packages/Microsoft.Extensions.Logging.Abstractions/) | 10.0.10 (all TFMs: net8.0 / net9.0 / net10.0) | Pluggable logging (optional) |
+| [Microsoft.Extensions.Logging.Abstractions](https://www.nuget.org/packages/Microsoft.Extensions.Logging.Abstractions/) | 10.0.11 (all TFMs: net8.0 / net9.0 / net10.0) | Pluggable logging (optional) |
 
 ---
 

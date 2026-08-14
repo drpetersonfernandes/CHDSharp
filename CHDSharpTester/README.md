@@ -94,7 +94,7 @@ CHDSharpTester/
 | Package | Version | Purpose |
 |---------|---------|---------|
 | [WPF-UI](https://www.nuget.org/packages/WPF-UI/) | 4.3.0 | Modern WPF Fluent Design controls |
-| [QuestPDF](https://www.nuget.org/packages/QuestPDF/) | 2026.7.1 | PDF report generation |
+| [QuestPDF](https://www.nuget.org/packages/QuestPDF/) | 2026.7.3 | PDF report generation |
 | [Serilog](https://www.nuget.org/packages/Serilog/) | 4.4.0 | File + debug logging |
 | [Serilog.Sinks.File](https://www.nuget.org/packages/Serilog.Sinks.File/) | 7.0.0 | Log file sink |
 | [Serilog.Sinks.Debug](https://www.nuget.org/packages/Serilog.Sinks.Debug/) | 3.0.0 | Debug output sink |

@@ -66,6 +66,15 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 
     private long _cachedHunk = -1;
 
+    // Configurable multi-hunk LRU cache (libchdr #36). When CacheSize > 1, decompressed hunks
+    // are retained so random reads that revisit hunks avoid re-decompression. Memory is capped
+    // at CacheSize * HunkBytes (one full decompressed copy per slot). Like all ChdFile state,
+    // the cache is NOT thread-safe: callers must serialize access, exactly as required for the
+    // existing single-hunk _cachedHunk slot.
+    private int _cacheSize = 1;
+    private Dictionary<uint, LinkedListNode<CachedHunk>>? _lruIndex;
+    private LinkedList<CachedHunk>? _lruOrder;
+
     private byte[]? _parentScratch;
 
     private List<ChdMetadataEntry>? _metadata;
@@ -114,6 +123,53 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     {
         get => _chd.MaxCompressedBlockCap;
         set => _chd.MaxCompressedBlockCap = value == 0 ? checked(_chd.Blocksize * ChdHeaders.DefaultMaxCompressedMultiple) : Math.Max(value, _chd.Blocksize);
+    }
+
+    /// <summary>
+    /// Number of decompressed hunks retained by the multi-hunk LRU cache (libchdr #36).
+    /// Defaults to 1, which keeps the same behaviour as the single-hunk <c>_cachedHunk</c> slot
+    /// (one hunk held between reads). Setting it to a value &gt; 1 makes <see cref="ReadHunk"/>
+    /// keep the last <see cref="CacheSize"/> distinct hunks decompressed, so random reads that
+    /// revisit hunks avoid re-decompression. Memory is capped at <c>CacheSize * HunkBytes</c>.
+    /// Set to 0 or 1 to disable the multi-hunk cache (back to single-slot behaviour).
+    /// </summary>
+    public int CacheSize
+    {
+        get => _cacheSize;
+        set => ConfigureCache(value);
+    }
+
+    /// <summary>
+    /// Configures the multi-hunk LRU cache size (number of decompressed hunks to retain).
+    /// A value &lt;= 1 reverts to the default single-hunk behaviour and releases any cached
+    /// hunks. See <see cref="CacheSize"/>.
+    /// </summary>
+    /// <param name="maxHunks">Maximum number of hunks to keep decompressed.</param>
+    public void ConfigureCache(int maxHunks)
+    {
+        if (maxHunks <= 0)
+            maxHunks = 1;
+
+        _cacheSize = maxHunks;
+
+        if (_cacheSize <= 1)
+        {
+            _lruIndex = null;
+            _lruOrder = null;
+            _cachedHunk = -1;
+            return;
+        }
+
+        _lruIndex ??= new Dictionary<uint, LinkedListNode<CachedHunk>>();
+        _lruOrder ??= new LinkedList<CachedHunk>();
+
+        // Shrink to the new capacity if it was reduced, evicting least-recently-used entries.
+        while (_lruOrder.Count > _cacheSize)
+        {
+            var node = _lruOrder.First!;
+            _lruOrder.RemoveFirst();
+            _lruIndex.Remove(node.Value.Hunk);
+        }
     }
 
     /// <summary>
@@ -803,9 +859,18 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 
         var me = _chd.Map[hunknum];
 
+        // Multi-hunk LRU cache: serve the cached decompressed hunk directly if present.
+        if (_cacheSize > 1 && TryGetCachedHunk(hunknum, buffer))
+            return ChdError.Chderrnone;
+
         // Parent-referenced hunk: resolve against the parent CHD.
         if (me.Comptype == CompressionType.Compressionparent)
-            return ReadParentHunk(me, buffer);
+        {
+            var err = ReadParentHunk(me, buffer);
+            if (err == ChdError.Chderrnone && _cacheSize > 1)
+                AddToCache(hunknum, buffer);
+            return err;
+        }
 
         // Resolve the entry that actually holds compressed data (follow SELF links).
         var dataEntry = me;
@@ -845,6 +910,8 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             }
 
             var rbErr = ChdBlockRead.ReadBlock(me, new ArrayPool(_chd.Blocksize), _chd.ChdReader, _codec, buffer, (int)_chd.Blocksize);
+            if (rbErr == ChdError.Chderrnone && _cacheSize > 1)
+                AddToCache(hunknum, buffer);
             return rbErr;
         }
         catch (Exception ex)
@@ -858,6 +925,56 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             {
                 dataEntry.BuffIn = null!;
             }
+        }
+    }
+
+    /// <summary>
+    /// Copies the cached decompressed hunk <paramref name="hunknum"/> into <paramref name="buffer"/>
+    /// (promoting it to most-recently-used) and returns <c>true</c> on a cache hit.
+    /// </summary>
+    private bool TryGetCachedHunk(uint hunknum, byte[] buffer)
+    {
+        var index = _lruIndex;
+        var order = _lruOrder;
+        if (index == null || order == null)
+            return false;
+
+        if (!index.TryGetValue(hunknum, out var node))
+            return false;
+
+        // Promote to most-recently-used.
+        order.Remove(node);
+        order.AddLast(node);
+        Array.Copy(node.Value.Data, 0, buffer, 0, _chd.Blocksize);
+        return true;
+    }
+
+    /// <summary>Inserts a freshly decompressed hunk into the LRU cache, evicting the least-recently-used entry when over capacity.</summary>
+    private void AddToCache(uint hunknum, byte[] buffer)
+    {
+        var index = _lruIndex;
+        var order = _lruOrder;
+        if (index == null || order == null)
+            return;
+
+        if (index.TryGetValue(hunknum, out var existing))
+        {
+            order.Remove(existing);
+            index.Remove(hunknum);
+        }
+
+        // Copy the decompressed data so callers can reuse/mutate their buffer freely.
+        var cached = new byte[_chd.Blocksize];
+        Array.Copy(buffer, 0, cached, 0, _chd.Blocksize);
+        var node = order.AddLast(new CachedHunk(hunknum, cached));
+        index[hunknum] = node;
+
+        // Evict least-recently-used while over capacity.
+        while (order.Count > _cacheSize)
+        {
+            var first = order.First!;
+            order.RemoveFirst();
+            index.Remove(first.Value.Hunk);
         }
     }
 
@@ -1299,5 +1416,21 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     private static string FramesToMsf(int frames)
     {
         return FramesToMsf((ulong)frames);
+    }
+
+    /// <summary>An entry in the multi-hunk LRU cache: a decompressed hunk value keyed by hunk index.</summary>
+    private sealed class CachedHunk
+    {
+        internal CachedHunk(uint hunk, byte[] data)
+        {
+            Hunk = hunk;
+            Data = data;
+        }
+
+        /// <summary>Hunk index this entry holds.</summary>
+        internal uint Hunk { get; }
+
+        /// <summary>The cached decompressed hunk data (always <see cref="HunkBytes"/> long).</summary>
+        internal byte[] Data { get; }
     }
 }

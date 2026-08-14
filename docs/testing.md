@@ -1,6 +1,6 @@
 # Testing
 
-CHDSharp ships a **488-test** xUnit suite plus a deterministic 30-file corpus covering every format version, codec, map type, and parent/child combination. Tests run on `net8.0`, `net9.0`, and `net10.0`.
+CHDSharp ships a **494-test** xUnit suite plus a deterministic 30-file corpus covering every format version, codec, map type, and parent/child combination. Tests run on `net8.0`, `net9.0`, and `net10.0`.
 
 ---
 
@@ -27,6 +27,7 @@ CHDSharp ships a **488-test** xUnit suite plus a deterministic 30-file corpus co
 | `ExtractTests` / `TrackInfoTests` | Extraction, CUE/GDI generation, reporting |
 | `ParityFeaturesTests` | `GetMetadata`, `Precache`, V1/V2 synthesized GDDD, `OpenAsync` overloads |
 | `LargeFileTests` | Synthetic uncompressed V5 CHD with a 20 GiB declared image: open, random access past 4 GiB (stored hunk + zero hunks), `ReadAllBytes` 2 GiB guard. Verifies libchdr #147 (sources > 10 GB). |
+| `LruCacheTests` | `ChdFile.CacheSize` / `ConfigureCache` multi-hunk LRU cache (libchdr #36): default size, lower-bounding, cross-hunk correctness, eviction/promotion, cache reconfiguration, parent-referenced hunk caching. |
 | `ChdApiTests`, `ChdFileTests`, `ChdTocParserTests`, `ChdCommonTests`, `ModelTests`, `UtilityTests`, `BigEndianTests`, `BoundsValidationTests`, `ExceptionHandlingTests`, `HuffmanDecoderTests`, `EccVerifyTests`, `CliAdditionalTests` | Remaining units |
 
 ---

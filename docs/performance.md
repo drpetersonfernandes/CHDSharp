@@ -47,7 +47,19 @@ Memory is bounded even with many workers:
 
 ### Last-hunk cache (random access)
 
-`ChdFile.Read()` caches the most recently read hunk, so byte ranges that stay within one hunk cost a single decompression. `ReadHunk()` does not use this cache.
+`ChdFile.Read()` caches the most recently read hunk, so byte ranges that stay within one hunk cost a single decompression.
+
+### Multi-hunk LRU cache (libchdr #36)
+
+`ChdFile.ReadHunk()` retains decompressed hunks in a configurable LRU cache so random reads that revisit hunks avoid re-decompression. Default size is 1 (equivalent to the single-hunk slot); set `CacheSize` or call `ConfigureCache(n)` to keep the last `n` distinct hunks (`n <= 1` disables it). Memory is capped at `CacheSize * HunkBytes`.
+
+```csharp
+chd.ConfigureCache(16);        // keep 16 decompressed hunks
+chd.ReadHunk(100, buf);        // decompressed
+chd.ReadHunk(100, buf);        // served from cache
+```
+
+Use a larger `CacheSize` when a workload performs random/scattered reads that repeatedly touch the same subset of hunks.
 
 ### Precache (whole file in RAM)
 

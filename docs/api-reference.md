@@ -45,8 +45,9 @@ All overloads seek from the start. Failure codes: `Chderrfilenotfound`, `Chderrc
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `ReadHunk` | `ChdError ReadHunk(uint hunknum, byte[] buffer)` | Decompress one hunk into `buffer` (≥ `HunkBytes`). |
+| `ReadHunk` | `ChdError ReadHunk(uint hunknum, byte[] buffer)` | Decompress one hunk into `buffer` (≥ `HunkBytes`). Serves cached hunks when `CacheSize > 1`. |
 | `Read` | `ChdError Read(ulong byteOffset, byte[] destination, int destinationOffset, int count)` | Read an arbitrary byte range, crossing hunk boundaries. Caches the last hunk. |
+| `ConfigureCache` | `void ConfigureCache(int maxHunks)` | Set the multi-hunk LRU cache size (decompressed hunks retained). `<= 1` disables it (single-slot behaviour). See `CacheSize`. |
 | `Precache` | `ChdError Precache()` | Read the **entire compressed file** into memory; subsequent hunk reads are served from RAM. Idempotent; restores stream position; `Chderroutofmemory` for files > 2 GiB, `Chderrreaderror` on IO failure. |
 | `ReadAllBytes` | `ChdError ReadAllBytes(out byte[] data)` | Decompress the whole image into one array. `Chderroutofmemory` if the image exceeds 2 GiB. |
 | `EnumerateHunks` | `IEnumerable<byte[]> EnumerateHunks()` | Yield each decompressed hunk in order. **The array is reused** — copy it if you need to keep it. Throws `InvalidDataException` on failure. |
@@ -67,6 +68,7 @@ All overloads seek from the start. Failure codes: `Chderrfilenotfound`, `Chderrc
 | `Version` | `uint` | CHD format version (1–5). |
 | `TotalBytes` | `ulong` | Decompressed image size. |
 | `HunkBytes` | `uint` | Size of one hunk. |
+| `CacheSize` | `int` | Number of decompressed hunks retained by the multi-hunk LRU cache (default 1). Set via `ConfigureCache(int)`. Memory capped at `CacheSize * HunkBytes`. |
 | `MaxCompressedBlockBytes` | `uint` | Max allowed on-disk length of one compressed hunk. Defaults to `HunkBytes * 2`; a hunk claiming more is rejected with `Chderrinvaliddata` before allocation (OOM guard). Settable; floors at `HunkBytes`, set to `0` to reset. |
 | `HunkCount` | `uint` | Total number of hunks. |
 | `UnitBytes` | `uint` | Unit size for parent-block translation. V5: from header; V1–V4: derived from metadata (GDDD `BPS`, CD frame 2448, or `HunkBytes`). |

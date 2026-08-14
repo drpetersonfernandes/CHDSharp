@@ -206,8 +206,9 @@ All `Open` overloads seek from the start. The reader is **not thread-safe** — 
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| **ReadHunk** | `ChdError ReadHunk(uint, byte[])` | Decompress a single hunk. |
+| **ReadHunk** | `ChdError ReadHunk(uint, byte[])` | Decompress a single hunk. Serves cached hunks when `CacheSize > 1`. |
 | **Read** | `ChdError Read(ulong, byte[], int, int)` | Read byte range. Caches last hunk. |
+| **ConfigureCache** | `void ConfigureCache(int)` | Set the multi-hunk LRU cache size. `<= 1` disables it (single-slot behaviour). |
 | **Precache** | `ChdError Precache()` | Load the entire compressed file into memory for fast random access (libchdr `chd_precache` parity). Idempotent. |
 | **GetMetadata** | `ChdError GetMetadata(string?, uint, out ChdMetadataEntry?)` | Search metadata by tag + occurrence index (`null`/empty tag = wildcard). Returns `Chderrmetadatanotfound` when absent. |
 | **ReadAllBytes** | `ChdError ReadAllBytes(out byte[])` | Decompress entire image to a `byte[]`. |
@@ -227,6 +228,7 @@ All `Open` overloads seek from the start. The reader is **not thread-safe** — 
 | `Version` | `uint` | CHD format version (1–5). |
 | `TotalBytes` | `ulong` | Decompressed image size. |
 | `HunkBytes` | `uint` | Size of one hunk. |
+| `CacheSize` | `int` | Number of decompressed hunks retained by the multi-hunk LRU cache (default 1). Set via `ConfigureCache(int)`. Memory capped at `CacheSize * HunkBytes`. |
 | `MaxCompressedBlockBytes` | `uint` | Max allowed on-disk length of one compressed hunk. Defaults to `HunkBytes * 2`; a hunk claiming more is rejected with `Chderrinvaliddata` before allocation (OOM guard). Settable; floors at `HunkBytes`, set to `0` to reset. |
 | `HunkCount` | `uint` | Total number of hunks. |
 | `UnitBytes` | `uint` | Unit size for parent block address translation. V5 reads from header; V1-V4 derives from metadata (HDD BPS, CD 2448, or HunkBytes). |

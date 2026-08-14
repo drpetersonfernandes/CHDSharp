@@ -129,9 +129,9 @@ public class ParityFeaturesTests
         using (chd)
         {
             var list = chd!.Metadata;
-            foreach (var tag in list.Select(e => e.Tag).Distinct())
+            foreach (var tag in list.Select(e => e.Tag).Distinct(StringComparer.Ordinal))
             {
-                var occurrences = list.Where(e => e.Tag == tag).ToList();
+                var occurrences = list.Where(e => string.Equals(e.Tag, tag, StringComparison.Ordinal)).ToList();
                 for (var i = 0; i < occurrences.Count; i++)
                 {
                     var gErr = chd.GetMetadata(tag, (uint)i, out var entry);

@@ -452,7 +452,7 @@ public static class Chd
 
             var ct = ts.Token;
 
-            var arrPoolIn = new ArrayPool(chd.Blocksize);
+            var arrPoolIn = new ArrayPool(chd.MaxCompressedBlockCap);
             var arrPoolOut = new ArrayPool(chd.Blocksize);
             var arrPoolCache = new ArrayPool(chd.Blocksize);
 
@@ -484,6 +484,20 @@ public static class Chd
 
                         if (mapEntry.Length > 0)
                         {
+                            // The compressed length is attacker-controlled data from the hunk map.
+                            // Reject any hunk claiming more than the cap before reading/allocating,
+                            // mirroring the ReadHunk bounds check. Break (not return) so the sentinel
+                            // values that terminate the decompression workers are still enqueued below;
+                            // the cancelled token additionally unblocks any in-flight Wait/Take.
+                            if (mapEntry.Length > chd.MaxCompressedBlockCap)
+                            {
+                                Log.LogWarning("Hunk {HunkNumber} compressed length {Length} exceeds cap {Cap}", block, mapEntry.Length, chd.MaxCompressedBlockCap);
+                                ts.Cancel();
+                                if (errMaster == ChdError.Chderrnone)
+                                    errMaster = ChdError.Chderrinvaliddata;
+                                break;
+                            }
+
                             if (file.Position != (long)mapEntry.Offset)
                                 file.Seek((long)mapEntry.Offset, SeekOrigin.Begin);
 

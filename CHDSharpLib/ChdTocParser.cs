@@ -22,15 +22,38 @@ internal static partial class ChdTocParser
 
     internal static List<ChdTrackInfo>? ParseTracks(IReadOnlyList<ChdMetadataEntry> metadata, out bool isGdRom)
     {
+        return ParseTracks(metadata, out isGdRom, out _);
+    }
+
+    /// <summary>
+    /// Parses CD/GD-ROM track metadata. When the legacy <see cref="GdRomOldMetadataTag"/> ("CHGT")
+    /// tag is present, the disc is a legacy GD-ROM whose CDDA audio is stored little-endian
+    /// (<c>CD_FLAG_GDROMLE</c>), and <paramref name="isLegacyGdRom"/> is set to <c>true</c>.
+    /// </summary>
+    internal static List<ChdTrackInfo>? ParseTracks(IReadOnlyList<ChdMetadataEntry> metadata, out bool isGdRom, out bool isLegacyGdRom)
+    {
         isGdRom = false;
+        isLegacyGdRom = false;
 
         var cht2Entries = metadata.Where(m => string.Equals(m.Tag, CdRomTrackMetadata2Tag, StringComparison.Ordinal)).ToList();
         var chgdEntries = metadata.Where(m => string.Equals(m.Tag, GdRomTrackMetadataTag, StringComparison.Ordinal)).ToList();
         var chtrEntries = metadata.Where(m => string.Equals(m.Tag, CdRomTrackMetadataTag, StringComparison.Ordinal)).ToList();
         var chcdEntries = metadata.Where(m => string.Equals(m.Tag, CdRomOldMetadataTag, StringComparison.Ordinal)).ToList();
+        var chgtEntries = metadata.Where(m => string.Equals(m.Tag, GdRomOldMetadataTag, StringComparison.Ordinal)).ToList();
+
+        if (chgtEntries.Count > 0)
+        {
+            // Legacy GD-ROM ("CHGT", GDROM_OLD_METADATA_TAG). MAME sets CD_FLAG_GDROMLE (0x02)
+            // for these: the CDDA audio tracks are stored little-endian and must be byte-swapped
+            // when read (cdrom.cpp:939, chdman.cpp:2521).
+            isGdRom = true;
+            isLegacyGdRom = true;
+            return ParseTextTracks(chgtEntries, TrackTypeParser.Chtr);
+        }
 
         if (chgdEntries.Count > 0)
         {
+            // Modern GD-ROM ("CHGD", GDROM_TRACK_METADATA_TAG). Not GDROMLE.
             isGdRom = true;
             return ParseTextTracks(chgdEntries, TrackTypeParser.GdRom);
         }
@@ -40,13 +63,6 @@ internal static partial class ChdTocParser
 
         if (chtrEntries.Count > 0)
             return ParseTextTracks(chtrEntries, TrackTypeParser.Chtr);
-
-        var chgtEntries = metadata.Where(m => string.Equals(m.Tag, GdRomOldMetadataTag, StringComparison.Ordinal)).ToList();
-        if (chgtEntries.Count > 0)
-        {
-            isGdRom = true;
-            return ParseTextTracks(chgtEntries, TrackTypeParser.Chtr);
-        }
 
         if (chcdEntries.Count > 0)
             return ParseBinaryTracks(chcdEntries);

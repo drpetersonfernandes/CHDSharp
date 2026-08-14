@@ -45,6 +45,16 @@ internal class ChdHeader
     /// <summary>File offset of the first metadata entry, or 0 if none.</summary>
     internal ulong Metaoffset;
 
+    /// <summary>
+    /// The maximum allowed length (in bytes) of a compressed hunk on disk.
+    /// A compressed hunk larger than the decompressed hunk is legal (codec headers/footers
+    /// can push the compressed size over <see cref="Blocksize"/> at low compression levels),
+    /// but it is attacker-controlled data from the hunk map. This cap bounds the size of the
+    /// <c>BuffIn</c> allocation so a malicious file cannot request an unbounded (OOM) allocation.
+    /// Defaults to <c>Blocksize * 2</c>, normalized during validation.
+    /// </summary>
+    internal uint MaxCompressedBlockCap;
+
     /// <summary>The secondary compression codec used by V3/V4 <c>CHDCOMPRESSION_ZLIB_PLUS</c> files for type-6 (2ND_COMPRESSED) map entries.</summary>
     internal ChdCodec SecondaryCodec;
 

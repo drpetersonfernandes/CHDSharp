@@ -67,6 +67,7 @@ All overloads seek from the start. Failure codes: `Chderrfilenotfound`, `Chderrc
 | `Version` | `uint` | CHD format version (1–5). |
 | `TotalBytes` | `ulong` | Decompressed image size. |
 | `HunkBytes` | `uint` | Size of one hunk. |
+| `MaxCompressedBlockBytes` | `uint` | Max allowed on-disk length of one compressed hunk. Defaults to `HunkBytes * 2`; a hunk claiming more is rejected with `Chderrinvaliddata` before allocation (OOM guard). Settable; floors at `HunkBytes`, set to `0` to reset. |
 | `HunkCount` | `uint` | Total number of hunks. |
 | `UnitBytes` | `uint` | Unit size for parent-block translation. V5: from header; V1–V4: derived from metadata (GDDD `BPS`, CD frame 2448, or `HunkBytes`). |
 | `Sha1` | `byte[]?` | Combined SHA1 (raw data + checksummed metadata). |
@@ -77,6 +78,7 @@ All overloads seek from the start. Failure codes: `Chderrfilenotfound`, `Chderrc
 | `Tracks` | `IReadOnlyList<ChdTrackInfo>?` | CD/GD-ROM track layout; `null` for non-disc images. |
 | `IsCd` | `bool` | CD-ROM track metadata present. |
 | `IsGdRom` | `bool` | GD-ROM (Sega Dreamcast) image. |
+| `IsLittleEndianAudio` | `bool` | True for legacy GD-ROMs (detected by the `CHGT` tag / `CD_FLAG_GDROMLE`) whose CDDA audio tracks are stored little-endian. AUDIO tracks are byte-swapped to big-endian order when extracted. |
 | `IsDvd` | `bool` | DVD metadata present. |
 | `IsHdd` | `bool` | Hard-disk geometry metadata present (V1/V2: via synthesized GDDD). |
 | `Metadata` | `IReadOnlyList<ChdMetadataEntry>` | All metadata entries, lazy-loaded. V1/V2 include a synthesized `GDDD` entry. |

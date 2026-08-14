@@ -106,7 +106,7 @@ where `BPS = hunkbytes / obsolete_hunksize` (512 for V1, `seclen` for V2). The e
 | Consumer | Tags | Purpose |
 |----------|------|---------|
 | `UnitBytes` | `GDDD` (BPS), `CHCD`/`CHTR`/`CHT2`/`CHGT`/`CHGD` | Sector size for parent-block translation |
-| `Tracks` / `IsCd` / `IsGdRom` | `CHT2` > `CHTR` > `CHGT` > `CHCD` (priority order) | Track layout parsing |
+| `Tracks` / `IsCd` / `IsGdRom` / `IsLittleEndianAudio` | `CHT2` > `CHTR` > `CHGT` > `CHCD` (priority order) | Track layout parsing (`CHGT` → legacy, `IsLittleEndianAudio` true) |
 | `IsDvd` | `DVD ` | DVD detection |
 | `IsHdd` | `GDDD` | Hard-disk detection |
 | `Chd.CheckFile` (deep) | checksummed entries | Combined SHA1 verification |

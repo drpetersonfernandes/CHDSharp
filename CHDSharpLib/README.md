@@ -12,7 +12,7 @@
 
 ## What's New in v1.2.0
 
-- **CD/GD-ROM track (TOC) parsing** — Full track layout via `Tracks` property backed by `ChdTocParser`, exposing `ChdTrackInfo` with track type, sector sizes, pregap/postgap, and GD-ROM support. Includes `GenerateCueSheet()`, `GenerateGdiDescriptor()`, `ExportToc()`, `ExtractToDirectory()`.
+- **CD/GD-ROM track (TOC) parsing** — Full track layout via `Tracks` property backed by `ChdTocParser`, exposing `ChdTrackInfo` with track type, sector sizes, pregap/postgap, and GD-ROM support. Legacy GD-ROMs (`CHGT` / `CD_FLAG_GDROMLE`) are detected via `IsLittleEndianAudio` and their AUDIO tracks byte-swapped during extraction. Includes `GenerateCueSheet()`, `GenerateGdiDescriptor()`, `ExportToc()`, `ExtractToDirectory()`.
 - **`UnitBytes` property** — Derives sector size from metadata for all CHD versions: V5 reads from header, V1-V4 detects HDD (512B) or CD (2448B) from metadata tags
 - **New enums** — `ChdTrackType` (matches MAME `cdrom.h`: Mode1, Mode2, Audio, etc.) and `ChdSubType` (None, Normal, Raw)
 - **Deterministic reproducible builds** — Byte-for-byte reproducible via `<Deterministic>true</Deterministic>` with embedded SourceLink and debug symbols
@@ -227,6 +227,7 @@ All `Open` overloads seek from the start. The reader is **not thread-safe** — 
 | `Version` | `uint` | CHD format version (1–5). |
 | `TotalBytes` | `ulong` | Decompressed image size. |
 | `HunkBytes` | `uint` | Size of one hunk. |
+| `MaxCompressedBlockBytes` | `uint` | Max allowed on-disk length of one compressed hunk. Defaults to `HunkBytes * 2`; a hunk claiming more is rejected with `Chderrinvaliddata` before allocation (OOM guard). Settable; floors at `HunkBytes`, set to `0` to reset. |
 | `HunkCount` | `uint` | Total number of hunks. |
 | `UnitBytes` | `uint` | Unit size for parent block address translation. V5 reads from header; V1-V4 derives from metadata (HDD BPS, CD 2448, or HunkBytes). |
 | `Sha1` | `byte[]?` | Combined SHA1 (image + metadata). |
@@ -237,6 +238,7 @@ All `Open` overloads seek from the start. The reader is **not thread-safe** — 
 | `Tracks` | `IReadOnlyList<ChdTrackInfo>?` | CD/GD-ROM track layout. `null` if not a CD/GD-ROM image. |
 | `IsCd` | `bool` | True if CD-ROM track metadata present. |
 | `IsGdRom` | `bool` | True if GD-ROM (Sega Dreamcast) image. |
+| `IsLittleEndianAudio` | `bool` | True for legacy GD-ROMs (`CHGT` tag / `CD_FLAG_GDROMLE`) whose CDDA audio tracks are stored little-endian. AUDIO tracks are byte-swapped during extraction. |
 | `IsDvd` | `bool` | True if DVD metadata present. |
 | `IsHdd` | `bool` | True if hard disk geometry metadata present. |
 | `Metadata` | `IReadOnlyList<ChdMetadataEntry>` | CHD metadata entries (game name, disc type, etc.). Lazy-loaded. V1/V2 files include a synthesized `GDDD` entry. |

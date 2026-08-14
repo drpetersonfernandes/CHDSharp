@@ -79,6 +79,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     private bool _tracksLoaded;
     private bool _isCd;
     private bool _isGdRom;
+    private bool _isLegacyGdRom;
     private bool _isDvd;
     private bool _isHdd;
 
@@ -99,6 +100,21 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 
     /// <summary>Size in bytes of a single hunk (block).</summary>
     public uint HunkBytes => _chd.Blocksize;
+
+    /// <summary>
+    /// The maximum allowed on-disk length (in bytes) of a single compressed hunk.
+    /// Normalized to <c>HunkBytes</c> if set below it, so it is always an upper bound on
+    /// the on-disk length. Defaults to <c>HunkBytes * 2</c> (see <see cref="ChdHeaders.DefaultMaxCompressedMultiple"/>).
+    /// A malicious hunk-map entry claiming a compressed hunk longer than this cap is rejected with
+    /// <see cref="ChdError.Chderrinvaliddata"/> before any allocation, preventing out-of-memory on crafted files.
+    /// Valid CHDs created at low compression levels whose compressed size slightly exceeds the hunk size
+    /// remain usable (they fall within the default 2x cap).
+    /// </summary>
+    public uint MaxCompressedBlockBytes
+    {
+        get => _chd.MaxCompressedBlockCap;
+        set => _chd.MaxCompressedBlockCap = value == 0 ? checked(_chd.Blocksize * ChdHeaders.DefaultMaxCompressedMultiple) : Math.Max(value, _chd.Blocksize);
+    }
 
     /// <summary>
     /// Size in bytes of a unit used for parent block address translation.
@@ -180,6 +196,21 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         {
             EnsureTracksLoaded();
             return _isGdRom;
+        }
+    }
+
+    /// <summary>
+    /// <c>true</c> if this is a legacy GD-ROM whose CDDA audio tracks are stored in little-endian
+    /// byte order (<c>CD_FLAG_GDROMLE</c>, detected by the old "CHGT" metadata tag). For such discs,
+    /// AUDIO track samples must be 16-bit byte-swapped when extracted/played back.
+    /// Always <c>false</c> for non-GD-ROM images.
+    /// </summary>
+    public bool IsLittleEndianAudio
+    {
+        get
+        {
+            EnsureTracksLoaded();
+            return _isLegacyGdRom;
         }
     }
 
@@ -399,7 +430,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         _tracksLoaded = true;
         EnsureMetadataLoaded();
 
-        _tracks = ChdTocParser.ParseTracks(_metadata!, out _isGdRom);
+        _tracks = ChdTocParser.ParseTracks(_metadata!, out _isGdRom, out _isLegacyGdRom);
         _isCd = _tracks != null && !_isGdRom;
         _isDvd = ChdTocParser.HasDvdMetadata(_metadata!);
         _isHdd = ChdTocParser.HasHddMetadata(_metadata!);
@@ -788,6 +819,15 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         {
             if (dataEntry.Length > 0)
             {
+                // Bounds check: the compressed length is attacker-controlled data from the hunk
+                // map. Enforce the cap before any allocation so a malicious entry cannot trigger
+                // an out-of-memory allocation of unbounded size.
+                if (dataEntry.Length > _chd.MaxCompressedBlockCap)
+                {
+                    Log.LogWarning("Hunk {HunkNumber} compressed length {Length} exceeds cap {Cap}", hunknum, dataEntry.Length, _chd.MaxCompressedBlockCap);
+                    return ChdError.Chderrinvaliddata;
+                }
+
                 if (dataEntry.BuffIn == null || dataEntry.BuffIn.Length < dataEntry.Length)
                     dataEntry.BuffIn = new byte[dataEntry.Length];
 
@@ -1206,6 +1246,12 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         var startByte = track.StartFrame * unitBytes;
         var totalBytes = (ulong)(track.Frames + track.ExtraFrames) * unitBytes;
 
+        // Legacy GD-ROMs (CD_FLAG_GDROMLE) store CDDA audio little-endian. MAME byte-swaps only
+        // the AUDIO track's 16-bit samples when reading them (cdrom.cpp:402), so do the same here.
+        var swapCdda = _isLegacyGdRom &&
+                       track.TrackType == ChdTrackType.Audio &&
+                       unitBytes == ChdReaders.CdFrameSize;
+
         try
         {
             using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024);
@@ -1220,6 +1266,12 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                 var err = Read(offset, buf, 0, toRead);
                 if (err != ChdError.Chderrnone)
                     return err;
+
+                if (swapCdda)
+                {
+                    // Swap only the 2352-byte sector-data portion of each 2448-byte frame.
+                    ChdReaders.SwapCdda16(buf, toRead, ChdReaders.CdMaxSectorData, ChdReaders.CdFrameSize);
+                }
 
                 fs.Write(buf, 0, toRead);
                 offset += (ulong)toRead;

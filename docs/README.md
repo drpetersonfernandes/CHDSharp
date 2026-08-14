@@ -76,7 +76,7 @@ CHDSharp is a **pure C# read-only CHD (Compressed Hunks of Data) reader** — th
 - **Parallel verification** — multi-threaded `CheckFile()` with bounded memory and configurable worker count.
 - **Parent/child chains** — transparent differential CHD support with wrong-parent detection.
 - **Metadata** — tag/index query API (`GetMetadata`) plus the full entry list; checksum-flag aware.
-- **Track info & extraction** — CD/GD-ROM TOC parsing (`ChdTrackInfo`), CUE/GDI descriptor generation, and whole-image extraction (`.bin`/`.cue`, `.iso`, `.img`, `.raw`, `.gdi`).
+- **Track info & extraction** — CD/GD-ROM TOC parsing (`ChdTrackInfo`), CUE/GDI descriptor generation, legacy `CHGT` little-endian CDDA handling (`IsLittleEndianAudio`), and whole-image extraction (`.bin`/`.cue`, `.iso`, `.img`, `.raw`, `.gdi`).
 - **Pluggable logging** — `Microsoft.Extensions.Logging` integration, silent by default.
 - **100% chdman match** — cross-checked against `chdman info`, `verify`, and `extractraw` (MAME 0.288).
 

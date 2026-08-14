@@ -11,12 +11,29 @@ internal static class ChdHeaders
     private const uint MaxHunkBytes = 128 * 1024 * 1024;
     private const ulong MaxLogicalBytes = 1024UL * 1024 * 1024 * 1024;
 
-    /// <summary>Validates that the hunk size and logical size are within safe limits.</summary>
+    /// <summary>
+    /// Default multiple of <see cref="ChdHeader.Blocksize"/> used to bound a single compressed
+    /// hunk's on-disk length when no explicit cap is set. A valid CHD created at a low compression
+    /// level can legitimately have a compressed hunk slightly larger than the uncompressed hunk
+    /// (codec headers/footers), so the default is 2x the hunk size; a malicious hunk map entry that
+    /// claims more than this is rejected before any allocation.
+    /// </summary>
+    internal const uint DefaultMaxCompressedMultiple = 2;
+
+    /// <summary>Validates that the hunk size, logical size, and compressed-hunk cap are within safe limits.</summary>
     /// <param name="chd">The parsed header to validate.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> if sizes are acceptable; otherwise <see cref="ChdError.Chderrinvaliddata"/>.</returns>
     internal static ChdError ValidateSizeLimits(ChdHeader chd)
     {
         if (chd.Blocksize == 0 || chd.Blocksize > MaxHunkBytes || chd.Totalbytes > MaxLogicalBytes)
+            return ChdError.Chderrinvaliddata;
+
+        // Default the compressed-hunk cap to 2x the hunk size if not explicitly set.
+        if (chd.MaxCompressedBlockCap == 0)
+            chd.MaxCompressedBlockCap = checked(chd.Blocksize * DefaultMaxCompressedMultiple);
+
+        // The cap itself must be representable and at least as large as the hunk size.
+        if (chd.MaxCompressedBlockCap < chd.Blocksize)
             return ChdError.Chderrinvaliddata;
 
         return ChdError.Chderrnone;

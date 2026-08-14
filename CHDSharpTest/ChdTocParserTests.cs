@@ -72,6 +72,59 @@ public class ChdTocParserTests
         Assert.True(isGdRom);
     }
 
+    // ── ParseTracks with CHGT entries (legacy GD-ROM / GDROMLE) ──
+
+    [Fact]
+    public void ParseTracks_chgt_sets_is_gdrom_and_little_endian()
+    {
+        const string text = "TRACK: 1 TYPE: MODE1/2048 SUBTYPE: NONE FRAMES: 150";
+        var entry = new ChdMetadataEntry("CHGT", System.Text.Encoding.ASCII.GetBytes(text));
+        var result = ChdTocParser.ParseTracks([entry], out var isGdRom, out var isLegacyGdRom);
+
+        Assert.NotNull(result);
+        Assert.True(isGdRom);
+        Assert.True(isLegacyGdRom);
+    }
+
+    [Fact]
+    public void ParseTracks_chgt_two_out_overload_false_legacy_explicit()
+    {
+        // The 2-out overload should still classify legacy CHGT as GD-ROM (isGdRom == true).
+        const string text = "TRACK: 1 TYPE: AUDIO SUBTYPE: NONE FRAMES: 100";
+        var entry = new ChdMetadataEntry("CHGT", System.Text.Encoding.ASCII.GetBytes(text));
+        var result = ChdTocParser.ParseTracks([entry], out var isGdRom);
+
+        Assert.NotNull(result);
+        Assert.True(isGdRom);
+        Assert.Equal(ChdTrackType.Audio, result![0].TrackType);
+    }
+
+    [Fact]
+    public void ParseTracks_chgd_is_not_little_endian()
+    {
+        // Modern CHGD GD-ROM metadata carries no GDROMLE flag.
+        const string text = "TRACK: 1 TYPE: MODE1/2048 SUBTYPE: NONE FRAMES: 150";
+        var entry = new ChdMetadataEntry("CHGD", System.Text.Encoding.ASCII.GetBytes(text));
+        var result = ChdTocParser.ParseTracks([entry], out var isGdRom, out var isLegacyGdRom);
+
+        Assert.NotNull(result);
+        Assert.True(isGdRom);
+        Assert.False(isLegacyGdRom);
+    }
+
+    [Fact]
+    public void ParseTracks_cht2_is_not_little_endian()
+    {
+        // Non-GD-ROM CD metadata must never report the LE flag.
+        const string text = "TRACK: 1 TYPE: MODE1/2048 SUBTYPE: NONE FRAMES: 100";
+        var entry = new ChdMetadataEntry("CHT2", System.Text.Encoding.ASCII.GetBytes(text));
+        var result = ChdTocParser.ParseTracks([entry], out var isGdRom, out var isLegacyGdRom);
+
+        Assert.NotNull(result);
+        Assert.False(isGdRom);
+        Assert.False(isLegacyGdRom);
+    }
+
     // ── ParseTracks with CHTR entries ──
 
     [Fact]

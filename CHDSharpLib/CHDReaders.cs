@@ -187,9 +187,33 @@ internal static partial class ChdReaders
         return ChdError.Chderrnone;
     }
 
-    private const int CdMaxSectorData = 2352;
+    internal const int CdMaxSectorData = 2352;
     private const int CdMaxSubcodeData = 96;
     internal const int CdFrameSize = CdMaxSectorData + CdMaxSubcodeData;
+
+    /// <summary>
+    /// Byte-swaps (little-endian) the 16-bit CDDA audio samples of a data chunk. For legacy GD-ROMs
+    /// (<c>CD_FLAG_GDROMLE</c>) whose AUDIO track data is stored little-endian (Sega CD / PCEngine CD),
+    /// each 16-bit sample byte pair must be reversed before the raw sector data can be consumed.
+    /// <paramref name="bufferLength"/> is the number of valid bytes in <paramref name="buffer"/>.
+    /// <paramref name="sectorBytes"/> is the CDDA data bytes per frame (typically 2352);
+    /// <paramref name="frameBytes"/> is the full frame stride including any subcode (typically 2448).
+    /// Only the first <paramref name="sectorBytes"/> bytes of each frame are swapped, leaving subcode intact.
+    /// </summary>
+    internal static void SwapCdda16(byte[] buffer, int bufferLength, int sectorBytes, int frameBytes)
+    {
+        if (sectorBytes <= 0 || frameBytes < sectorBytes)
+            return;
+
+        for (var frameStart = 0; frameStart + sectorBytes <= bufferLength; frameStart += frameBytes)
+        {
+            var end = frameStart + sectorBytes;
+            for (var i = frameStart; i < end; i += 2)
+            {
+                (buffer[i], buffer[i + 1]) = (buffer[i + 1], buffer[i]);
+            }
+        }
+    }
 
     private static readonly byte[] SCdSyncHeader = [0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00];
 

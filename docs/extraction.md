@@ -51,13 +51,17 @@ using (chd)
 
 The TOC parser (`ChdTocParser`) supports every metadata format, in priority order:
 
-1. `CHGD` — GD-ROM (current)
-2. `CHT2` — CD tracks v2 (current, with pregap/postgap)
-3. `CHTR` — CD tracks v1
-4. `CHGT` — GD-ROM (legacy)
+1. `CHGT` — GD-ROM (legacy) — also sets `IsLittleEndianAudio`
+2. `CHGD` — GD-ROM (current)
+3. `CHT2` — CD tracks v2 (current, with pregap/postgap)
+4. `CHTR` — CD tracks v1
 5. `CHCD` — legacy binary track records (4-byte track count, 6×4-byte records per track, endianness auto-detected)
 
 Tracks are padded to 4-frame alignment (`ExtraFrames`). GD-ROM images carry `PadFrames`.
+
+### Legacy GD-ROM little-endian CDDA (`CHGT` / `CD_FLAG_GDROMLE`)
+
+Legacy GD-ROMs detected via the `CHGT` tag store their CDDA audio tracks in **little-endian byte order** (Sega CD / PCEngine CD). `ChdFile.IsLittleEndianAudio` is `true` for these. To match MAME's playback behavior, `ExtractToDirectory` byte-swaps the 2352-byte sector-data portion of each 2448-byte frame **only for `AUDIO` tracks** when writing the per-track `.bin` files (subcode is left untouched). Raw `Read()` and hash/verification output are unchanged.
 
 ---
 

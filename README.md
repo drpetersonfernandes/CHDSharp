@@ -194,7 +194,7 @@ The full wiki lives in [`docs/`](docs/README.md) — format reference, codecs, A
 
 ## Full API
 
-See the [CHDSharpLib README](CHDSharpLib/README.md#api-reference) for the complete `Chd`, `ChdFile`, `ChdResult`, `ChdMetadataEntry`, and `ChdError` API reference, including all `Open` overloads, performance tuning (`Chd.TaskCount`), and usage patterns.
+See the [CHDSharpLib README](CHDSharpLib/README.md#api-reference) for the complete `Chd`, `ChdFile`, `ChdResult`, `ChdHeaderInfo`, `ChdMetadataEntry`, and `ChdError` API reference, including all `Open` overloads, the full header DTO read (`Chd.ReadHeader`), performance tuning (`Chd.TaskCount`), and usage patterns.
 
 ---
 

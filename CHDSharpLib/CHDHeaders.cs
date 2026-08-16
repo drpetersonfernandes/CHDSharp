@@ -50,7 +50,7 @@ internal static class ChdHeaders
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
         chd.Compression = [ChdCodec.Zlib];
-        br.ReadUInt32Be(); // flags
+        chd.Flags = br.ReadUInt32Be(); // flags
         br.ReadUInt32Be(); // compression
         chd.ObsoleteHunksize = br.ReadUInt32Be(); // number of 512-byte sectors per hunk
         chd.Totalblocks = br.ReadUInt32Be();
@@ -109,7 +109,7 @@ internal static class ChdHeaders
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
         chd.Compression = [ChdCodec.Zlib];
-        br.ReadUInt32Be(); // flags
+        chd.Flags = br.ReadUInt32Be(); // flags
         br.ReadUInt32Be(); // compression
         chd.ObsoleteHunksize = br.ReadUInt32Be(); // number of seclen-byte sectors per hunk
         chd.Totalblocks = br.ReadUInt32Be();
@@ -167,7 +167,7 @@ internal static class ChdHeaders
         chd = new ChdHeader();
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
-        br.ReadUInt32Be(); // flags
+        chd.Flags = br.ReadUInt32Be(); // flags
 
         var compressionType = br.ReadUInt32Be();
         chd.Compression = [ChdCommon.CompTypeConv(compressionType)];
@@ -216,7 +216,7 @@ internal static class ChdHeaders
         chd = new ChdHeader();
         using var br = new BinaryReader(file, Encoding.UTF8, true);
 
-        br.ReadUInt32Be(); // flags
+        chd.Flags = br.ReadUInt32Be(); // flags
 
         var compressionType = br.ReadUInt32Be();
         chd.Compression = [ChdCommon.CompTypeConv(compressionType)];
@@ -276,6 +276,7 @@ internal static class ChdHeaders
 
         chd.Totalbytes = br.ReadUInt64Be(); // total byte size of the image
         var mapoffset = br.ReadUInt64Be();
+        chd.Mapoffset = mapoffset;
         chd.Metaoffset = br.ReadUInt64Be();
 
         chd.Blocksize = br.ReadUInt32Be(); // length of a CHD Hunk (Block)

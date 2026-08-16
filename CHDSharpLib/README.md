@@ -97,6 +97,25 @@ bool isChd = Chd.IsChdFile("game.chd", out uint version);
 bool yesNo = Chd.IsChdFile("game.chd");
 ```
 
+### Read the full header without opening the file (libchdr `chd_read_header` parity)
+
+```csharp
+var err = Chd.ReadHeader("game.chd", out ChdHeaderInfo? header);
+if (err == ChdError.Chderrnone)
+{
+    Console.WriteLine($"V{header.Version}, {header.TotalBytes:N0} bytes, " +
+                      $"{header.TotalHunks} hunks x {header.HunkBytes}");
+    Console.WriteLine($"Codecs: {string.Join(", ", header.Compression)}");
+    Console.WriteLine($"Parent required: {header.HasParent}");
+}
+
+// Async + stream variants:
+var (aerr, aHeader) = await Chd.ReadHeaderAsync("game.chd");
+Chd.ReadHeader(File.OpenRead("game.chd"), out ChdHeaderInfo? sHeader); // stream left open
+```
+
+The file is opened, parsed, and closed again — no handle is kept alive. Stream and async variants are also available.
+
 ### Decompress entire image to a byte array
 
 ```csharp
@@ -172,6 +191,7 @@ You can use any `ILoggerFactory`-compatible provider (NLog, Microsoft.Extensions
 | **CheckFileWithParent** | `ChdResult CheckFileWithParent(string, string)` | Verify child CHD against parent. Pass `null` for second arg for standalone. |
 | **CheckHeader** | `bool CheckHeader(Stream, out uint length, out uint version)` | Sniff magic + version. Stream must be at position 0. |
 | **IsChdFile** | `bool IsChdFile(string)` / `bool IsChdFile(string, out uint)` | Quick check if a file is a valid CHD. |
+| **ReadHeader** | `ChdError ReadHeader(string, out ChdHeaderInfo?)` / `ChdError ReadHeader(Stream, out ChdHeaderInfo?)` / `Task<(ChdError, ChdHeaderInfo?)> ReadHeaderAsync(string)` | Parse the **full** header DTO (version, flags, codec slots, sizes, hashes, unit info, parent linkage) without opening the file for reads or keeping a handle. libchdr `chd_read_header` parity. |
 
 ### `ChdResult` — Verification result
 
@@ -186,6 +206,25 @@ You can use any `ILoggerFactory`-compatible provider (NLog, Microsoft.Extensions
 | `Md5Hex` | `string` | MD5 as lowercase hex, or "(none)". |
 
 Supports deconstruction: `var (err, ver, sha1, md5) = result;`
+
+### `ChdHeaderInfo` — Full header DTO
+
+Returned by `Chd.ReadHeader(...)`. A snapshot of the CHD header without keeping the file open.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Length` | `uint` | On-disk header length (76/80/120/108/124 for V1-V5). |
+| `Version` | `uint` | CHD format version (1-5). |
+| `Flags` | `uint` | Raw flags (V1-V4): bit 0 = has parent, bit 1 = writable. 0 for V5. |
+| `Compression` | `ChdCodec[]` | Codec slots (up to 4 for V5). |
+| `HunkBytes` / `TotalHunks` | `uint` | Hunk size / hunk count. |
+| `TotalBytes` | `ulong` | Decompressed image size. |
+| `MetaOffset` / `MapOffset` | `ulong` | Metadata / V5 map file offsets. |
+| `Md5` / `ParentMd5` | `byte[]?` | MD5 hashes (V1-V3). |
+| `Sha1` / `RawSha1` / `ParentSha1` | `byte[]?` | SHA1 hashes (V3-V5). |
+| `UnitBytes` / `UnitCount` | `uint` / `ulong` | Unit size / count (matches `ChdFile.UnitBytes`). |
+| `HasParent` | `bool` | True if a differential child requiring a parent. |
+| `ObsoleteCylinders/Heads/Sectors/Hunksize` | `uint` | Obsolete V1/V2 hard-disk geometry. |
 
 ### `ChdFile` — Random-access reader
 

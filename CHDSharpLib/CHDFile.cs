@@ -450,33 +450,45 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     {
         EnsureMetadataLoaded();
 
-        if (_metadata is { Count: > 0 })
+        return _metadata is { Count: > 0 }
+            ? GuessUnitBytesFromMetadata(_metadata, _chd)
+            : _chd.Blocksize;
+    }
+
+    /// <summary>
+    /// Guesses the unit size (bytes per unit) from metadata entries for pre-V5 CHDs
+    /// (libchdr <c>header_guess_unitbytes</c> parity): a "GDDD" hard-disk entry provides
+    /// <c>BPS</c> (bytes per sector); CD/GD-ROM entries (CHCD/CHTR/CHT2/CHGT/CHGD) produce
+    /// the CD frame size; otherwise falls back to the hunk size. Shared by
+    /// <see cref="Chd.ReadHeader(string, out CHDSharp.Models.ChdHeaderInfo?)"/> so a header-only
+    /// read reports the same unit size as an open <see cref="ChdFile"/>.
+    /// </summary>
+    internal static uint GuessUnitBytesFromMetadata(IReadOnlyList<ChdMetadataEntry> metadata, ChdHeader chd)
+    {
+        foreach (var entry in metadata)
         {
-            foreach (var entry in _metadata)
+            if (entry is { Tag: "GDDD", IsText: true })
             {
-                if (entry is { Tag: "GDDD", IsText: true })
+                var parts = entry.GetText().Split(',');
+                foreach (var p in parts)
                 {
-                    var parts = entry.GetText().Split(',');
-                    foreach (var p in parts)
-                    {
-                        var trimmed = p.Trim();
-                        if (trimmed.StartsWith("BPS:", StringComparison.Ordinal) &&
-                            uint.TryParse(trimmed.AsSpan(4), out var bps) && bps > 0)
-                            return bps;
-                    }
-
-                    break;
+                    var trimmed = p.Trim();
+                    if (trimmed.StartsWith("BPS:", StringComparison.Ordinal) &&
+                        uint.TryParse(trimmed.AsSpan(4), out var bps) && bps > 0)
+                        return bps;
                 }
-            }
 
-            foreach (var entry in _metadata)
-            {
-                if (entry.Tag is "CHCD" or "CHTR" or "CHT2" or "CHGT" or "CHGD")
-                    return ChdReaders.CdFrameSize;
+                break;
             }
         }
 
-        return _chd.Blocksize;
+        foreach (var entry in metadata)
+        {
+            if (entry.Tag is "CHCD" or "CHTR" or "CHT2" or "CHGT" or "CHGD")
+                return ChdReaders.CdFrameSize;
+        }
+
+        return chd.Blocksize;
     }
 
     private void EnsureTracksLoaded()

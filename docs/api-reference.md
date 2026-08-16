@@ -18,6 +18,9 @@ Entry point for verification, quick checks, and global settings.
 | `CheckFileWithParent` | `static ChdError CheckFileWithParent(string, string?, out uint?, out byte[]?, out byte[]?)` | Out-parameter variant. |
 | `IsChdFile` | `static bool IsChdFile(string)` / `static bool IsChdFile(string, out uint version)` | Quick magic/version sniff. Never throws. |
 | `CheckHeader` | `static bool CheckHeader(Stream, out uint length, out uint version)` | Validate signature + version; stream must be at position 0. |
+| `ReadHeader` | `static ChdError ReadHeader(string, out ChdHeaderInfo? header)` | Parse the **full** header DTO from disk without keeping the file open (libchdr `chd_read_header` parity). |
+| `ReadHeader` | `static ChdError ReadHeader(Stream, out ChdHeaderInfo? header)` | Header DTO from an existing seekable stream (stream left open). |
+| `ReadHeaderAsync` | `static Task<(ChdError, ChdHeaderInfo?)> ReadHeaderAsync(string)` | Async variant. |
 | `Classify` | `static ChdError Classify(string, out string? classification)` | Classify as `"cd"`, `"dvd"`, `"hdd"`, `"gd-rom"`, or `null` (unknown). |
 
 ---
@@ -100,6 +103,30 @@ All overloads seek from the start. Failure codes: `Chderrfilenotfound`, `Chderrc
 | `Md5Hex` | `string` | Lowercase hex, or `"(none)"`. |
 
 Supports deconstruction: `var (err, ver, sha1, md5) = result;`
+
+---
+
+## `ChdHeaderInfo` — full header DTO (record)
+
+Returned by `Chd.ReadHeader(...)`. A snapshot of everything in the CHD header, parsed without opening the file for hunk reads and without keeping a file handle open.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Length` | `uint` | On-disk header length (76 / 80 / 120 / 108 / 124 for V1–V5). |
+| `Version` | `uint` | CHD format version (1–5). |
+| `Flags` | `uint` | Raw flags field (V1–V4): bit 0 = has parent, bit 1 = writable. Always 0 for V5. |
+| `Compression` | `ChdCodec[]` | Codec slots (up to 4 for V5; V1–V4 use slot 0). All `None` = uncompressed V5. |
+| `HunkBytes` | `uint` | Size of one hunk. |
+| `TotalHunks` | `uint` | Total number of hunks. |
+| `TotalBytes` | `ulong` | Decompressed image size. |
+| `MetaOffset` | `ulong` | File offset of the first metadata entry (0 = none). |
+| `MapOffset` | `ulong` | File offset of the block map (V5 only; 0 for V1–V4). |
+| `Md5` / `ParentMd5` | `byte[]?` | MD5 hashes (V1–V3; `null` for V4/V5). |
+| `Sha1` / `RawSha1` / `ParentSha1` | `byte[]?` | SHA1 hashes (V3–V5; `null` for V1/V2). |
+| `UnitBytes` | `uint` | Unit size. V5: from header; V1–V4: derived from metadata (matches `ChdFile.UnitBytes`). |
+| `UnitCount` | `ulong` | `ceil(TotalBytes / UnitBytes)` (0 if `UnitBytes` is 0). |
+| `HasParent` | `bool` | True if this is a differential child (derived from parent hashes). |
+| `ObsoleteCylinders` / `ObsoleteHeads` / `ObsoleteSectors` / `ObsoleteHunksize` | `uint` | Obsolete V1/V2 hard-disk geometry (0 for V3+). |
 
 ---
 

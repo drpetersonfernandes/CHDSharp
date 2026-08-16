@@ -109,6 +109,7 @@ CHDSharpTester/
 | Test | Requires chdman | Description |
 |------|:---:|-------------|
 | Header Basic Check | No | Validates `MComprHD` magic bytes and format version (V1–V5) |
+| Header Read (standalone) | No | `Chd.ReadHeader` full header DTO (libchdr `chd_read_header` parity), cross-checked against an opened `ChdFile` |
 | Header vs chdman | Yes | Cross-checks every header field against `chdman info` output |
 | Deep Verification | No | Full hunk decompression with per-hunk CRC validation |
 | chdman Verify | Yes | Runs `chdman verify -i file` and checks exit code |

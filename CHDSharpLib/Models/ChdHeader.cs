@@ -3,6 +3,12 @@ namespace CHDSharp.Models;
 /// <summary>Represents the fully parsed header of a CHD file including compression codecs, block map, checksums, and metadata offsets.</summary>
 internal class ChdHeader
 {
+    /// <summary>Raw CHD global flags field (V1-V4). Bit 0 = has parent, bit 1 = writable. V5 has no flags field on disk (0).</summary>
+    internal uint Flags;
+
+    /// <summary>File offset of the block map. Only populated for V5 headers; 0 otherwise.</summary>
+    internal ulong Mapoffset;
+
     /// <summary>The array of compression codecs used by this CHD (up to 4 slots in V5).</summary>
     internal ChdCodec[] Compression = null!;
 

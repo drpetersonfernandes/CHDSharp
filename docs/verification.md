@@ -1,6 +1,6 @@
 # Verification
 
-CHDSharp offers three levels of integrity checking: a fast header sniff, a header-only check, and a **full deep verification** that decompresses every hunk and validates every checksum the format defines.
+CHDSharp offers four levels of integrity checking: a fast header sniff, a full header DTO read, a header-only check, and a **full deep verification** that decompresses every hunk and validates every checksum the format defines.
 
 ---
 
@@ -9,6 +9,7 @@ CHDSharp offers three levels of integrity checking: a fast header sniff, a heade
 | Level | API | What it does | Cost |
 |-------|-----|--------------|------|
 | Sniff | `Chd.IsChdFile(path)` / `Chd.CheckHeader(stream, ...)` | Validates magic + version + header length. | Reads 16–20 bytes. |
+| Header DTO | `Chd.ReadHeader(path, out ChdHeaderInfo?)` | Parses the **full** header into a DTO (codec slots, sizes, hashes, parent linkage, unit info) without keeping the file open. | Reads the header (plus a small metadata peek for V1–V4 unit size). |
 | Header-only | `Chd.CheckFile(stream, name, deepCheck: false)` | Parses and validates the full header (codec slots, sizes, parent linkage). | Reads the header. |
 | **Deep** | `Chd.CheckFile(stream, name, deepCheck: true)` | Decompresses **every hunk** in parallel, verifies per-hunk CRCs, and recomputes MD5 / SHA1 / rawsha1 / combined metadata SHA1. | Reads the whole file; ~200–400 MB/s typical. |
 | Chain | `Chd.CheckFileWithParent(child, parent)` | Deep verification of a (possibly child) CHD, resolving parent hunks. Single-threaded. | Reads child + referenced parent hunks. |

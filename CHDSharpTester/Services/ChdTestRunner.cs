@@ -127,6 +127,99 @@ public class ChdTestRunner
             });
         }
 
+        // Test 1b: ReadHeader (standalone full header DTO, libchdr chd_read_header parity)
+        Report(progress, entry.FileName, fileIndex + 1, totalFiles, "ReadHeader",
+            "Reading full header DTO without opening for reads...");
+        t1Sw.Restart();
+        var rhErr = Chd.ReadHeader(path, out var headerInfo);
+        t1Sw.Stop();
+        if (rhErr == ChdError.Chderrnone && headerInfo != null)
+        {
+            var details = new List<string>();
+            var allMatch = true;
+            details.Add($"Version: V{headerInfo.Version}");
+
+            var rhOpenErr = ChdFile.Open(path, out var rhChd);
+            if (rhOpenErr == ChdError.Chderrnone && rhChd != null)
+            {
+                using (rhChd)
+                {
+                    if (rhChd.HunkBytes == headerInfo.HunkBytes)
+                    {
+                        details.Add($"HunkBytes: {headerInfo.HunkBytes} ✓");
+                    }
+                    else
+                    {
+                        details.Add($"HunkBytes: dto={headerInfo.HunkBytes} open={rhChd.HunkBytes} ✗");
+                        allMatch = false;
+                    }
+
+                    if (rhChd.TotalBytes == headerInfo.TotalBytes)
+                    {
+                        details.Add($"TotalBytes: {headerInfo.TotalBytes} ✓");
+                    }
+                    else
+                    {
+                        details.Add($"TotalBytes: dto={headerInfo.TotalBytes} open={rhChd.TotalBytes} ✗");
+                        allMatch = false;
+                    }
+
+                    if (rhChd.HunkCount == headerInfo.TotalHunks)
+                    {
+                        details.Add($"Hunks: {headerInfo.TotalHunks} ✓");
+                    }
+                    else
+                    {
+                        details.Add($"Hunks: dto={headerInfo.TotalHunks} open={rhChd.HunkCount} ✗");
+                        allMatch = false;
+                    }
+
+                    if (rhChd.UnitBytes == headerInfo.UnitBytes)
+                    {
+                        details.Add($"UnitBytes: {headerInfo.UnitBytes} ✓");
+                    }
+                    else
+                    {
+                        details.Add($"UnitBytes: dto={headerInfo.UnitBytes} open={rhChd.UnitBytes} ✗");
+                        allMatch = false;
+                    }
+
+                    if (rhChd.RequiresParent == headerInfo.HasParent)
+                    {
+                        details.Add($"HasParent: {headerInfo.HasParent} ✓");
+                    }
+                    else
+                    {
+                        details.Add($"HasParent: dto={headerInfo.HasParent} open={rhChd.RequiresParent} ✗");
+                        allMatch = false;
+                    }
+                }
+            }
+            else
+            {
+                details.Add($"Opened for reads: {rhOpenErr.GetMessage()}");
+                details.Add($"Codecs: {string.Join(", ", headerInfo.Compression)}");
+            }
+
+            result.SubTests.Add(new SubTestResult
+            {
+                TestName = "Header Read (standalone)",
+                Status = allMatch ? TestStatus.Passed : TestStatus.Failed,
+                Detail = string.Join("\n", details),
+                ElapsedSeconds = t1Sw.Elapsed.TotalSeconds
+            });
+        }
+        else
+        {
+            result.SubTests.Add(new SubTestResult
+            {
+                TestName = "Header Read (standalone)",
+                Status = TestStatus.Failed,
+                Detail = $"Chd.ReadHeader failed: {rhErr}",
+                ElapsedSeconds = t1Sw.Elapsed.TotalSeconds
+            });
+        }
+
         // Test 2: Header vs chdman info
         if (chdman is { Available: true })
         {

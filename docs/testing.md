@@ -1,6 +1,6 @@
 # Testing
 
-CHDSharp ships a **494-test** xUnit suite plus a deterministic 30-file corpus covering every format version, codec, map type, and parent/child combination. Tests run on `net8.0`, `net9.0`, and `net10.0`.
+CHDSharp ships a **527-test** xUnit suite plus a deterministic 30-file corpus covering every format version, codec, map type, and parent/child combination. Tests run on `net8.0`, `net9.0`, and `net10.0`.
 
 ---
 
@@ -20,6 +20,7 @@ CHDSharp ships a **494-test** xUnit suite plus a deterministic 30-file corpus co
 | Class | Covers |
 |-------|--------|
 | `HeaderAndApiTests` | Magic/version detection, `CheckHeader`, `IsChdFile`, open/read error paths |
+| `ReadHeaderTests` | `Chd.ReadHeader`/`ReadHeaderAsync` full header DTO (libchdr `chd_read_header` parity): all versions, field parity with an opened `ChdFile`, codec slots, child/parent hashes, V1 geometry, error paths, stream leave-open, async |
 | `ChecksumTests` | CRC-32 / CRC-16 test vectors |
 | `TrackInfoTests` / `TrackInfoEdgeCaseTests` | TOC parsing across `CHTR`, `CHT2`, `CHCD`, `CHGD`, `CHGT`; GD-ROM pad frames; binary track parsing |
 | `CorpusTests` | Deep verification + open/read on all 30 fixtures |

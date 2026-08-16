@@ -70,6 +70,7 @@ CHDSharp is a **pure C# read-only CHD (Compressed Hunks of Data) reader** — th
 ## Feature overview
 
 - **Any CHD, any version** — V1–V5 headers, every internal map format (self-hunk dedup, CRC32 maps, CRC16/compressed/RLE maps, uncompressed V5 maps, unit-based parent references).
+- **Header DTO without opening** — `Chd.ReadHeader()` returns the full parsed header (`ChdHeaderInfo`) without keeping the file open (libchdr `chd_read_header` parity); `CheckHeader`/`IsChdFile` remain for magic/version sniffing.
 - **All 10 codecs** — zlib, lzma, huffman, flac, zstd, AVHuff, plus the four CD-aware variants (`cdzl`, `cdlz`, `cdfl`, `cdzs`) with ECC/sync regeneration.
 - **Random access** — `ReadHunk()`, `Read()` (byte ranges across hunk boundaries), `EnumerateHunks()`, `ReadAllBytes()`.
 - **Async API** — `OpenAsync`, `ReadHunkAsync`, `ReadAsync`, `IAsyncDisposable`.

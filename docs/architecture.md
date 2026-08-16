@@ -50,7 +50,7 @@ All projects share versioning and analyzer settings via `Directory.Build.props`.
 
 ### Layer responsibilities
 
-**`Chd` (static)** — verification entry points (`CheckFile`, `CheckFileWithParent`), header sniffing (`CheckHeader`, `IsChdFile`), classification (`Classify`), plus global settings (`LoggerFactory`, `TaskCount`).
+**`Chd` (static)** — verification entry points (`CheckFile`, `CheckFileWithParent`), header sniffing (`CheckHeader`, `IsChdFile`), full header DTO reads (`ReadHeader`, `ReadHeaderAsync`), classification (`Classify`), plus global settings (`LoggerFactory`, `TaskCount`).
 
 **`ChdFile` (instance)** — random access. Owns the stream (optionally), the parsed `ChdHeader`, a `ChdCodecState`, an optional parent `ChdFile`, and lazy metadata/tracks caches. All `Read*`/`Extract*`/`Generate*` operations live here.
 

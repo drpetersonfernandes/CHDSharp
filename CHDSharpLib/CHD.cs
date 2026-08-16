@@ -15,8 +15,10 @@ namespace CHDSharp;
 /// </summary>
 /// <remarks>
 /// Use <see cref="CheckFile(Stream,string,bool)"/> for full (parallel) verification of a standalone CHD,
-/// <see cref="CheckFileWithParent(string,string)"/> for child (differential) CHDs, and
-/// <see cref="IsChdFile(string)"/> / <see cref="CheckHeader"/> for fast header-only checks.
+/// <see cref="CheckFileWithParent(string,string)"/> for child (differential) CHDs,
+/// <see cref="IsChdFile(string)"/> / <see cref="CheckHeader"/> for fast header-only checks, and
+/// <see cref="ReadHeader(string,out CHDSharp.Models.ChdHeaderInfo?)"/> for the full parsed header without
+/// opening the file for reads.
 /// For random access to decompressed data use <see cref="ChdFile"/> instead.
 /// </remarks>
 /// <example>
@@ -429,6 +431,202 @@ public static class Chd
             return false;
 
         return HeaderLengths[version] == length;
+    }
+
+    /// <summary>
+    /// Reads and parses the full CHD header from the file at <paramref name="filename"/> without
+    /// opening it for hunk reads (libchdr <c>chd_read_header</c> parity). The file is opened,
+    /// the header is parsed, and the file is closed again — no file handle is kept alive.
+    /// </summary>
+    /// <param name="filename">Path to the CHD file to read.</param>
+    /// <param name="header">When this method returns, contains the parsed header information on
+    /// success, or <c>null</c> on error.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; <see cref="ChdError.Chderrinvalidparameter"/>
+    /// if <paramref name="filename"/> is null/empty; <see cref="ChdError.Chderrfilenotfound"/> if the file
+    /// does not exist; <see cref="ChdError.Chderrcannotopenfile"/> if it cannot be opened;
+    /// <see cref="ChdError.Chderrinvalidfile"/> if it is not a CHD; otherwise a header parse/validation error.</returns>
+    /// <remarks>
+    /// Unlike <see cref="ChdFile.Open(string, out ChdFile?)"/>, this performs no hunk-map linking,
+    /// codec setup, or parent resolution, and does not retain a stream. Use it to inspect a CHD
+    /// (version, sizes, codecs, hashes, parent linkage) cheaply.
+    /// </remarks>
+    public static ChdError ReadHeader(string filename, out ChdHeaderInfo? header)
+    {
+        header = null;
+        if (string.IsNullOrEmpty(filename))
+            return ChdError.Chderrinvalidparameter;
+
+        if (!File.Exists(filename))
+            return ChdError.Chderrfilenotfound;
+
+        FileStream fs;
+        try
+        {
+            fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 4096);
+        }
+        catch (FileNotFoundException)
+        {
+            return ChdError.Chderrfilenotfound;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return ChdError.Chderrcannotopenfile;
+        }
+        catch (IOException)
+        {
+            return ChdError.Chderrcannotopenfile;
+        }
+
+        var err = ReadHeader(fs, out header);
+        fs.Dispose();
+        return err;
+    }
+
+    /// <inheritdoc cref="ReadHeader(string,out ChdHeaderInfo?)"/>
+    /// <summary>
+    /// Reads and parses the full CHD header from an existing seekable stream
+    /// (libchdr <c>chd_read_header_file</c> parity). The stream is seeked as needed and left open.
+    /// </summary>
+    /// <param name="stream">A readable, seekable stream containing a CHD file.</param>
+    /// <param name="header">When this method returns, contains the parsed header information on
+    /// success, or <c>null</c> on error.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; <see cref="ChdError.Chderrinvalidparameter"/>
+    /// if the stream is not readable/seekable; <see cref="ChdError.Chderrinvalidfile"/> if it is not a CHD;
+    /// <see cref="ChdError.Chderrreaderror"/> on IO failure; otherwise a header parse/validation error.</returns>
+    public static ChdError ReadHeader(Stream stream, out ChdHeaderInfo? header)
+    {
+        header = null;
+        if (stream is not { CanRead: true } || !stream.CanSeek)
+            return ChdError.Chderrinvalidparameter;
+
+        uint version;
+        try
+        {
+            stream.Seek(0, SeekOrigin.Begin);
+            if (!CheckHeader(stream, out _, out version))
+                return ChdError.Chderrinvalidfile;
+        }
+        catch (IOException ex)
+        {
+            Log.LogWarning(ex, "Failed to read CHD header from stream");
+            return ChdError.Chderrreaderror;
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Failed to read CHD header from stream");
+            return ChdError.Chderrinvalidfile;
+        }
+
+        ChdError valid;
+        ChdHeader chd;
+        try
+        {
+            switch (version)
+            {
+                case 1: valid = ChdHeaders.ReadHeaderV1(stream, out chd); break;
+                case 2: valid = ChdHeaders.ReadHeaderV2(stream, out chd); break;
+                case 3: valid = ChdHeaders.ReadHeaderV3(stream, out chd); break;
+                case 4: valid = ChdHeaders.ReadHeaderV4(stream, out chd); break;
+                case 5: valid = ChdHeaders.ReadHeaderV5(stream, out chd); break;
+                default:
+                    LogUnknownVersion(Log, version, null);
+                    return ChdError.Chderrunsupportedversion;
+            }
+        }
+        catch (Exception)
+        {
+            return ChdError.Chderrinvaliddata;
+        }
+
+        if (valid != ChdError.Chderrnone)
+        {
+            LogHeaderReadFailed(Log, valid, null);
+            return valid;
+        }
+
+        if (ChdHeaders.ValidateSizeLimits(chd) != ChdError.Chderrnone)
+        {
+            LogHeaderReadFailed(Log, ChdError.Chderrinvaliddata, null);
+            return ChdError.Chderrinvaliddata;
+        }
+
+        header = ToHeaderInfo(chd, version, stream);
+        return ChdError.Chderrnone;
+    }
+
+    /// <inheritdoc cref="ReadHeader(string,out ChdHeaderInfo?)"/>
+    /// <summary>Asynchronously reads and parses the full CHD header from the file at <paramref name="filename"/>
+    /// (see <see cref="ReadHeader(string,out ChdHeaderInfo?)"/>).</summary>
+    /// <returns>A task producing a tuple of the <see cref="ChdError"/> result and the parsed
+    /// <see cref="ChdHeaderInfo"/> (or <c>null</c> on error).</returns>
+    public static Task<(ChdError error, ChdHeaderInfo? header)> ReadHeaderAsync(string filename)
+    {
+        return Task.Run(() =>
+        {
+            var err = ReadHeader(filename, out var header);
+            return (err, header);
+        });
+    }
+
+    private static ChdHeaderInfo ToHeaderInfo(ChdHeader chd, uint version, Stream stream)
+    {
+        var unitBytes = version >= 5 ? chd.Unitbytes : GuessUnitBytes(chd, version, stream);
+
+        return new ChdHeaderInfo
+        {
+            Length = HeaderLengths[version],
+            Version = version,
+            Flags = chd.Flags,
+            Compression = (ChdCodec[])chd.Compression.Clone(),
+            HunkBytes = chd.Blocksize,
+            TotalHunks = chd.Totalblocks,
+            TotalBytes = chd.Totalbytes,
+            MetaOffset = chd.Metaoffset,
+            MapOffset = chd.Mapoffset,
+            Md5 = chd.Md5,
+            ParentMd5 = chd.Parentmd5,
+            Sha1 = chd.Sha1,
+            RawSha1 = chd.Rawsha1,
+            ParentSha1 = chd.Parentsha1,
+            UnitBytes = unitBytes,
+            UnitCount = unitBytes == 0 ? 0 : (chd.Totalbytes + unitBytes - 1) / unitBytes,
+            ObsoleteCylinders = chd.ObsoleteCylinders,
+            ObsoleteHeads = chd.ObsoleteHeads,
+            ObsoleteSectors = chd.ObsoleteSectors,
+            ObsoleteHunksize = chd.ObsoleteHunksize
+        };
+    }
+
+    /// <summary>
+    /// Guesses the unit size for pre-V5 CHDs from metadata, mirroring <see cref="ChdFile.UnitBytes"/>
+    /// and libchdr's <c>header_guess_unitbytes</c>. For V1/V2 the obsolete header geometry is
+    /// synthesized into a "GDDD" entry; for V3/V4 the metadata chain is read from the stream.
+    /// Falls back to the hunk size on error or when no metadata is present.
+    /// </summary>
+    private static uint GuessUnitBytes(ChdHeader chd, uint version, Stream stream)
+    {
+        var metadata = new List<ChdMetadataEntry>();
+
+        if (version < 3 && chd.ObsoleteHunksize > 0)
+        {
+            var bps = chd.Blocksize / chd.ObsoleteHunksize;
+            var gddd = $"CYLS:{chd.ObsoleteCylinders},HEADS:{chd.ObsoleteHeads},SECS:{chd.ObsoleteSectors},BPS:{bps}";
+            metadata.Add(new ChdMetadataEntry("GDDD", Encoding.ASCII.GetBytes(gddd)));
+        }
+        else if (chd.Metaoffset != 0)
+        {
+            try
+            {
+                if (ChdMetaData.ReadMetaDataEntries(stream, chd, out var entries) == ChdError.Chderrnone)
+                    metadata.AddRange(entries);
+            }
+            catch (Exception)
+            {
+                // Fall through to the hunk-size fallback.
+            }
+        }
+
+        return metadata.Count > 0 ? ChdFile.GuessUnitBytesFromMetadata(metadata, chd) : chd.Blocksize;
     }
 
 

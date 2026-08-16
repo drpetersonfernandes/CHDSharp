@@ -5,19 +5,20 @@ namespace CHDSharpEncoderTest;
 
 public class ChdmanValidationTests : IDisposable
 {
-    private static readonly string TestDataDir =
-        Path.Combine(Path.GetTempPath(), "chd_encoder_chdman_tests");
-
     private static readonly string? ChdmanPath = ResolveChdmanPath();
+
+    private readonly string _testDataDir;
 
     public ChdmanValidationTests()
     {
-        Directory.CreateDirectory(TestDataDir);
+        // unique per test class instance: the test host runs per-TFM in parallel
+        _testDataDir = Path.Combine(Path.GetTempPath(), "chd_encoder_chdman_tests_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(_testDataDir);
     }
 
     public void Dispose()
     {
-        try { Directory.Delete(TestDataDir, recursive: true); } catch { }
+        try { Directory.Delete(_testDataDir, recursive: true); } catch { }
     }
 
     [Fact]
@@ -26,8 +27,8 @@ public class ChdmanValidationTests : IDisposable
         if (ChdmanPath == null) return;
 
         byte[] source = CreateTestFile(8192, 42);
-        string srcPath = Path.Combine(TestDataDir, "info_src.bin");
-        string chdPath = Path.Combine(TestDataDir, "info.chd");
+        string srcPath = Path.Combine(_testDataDir, "info_src.bin");
+        string chdPath = Path.Combine(_testDataDir, "info.chd");
         File.WriteAllBytes(srcPath, source);
 
         ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512);
@@ -47,8 +48,8 @@ public class ChdmanValidationTests : IDisposable
         if (ChdmanPath == null) return;
 
         byte[] source = CreateTestFile(65536, 123);
-        string srcPath = Path.Combine(TestDataDir, "verify_src.bin");
-        string chdPath = Path.Combine(TestDataDir, "verify.chd");
+        string srcPath = Path.Combine(_testDataDir, "verify_src.bin");
+        string chdPath = Path.Combine(_testDataDir, "verify.chd");
         File.WriteAllBytes(srcPath, source);
 
         ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512);
@@ -63,9 +64,9 @@ public class ChdmanValidationTests : IDisposable
         if (ChdmanPath == null) return;
 
         byte[] source = CreateTestFile(65536, 456);
-        string srcPath = Path.Combine(TestDataDir, "extract_src.bin");
-        string chdPath = Path.Combine(TestDataDir, "extract.chd");
-        string extractedPath = Path.Combine(TestDataDir, "extracted.raw");
+        string srcPath = Path.Combine(_testDataDir, "extract_src.bin");
+        string chdPath = Path.Combine(_testDataDir, "extract.chd");
+        string extractedPath = Path.Combine(_testDataDir, "extracted.raw");
         File.WriteAllBytes(srcPath, source);
 
         ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512);
@@ -83,11 +84,11 @@ public class ChdmanValidationTests : IDisposable
         if (ChdmanPath == null) return;
 
         byte[] source = CreateTestFile(65536, 789);
-        string srcPath = Path.Combine(TestDataDir, "cross_src.bin");
-        string ourChd = Path.Combine(TestDataDir, "cross_our.chd");
-        string chdmanChd = Path.Combine(TestDataDir, "cross_chdman.chd");
-        string ourExtract = Path.Combine(TestDataDir, "cross_our_extracted.raw");
-        string chdmanExtract = Path.Combine(TestDataDir, "cross_chdman_extracted.raw");
+        string srcPath = Path.Combine(_testDataDir, "cross_src.bin");
+        string ourChd = Path.Combine(_testDataDir, "cross_our.chd");
+        string chdmanChd = Path.Combine(_testDataDir, "cross_chdman.chd");
+        string ourExtract = Path.Combine(_testDataDir, "cross_our_extracted.raw");
+        string chdmanExtract = Path.Combine(_testDataDir, "cross_chdman_extracted.raw");
         File.WriteAllBytes(srcPath, source);
 
         ChdEncoder.EncodeRaw(srcPath, ourChd, 4096, 512);
@@ -119,9 +120,9 @@ public class ChdmanValidationTests : IDisposable
         if (ChdmanPath == null) return;
 
         byte[] source = CreateTestFile(10000, 42);
-        string srcPath = Path.Combine(TestDataDir, "na_src.bin");
-        string chdPath = Path.Combine(TestDataDir, "na.chd");
-        string extractedPath = Path.Combine(TestDataDir, "na_extracted.raw");
+        string srcPath = Path.Combine(_testDataDir, "na_src.bin");
+        string chdPath = Path.Combine(_testDataDir, "na.chd");
+        string extractedPath = Path.Combine(_testDataDir, "na_extracted.raw");
         File.WriteAllBytes(srcPath, source);
 
         ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512);

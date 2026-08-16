@@ -192,10 +192,21 @@ internal class Program
 
             var fileSw = Stopwatch.StartNew();
             ChdResult result;
+            var lastPercent = -1;
             try
             {
                 using Stream s = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 4096);
-                result = Chd.CheckFile(s, name, true);
+                var progress = new Progress<ChdProgress>(p =>
+                {
+                    var pct = (int)p.Percent / 10 * 10;
+                    if (pct != lastPercent)
+                    {
+                        lastPercent = pct;
+                        log.Information("   {Pct,3}% {Name}  ({Bytes:N0} / {Total:N0} bytes, {Elapsed:N1}s)",
+                            pct, name, p.BytesProcessed, p.TotalBytes, p.Elapsed.TotalSeconds);
+                    }
+                });
+                result = Chd.CheckFile(s, name, true, progress);
             }
             catch (Exception ex)
             {
@@ -389,8 +400,19 @@ internal class Program
         {
             try
             {
+                var lastPercent = -1;
                 using Stream s = new FileStream(f.FullName, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 4096);
-                Chd.CheckFile(s, f.Name, true);
+                var progress = new Progress<ChdProgress>(p =>
+                {
+                    var pct = (int)p.Percent / 10 * 10;
+                    if (pct != lastPercent)
+                    {
+                        lastPercent = pct;
+                        Log.Logger.Information("   {Pct,3}% {Name}  ({Bytes:N0} / {Total:N0} bytes, {Elapsed:N1}s)",
+                            pct, f.Name, p.BytesProcessed, p.TotalBytes, p.Elapsed.TotalSeconds);
+                    }
+                });
+                Chd.CheckFile(s, f.Name, true, progress);
             }
             catch (Exception ex)
             {

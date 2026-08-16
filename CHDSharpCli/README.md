@@ -56,6 +56,14 @@ CHDSharpCli --classify game.chd
 ==== Summary: 10 passed, 1 failed, 2 skipped, 13 total ====
 ```
 
+While a file verifies, progress is reported in 10% steps via `IProgress<ChdProgress>`:
+
+```
+   10% game.chd  (67,108,864 / 671,088,640 bytes, 0.8s)
+   50% game.chd  (335,544,320 / 671,088,640 bytes, 3.1s)
+  100% game.chd  (671,088,640 / 671,088,640 bytes, 5.9s)
+```
+
 ### Random-access test
 
 ```

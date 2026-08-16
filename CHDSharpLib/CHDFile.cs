@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using CHDSharp.Models;
@@ -588,17 +589,38 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// Decompresses the entire CHD image into a single byte array.
     /// </summary>
     /// <param name="data">When this method returns, contains the full decompressed image on success; an empty array on failure.</param>
+    /// <param name="progress">An optional <see cref="IProgress{T}"/> receiving a <see cref="ChdProgress"/>
+    /// report after each decompressed hunk. <c>null</c> (default) disables progress reporting.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success; <see cref="ChdError.Chderroutofmemory"/>
     /// if the image is larger than 2 GiB (<see cref="int.MaxValue"/> bytes); otherwise a read/decompression error code.</returns>
     /// <remarks>Be cautious: CHD images can be tens of gigabytes. Prefer <see cref="EnumerateHunks"/> or <see cref="Read"/> for large images.</remarks>
-    public ChdError ReadAllBytes(out byte[] data)
+    public ChdError ReadAllBytes(out byte[] data, IProgress<ChdProgress>? progress = null)
     {
         data = [];
         if (_chd.Totalbytes > int.MaxValue)
             return ChdError.Chderroutofmemory;
 
         data = new byte[_chd.Totalbytes];
-        return Read(0, data, 0, data.Length);
+        if (progress == null)
+            return Read(0, data, 0, data.Length);
+
+        var sw = Stopwatch.StartNew();
+        var bytesRead = 0;
+        while (bytesRead < data.Length)
+        {
+            var count = (int)Math.Min((ulong)_chd.Blocksize, (ulong)(data.Length - bytesRead));
+            var err = Read((ulong)bytesRead, data, bytesRead, count);
+            if (err != ChdError.Chderrnone)
+                return err;
+
+            bytesRead += count;
+            var currentHunk = (long)bytesRead / _chd.Blocksize;
+            if ((long)bytesRead % _chd.Blocksize != 0)
+                currentHunk++;
+            progress.Report(new ChdProgress(currentHunk, _chd.Totalblocks, bytesRead, (long)_chd.Totalbytes, sw.Elapsed));
+        }
+
+        return ChdError.Chderrnone;
     }
 
     /// <summary>
@@ -606,9 +628,12 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// between iterations. Copy it if you need to keep the data beyond the
     /// current iteration.
     /// </summary>
+    /// <param name="progress">An optional <see cref="IProgress{T}"/> receiving a <see cref="ChdProgress"/>
+    /// report after each decompressed hunk. <c>null</c> (default) disables progress reporting.</param>
     /// <exception cref="InvalidDataException">Thrown when a hunk fails to decompress, with the <see cref="ChdError"/> in the message.</exception>
-    public IEnumerable<byte[]> EnumerateHunks()
+    public IEnumerable<byte[]> EnumerateHunks(IProgress<ChdProgress>? progress = null)
     {
+        var sw = progress != null ? Stopwatch.StartNew() : null;
         var buffer = new byte[_chd.Blocksize];
         for (uint i = 0; i < _chd.Totalblocks; i++)
         {
@@ -616,6 +641,12 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             if (err != ChdError.Chderrnone)
                 throw new InvalidDataException($"Failed to read hunk {i}: {err.GetMessage()} ({err})");
 
+            progress?.Report(new ChdProgress(
+                i + 1,
+                _chd.Totalblocks,
+                (long)Math.Min((i + 1) * (ulong)_chd.Blocksize, _chd.Totalbytes),
+                (long)_chd.Totalbytes,
+                sw!.Elapsed));
             yield return buffer;
         }
     }
@@ -1254,10 +1285,12 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// </summary>
     /// <param name="outputDir">Target directory. Created if it doesn't exist.</param>
     /// <param name="baseFileName">Base filename (without extension) for output files.</param>
+    /// <param name="progress">An optional <see cref="IProgress{T}"/> receiving a <see cref="ChdProgress"/>
+    /// report after each decompressed hunk. <c>null</c> (default) disables progress reporting.</param>
     /// <returns>List of created file paths.</returns>
-    public IReadOnlyList<string> ExtractToDirectory(string outputDir, string baseFileName)
+    public IReadOnlyList<string> ExtractToDirectory(string outputDir, string baseFileName, IProgress<ChdProgress>? progress = null)
     {
-        var result = ExtractToDirectoryWithReporting(outputDir, baseFileName);
+        var result = ExtractToDirectoryWithReporting(outputDir, baseFileName, progress);
         if (result.Error != ChdError.Chderrnone)
             throw new InvalidDataException($"Extraction failed: {result.Error}");
 
@@ -1277,8 +1310,10 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// </summary>
     /// <param name="outputDir">Target directory. Created if it doesn't exist.</param>
     /// <param name="baseFileName">Base filename (without extension) for output files.</param>
+    /// <param name="progress">An optional <see cref="IProgress{T}"/> receiving a <see cref="ChdProgress"/>
+    /// report after each decompressed hunk. <c>null</c> (default) disables progress reporting.</param>
     /// <returns>An <see cref="ExtractResult"/> with created files, per-track results, and overall error.</returns>
-    public ExtractResult ExtractToDirectoryWithReporting(string outputDir, string baseFileName)
+    public ExtractResult ExtractToDirectoryWithReporting(string outputDir, string baseFileName, IProgress<ChdProgress>? progress = null)
     {
         var created = new List<string>();
         var trackResults = new List<TrackExtractResult>();
@@ -1289,7 +1324,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             foreach (var track in Tracks!)
             {
                 var trackFile = Path.Combine(outputDir, $"track{track.TrackNumber:D2}.bin");
-                var err = TryWriteTrackToFile(track, trackFile);
+                var err = TryWriteTrackToFile(track, trackFile, progress);
                 trackResults.Add(new TrackExtractResult(track.TrackNumber, trackFile, err));
                 if (err == ChdError.Chderrnone)
                     created.Add(trackFile);
@@ -1317,7 +1352,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             if (IsCd)
             {
                 imageFile = Path.Combine(outputDir, $"{baseFileName}.bin");
-                WriteAllBytesSlow(imageFile);
+                WriteAllBytesSlow(imageFile, progress);
                 created.Add(imageFile);
 
                 var descriptorFile = Path.Combine(outputDir, $"{baseFileName}.cue");
@@ -1327,19 +1362,19 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             else if (IsDvd)
             {
                 imageFile = Path.Combine(outputDir, $"{baseFileName}.iso");
-                WriteAllBytesSlow(imageFile);
+                WriteAllBytesSlow(imageFile, progress);
                 created.Add(imageFile);
             }
             else if (IsHdd)
             {
                 imageFile = Path.Combine(outputDir, $"{baseFileName}.img");
-                WriteAllBytesSlow(imageFile);
+                WriteAllBytesSlow(imageFile, progress);
                 created.Add(imageFile);
             }
             else
             {
                 imageFile = Path.Combine(outputDir, $"{baseFileName}.raw");
-                WriteAllBytesSlow(imageFile);
+                WriteAllBytesSlow(imageFile, progress);
                 created.Add(imageFile);
             }
 
@@ -1352,9 +1387,10 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         }
     }
 
-    private void WriteAllBytesSlow(string path)
+    private void WriteAllBytesSlow(string path, IProgress<ChdProgress>? progress)
     {
         using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024);
+        var sw = progress != null ? Stopwatch.StartNew() : null;
         var buf = new byte[HunkBytes];
         for (uint i = 0; i < HunkCount; i++)
         {
@@ -1366,10 +1402,17 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                 ? (int)(TotalBytes - (ulong)i * HunkBytes)
                 : (int)HunkBytes;
             fs.Write(buf, 0, bytesToWrite);
+
+            progress?.Report(new ChdProgress(
+                i + 1,
+                HunkCount,
+                (long)Math.Min((i + 1) * (ulong)HunkBytes, TotalBytes),
+                (long)TotalBytes,
+                sw!.Elapsed));
         }
     }
 
-    private ChdError TryWriteTrackToFile(ChdTrackInfo track, string path)
+    private ChdError TryWriteTrackToFile(ChdTrackInfo track, string path, IProgress<ChdProgress>? progress)
     {
         var unitBytes = UnitBytes;
         var startByte = track.StartFrame * unitBytes;
@@ -1384,6 +1427,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         try
         {
             using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024);
+            var sw = progress != null ? Stopwatch.StartNew() : null;
             var buf = new byte[HunkBytes];
             var hunkSize = HunkBytes;
             var remaining = totalBytes;
@@ -1405,6 +1449,15 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                 fs.Write(buf, 0, toRead);
                 offset += (ulong)toRead;
                 remaining -= (ulong)toRead;
+
+                if (progress != null)
+                {
+                    var processed = (long)Math.Min(offset, TotalBytes);
+                    var currentHunk = processed / hunkSize;
+                    if (processed % hunkSize != 0)
+                        currentHunk++;
+                    progress.Report(new ChdProgress(currentHunk, HunkCount, processed, (long)TotalBytes, sw!.Elapsed));
+                }
             }
 
             return ChdError.Chderrnone;

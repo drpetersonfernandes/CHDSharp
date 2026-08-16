@@ -64,6 +64,19 @@ Chd.TaskCount = 16;   // tune for your CPU/memory
 var result = Chd.CheckFile(stream, "game.chd", deepCheck: true);
 ```
 
+### Progress reporting
+
+All long operations accept an optional `IProgress<ChdProgress>` and report after every decompressed hunk:
+
+```csharp
+var progress = new Progress<ChdProgress>(p =>
+    Console.WriteLine($"{p.Percent:F0}% — {p.BytesProcessed:N0}/{p.TotalBytes:N0} bytes"));
+
+var result = Chd.CheckFile(stream, "game.chd", deepCheck: true, progress);
+```
+
+For `CheckFile(deepCheck: true)` the reports are emitted in hunk order from the hasher stage; `new Progress<ChdProgress>(...)` marshals them to the capturing thread/context. The same parameter exists on `CheckFileWithParent`, `ReadAllBytes`, `EnumerateHunks`, and `ExtractToDirectory`. Defaults to `null` (no reporting) everywhere.
+
 ---
 
 ## Child CHD verification

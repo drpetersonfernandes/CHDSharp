@@ -187,8 +187,8 @@ You can use any `ILoggerFactory`-compatible provider (NLog, Microsoft.Extensions
 |--------|-----------|-------------|
 | **LoggerFactory** | `ILoggerFactory?` (static property) | Set to enable internal logging. |
 | **TaskCount** | `int` (static property, default 8) | Number of parallel workers for `CheckFile` (1-64). Change before calling. |
-| **CheckFile** | `ChdResult CheckFile(Stream, string, bool)` | Full parallel verification. Returns error, version, SHA1, MD5. |
-| **CheckFileWithParent** | `ChdResult CheckFileWithParent(string, string)` | Verify child CHD against parent. Pass `null` for second arg for standalone. |
+| **CheckFile** | `ChdResult CheckFile(Stream, string, bool, IProgress<ChdProgress>? = null)` | Full parallel verification. Returns error, version, SHA1, MD5. Reports progress per hunk. |
+| **CheckFileWithParent** | `ChdResult CheckFileWithParent(string, string, IProgress<ChdProgress>? = null)` | Verify child CHD against parent. Pass `null` for second arg for standalone. Reports progress per hunk. |
 | **CheckHeader** | `bool CheckHeader(Stream, out uint length, out uint version)` | Sniff magic + version. Stream must be at position 0. |
 | **IsChdFile** | `bool IsChdFile(string)` / `bool IsChdFile(string, out uint)` | Quick check if a file is a valid CHD. |
 | **ReadHeader** | `ChdError ReadHeader(string, out ChdHeaderInfo?)` / `ChdError ReadHeader(Stream, out ChdHeaderInfo?)` / `Task<(ChdError, ChdHeaderInfo?)> ReadHeaderAsync(string)` | Parse the **full** header DTO (version, flags, codec slots, sizes, hashes, unit info, parent linkage) without opening the file for reads or keeping a handle. libchdr `chd_read_header` parity. |
@@ -226,6 +226,28 @@ Returned by `Chd.ReadHeader(...)`. A snapshot of the CHD header without keeping 
 | `HasParent` | `bool` | True if a differential child requiring a parent. |
 | `ObsoleteCylinders/Heads/Sectors/Hunksize` | `uint` | Obsolete V1/V2 hard-disk geometry. |
 
+### `ChdProgress` — Long-operation progress
+
+Pass an `IProgress<ChdProgress>` to `Chd.CheckFile`, `Chd.CheckFileWithParent`, `ChdFile.ReadAllBytes`, `ChdFile.EnumerateHunks`, or `ChdFile.ExtractToDirectory` to receive a report after every decompressed hunk.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `CurrentHunk` | `long` | Hunks processed so far (1-based; equals `TotalHunks` when done). |
+| `TotalHunks` | `long` | Total hunks in the image. |
+| `BytesProcessed` | `long` | Decompressed bytes processed so far. |
+| `TotalBytes` | `long` | Total decompressed image size. |
+| `Elapsed` | `TimeSpan` | Wall-clock time since the operation started. |
+| `Percent` | `double` | Percentage completed (0–100). |
+
+```csharp
+var progress = new Progress<ChdProgress>(p =>
+    Console.WriteLine($"{p.Percent:F0}% — {p.BytesProcessed:N0}/{p.TotalBytes:N0} bytes ({p.Elapsed.TotalSeconds:F1}s)"));
+
+var result = Chd.CheckFile(File.OpenRead("game.chd"), "game.chd", deepCheck: true, progress);
+```
+
+All parameters default to `null`, so existing callers are unaffected. For `Chd.CheckFile(deepCheck: true)`, reports arrive in hunk order from the internal hashing thread; `new Progress<ChdProgress>(...)` marshals them back to the capturing context automatically.
+
 ### `ChdFile` — Random-access reader
 
 All `Open` overloads seek from the start. The reader is **not thread-safe** — serialize all calls.
@@ -247,17 +269,18 @@ All `Open` overloads seek from the start. The reader is **not thread-safe** — 
 |--------|-----------|-------------|
 | **ReadHunk** | `ChdError ReadHunk(uint, byte[])` | Decompress a single hunk. Serves cached hunks when `CacheSize > 1`. |
 | **Read** | `ChdError Read(ulong, byte[], int, int)` | Read byte range. Caches last hunk. |
+| **ReadAllBytes** | `ChdError ReadAllBytes(out byte[], IProgress<ChdProgress>? = null)` | Decompress entire image to a `byte[]`. Reports progress per hunk. |
 | **ConfigureCache** | `void ConfigureCache(int)` | Set the multi-hunk LRU cache size. `<= 1` disables it (single-slot behaviour). |
 | **Precache** | `ChdError Precache()` | Load the entire compressed file into memory for fast random access (libchdr `chd_precache` parity). Idempotent. |
 | **GetMetadata** | `ChdError GetMetadata(string?, uint, out ChdMetadataEntry?)` | Search metadata by tag + occurrence index (`null`/empty tag = wildcard). Returns `Chderrmetadatanotfound` when absent. |
-| **ReadAllBytes** | `ChdError ReadAllBytes(out byte[])` | Decompress entire image to a `byte[]`. |
-| **EnumerateHunks** | `IEnumerable<byte[]> EnumerateHunks()` | Yield each decompressed hunk. Buffer reused — copy if needed. |
+| **ReadAllBytes** | `ChdError ReadAllBytes(out byte[], IProgress<ChdProgress>? = null)` | Decompress entire image to a `byte[]`. Reports progress per hunk. |
+| **EnumerateHunks** | `IEnumerable<byte[]> EnumerateHunks(IProgress<ChdProgress>? = null)` | Yield each decompressed hunk. Buffer reused — copy if needed. Reports progress per hunk. |
 | **ReadHunkAsync** | `Task<ChdError> ReadHunkAsync(uint, byte[])` | Async hunk read. |
 | **ReadAsync** | `Task<ChdError> ReadAsync(ulong, byte[], int, int)` | Async byte range read. |
 | **GenerateCueSheet** | `string GenerateCueSheet(string)` | Generate CUE sheet for CD CHDs. |
 | **GenerateGdiDescriptor** | `string GenerateGdiDescriptor(string[])` | Generate GDI descriptor for GD-ROM CHDs. |
 | **ExportToc** | `string ExportToc()` | Export TOC as human-readable text. |
-| **ExtractToDirectory** | `List<string> ExtractToDirectory(string, string)` | Extract CHD tracks to directory. Returns file paths. |
+| **ExtractToDirectory** | `List<string> ExtractToDirectory(string, string, IProgress<ChdProgress>? = null)` | Extract CHD tracks to directory. Returns file paths. Reports progress per hunk. |
 | **Dispose** / **DisposeAsync** | `void Dispose()` / `ValueTask DisposeAsync()` | Release stream and parent. |
 
 #### Properties

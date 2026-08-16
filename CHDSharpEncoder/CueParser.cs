@@ -260,7 +260,7 @@ public class CueParser
         return new FileInfo(path).Length;
     }
 
-    private static void ParseTrackType(string typeString, ref CdTrack track)
+    internal static void ParseTrackType(string typeString, ref CdTrack track)
     {
         switch (typeString)
         {
@@ -308,7 +308,7 @@ public class CueParser
         }
     }
 
-    private static void ParseSubType(string subTypeString, ref CdTrack track)
+    internal static void ParseSubType(string subTypeString, ref CdTrack track)
     {
         switch (subTypeString)
         {
@@ -429,42 +429,6 @@ public class CueParser
     /// </summary>
     private static List<string> Tokenize(string line)
     {
-        var tokens = new List<string>();
-        bool singleQuote = false;
-        bool doubleQuote = false;
-        var sb = new StringBuilder();
-
-        int i = 0;
-        while (i < line.Length)
-        {
-            char c = line[i];
-            if (!singleQuote && c == '"')
-            {
-                doubleQuote = !doubleQuote;
-            }
-            else if (!doubleQuote && c == '\'')
-            {
-                singleQuote = !singleQuote;
-            }
-            else if (!singleQuote && !doubleQuote && char.IsWhiteSpace(c))
-            {
-                if (sb.Length > 0)
-                {
-                    tokens.Add(sb.ToString());
-                    sb.Clear();
-                }
-                while (i + 1 < line.Length && char.IsWhiteSpace(line[i + 1]))
-                    i++;
-            }
-            else
-            {
-                sb.Append(c);
-            }
-            i++;
-        }
-
-        if (sb.Length > 0)
-            tokens.Add(sb.ToString());
-        return tokens;
+        return CdImageParser.Tokenize(line);
     }
 }

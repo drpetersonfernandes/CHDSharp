@@ -14,6 +14,8 @@ public static class MetadataWriter
     public const int MetadataHeaderSize = 16;
     /// <summary>'CHT2' CD-ROM track metadata v2 tag (big-endian).</summary>
     public const uint CdRomTrackMetadata2Tag = 0x43485432;
+    /// <summary>'CHGD' GD-ROM track metadata tag (big-endian).</summary>
+    public const uint GdRomTrackMetadataTag = 0x43484744;
     /// <summary>CHD_MDFLAGS_CHECKSUM: the entry is covered by the combined SHA-1 verification.</summary>
     public const byte ChdMdflagsChecksum = 0x01;
 
@@ -72,24 +74,41 @@ public static class MetadataWriter
     }
 
     /// <summary>
-    /// Builds the 'CHT2' metadata entries (tag, checksum flag, null-terminated payload) for a
-    /// CD table of contents, in track order.
+    /// Builds the metadata entries (tag, checksum flag, null-terminated payload) for a
+    /// CD or GD-ROM table of contents, in track order: 'CHT2' entries for CDs, 'CHGD'
+    /// entries (with the PAD field) for GD-ROMs.
     /// </summary>
     public static List<MetadataEntry> BuildCdMetadataEntries(CdToc toc)
     {
         ArgumentNullException.ThrowIfNull(toc);
 
+        bool gdRom = (toc.Flags & CdTocFlags.GdRom) != 0;
+        uint tag = gdRom ? GdRomTrackMetadataTag : CdRomTrackMetadata2Tag;
+
         var entries = new List<MetadataEntry>(toc.Tracks.Count);
         foreach (var track in toc.Tracks)
         {
+            string text = gdRom ? BuildGdRomString(track) : BuildChd2String(track);
             entries.Add(new MetadataEntry
             {
-                Tag = CdRomTrackMetadata2Tag,
+                Tag = tag,
                 Flags = ChdMdflagsChecksum,
-                Payload = Encoding.ASCII.GetBytes(BuildChd2String(track) + '\0'),
+                Payload = Encoding.ASCII.GetBytes(text + '\0'),
             });
         }
         return entries;
+    }
+
+    /// <summary>
+    /// Builds the GD-ROM metadata string for a track, matching MAME's
+    /// <c>GDROM_TRACK_METADATA_FORMAT</c>:
+    /// <c>TRACK:%d TYPE:%s SUBTYPE:%s FRAMES:%d PAD:%d PREGAP:%d PGTYPE:%s PGSUB:%s POSTGAP:%d</c>.
+    /// </summary>
+    public static string BuildGdRomString(CdTrack track)
+    {
+        return $"TRACK:{track.Number} TYPE:{GetTypeString(track.TrackType)} SUBTYPE:{GetSubtypeString(track.SubType)} " +
+               $"FRAMES:{track.Frames} PAD:{track.PadFrames} PREGAP:{track.Pregap} PGTYPE:{GetTypeString(track.PgType)} " +
+               $"PGSUB:{GetSubtypeString(track.PgSub)} POSTGAP:{track.Postgap}";
     }
 
     /// <summary>

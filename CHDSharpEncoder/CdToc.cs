@@ -51,7 +51,18 @@ public static class CdSubType
     public const int None = 2;
 }
 
-/// <summary>Describes a single track of a CD, as parsed from a CUE sheet.</summary>
+/// <summary>Disc-level flags for the table of contents (mirrors MAME's <c>cdrom_file::toc</c> flags).</summary>
+public static class CdTocFlags
+{
+    /// <summary>The disc is a GD-ROM; tracks use CHGD metadata and physical (LBA) offsets.</summary>
+    public const uint GdRom = 0x00000001;
+    /// <summary>Legacy GD-ROM with little-endian CDDA data.</summary>
+    public const uint GdRomLe = 0x00000002;
+    /// <summary>Multisession CD.</summary>
+    public const uint MultiSession = 0x00000004;
+}
+
+/// <summary>Describes a single track of a CD, as parsed from a CUE/GDI/ISO/TOC sheet.</summary>
 public struct CdTrack
 {
     /// <summary>The 1-based track number.</summary>
@@ -64,7 +75,7 @@ public struct CdTrack
     public int DataSize;
     /// <summary>Size of subchannel data in each sector of this track.</summary>
     public int SubSize;
-    /// <summary>Number of frames in this track.</summary>
+    /// <summary>Number of frames in this track (includes pregap and pad frames where applicable).</summary>
     public int Frames;
     /// <summary>Number of "spillage" frames the track is padded to (CHD layout).</summary>
     public int PaddedFrames;
@@ -90,11 +101,18 @@ public struct CdTrack
     public bool Swap;
     /// <summary>Frame number this track starts at within the CHD logical image.</summary>
     public long LogicalFrameStart;
+    /// <summary>Zero-filled frames appended at the end of the track's data region (GDI gaps).</summary>
+    public int PadFrames;
+    /// <summary>Physical (LBA) frame offset of the track on the disc (GDI).</summary>
+    public int PhysicalFrameOffset;
 }
 
-/// <summary>The table of contents of a CD, as parsed from a CUE sheet.</summary>
+/// <summary>The table of contents of a CD, as parsed from a CUE/GDI/ISO/TOC sheet.</summary>
 public class CdToc
 {
     /// <summary>Gets the tracks in playback order.</summary>
     public List<CdTrack> Tracks { get; } = new();
+
+    /// <summary>Gets or sets the disc-level flags (see <see cref="CdTocFlags"/>).</summary>
+    public uint Flags { get; set; }
 }

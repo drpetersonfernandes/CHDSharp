@@ -144,10 +144,10 @@ public static class ChdEncoder
         codecTags ??= [CodecTags.ZLIB];
         var codecs = ChdCodecs.CreateAll(codecTags, hunkBytes);
 
-        // 1. Parse the CUE sheet
-        var toc = new CueParser().Parse(cuePath);
+        // 1. Parse the image descriptor (CUE, GDI, ISO or TOC)
+        var toc = CdImageParser.Parse(cuePath);
         if (toc.Tracks.Count == 0)
-            throw new InvalidDataException("CUE file contains no tracks");
+            throw new InvalidDataException($"{Path.GetExtension(cuePath)} file contains no tracks");
 
         // 2. Pad each track to a 4-frame boundary and assign logical frame positions
         ulong totalFrames = 0;
@@ -191,8 +191,10 @@ public static class ChdEncoder
                     var track = FindTrackContainingFrame(toc, frame);
                     int frameInTrack = (int)(frame - track.LogicalFrameStart);
 
-                    // frames past the track's data are padding and stay zero-filled
+                    // frames past the track's data and GDI gap (pad) frames are zero-filled
                     if (frameInTrack >= track.Frames)
+                        continue;
+                    if (track.PadFrames > 0 && frameInTrack >= track.Frames - track.PadFrames)
                         continue;
 
                     // the BIN file stores datasize+subsize bytes per sector (no subcode → 2352);

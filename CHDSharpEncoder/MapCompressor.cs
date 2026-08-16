@@ -5,16 +5,22 @@ public static class MapCompressor
 {
     private const byte COMPRESSION_RLE_SMALL = 7;
     private const byte COMPRESSION_RLE_LARGE = 8;
+    /// <summary>Promoted map type: SELF reference to the same source hunk as the previous SELF entry.</summary>
+    private const byte COMPRESSION_SELF_0 = 9;
+    /// <summary>Promoted map type: SELF reference to the source hunk after the previous SELF entry.</summary>
+    private const byte COMPRESSION_SELF_1 = 10;
 
     /// <summary>Compresses the hunk map entries into a compact binary representation.</summary>
-    /// <param name="entries">The array of map entries to compress.</param>
+    /// <param name="entries">The array of map entries to compress. SELF entries must carry the source
+    /// hunk index in <see cref="MapEntry.Offset"/> with <see cref="MapEntry.CompLength"/> and
+    /// <see cref="MapEntry.Crc16"/> set to zero.</param>
     /// <param name="hunkCount">The number of hunks in the image.</param>
     /// <param name="hunkBytes">The size of each hunk in bytes.</param>
     /// <param name="unitBytes">The unit size in bytes.</param>
     /// <returns>A byte array containing the compressed map data.</returns>
     public static byte[] Compress(MapEntry[] entries, uint hunkCount, uint hunkBytes, uint unitBytes)
     {
-        var rleList = RleEncode(entries, hunkCount);
+        var rleList = RleEncode(entries, hunkCount, out var maxSelf);
 
         uint maxCompLen = 0;
         for (uint i = 0; i < hunkCount; i++)
@@ -25,13 +31,14 @@ public static class MapCompressor
             }
         }
         var lengthBits = BitsForValue(maxCompLen);
+        var selfBits = BitsForValue(maxSelf);
 
         var huff = new Huffman16_8();
         foreach (var sym in rleList)
             huff.CountSymbol(sym);
         huff.BuildTree();
 
-        var nbitsNeeded = (8 * 16) + (12 + Math.Max(lengthBits + 16, 0)) * (int)hunkCount;
+        var nbitsNeeded = (8 * 16) + (12 + Math.Max(lengthBits + 16, selfBits)) * (int)hunkCount;
         var bs = new BitStreamOut(nbitsNeeded / 8 + 1 + 256);
 
         huff.ExportTreeRle(bs);
@@ -39,11 +46,42 @@ public static class MapCompressor
         foreach (var sym in rleList)
             huff.Encode(bs, sym);
 
+        // iterate the RLE-decoded types in lockstep with the raw entries, writing the
+        // auxiliary data for each hunk (SELF_0/SELF_1 pseudo-types encode nothing)
         ulong firstOffset = 0;
+        int rleIndex = 0;
+        byte lastComp = 0;
+        int repCount = 0;
         for (uint i = 0; i < hunkCount; i++)
         {
+            byte type;
+            if (repCount > 0)
+            {
+                type = lastComp;
+                repCount--;
+            }
+            else
+            {
+                var val = rleList[rleIndex++];
+                if (val == COMPRESSION_RLE_SMALL)
+                {
+                    type = lastComp;
+                    repCount = 2 + rleList[rleIndex++];
+                }
+                else if (val == COMPRESSION_RLE_LARGE)
+                {
+                    type = lastComp;
+                    repCount = 2 + 16 + (rleList[rleIndex++] << 4);
+                    repCount += rleList[rleIndex++];
+                }
+                else
+                {
+                    type = lastComp = val;
+                }
+            }
+
             var entry = entries[i];
-            switch (entry.Compression)
+            switch (type)
             {
                 case MapEntry.COMPRESSION_TYPE_0:
                 case MapEntry.COMPRESSION_TYPE_1:
@@ -65,6 +103,14 @@ public static class MapCompressor
                     }
 
                     break;
+                case MapEntry.COMPRESSION_SELF:
+                    // writes the source hunk index with selfBits; guaranteed to fit because
+                    // maxSelf covers every non-promoted SELF reference
+                    bs.Write((uint)entry.Offset, selfBits);
+                    break;
+                case COMPRESSION_SELF_0:
+                case COMPRESSION_SELF_1:
+                    break;
             }
         }
 
@@ -80,7 +126,7 @@ public static class MapCompressor
         headerW.WriteU48(firstOffset);
         headerW.WriteU16(mapCrc);
         headerW.WriteU8(lengthBits);
-        headerW.WriteU8(0);
+        headerW.WriteU8(selfBits);
         headerW.WriteU8(0);
         headerW.WriteU8(0);
 
@@ -92,15 +138,36 @@ public static class MapCompressor
         return result;
     }
 
-    private static List<byte> RleEncode(MapEntry[] entries, uint hunkCount)
+    /// <summary>
+    /// RLE-encodes the compression types, promoting SELF references to the compact
+    /// SELF_0/SELF_1 forms and tracking the maximum referenced source hunk index
+    /// (mirrors MAME's compress_v5_map).
+    /// </summary>
+    private static List<byte> RleEncode(MapEntry[] entries, uint hunkCount, out uint maxSelf)
     {
         var rleList = new List<byte>((int)hunkCount + 4);
         byte lastcomp = 0;
         var count = 0;
+        uint lastSelf = 0;
+        maxSelf = 0;
 
-        for (uint i = 0; i < hunkCount; i++)
+        for (uint hunknum = 0; hunknum < hunkCount; hunknum++)
         {
-            var curcomp = entries[i].Compression;
+            var curcomp = entries[hunknum].Compression;
+
+            if (curcomp == MapEntry.COMPRESSION_SELF)
+            {
+                // promote self references to the previous reference's form
+                var refHunk = (uint)entries[hunknum].Offset;
+                if (refHunk == lastSelf)
+                    curcomp = COMPRESSION_SELF_0;
+                else if (refHunk == lastSelf + 1)
+                    curcomp = COMPRESSION_SELF_1;
+                else
+                    maxSelf = Math.Max(maxSelf, refHunk);
+                lastSelf = refHunk;
+            }
+
             if (curcomp == lastcomp)
             {
                 count++;

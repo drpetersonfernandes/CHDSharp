@@ -37,6 +37,7 @@ public static class ChdEncoder
         var sha1 = new Sha1();
         long currentOffset = ChdHeaderV5.LENGTH;
         var processor = new HunkProcessor(hunkBytes);
+        var selfMap = new Dictionary<string, uint>((int)hunkCount);
 
         var readBuffer = new byte[hunkBytes];
 
@@ -57,10 +58,13 @@ public static class ChdEncoder
             // of a partial final hunk (chdman verify computes it over logicalbytes)
             sha1.Append(readBuffer, 0, bytesRead);
 
-            var (entry, data) = processor.ProcessHunk(readBuffer, currentOffset);
+            var (entry, data) = ProcessHunkWithDedup(processor, readBuffer, currentOffset, h, selfMap);
             entries[h] = entry;
-            blockList.Add(data);
-            currentOffset += data.Length;
+            if (data != null)
+            {
+                blockList.Add(data);
+                currentOffset += data.Length;
+            }
         }
 
         var rawSha1 = sha1.Finish();
@@ -158,6 +162,7 @@ public static class ChdEncoder
         var sha1 = new Sha1();
         long currentOffset = ChdHeaderV5.LENGTH;
         var processor = new HunkProcessor(hunkBytes);
+        var selfMap = new Dictionary<string, uint>((int)hunkCount);
         var readBuffer = new byte[hunkBytes];
         var sourceFiles = new Dictionary<string, FileStream>(StringComparer.OrdinalIgnoreCase);
 
@@ -198,10 +203,13 @@ public static class ChdEncoder
 
                 sha1.Append(readBuffer, 0, (int)hunkBytes);
 
-                var (entry, data) = processor.ProcessHunk(readBuffer, currentOffset);
+                var (entry, data) = ProcessHunkWithDedup(processor, readBuffer, currentOffset, h, selfMap);
                 entries[h] = entry;
-                blockList.Add(data);
-                currentOffset += data.Length;
+                if (data != null)
+                {
+                    blockList.Add(data);
+                    currentOffset += data.Length;
+                }
             }
         }
         finally
@@ -257,6 +265,37 @@ public static class ChdEncoder
                 return track;
         }
         throw new InvalidDataException($"Frame {frame} falls outside all tracks");
+    }
+
+    /// <summary>
+    /// Compresses a hunk unless an identical hunk was already stored, in which case a
+    /// COMPRESSION_SELF map entry referencing it is produced and no data is written.
+    /// Only data-bearing hunks are added to the self map, so SELF references never chain
+    /// (mirrors MAME's chd_file_compressor self map).
+    /// </summary>
+    /// <returns>The map entry and the data to write, or <c>null</c> data for a SELF reference.</returns>
+    private static (MapEntry Entry, byte[]? Data) ProcessHunkWithDedup(
+        HunkProcessor processor, byte[] rawHunk, long currentOffset, uint hunkIndex,
+        Dictionary<string, uint> selfMap)
+    {
+        var sha1Hex = Convert.ToHexString(Sha1.Compute(rawHunk));
+        if (selfMap.TryGetValue(sha1Hex, out var sourceHunk))
+        {
+            return (
+                new MapEntry
+                {
+                    Compression = MapEntry.COMPRESSION_SELF,
+                    CompLength = 0,
+                    Offset = sourceHunk,
+                    Crc16 = 0,
+                },
+                null
+            );
+        }
+
+        var (entry, data) = processor.ProcessHunk(rawHunk, currentOffset);
+        selfMap[sha1Hex] = hunkIndex;
+        return (entry, data);
     }
 
     private static FileStream GetSourceFile(Dictionary<string, FileStream> files, string fileName)

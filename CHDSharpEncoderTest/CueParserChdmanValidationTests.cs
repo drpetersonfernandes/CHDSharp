@@ -63,7 +63,7 @@ public class CueParserChdmanValidationTests : IDisposable
 
         // parse the CUE with our parser and build the CHT2 metadata strings it implies
         var toc = new CueParser().Parse(cuePath);
-        var expected = toc.Tracks.Select(BuildCht2String).ToList();
+        var expected = toc.Tracks.Select(MetadataWriter.BuildChd2String).ToList();
 
         // read the metadata chdman actually wrote
         var openErr = ChdFile.Open(chdPath, out var chd);
@@ -107,7 +107,7 @@ public class CueParserChdmanValidationTests : IDisposable
         Assert.True(exitCode == 0, $"chdman createcd failed (exit={exitCode})\nstdout: {stdout}\nstderr: {stderr}");
 
         var toc = new CueParser().Parse(cuePath);
-        var expected = toc.Tracks.Select(BuildCht2String).ToList();
+        var expected = toc.Tracks.Select(MetadataWriter.BuildChd2String).ToList();
 
         var openErr = ChdFile.Open(chdPath, out var chd);
         Assert.Equal(ChdError.Chderrnone, openErr);
@@ -122,42 +122,6 @@ public class CueParserChdmanValidationTests : IDisposable
             for (int i = 0; i < expected.Count; i++)
                 Assert.Equal(expected[i], actual[i]);
         }
-    }
-
-    private static string BuildCht2String(CdTrack track)
-    {
-        string pgType = track.PgDataSize > 0
-            ? "V" + GetTypeString(track.PgType)
-            : GetTypeString(track.PgType);
-        return $"TRACK:{track.Number} TYPE:{GetTypeString(track.TrackType)} SUBTYPE:{GetSubTypeString(track.SubType)} " +
-               $"FRAMES:{track.Frames} PREGAP:{track.Pregap} PGTYPE:{pgType} PGSUB:{GetSubTypeString(track.PgSub)} " +
-               $"POSTGAP:{track.Postgap}";
-    }
-
-    private static string GetTypeString(int type)
-    {
-        return type switch
-        {
-            CdTrackType.Mode1 => "MODE1",
-            CdTrackType.Mode1Raw => "MODE1_RAW",
-            CdTrackType.Mode2 => "MODE2",
-            CdTrackType.Mode2Form1 => "MODE2_FORM1",
-            CdTrackType.Mode2Form2 => "MODE2_FORM2",
-            CdTrackType.Mode2FormMix => "MODE2_FORM_MIX",
-            CdTrackType.Mode2Raw => "MODE2_RAW",
-            CdTrackType.Audio => "AUDIO",
-            _ => "UNKNOWN"
-        };
-    }
-
-    private static string GetSubTypeString(int subtype)
-    {
-        return subtype switch
-        {
-            CdSubType.Normal => "RW",
-            CdSubType.Raw => "RW_RAW",
-            _ => "NONE"
-        };
     }
 
     private static (int ExitCode, string StdOut, string StdErr) RunChdman(params string[] args)

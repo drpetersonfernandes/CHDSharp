@@ -19,11 +19,15 @@ public static class ChdEncoder
     /// <param name="hunkBytes">Hunk size in bytes (default 4096).</param>
     /// <param name="unitBytes">Unit size in bytes (default 512).</param>
     /// <exception cref="ArgumentException"><paramref name="hunkBytes"/> is not a multiple of <paramref name="unitBytes"/>.</exception>
-    public static void EncodeRaw(Stream sourceStream, string chdPath, uint hunkBytes = 4096, uint unitBytes = 512)
+    public static void EncodeRaw(Stream sourceStream, string chdPath, uint hunkBytes = 4096, uint unitBytes = 512,
+        IReadOnlyList<uint>? codecTags = null)
     {
         ArgumentNullException.ThrowIfNull(sourceStream);
         if (hunkBytes == 0 || unitBytes == 0 || hunkBytes % unitBytes != 0)
             throw new ArgumentException($"hunkBytes ({hunkBytes}) must be a multiple of unitBytes ({unitBytes})");
+
+        codecTags ??= [CodecTags.ZLIB];
+        var codecs = ChdCodecs.CreateAll(codecTags, hunkBytes);
 
         var logicalBytes = (ulong)sourceStream.Length;
         var hunkCount = (uint)((logicalBytes + hunkBytes - 1) / hunkBytes);
@@ -36,7 +40,7 @@ public static class ChdEncoder
         var blockList = new List<byte[]>();
         var sha1 = new Sha1();
         long currentOffset = ChdHeaderV5.LENGTH;
-        var processor = new HunkProcessor(hunkBytes);
+        var processor = new HunkProcessor(hunkBytes, codecs);
         var selfMap = new Dictionary<string, uint>((int)hunkCount);
 
         var readBuffer = new byte[hunkBytes];
@@ -75,7 +79,7 @@ public static class ChdEncoder
         // Write file
         using var fs = new FileStream(chdPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
 
-        var header = ChdHeaderV5.CreateRaw(CodecTags.ZLIB, logicalBytes, hunkBytes, unitBytes);
+        var header = ChdHeaderV5.CreateRaw(codecTags.ToArray(), logicalBytes, hunkBytes, unitBytes);
         header.WriteToStream(fs);
 
         foreach (var block in blockList)
@@ -107,10 +111,11 @@ public static class ChdEncoder
     /// <param name="hunkBytes">Hunk size in bytes (default 4096).</param>
     /// <param name="unitBytes">Unit size in bytes (default 512).</param>
     /// <exception cref="ArgumentException"><paramref name="hunkBytes"/> is not a multiple of <paramref name="unitBytes"/>.</exception>
-    public static void EncodeRaw(string sourcePath, string chdPath, uint hunkBytes = 4096, uint unitBytes = 512)
+    public static void EncodeRaw(string sourcePath, string chdPath, uint hunkBytes = 4096, uint unitBytes = 512,
+        IReadOnlyList<uint>? codecTags = null)
     {
         using var fs = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        EncodeRaw(fs, chdPath, hunkBytes, unitBytes);
+        EncodeRaw(fs, chdPath, hunkBytes, unitBytes, codecTags);
     }
 
     /// <summary>
@@ -127,13 +132,17 @@ public static class ChdEncoder
     /// <exception cref="FileNotFoundException">The CUE file or a referenced data file does not exist.</exception>
     /// <exception cref="InvalidDataException">The CUE sheet is malformed or contains no tracks.</exception>
     public static void EncodeCd(string cuePath, string chdPath,
-        uint hunkBytes = CdConstants.FramesPerHunk * CdConstants.FrameSize, uint unitBytes = CdConstants.FrameSize)
+        uint hunkBytes = CdConstants.FramesPerHunk * CdConstants.FrameSize, uint unitBytes = CdConstants.FrameSize,
+        IReadOnlyList<uint>? codecTags = null)
     {
         ArgumentNullException.ThrowIfNull(cuePath);
         if (unitBytes != CdConstants.FrameSize)
             throw new ArgumentException($"unitBytes ({unitBytes}) must be the CD frame size ({CdConstants.FrameSize})");
         if (hunkBytes == 0 || hunkBytes % unitBytes != 0)
             throw new ArgumentException($"hunkBytes ({hunkBytes}) must be a multiple of unitBytes ({unitBytes})");
+
+        codecTags ??= [CodecTags.ZLIB];
+        var codecs = ChdCodecs.CreateAll(codecTags, hunkBytes);
 
         // 1. Parse the CUE sheet
         var toc = new CueParser().Parse(cuePath);
@@ -161,7 +170,7 @@ public static class ChdEncoder
         var blockList = new List<byte[]>();
         var sha1 = new Sha1();
         long currentOffset = ChdHeaderV5.LENGTH;
-        var processor = new HunkProcessor(hunkBytes);
+        var processor = new HunkProcessor(hunkBytes, codecs);
         var selfMap = new Dictionary<string, uint>((int)hunkCount);
         var readBuffer = new byte[hunkBytes];
         var sourceFiles = new Dictionary<string, FileStream>(StringComparer.OrdinalIgnoreCase);
@@ -227,7 +236,7 @@ public static class ChdEncoder
         // 5. Write output file
         using var fs = new FileStream(chdPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
 
-        var header = ChdHeaderV5.CreateRaw(CodecTags.ZLIB, logicalBytes, hunkBytes, unitBytes);
+        var header = ChdHeaderV5.CreateRaw(codecTags.ToArray(), logicalBytes, hunkBytes, unitBytes);
         header.WriteToStream(fs);
 
         foreach (var block in blockList)

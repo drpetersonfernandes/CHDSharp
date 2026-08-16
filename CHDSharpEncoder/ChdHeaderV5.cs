@@ -107,20 +107,32 @@ public class ChdHeaderV5
     /// <returns>A new <see cref="ChdHeaderV5"/> configured for a raw image.</returns>
     public static ChdHeaderV5 CreateRaw(uint compressors0, ulong logicalBytes, uint hunkBytes, uint unitBytes)
     {
+        return CreateRaw(new[] { compressors0, 0u, 0u, 0u }, logicalBytes, hunkBytes, unitBytes);
+    }
+
+    /// <summary>Creates a header for a compressed CHD image with up to 4 codecs.</summary>
+    /// <param name="compressors">The compressor codec tags (up to 4; empty slots use <see cref="CodecTags.NONE"/>).</param>
+    /// <param name="logicalBytes">The total logical size in bytes.</param>
+    /// <param name="hunkBytes">The hunk size in bytes.</param>
+    /// <param name="unitBytes">The unit size in bytes.</param>
+    /// <returns>A new <see cref="ChdHeaderV5"/> configured for the image.</returns>
+    public static ChdHeaderV5 CreateRaw(uint[] compressors, ulong logicalBytes, uint hunkBytes, uint unitBytes)
+    {
+        ArgumentNullException.ThrowIfNull(compressors);
+
+        var codecArray = new uint[4];
+        for (int i = 0; i < 4; i++)
+            codecArray[i] = i < compressors.Length ? compressors[i] : CodecTags.NONE;
+
         return new ChdHeaderV5
         {
-            Compressors = new[] { compressors0, 0u, 0u, 0u },
+            Compressors = codecArray,
             LogicalBytes = logicalBytes,
-            MapOffset = IsCompressedCheck(compressors0) ? 0uL : LENGTH,
+            MapOffset = codecArray[0] != CodecTags.NONE ? 0uL : LENGTH,
             MetaOffset = 0,
             HunkBytes = hunkBytes,
             UnitBytes = unitBytes,
         };
-    }
-
-    private static bool IsCompressedCheck(uint compressor0)
-    {
-        return compressor0 != CodecTags.NONE;
     }
 
     private static uint ReadU32BE(byte[] data, int offset)

@@ -45,8 +45,8 @@ internal class Program
             serilogLogger.Information("  CHDSharpCli --toc <file.chd>                   Print table-of-contents for CD/GD-ROM CHD");
             serilogLogger.Information("  CHDSharpCli --cue <file.chd> [<binfile>]       Generate CUE sheet for CD CHD");
             serilogLogger.Information("  CHDSharpCli --classify <file.chd>              Classify CHD type (cd/dvd/hdd/gd-rom)");
-            serilogLogger.Information("  CHDSharpCli --create <in.bin> <out.chd>        Create CHD from raw binary [-hs N] [-us N]");
-            serilogLogger.Information("  CHDSharpCli --createcd <in.cue> <out.chd>      Create CD CHD from CUE/BIN [-hs N] [-us N]");
+            serilogLogger.Information("  CHDSharpCli --create <in.bin> <out.chd>        Create CHD from raw binary [-c zlib,zstd,lzma] [-hs N] [-us N]");
+            serilogLogger.Information("  CHDSharpCli --createcd <in.cue> <out.chd>      Create CD CHD from CUE/BIN [-c zlib,zstd,lzma] [-hs N] [-us N]");
             return;
         }
 
@@ -534,7 +534,7 @@ internal class Program
     /// </summary>
     /// <param name="inputPath">Path to the raw input file.</param>
     /// <param name="outputPath">Path of the output .chd file.</param>
-    /// <param name="options">Optional <c>-hs</c> hunk size and <c>-us</c> unit size arguments.</param>
+    /// <param name="options">Optional <c>-c</c> codec list, <c>-hs</c> hunk size and <c>-us</c> unit size arguments.</param>
     private static void CreateRawTest(string inputPath, string outputPath, string[] options)
     {
         var log = Log.Logger;
@@ -546,14 +546,17 @@ internal class Program
 
         var hunkBytes = 4096u;
         var unitBytes = 512u;
-        if (!TryParseOptions(options, ref hunkBytes, ref unitBytes))
+        string? codecs = null;
+        if (!TryParseOptions(options, ref hunkBytes, ref unitBytes, ref codecs))
             return;
 
         try
         {
-            log.Information("Creating CHD: {Input} -> {Output}  (hunk {Hunk}B, unit {Unit}B)",
-                Path.GetFileName(inputPath), outputPath, hunkBytes, unitBytes);
-            ChdEncoder.EncodeRaw(inputPath, outputPath, hunkBytes, unitBytes);
+            var codecTags = ChdCodecs.ParseCodecTags(codecs);
+            log.Information("Creating CHD: {Input} -> {Output}  (hunk {Hunk}B, unit {Unit}B, codecs {Codecs})",
+                Path.GetFileName(inputPath), outputPath, hunkBytes, unitBytes,
+                string.Join(",", codecTags.Select(CodecTags.ToString)));
+            ChdEncoder.EncodeRaw(inputPath, outputPath, hunkBytes, unitBytes, codecTags);
             log.Information("  Created {Size:N0} bytes", new FileInfo(outputPath).Length);
             VerifyResultChd(outputPath);
         }
@@ -569,7 +572,7 @@ internal class Program
     /// </summary>
     /// <param name="inputPath">Path of the .cue file.</param>
     /// <param name="outputPath">Path of the output .chd file.</param>
-    /// <param name="options">Optional <c>-hs</c> hunk size and <c>-us</c> unit size arguments.</param>
+    /// <param name="options">Optional <c>-c</c> codec list, <c>-hs</c> hunk size and <c>-us</c> unit size arguments.</param>
     private static void CreateCdTest(string inputPath, string outputPath, string[] options)
     {
         var log = Log.Logger;
@@ -581,14 +584,17 @@ internal class Program
 
         uint hunkSize = (uint)(CdConstants.FramesPerHunk * CdConstants.FrameSize);
         uint unitBytes = (uint)CdConstants.FrameSize;
-        if (!TryParseOptions(options, ref hunkSize, ref unitBytes))
+        string? codecs = null;
+        if (!TryParseOptions(options, ref hunkSize, ref unitBytes, ref codecs))
             return;
 
         try
         {
-            log.Information("Creating CD CHD: {Input} -> {Output}  (hunk {Hunk}B, unit {Unit}B)",
-                Path.GetFileName(inputPath), outputPath, hunkSize, unitBytes);
-            ChdEncoder.EncodeCd(inputPath, outputPath, hunkSize, unitBytes);
+            var codecTags = ChdCodecs.ParseCodecTags(codecs);
+            log.Information("Creating CD CHD: {Input} -> {Output}  (hunk {Hunk}B, unit {Unit}B, codecs {Codecs})",
+                Path.GetFileName(inputPath), outputPath, hunkSize, unitBytes,
+                string.Join(",", codecTags.Select(CodecTags.ToString)));
+            ChdEncoder.EncodeCd(inputPath, outputPath, hunkSize, unitBytes, codecTags);
             log.Information("  Created ({File:N0} bytes)", new FileInfo(outputPath).Length);
             VerifyResultChd(outputPath);
         }
@@ -598,13 +604,16 @@ internal class Program
         }
     }
 
-    /// <summary>Parses optional <c>-hs</c>/<c>-us</c> pairs from the CLI arguments.</summary>
-    private static bool TryParseOptions(string[] options, ref uint hunkSize, ref uint unitSize)
+    /// <summary>Parses optional <c>-c</c>/<c>-hs</c>/<c>-us</c> arguments from the CLI.</summary>
+    private static bool TryParseOptions(string[] options, ref uint hunkSize, ref uint unitSize, ref string? codecs)
     {
         for (int i = 0; i < options.Length; i++)
         {
             switch (options[i])
             {
+                case "-c" or "--codecs" when i + 1 < options.Length:
+                    codecs = options[++i];
+                    break;
                 case "-hs" or "--hunk-size" when i + 1 < options.Length:
                     if (!uint.TryParse(options[++i], out var hs) || hs == 0)
                     {

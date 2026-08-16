@@ -1,13 +1,26 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
-    <PropertyGroup>
+<PropertyGroup>
         <OutputType>Library</OutputType>
         <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
         <RootNamespace>CHDSharpEncoder</RootNamespace>
+        <!-- NU1902: SharpCompress 0.39.0 is pinned because 0.48+ replaced the raw LZMA
+             stream API with a chunked format incompatible with CHD. The flagged advisory
+             (GHSA-6c8g-7p36-r338, zip-slip) affects the archive extraction APIs
+             (WriteToDirectory) which this project never calls; we only use the raw
+             LZMA stream class on trusted in-memory hunk data. -->
+        <NoWarn>$(NoWarn);NU1902</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
         <InternalsVisibleTo Include="CHDSharpEncoderTest" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="SharpCompress" Version="0.39.0" />
+      <PackageReference Include="ZstdSharp.Port" Version="0.8.8" />
+    </ItemGroup>
+
 </Project>
+
+

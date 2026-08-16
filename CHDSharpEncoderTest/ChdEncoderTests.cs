@@ -173,6 +173,32 @@ public class ChdEncoderTests
     }
 
     [Fact]
+    public void NonAlignedSize_Sha1CoversSourceBytesOnly()
+    {
+        // the raw SHA-1 must cover the actual source bytes, not the zero-padded
+        // final hunk, so that chdman verify succeeds for non-aligned sizes
+        byte[] source = new byte[10000];
+        for (int i = 0; i < source.Length; i++) source[i] = (byte)((i * 13) & 0xFF);
+        string chdPath = Path.GetTempFileName();
+
+        try
+        {
+            using var ms = new MemoryStream(source);
+            ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512);
+
+            byte[] chd = File.ReadAllBytes(chdPath);
+            byte[] storedRawSha1 = chd.AsSpan(64, 20).ToArray();
+            byte[] expectedSha1 = Sha1.Compute(source);
+
+            Assert.Equal(expectedSha1, storedRawSha1);
+        }
+        finally
+        {
+            if (File.Exists(chdPath)) File.Delete(chdPath);
+        }
+    }
+
+    [Fact]
     public void InvalidHunkUnitRatio_throws()
     {
         using var ms = new MemoryStream(new byte[4096]);

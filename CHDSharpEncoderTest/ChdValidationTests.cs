@@ -4,14 +4,20 @@ using CHDSharp.Models;
 
 namespace CHDSharpEncoderTest;
 
-public class ChdValidationTests
+public class ChdValidationTests : IDisposable
 {
-    private static readonly string TestDataDir =
-        Path.Combine(Path.GetTempPath(), "chd_validation_tests");
+    private readonly string TestDataDir;
 
     public ChdValidationTests()
     {
+        // unique per test class instance: the test host runs per-TFM in parallel
+        TestDataDir = Path.Combine(Path.GetTempPath(), "chd_validation_tests_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(TestDataDir);
+    }
+
+    public void Dispose()
+    {
+        try { Directory.Delete(TestDataDir, recursive: true); } catch { }
     }
 
     [Fact]

@@ -1,8 +1,25 @@
 namespace CHDSharpEncoder;
 
-internal class ChdEncoder
+/// <summary>
+/// Creates CHD v5 files from raw binary data (<see cref="EncodeRaw"/>) or from CD
+/// CUE/BIN sources (<see cref="EncodeCd"/>). Uses the zlib codec, matching chdman's
+/// <c>--compression zlib</c> output; produced files pass <c>chdman verify</c> and
+/// extract byte-identically via <c>chdman extractraw</c>.
+/// </summary>
+public static class ChdEncoder
 {
-    internal static void EncodeRaw(Stream sourceStream, string chdPath, uint hunkBytes = 4096, uint unitBytes = 512)
+    /// <summary>
+    /// Encodes a raw binary stream into a compressed CHD v5 file. The last hunk is
+    /// zero-padded in the file when the source size is not a multiple of
+    /// <paramref name="hunkBytes"/>; the stored raw SHA-1 covers only the actual source
+    /// bytes, so <c>chdman verify</c> succeeds for any input size.
+    /// </summary>
+    /// <param name="sourceStream">The raw source data; the full stream is consumed from its start.</param>
+    /// <param name="chdPath">Path of the output .chd file (created/overwritten).</param>
+    /// <param name="hunkBytes">Hunk size in bytes (default 4096).</param>
+    /// <param name="unitBytes">Unit size in bytes (default 512).</param>
+    /// <exception cref="ArgumentException"><paramref name="hunkBytes"/> is not a multiple of <paramref name="unitBytes"/>.</exception>
+    public static void EncodeRaw(Stream sourceStream, string chdPath, uint hunkBytes = 4096, uint unitBytes = 512)
     {
         ArgumentNullException.ThrowIfNull(sourceStream);
         if (hunkBytes == 0 || unitBytes == 0 || hunkBytes % unitBytes != 0)
@@ -28,14 +45,17 @@ internal class ChdEncoder
             Array.Clear(readBuffer, 0, (int)hunkBytes);
 
             var streamOffset = (long)h * hunkBytes;
+            int bytesRead = 0;
             if (streamOffset < (long)logicalBytes)
             {
                 sourceStream.Position = streamOffset;
-                var bytesRead = sourceStream.Read(readBuffer, 0, (int)hunkBytes);
+                bytesRead = sourceStream.Read(readBuffer, 0, (int)hunkBytes);
                 // remaining bytes stay zero (default)
             }
 
-            sha1.Append(readBuffer, 0, (int)hunkBytes);
+            // the raw SHA-1 covers only the actual source bytes, not the zero padding
+            // of a partial final hunk (chdman verify computes it over logicalbytes)
+            sha1.Append(readBuffer, 0, bytesRead);
 
             var (entry, data) = processor.ProcessHunk(readBuffer, currentOffset);
             entries[h] = entry;
@@ -75,13 +95,34 @@ internal class ChdEncoder
         fs.Write(combinedSha1, 0, 20);
     }
 
-    internal static void EncodeRaw(string sourcePath, string chdPath, uint hunkBytes = 4096, uint unitBytes = 512)
+    /// <summary>
+    /// Encodes a raw binary file into a compressed CHD v5 file.
+    /// </summary>
+    /// <param name="sourcePath">Path of the raw input file.</param>
+    /// <param name="chdPath">Path of the output .chd file (created/overwritten).</param>
+    /// <param name="hunkBytes">Hunk size in bytes (default 4096).</param>
+    /// <param name="unitBytes">Unit size in bytes (default 512).</param>
+    /// <exception cref="ArgumentException"><paramref name="hunkBytes"/> is not a multiple of <paramref name="unitBytes"/>.</exception>
+    public static void EncodeRaw(string sourcePath, string chdPath, uint hunkBytes = 4096, uint unitBytes = 512)
     {
         using var fs = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
         EncodeRaw(fs, chdPath, hunkBytes, unitBytes);
     }
 
-    internal static void EncodeCd(string cuePath, string chdPath,
+    /// <summary>
+    /// Encodes a CD image from a CUE sheet into a compressed CHD v5 file. Tracks are
+    /// padded to 4-frame boundaries, audio sectors are byte-swapped to big-endian (as on
+    /// the physical disc), and one CHT2 metadata entry is written per track.
+    /// </summary>
+    /// <param name="cuePath">Path of the .cue file; referenced BIN/WAV files are resolved relative to it.</param>
+    /// <param name="chdPath">Path of the output .chd file (created/overwritten).</param>
+    /// <param name="hunkBytes">Hunk size in bytes (default 19584 = 8 CD frames).</param>
+    /// <param name="unitBytes">Unit size in bytes (default 2448 = CD frame with subcode).</param>
+    /// <exception cref="ArgumentException"><paramref name="unitBytes"/> is not the CD frame size, or
+    /// <paramref name="hunkBytes"/> is not a multiple of it.</exception>
+    /// <exception cref="FileNotFoundException">The CUE file or a referenced data file does not exist.</exception>
+    /// <exception cref="InvalidDataException">The CUE sheet is malformed or contains no tracks.</exception>
+    public static void EncodeCd(string cuePath, string chdPath,
         uint hunkBytes = CdConstants.FramesPerHunk * CdConstants.FrameSize, uint unitBytes = CdConstants.FrameSize)
     {
         ArgumentNullException.ThrowIfNull(cuePath);

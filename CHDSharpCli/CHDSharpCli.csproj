@@ -10,6 +10,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\CHDSharpLib\CHDSharpLib.csproj" />
+      <ProjectReference Include="..\CHDSharpEncoder\CHDSharpEncoder.csproj" />
     </ItemGroup>
 
     <ItemGroup>

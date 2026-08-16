@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
 using CHDSharp.Models;
+using CHDSharpEncoder;
 using Serilog;
 using Serilog.Extensions.Logging;
 
@@ -9,7 +10,8 @@ namespace CHDSharp.Cli;
 
 /// <summary>
 /// Command-line entry point for CHDSharp. Provides file verification, random-access testing,
-/// CD TOC inspection, CUE sheet generation, CHD classification, and parent/child CHD validation.
+/// CD TOC inspection, CUE sheet generation, CHD classification, parent/child CHD validation,
+/// and CHD creation (raw and CUE/BIN CD images).
 /// Uses Serilog for console logging throughout.
 /// </summary>
 internal class Program
@@ -17,7 +19,7 @@ internal class Program
     /// <summary>
     /// Application entry point. Parses command-line arguments and dispatches to the
     /// appropriate operation: directory scanning, random-access test, list-based verification,
-    /// parent/child test, TOC dump, CUE sheet generation, or CHD classification.
+    /// parent/child test, TOC dump, CUE sheet generation, CHD classification, or CHD creation.
     /// </summary>
     /// <param name="args">Command-line arguments defining the operation and its parameters.</param>
     private static void Main(string[] args)
@@ -43,6 +45,8 @@ internal class Program
             serilogLogger.Information("  CHDSharpCli --toc <file.chd>                   Print table-of-contents for CD/GD-ROM CHD");
             serilogLogger.Information("  CHDSharpCli --cue <file.chd> [<binfile>]       Generate CUE sheet for CD CHD");
             serilogLogger.Information("  CHDSharpCli --classify <file.chd>              Classify CHD type (cd/dvd/hdd/gd-rom)");
+            serilogLogger.Information("  CHDSharpCli --create <in.bin> <out.chd>        Create CHD from raw binary [-hs N] [-us N]");
+            serilogLogger.Information("  CHDSharpCli --createcd <in.cue> <out.chd>      Create CD CHD from CUE/BIN [-hs N] [-us N]");
             return;
         }
 
@@ -88,6 +92,20 @@ internal class Program
                 return;
             case "--classify":
                 ClassifyTest(args[1].Replace("\"", ""));
+                serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
+            case "--create" when args.Length < 3:
+                serilogLogger.Warning("--create requires <input.bin> <output.chd>");
+                return;
+            case "--create":
+                CreateRawTest(args[1].Replace("\"", ""), args[2].Replace("\"", ""), args.Skip(3).ToArray());
+                serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
+            case "--createcd" when args.Length < 3:
+                serilogLogger.Warning("--createcd requires <input.cue> <output.chd>");
+                return;
+            case "--createcd":
+                CreateCdTest(args[1].Replace("\"", ""), args[2].Replace("\"", ""), args.Skip(3).ToArray());
                 serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
                 return;
         }
@@ -508,5 +526,117 @@ internal class Program
         log.Information("{File}: {Classification}",
             Path.GetFileName(file),
             classification ?? "unknown/raw");
+    }
+
+    /// <summary>
+    /// Creates a CHD from a raw binary file and verifies the result with a deep
+    /// CHDSharpLib check.
+    /// </summary>
+    /// <param name="inputPath">Path to the raw input file.</param>
+    /// <param name="outputPath">Path of the output .chd file.</param>
+    /// <param name="options">Optional <c>-hs</c> hunk size and <c>-us</c> unit size arguments.</param>
+    private static void CreateRawTest(string inputPath, string outputPath, string[] options)
+    {
+        var log = Log.Logger;
+        if (!File.Exists(inputPath))
+        {
+            log.Warning("--create: input file not found: {Path}", inputPath);
+            return;
+        }
+
+        var hunkBytes = 4096u;
+        var unitBytes = 512u;
+        if (!TryParseOptions(options, ref hunkBytes, ref unitBytes))
+            return;
+
+        try
+        {
+            log.Information("Creating CHD: {Input} -> {Output}  (hunk {Hunk}B, unit {Unit}B)",
+                Path.GetFileName(inputPath), outputPath, hunkBytes, unitBytes);
+            ChdEncoder.EncodeRaw(inputPath, outputPath, hunkBytes, unitBytes);
+            log.Information("  Created {Size:N0} bytes", new FileInfo(outputPath).Length);
+            VerifyResultChd(outputPath);
+        }
+        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
+        {
+            log.Warning("--create failed: {Message}", ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Creates a CD CHD from a CUE sheet using the CHDSharpEncoder, then verifies
+    /// the file with a deep CHDSharpLib check.
+    /// </summary>
+    /// <param name="inputPath">Path of the .cue file.</param>
+    /// <param name="outputPath">Path of the output .chd file.</param>
+    /// <param name="options">Optional <c>-hs</c> hunk size and <c>-us</c> unit size arguments.</param>
+    private static void CreateCdTest(string inputPath, string outputPath, string[] options)
+    {
+        var log = Log.Logger;
+        if (!File.Exists(inputPath))
+        {
+            log.Warning("--createcd: input file not found: {Path}", inputPath);
+            return;
+        }
+
+        uint hunkSize = (uint)(CdConstants.FramesPerHunk * CdConstants.FrameSize);
+        uint unitBytes = (uint)CdConstants.FrameSize;
+        if (!TryParseOptions(options, ref hunkSize, ref unitBytes))
+            return;
+
+        try
+        {
+            log.Information("Creating CD CHD: {Input} -> {Output}  (hunk {Hunk}B, unit {Unit}B)",
+                Path.GetFileName(inputPath), outputPath, hunkSize, unitBytes);
+            ChdEncoder.EncodeCd(inputPath, outputPath, hunkSize, unitBytes);
+            log.Information("  Created ({File:N0} bytes)", new FileInfo(outputPath).Length);
+            VerifyResultChd(outputPath);
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidDataException or IOException or UnauthorizedAccessException or FileNotFoundException)
+        {
+            log.Warning("--createcd failed: {Message}", ex.Message);
+        }
+    }
+
+    /// <summary>Parses optional <c>-hs</c>/<c>-us</c> pairs from the CLI arguments.</summary>
+    private static bool TryParseOptions(string[] options, ref uint hunkSize, ref uint unitSize)
+    {
+        for (int i = 0; i < options.Length; i++)
+        {
+            switch (options[i])
+            {
+                case "-hs" or "--hunk-size" when i + 1 < options.Length:
+                    if (!uint.TryParse(options[++i], out var hs) || hs == 0)
+                    {
+                        Log.Logger.Warning("Invalid hunk size: {Value}", options[i]);
+                        return false;
+                    }
+                    hunkSize = hs;
+                    break;
+                case "-us" or "--unit-size" when i + 1 < options.Length:
+                    if (!uint.TryParse(options[++i], out var us) || us == 0)
+                    {
+                        Log.Logger.Warning("Invalid unit size: {Value}", options[i]);
+                        return false;
+                    }
+                    unitSize = us;
+                    break;
+                default:
+                    Log.Logger.Warning("Unknown option: {Option}", options[i]);
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    /// <summary>Runs a deep CHDSharpLib check on a created CHD file (raw + combined SHA1).</summary>
+    private static void VerifyResultChd(string path)
+    {
+        using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        var result = Chd.CheckFile(fs, Path.GetFileName(path), deepCheck: true);
+        if (result.IsSuccess)
+            Log.Logger.Information("  Verified OK (V{Version}, sha1={Sha1})", result.Version, result.Sha1Hex);
+        else
+            Log.Logger.Warning("  Verified FAILED: {Error}", result.Error);
     }
 }

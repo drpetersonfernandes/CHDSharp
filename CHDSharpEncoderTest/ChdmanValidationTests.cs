@@ -132,6 +132,11 @@ public class ChdmanValidationTests : IDisposable
 
         byte[] extracted = File.ReadAllBytes(extractedPath);
         Assert.Equal(source, extracted);
+
+        // non-aligned sizes must also pass chdman verify (SHA1 covers source bytes only,
+        // not the zero-padded final hunk)
+        var (verifyExit, vstdout, vstderr) = RunChdman("verify", "-i", chdPath);
+        Assert.True(verifyExit == 0, $"non-aligned verify failed (exit={verifyExit})\nstdout: {vstdout}\nstderr: {vstderr}");
     }
 
     // ----- helpers -----

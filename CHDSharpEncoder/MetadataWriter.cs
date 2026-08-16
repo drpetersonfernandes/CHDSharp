@@ -27,22 +27,29 @@ public static class MetadataWriter
     /// <returns>The byte offset of the first metadata entry (for the header's <c>metaoffset</c>).</returns>
     public static long WriteCdMetadata(Stream stream, CdToc toc)
     {
-        ArgumentNullException.ThrowIfNull(stream);
         ArgumentNullException.ThrowIfNull(toc);
+        return WriteCdMetadata(stream, BuildCdMetadataEntries(toc));
+    }
+
+    /// <summary>
+    /// Appends the given metadata entries at the current stream position, linking them into a
+    /// forward linked list (each entry's <c>next</c> points at the following entry; the last
+    /// entry has <c>next = 0</c>).
+    /// </summary>
+    /// <param name="stream">The output stream; entries are appended at the current position.</param>
+    /// <param name="entries">The metadata entries to write.</param>
+    /// <returns>The byte offset of the first metadata entry (for the header's <c>metaoffset</c>).</returns>
+    public static long WriteCdMetadata(Stream stream, IEnumerable<MetadataEntry> entries)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        ArgumentNullException.ThrowIfNull(entries);
 
         long firstOffset = stream.Position;
         bool hasPrevious = false;
         long previousOffset = 0;
 
-        foreach (var track in toc.Tracks)
+        foreach (var entry in entries)
         {
-            var entry = new MetadataEntry
-            {
-                Tag = CdRomTrackMetadata2Tag,
-                Flags = ChdMdflagsChecksum,
-                Payload = Encoding.ASCII.GetBytes(BuildChd2String(track) + '\0'),
-            };
-
             long entryOffset = stream.Position;
             var serialized = entry.Serialize();
             stream.Write(serialized, 0, serialized.Length);
@@ -62,6 +69,74 @@ public static class MetadataWriter
         }
 
         return firstOffset;
+    }
+
+    /// <summary>
+    /// Builds the 'CHT2' metadata entries (tag, checksum flag, null-terminated payload) for a
+    /// CD table of contents, in track order.
+    /// </summary>
+    public static List<MetadataEntry> BuildCdMetadataEntries(CdToc toc)
+    {
+        ArgumentNullException.ThrowIfNull(toc);
+
+        var entries = new List<MetadataEntry>(toc.Tracks.Count);
+        foreach (var track in toc.Tracks)
+        {
+            entries.Add(new MetadataEntry
+            {
+                Tag = CdRomTrackMetadata2Tag,
+                Flags = ChdMdflagsChecksum,
+                Payload = Encoding.ASCII.GetBytes(BuildChd2String(track) + '\0'),
+            });
+        }
+        return entries;
+    }
+
+    /// <summary>
+    /// Computes the combined SHA-1 of a compressed CHD: <c>SHA1(rawsha1 ‖ sorted hashes)</c>
+    /// where each hash is the big-endian 4-byte metadata tag followed by the SHA-1 of the
+    /// entry payload (checksummed entries only, sorted byte-wise). Matches MAME's
+    /// <c>compute_overall_sha1</c> (src/lib/util/chd.cpp) and the CHDSharpLib reader.
+    /// </summary>
+    public static byte[] ComputeCombinedSha1(byte[] rawSha1, IEnumerable<MetadataEntry> entries)
+    {
+        ArgumentNullException.ThrowIfNull(rawSha1);
+        ArgumentNullException.ThrowIfNull(entries);
+
+        var hashes = new List<byte[]>();
+        foreach (var entry in entries)
+        {
+            if ((entry.Flags & ChdMdflagsChecksum) == 0)
+                continue;
+
+            var sha1 = Sha1.Compute(entry.Payload);
+            var hash = new byte[24];
+            hash[0] = (byte)(entry.Tag >> 24);
+            hash[1] = (byte)(entry.Tag >> 16);
+            hash[2] = (byte)(entry.Tag >> 8);
+            hash[3] = (byte)entry.Tag;
+            Array.Copy(sha1, 0, hash, 4, 20);
+            hashes.Add(hash);
+        }
+
+        hashes.Sort(CompareBytes);
+
+        var overall = new Sha1();
+        overall.Append(rawSha1, 0, rawSha1.Length);
+        foreach (var hash in hashes)
+            overall.Append(hash, 0, hash.Length);
+        return overall.Finish();
+    }
+
+    private static int CompareBytes(byte[] x, byte[] y)
+    {
+        for (int i = 0; i < x.Length && i < y.Length; i++)
+        {
+            int v = x[i].CompareTo(y[i]);
+            if (v != 0)
+                return v;
+        }
+        return x.Length.CompareTo(y.Length);
     }
 
     /// <summary>

@@ -23,7 +23,7 @@ The package targets `net8.0`, `net9.0`, and `net10.0` and has **no native depend
 ### From source
 
 ```bash
-git clone https://github.com/drpetersonfernandes/CHDSharp.git
+git clone https://github.com/purelogiccode/CHDSharp.git
 cd CHDSharp
 dotnet build -c Release
 ```

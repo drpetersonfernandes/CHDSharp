@@ -15,8 +15,8 @@
         <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageIcon>chd.png</PackageIcon>
         <PackageTags>chd;mame;compression;emulation;disk-image;zstd;lzma;flac;huffman;avhuff</PackageTags>
-        <PackageProjectUrl>https://github.com/drpetersonfernandes/CHDSharp</PackageProjectUrl>
-        <RepositoryUrl>https://github.com/drpetersonfernandes/CHDSharp</RepositoryUrl>
+        <PackageProjectUrl>https://github.com/purelogiccode/CHDSharp</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/purelogiccode/CHDSharp</RepositoryUrl>
         <RepositoryType>git</RepositoryType>
         <PackageReleaseNotes>v1.2.0: CD/GD-ROM track (TOC) parsing with full track layout and sector type information via ChdTrackInfo and ChdTocParser. New ChdTrackType and ChdSubType enums. Improved UnitBytes property detects sector sizes from metadata for all CHD versions. Centralized versioning via Directory.Build.props. Deterministic and reproducible builds with embedded SourceLink.</PackageReleaseNotes>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>

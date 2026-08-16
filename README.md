@@ -224,7 +224,7 @@ dotnet run --project CHDSharpTester
 ## Building
 
 ```bash
-git clone https://github.com/drpetersonfernandes/CHDSharp.git
+git clone https://github.com/purelogiccode/CHDSharp.git
 cd CHDSharp
 dotnet build -c Release
 
@@ -253,4 +253,4 @@ MIT License — see [LICENSE](LICENSE.txt).
 ---
 
 * **Donate:** [support the developer](https://www.purelogiccode.com/donate)
-* **⭐ Star this repo on [GitHub](https://github.com/drpetersonfernandes/CHDSharp)**
+* **⭐ Star this repo on [GitHub](https://github.com/purelogiccode/CHDSharp)**

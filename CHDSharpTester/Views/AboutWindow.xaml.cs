@@ -20,7 +20,7 @@ internal partial class AboutWindow
             "SHA1 integrity checks, random-access byte-range comparison, zstd/cdzs codec " +
             "tests, and parent/child delta chain validation.";
 
-        GitHubLink.NavigateUri = new Uri("https://github.com/drpetersonfernandes/CHDSharp");
+        GitHubLink.NavigateUri = new Uri("https://github.com/purelogiccode/CHDSharp");
         WebLink.NavigateUri = new Uri("https://www.purelogiccode.com");
     }
 

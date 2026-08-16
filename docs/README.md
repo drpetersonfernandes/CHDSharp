@@ -18,7 +18,7 @@ CHDSharp is a **pure C# read-only CHD (Compressed Hunks of Data) reader** — th
 | Codecs | `zlib`, `lzma`, `huff`, `flac`, `zstd`, `avhu` + CD variants `cdzl`, `cdlz`, `cdfl`, `cdzs` |
 | Native dependencies | **none** |
 | License | MIT |
-| Repository | https://github.com/drpetersonfernandes/CHDSharp |
+| Repository | https://github.com/purelogiccode/CHDSharp |
 
 ---
 

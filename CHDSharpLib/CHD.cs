@@ -776,12 +776,13 @@ public static class Chd
                                 return;
 
                             var mapEntry = chd.Map[block];
-                            mapEntry.BuffOut = arrPoolOut.Rent();
-                            var err = ChdBlockRead.ReadBlock(mapEntry, arrPoolCache, chd.ChdReader, codec, mapEntry.BuffOut, (int)chd.Blocksize);
+                            var outBuf = arrPoolOut.Rent();
+                            mapEntry.BuffOut = outBuf;
+                            var err = ChdBlockRead.ReadBlock(mapEntry, arrPoolCache, chd.ChdReader, codec, outBuf, (int)chd.Blocksize);
                             if (err != ChdError.Chderrnone)
                             {
-                                arrPoolOut.Return(mapEntry.BuffOut);
-                                mapEntry.BuffOut = null!;
+                                arrPoolOut.Return(outBuf);
+                                mapEntry.BuffOut = null;
                                 ts.Cancel();
                                 errMaster = err;
                                 return;
@@ -791,8 +792,8 @@ public static class Chd
 
                             if (mapEntry.Length > 0)
                             {
-                                arrPoolIn.Return(mapEntry.BuffIn);
-                                mapEntry.BuffIn = null!;
+                                arrPoolIn.Return(mapEntry.BuffIn!);
+                                mapEntry.BuffIn = null;
                             }
                         }
                     }
@@ -829,12 +830,12 @@ public static class Chd
                             var sizenext = sizetoGo > chd.Blocksize ? (int)chd.Blocksize : (int)sizetoGo;
 
                             var mapEntry = chd.Map[proc];
+                            var outBuf = mapEntry.BuffOut!;
+                            md5Check?.TransformBlock(outBuf, 0, sizenext, null, 0);
+                            sha1Check?.TransformBlock(outBuf, 0, sizenext, null, 0);
 
-                            md5Check?.TransformBlock(mapEntry.BuffOut, 0, sizenext, null, 0);
-                            sha1Check?.TransformBlock(mapEntry.BuffOut, 0, sizenext, null, 0);
-
-                            arrPoolOut.Return(mapEntry.BuffOut);
-                            mapEntry.BuffOut = null!;
+                            arrPoolOut.Return(outBuf);
+                            mapEntry.BuffOut = null;
                             aheadLock.Release();
 
                             /* prepare for the next block */

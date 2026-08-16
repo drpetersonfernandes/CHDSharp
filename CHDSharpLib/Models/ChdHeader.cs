@@ -9,11 +9,11 @@ internal class ChdHeader
     /// <summary>File offset of the block map. Only populated for V5 headers; 0 otherwise.</summary>
     internal ulong Mapoffset;
 
-    /// <summary>The array of compression codecs used by this CHD (up to 4 slots in V5).</summary>
-    internal ChdCodec[] Compression = null!;
+    /// <summary>The array of compression codecs used by this CHD (up to 4 slots in V5). Populated by the header parsers.</summary>
+    internal ChdCodec[] Compression = [];
 
-    /// <summary>The array of decompression delegate readers corresponding to each compression slot.</summary>
-    internal ChdReader[] ChdReader = null!;
+    /// <summary>The array of decompression delegate readers corresponding to each compression slot. Populated by <c>ChdBlockRead.FindBlockReaders</c>.</summary>
+    internal ChdReader[] ChdReader = [];
 
     /// <summary>The total decompressed size of the image, in bytes.</summary>
     internal ulong Totalbytes;
@@ -31,22 +31,22 @@ internal class ChdHeader
     internal bool UncompressedMap;
 
     /// <summary>The parsed array of map entries describing each hunk's compression type, offset, and length.</summary>
-    internal MapEntry[] Map = null!;
+    internal MapEntry[] Map = [];
 
-    /// <summary>MD5 hash of the raw compressed data (V1-V3). Null for V4/V5.</summary>
-    internal byte[] Md5 = null!;
+    /// <summary>MD5 hash of the raw compressed data (V1-V3). <c>null</c> for V4/V5, which dropped MD5.</summary>
+    internal byte[]? Md5;
 
-    /// <summary>SHA1 hash of only the raw decompressed image data.</summary>
-    internal byte[] Rawsha1 = null!;
+    /// <summary>SHA1 hash of only the raw decompressed image data (V3-V5). <c>null</c> for V1/V2.</summary>
+    internal byte[]? Rawsha1;
 
-    /// <summary>SHA1 hash of the full image including metadata.</summary>
-    internal byte[] Sha1 = null!;
+    /// <summary>SHA1 hash of the full image including metadata (V4/V5), or the raw SHA1 for V3. <c>null</c> for V1/V2.</summary>
+    internal byte[]? Sha1;
 
-    /// <summary>MD5 hash of the expected parent file (for child/delta CHDs).</summary>
-    internal byte[] Parentmd5 = null!;
+    /// <summary>MD5 hash of the expected parent file (V1-V3). <c>null</c> for V4/V5.</summary>
+    internal byte[]? Parentmd5;
 
-    /// <summary>SHA1 hash of the expected parent file (for child/delta CHDs).</summary>
-    internal byte[] Parentsha1 = null!;
+    /// <summary>SHA1 hash of the expected parent file (V3-V5). <c>null</c> for V1/V2.</summary>
+    internal byte[]? Parentsha1;
 
     /// <summary>File offset of the first metadata entry, or 0 if none.</summary>
     internal ulong Metaoffset;

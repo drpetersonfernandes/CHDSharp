@@ -844,8 +844,10 @@ public class SecondCompressedTests
 
         ChdBlockRead.FindRepeatedBlocks(chd);
 
-        Assert.Equal(1, chd.Map[3].SelfMapEntry.UseCount);
-        Assert.Equal(CompressionType.Compressiontype2Nd, chd.Map[3].SelfMapEntry.Comptype);
+        var self = chd.Map[3].SelfMapEntry;
+        Assert.NotNull(self);
+        Assert.Equal(1, self.UseCount);
+        Assert.Equal(CompressionType.Compressiontype2Nd, self.Comptype);
     }
 
     [Fact]
@@ -876,9 +878,10 @@ public class SecondCompressedTests
         ChdBlockRead.FindBlockReaders(chd);
         ChdBlockRead.FindRepeatedBlocks(chd);
 
-        Assert.NotNull(chd.Map[1].SelfMapEntry);
-        Assert.Equal(CompressionType.Compressiontype2Nd, chd.Map[1].SelfMapEntry.Comptype);
-        Assert.NotNull(chd.Map[1].SelfMapEntry.SecondaryReader);
+        var self = chd.Map[1].SelfMapEntry;
+        Assert.NotNull(self);
+        Assert.Equal(CompressionType.Compressiontype2Nd, self.Comptype);
+        Assert.NotNull(self.SecondaryReader);
         return;
 
         static ChdError Reader(byte[] bytes, int i, byte[] bytes1, int i1, ChdCodecState chdCodecState)

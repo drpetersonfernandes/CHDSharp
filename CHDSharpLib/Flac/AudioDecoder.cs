@@ -64,10 +64,10 @@ internal class AudioDecoder : IAudioSource
     internal AudioDecoder(DecoderSettings settings, string? path, Stream? io = null)
     {
         _mSettings = settings;
+        Path = path ?? string.Empty;
 
         if (path != null)
         {
-            Path = path;
             _io = io ?? new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 0x10000);
         }
         else
@@ -108,9 +108,10 @@ internal class AudioDecoder : IAudioSource
     /// <param name="pcm">PCM audio configuration specifying sample rate, bit depth, and channel count.</param>
     internal AudioDecoder(AudioPcmConfig pcm)
     {
-        _framesBuffer = null!;
-        _io = null!;
-        _mSettings = null!;
+        _framesBuffer = [];
+        _io = new MemoryStream();
+        _mSettings = new DecoderSettings();
+        Path = string.Empty;
         Pcm = pcm;
         _crc8 = new Crc8();
 
@@ -217,9 +218,9 @@ internal class AudioDecoder : IAudioSource
     public AudioPcmConfig Pcm { get; private set; }
 
     /// <summary>
-    /// Gets the file path of the FLAC source, or null if reading from a stream.
+    /// Gets the file path of the FLAC source, or an empty string if reading from a stream.
     /// </summary>
-    public string Path { get; } = null!;
+    public string Path { get; }
 
     private unsafe void Interlace(AudioBuffer buff, int offset, int count)
     {

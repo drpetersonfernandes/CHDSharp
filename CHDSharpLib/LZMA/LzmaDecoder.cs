@@ -117,7 +117,7 @@ internal class Decoder
             }
         }
 
-        private Decoder2[] _mCoders = null!;
+        private Decoder2[] _mCoders = [];
         private int _mNumPrevBits;
         private int _mNumPosBits;
         private uint _mPosMask;

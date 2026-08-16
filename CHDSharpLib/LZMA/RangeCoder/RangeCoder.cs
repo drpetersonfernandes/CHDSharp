@@ -11,15 +11,19 @@ internal class Decoder
     /// <summary>Current code (compressed data) being decoded.</summary>
     internal uint Code;
 
-    /// <summary>Input stream providing compressed data.</summary>
-    internal Stream Stream = null!;
+    /// <summary>Input stream providing compressed data; <c>null</c> before <see cref="Init"/> or after <see cref="ReleaseStream"/>.</summary>
+    internal Stream? Stream;
     /// <summary>Total number of bytes consumed from the stream.</summary>
     internal long Total;
 
     /// <summary>Reads the next byte from the stream, throwing <see cref="DataErrorException"/> on EOF (truncated stream).</summary>
     internal byte ReadByteChecked()
     {
-        var b = Stream.ReadByte();
+        var stream = Stream;
+        if (stream is null)
+            throw new DataErrorException();
+
+        var b = stream.ReadByte();
         if (b < 0)
             throw new DataErrorException();
 
@@ -44,7 +48,7 @@ internal class Decoder
     /// <summary>Releases the reference to the input stream.</summary>
     internal void ReleaseStream()
     {
-        Stream = null!;
+        Stream = null;
     }
 
     /// <summary>Closes and disposes the input stream.</summary>

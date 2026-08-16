@@ -41,8 +41,9 @@ internal static class ChdBlockRead
                 return;
             }
 
-            me.SelfMapEntry = chd.Map[me.Offset];
-            switch (me.SelfMapEntry.Comptype)
+            var self = chd.Map[me.Offset];
+            me.SelfMapEntry = self;
+            switch (self.Comptype)
             {
                 case CompressionType.Compressiontype0:
                 case CompressionType.Compressiontype1:
@@ -52,28 +53,28 @@ internal static class ChdBlockRead
                 case CompressionType.Compressiontype2Nd:
                     break;
                 default:
-                    LogUnexpectedCompType(Log, me.SelfMapEntry.Comptype, null);
+                    LogUnexpectedCompType(Log, self.Comptype, null);
                     break;
             }
 
-            lock (me.SelfMapEntry)
+            lock (self)
             {
-                Interlocked.Increment(ref me.SelfMapEntry.UseCount);
-                if (me.SelfMapEntry.UseCount == 1)
+                Interlocked.Increment(ref self.UseCount);
+                if (self.UseCount == 1)
                 {
-                    var uniqueIdx = (int)me.SelfMapEntry.Comptype;
+                    var uniqueIdx = (int)self.Comptype;
                     if (uniqueIdx is >= 0 and < 6)
                         Interlocked.Increment(ref compressionUniqueCount[uniqueIdx]);
-                    else if (me.SelfMapEntry.Comptype == CompressionType.Compressiontype2Nd)
+                    else if (self.Comptype == CompressionType.Compressiontype2Nd)
                         Interlocked.Increment(ref compressionUniqueCount[5]);
                 }
             }
 
             {
-                var selfIdx = (int)me.SelfMapEntry.Comptype;
+                var selfIdx = (int)self.Comptype;
                 if (selfIdx is >= 0 and < 6)
                     Interlocked.Increment(ref compressionSelfCount[selfIdx]);
-                else if (me.SelfMapEntry.Comptype == CompressionType.Compressiontype2Nd)
+                else if (self.Comptype == CompressionType.Compressiontype2Nd)
                     Interlocked.Increment(ref compressionSelfCount[5]);
             }
 
@@ -158,7 +159,7 @@ internal static class ChdBlockRead
             me.Crc = me.SelfMapEntry.Crc;
             me.Crc16 = me.SelfMapEntry.Crc16;
             me.SecondaryReader = me.SelfMapEntry.SecondaryReader;
-            me.SelfMapEntry = null!;
+            me.SelfMapEntry = null;
         });
     }
 
@@ -264,7 +265,11 @@ internal static class ChdBlockRead
                 {
                     if (mapEntry.BuffOutCache == null)
                     {
-                        var ret = compression[(int)mapEntry.Comptype].Invoke(mapEntry.BuffIn, (int)mapEntry.Length, buffOut, buffOutLength, codec);
+                        var buffIn = mapEntry.BuffIn;
+                        if (buffIn is null)
+                            return ChdError.Chderrcodecerror;
+
+                        var ret = compression[(int)mapEntry.Comptype].Invoke(buffIn, (int)mapEntry.Length, buffOut, buffOutLength, codec);
 
                         if (ret != ChdError.Chderrnone)
                             return ret;
@@ -299,7 +304,11 @@ internal static class ChdBlockRead
                 {
                     if (mapEntry.BuffOutCache == null)
                     {
-                        Array.Copy(mapEntry.BuffIn, 0, buffOut, 0, buffOutLength);
+                        var buffIn = mapEntry.BuffIn;
+                        if (buffIn is null)
+                            return ChdError.Chderrcodecerror;
+
+                        Array.Copy(buffIn, 0, buffOut, 0, buffOutLength);
 
                         if (mapEntry.UseCount > 0)
                         {
@@ -349,7 +358,11 @@ internal static class ChdBlockRead
 
             case CompressionType.Compressionself:
             {
-                var retcs = ReadBlock(mapEntry.SelfMapEntry, arrPool, compression, codec, buffOut, buffOutLength);
+                var self = mapEntry.SelfMapEntry;
+                if (self is null)
+                    return ChdError.Chderrinvaliddata;
+
+                var retcs = ReadBlock(self, arrPool, compression, codec, buffOut, buffOutLength);
                 if (retcs != ChdError.Chderrnone)
                     return retcs;
                 // check CRC in the read_block_into_cache call
@@ -366,7 +379,11 @@ internal static class ChdBlockRead
                 {
                     if (mapEntry.BuffOutCache == null)
                     {
-                        var ret = mapEntry.SecondaryReader.Invoke(mapEntry.BuffIn, (int)mapEntry.Length, buffOut, buffOutLength, codec);
+                        var buffIn = mapEntry.BuffIn;
+                        if (buffIn is null)
+                            return ChdError.Chderrcodecerror;
+
+                        var ret = mapEntry.SecondaryReader.Invoke(buffIn, (int)mapEntry.Length, buffOut, buffOutLength, codec);
 
                         if (ret != ChdError.Chderrnone)
                             return ret;

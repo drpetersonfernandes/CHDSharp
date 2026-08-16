@@ -349,9 +349,9 @@ internal class AudioBuffer
 
     #endregion
 
-    private int[,] _samples = null!;
-    private float[,] _fsamples = null!;
-    private byte[] _bytes = null!;
+    private int[,]? _samples;
+    private float[,]? _fsamples;
+    private byte[]? _bytes;
     private bool _dataInSamples;
     private bool _dataInBytes;
     private bool _dataInFloat;
@@ -388,7 +388,7 @@ internal class AudioBuffer
                 _samples = new int[Size, Pcm.ChannelCount];
             }
 
-            if (!_dataInSamples && _dataInBytes && Length != 0)
+            if (!_dataInSamples && _dataInBytes && _bytes != null && Length != 0)
                 BytesToFlacSamples(_bytes, 0, _samples, 0, Length, Pcm.ChannelCount, Pcm.BitsPerSample);
             _dataInSamples = true;
             return _samples;
@@ -407,7 +407,7 @@ internal class AudioBuffer
                 _fsamples = new float[Size, Pcm.ChannelCount];
             }
 
-            if (!_dataInFloat && _dataInBytes && Length != 0)
+            if (!_dataInFloat && _dataInBytes && _bytes != null && Length != 0)
             {
                 switch (Pcm.BitsPerSample)
                 {
@@ -441,9 +441,9 @@ internal class AudioBuffer
 
             if (!_dataInBytes && Length != 0)
             {
-                if (_dataInSamples)
+                if (_dataInSamples && _samples != null)
                     FlacSamplesToBytes(_samples, 0, _bytes, 0, Length, Pcm.ChannelCount, Pcm.BitsPerSample);
-                else if (_dataInFloat)
+                else if (_dataInFloat && _fsamples != null)
                     FloatToBytes(_fsamples, 0, _bytes, 0, Length, Pcm.ChannelCount, Pcm.BitsPerSample);
             }
 

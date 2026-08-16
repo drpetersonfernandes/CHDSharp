@@ -129,7 +129,6 @@ public class HeaderAndApiTests
         return new ChdHeader
         {
             Compression = [ChdCodec.Zlib],
-            ChdReader = null!,
             Totalbytes = totalbytes,
             Blocksize = blocksize,
             Totalblocks = 1,
@@ -330,7 +329,6 @@ public class HeaderAndApiTests
         {
             Metaoffset = 16,
             Compression = [ChdCodec.Zlib],
-            ChdReader = null!,
             Rawsha1 = new byte[20],
             Sha1 = new byte[20],
             Md5 = new byte[16],

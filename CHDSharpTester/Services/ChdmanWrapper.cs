@@ -37,7 +37,7 @@ public class ChdmanWrapper
         internal uint TotalHunks;
 
         /// <summary>The string description of compression codec(s) used by the CHD (e.g. "zstd", "cdzs", "cdzl,cdfl").</summary>
-        public string Compression = null!;
+        public string Compression = "";
 
         /// <summary>The overall SHA1 hash (raw data + metadata), or null if not present.</summary>
         internal string? Sha1;
@@ -53,10 +53,10 @@ public class ChdmanWrapper
         internal int ExitCode;
 
         /// <summary>The captured standard output text.</summary>
-        internal string StdOut = null!;
+        internal string StdOut = "";
 
         /// <summary>The captured standard error text.</summary>
-        internal string StdErr = null!;
+        internal string StdErr = "";
 
         /// <summary>Gets the combined standard output and standard error text.</summary>
         internal string All => StdOut + "\n" + StdErr;
@@ -104,7 +104,7 @@ public class ChdmanWrapper
             LogicalBytes = ParseULongField(text, @"Logical size:\s*([\d,]+)"),
             HunkBytes = (uint)ParseULongField(text, @"Hunk Size:\s*([\d,]+)"),
             TotalHunks = (uint)ParseULongField(text, @"Total Hunks:\s*([\d,]+)"),
-            Compression = ParseStringField(text, @"Compression:\s*(.+)")!,
+            Compression = ParseStringField(text, @"Compression:\s*(.+)") ?? "",
             Sha1 = ParseHexField(text, @"(?<!Data )SHA1:\s*([0-9a-fA-F]{40})"),
             DataSha1 = ParseHexField(text, @"Data SHA1:\s*([0-9a-fA-F]{40})")
         };

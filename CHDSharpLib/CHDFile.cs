@@ -208,17 +208,17 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// SHA1 of the full image including metadata (V4/V5), or the raw SHA1 when that is
     /// all the format provides (V3). All-zero or <c>null</c> for V1/V2, which predate SHA1 hashes.
     /// </summary>
-    public byte[] Sha1 => _chd.Sha1;
+    public byte[] Sha1 => _chd.Sha1!;
 
     /// <summary>
     /// SHA1 of ONLY the raw (decompressed) image data, excluding metadata (V3-V5).
     /// This is what a full sequential read of the image hashes to.
     /// All-zero or <c>null</c> for V1/V2.
     /// </summary>
-    public byte[] RawSha1 => _chd.Rawsha1;
+    public byte[] RawSha1 => _chd.Rawsha1!;
 
     /// <summary>MD5 of the raw image data (V1-V3). All-zero or <c>null</c> for V4/V5, which dropped MD5.</summary>
-    public byte[] Md5 => _chd.Md5;
+    public byte[] Md5 => _chd.Md5!;
 
     /// <summary>True if this CHD is a differential child that requires a parent CHD to read.</summary>
     public bool RequiresParent => !Util.IsAllZeroArray(_chd.Parentmd5) || !Util.IsAllZeroArray(_chd.Parentsha1);
@@ -903,10 +903,11 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                 if (me.Offset >= (ulong)chd.Map.Length)
                     return ChdError.Chderrinvaliddata;
 
-                me.SelfMapEntry = chd.Map[me.Offset];
-                if (me.SelfMapEntry.Comptype == CompressionType.Compressiontype2Nd)
+                var self = chd.Map[me.Offset];
+                me.SelfMapEntry = self;
+                if (self.Comptype == CompressionType.Compressiontype2Nd)
                 {
-                    me.SecondaryReader = me.SelfMapEntry.SecondaryReader;
+                    me.SecondaryReader = self.SecondaryReader;
                 }
             }
         }
@@ -952,11 +953,14 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         }
 
         // Resolve the entry that actually holds compressed data (follow SELF links).
-        var dataEntry = me;
+        MapEntry? dataEntry = me;
         while (dataEntry is { Comptype: CompressionType.Compressionself })
         {
             dataEntry = dataEntry.SelfMapEntry;
         }
+
+        if (dataEntry is null)
+            return ChdError.Chderrinvaliddata;
 
         var loaded = false;
         try
@@ -1002,7 +1006,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         {
             if (loaded)
             {
-                dataEntry.BuffIn = null!;
+                dataEntry.BuffIn = null;
             }
         }
     }

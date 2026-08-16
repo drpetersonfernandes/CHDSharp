@@ -18,20 +18,20 @@ internal class MapEntry
     /// <summary>The CRC-16 checksum of the decompressed hunk data (V5).</summary>
     internal ushort? Crc16;
 
-    /// <summary>Reference to the source map entry when this hunk is a <see cref="CompressionType.Compressionself"/> reference.</summary>
-    internal MapEntry SelfMapEntry = null!;
+    /// <summary>Reference to the source map entry when this hunk is a <see cref="CompressionType.Compressionself"/> reference; <c>null</c> otherwise.</summary>
+    internal MapEntry? SelfMapEntry;
 
     /// <summary>Number of times this block is referenced by other hunks; used for caching decompressed data.</summary>
     internal int UseCount;
 
-    /// <summary>Buffer holding the raw compressed data read from disk.</summary>
-    internal byte[] BuffIn = null!;
+    /// <summary>Buffer holding the raw compressed data read from disk; <c>null</c> while unloaded or after the buffer is returned to the pool.</summary>
+    internal byte[]? BuffIn;
 
-    /// <summary>Cached copy of the decompressed output when this block is kept for reuse.</summary>
-    internal byte[] BuffOutCache = null!;
+    /// <summary>Cached copy of the decompressed output when this block is kept for reuse; <c>null</c> when no cache is held.</summary>
+    internal byte[]? BuffOutCache;
 
-    /// <summary>Buffer holding the final decompressed hunk data.</summary>
-    internal byte[] BuffOut = null!;
+    /// <summary>Buffer holding the final decompressed hunk data; <c>null</c> while unset or after the buffer is returned to the pool.</summary>
+    internal byte[]? BuffOut;
 
     /// <summary>Whether this hunk has been processed during parallel decompression (for ordering during hashing).</summary>
     internal bool Processed;

@@ -3,13 +3,13 @@ namespace CHDSharp.LZMA.LZ;
 /// <summary>Sliding-window output buffer for LZMA decompression. Handles literal bytes, LZ77 copy blocks, and streaming to the output stream.</summary>
 internal class OutWindow
 {
-    private byte[] _buffer = null!;
+    private byte[] _buffer = [];
     private int _windowSize;
     private int _pos;
     private int _streamPos;
     private int _pendingLen;
     private int _pendingDist;
-    private Stream _stream = null!;
+    private Stream? _stream;
 
     /// <summary>Total number of bytes written so far.</summary>
     internal long Total;
@@ -77,7 +77,7 @@ internal class OutWindow
     internal void ReleaseStream()
     {
         Flush();
-        _stream = null!;
+        _stream = null;
     }
 
     /// <summary>Writes buffered data to the output stream.</summary>

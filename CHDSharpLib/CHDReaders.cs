@@ -109,7 +109,7 @@ internal static partial class ChdReaders
         }
 
         using var memStream = new MemoryStream(buffIn, buffInStart, compsize, false);
-        using Stream compStream = new LzmaStream(properties, memStream, -1, -1, null!, false, codec.Blzma);
+        using Stream compStream = new LzmaStream(properties, memStream, -1, -1, null, false, codec.Blzma);
         var bytesRead = 0;
         while (bytesRead < buffOutLength)
         {

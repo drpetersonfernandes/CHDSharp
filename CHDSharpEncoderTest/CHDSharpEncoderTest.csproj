@@ -4,6 +4,9 @@
         <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
         <OutputType>Exe</OutputType>
         <RootNamespace>CHDSharpEncoderTest</RootNamespace>
+        <!-- xUnit1051 wants test calls to pass TestContext.Current.CancellationToken; the CHD
+             API legitimately accepts caller-supplied tokens, so tests use their own. -->
+        <NoWarn>$(NoWarn);xUnit1051</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

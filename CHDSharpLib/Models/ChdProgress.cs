@@ -2,11 +2,11 @@ namespace CHDSharp.Models;
 
 /// <summary>
 /// Progress snapshot reported by long-running CHD operations. Pass an
-/// <see cref="IProgress{T}"/> of this type to <see cref="CHDSharp.Chd.CheckFile(Stream,string,bool,IProgress{CHDSharp.Models.ChdProgress}?)"/>,
-/// <see cref="CHDSharp.Chd.CheckFileWithParent(string,string?,IProgress{CHDSharp.Models.ChdProgress}?)"/>,
-/// <see cref="CHDSharp.ChdFile.ReadAllBytes(out byte[],IProgress{CHDSharp.Models.ChdProgress}?)"/>,
+/// <see cref="IProgress{T}"/> of this type to <see cref="CHDSharp.Chd.CheckFile(Stream,string,bool,IProgress{CHDSharp.Models.ChdProgress}?,System.Threading.CancellationToken)"/>,
+/// <see cref="CHDSharp.Chd.CheckFileWithParent(string,string?,IProgress{CHDSharp.Models.ChdProgress}?,System.Threading.CancellationToken)"/>,
+/// <see cref="CHDSharp.ChdFile.ReadAllBytes(out byte[],IProgress{CHDSharp.Models.ChdProgress}?,System.Threading.CancellationToken)"/>,
 /// <see cref="CHDSharp.ChdFile.EnumerateHunks(IProgress{CHDSharp.Models.ChdProgress}?)"/>, or
-/// <see cref="CHDSharp.ChdFile.ExtractToDirectory(string,string,IProgress{CHDSharp.Models.ChdProgress}?)"/>
+/// <see cref="CHDSharp.ChdFile.ExtractToDirectory(string,string,IProgress{CHDSharp.Models.ChdProgress}?,System.Threading.CancellationToken)"/>
 /// to receive a report after every decompressed hunk. Callers commonly wrap this in
 /// <c>new Progress&lt;ChdProgress&gt;(...)></c> for UI binding or logging.
 /// </summary>

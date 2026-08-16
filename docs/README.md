@@ -75,6 +75,7 @@ CHDSharp is a **pure C# read-only CHD (Compressed Hunks of Data) reader** — th
 - **Random access** — `ReadHunk()`, `Read()` (byte ranges across hunk boundaries), `EnumerateHunks()`, `ReadAllBytes()`.
 - **Async API** — `OpenAsync`, `ReadHunkAsync`, `ReadAsync`, `IAsyncDisposable`.
 - **Progress reporting** — optional `IProgress<ChdProgress>` on `CheckFile`, `CheckFileWithParent`, `ReadAllBytes`, `EnumerateHunks`, and `ExtractToDirectory`, reported after every decompressed hunk.
+- **Cancellation** — optional `CancellationToken` on every long-running API (`Open`/`OpenAsync`, `Read`/`ReadAsync`, `ReadHunk`/`ReadHunkAsync`, `ReadAllBytes`, `CheckFile`, `CheckFileWithParent`, `ExtractToDirectory`), linked into the parallel verification pipeline; throws `OperationCanceledException`.
 - **Parallel verification** — multi-threaded `CheckFile()` with bounded memory and configurable worker count.
 - **Parent/child chains** — transparent differential CHD support with wrong-parent detection.
 - **Metadata** — tag/index query API (`GetMetadata`) plus the full entry list; checksum-flag aware.

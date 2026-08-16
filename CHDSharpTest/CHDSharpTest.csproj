@@ -5,6 +5,9 @@
         <OutputType>Exe</OutputType>
         <RootNamespace>CHDSharp.Tests</RootNamespace>
         <ApplicationIcon>Icon\chd.ico</ApplicationIcon>
+        <!-- xUnit1051 wants test calls to pass TestContext.Current.CancellationToken; the CHD
+             API legitimately accepts caller-supplied tokens, so tests use their own. -->
+        <NoWarn>$(NoWarn);xUnit1051</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

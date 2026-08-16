@@ -77,6 +77,8 @@ var result = Chd.CheckFile(stream, "game.chd", deepCheck: true, progress);
 
 For `CheckFile(deepCheck: true)` the reports are emitted in hunk order from the hasher stage; `new Progress<ChdProgress>(...)` marshals them to the capturing thread/context. The same parameter exists on `CheckFileWithParent`, `ReadAllBytes`, `EnumerateHunks`, and `ExtractToDirectory`. Defaults to `null` (no reporting) everywhere.
 
+All of these also accept an optional trailing `CancellationToken` and throw `OperationCanceledException` when cancelled. For deep verification the token is linked into the pipeline's internal `CancellationTokenSource`, so cancelling stops the workers immediately and the method throws OCE instead of reporting a bogus partial-hash mismatch.
+
 ---
 
 ## Child CHD verification

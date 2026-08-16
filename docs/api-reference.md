@@ -12,10 +12,10 @@ Entry point for verification, quick checks, and global settings.
 |--------|-----------|-------------|
 | `LoggerFactory` | `static ILoggerFactory?` | Set to enable internal logging. See [Logging](logging.md). |
 | `TaskCount` | `static int` (default 8) | Number of parallel workers for `CheckFile` (1–64). Set **before** calling. |
-| `CheckFile` | `static ChdResult CheckFile(Stream s, string filename, bool deepCheck, IProgress<ChdProgress>? progress = null)` | Verify a standalone CHD. `deepCheck: true` decompresses every hunk and validates hashes; `false` is header-only. Reports progress per hunk when `progress` is supplied. |
-| `CheckFile` | `static ChdError CheckFile(Stream, string, bool, out uint? version, out byte[]? sha1, out byte[]? md5, IProgress<ChdProgress>? progress = null)` | Out-parameter variant. |
-| `CheckFileWithParent` | `static ChdResult CheckFileWithParent(string filename, string? parentFilename, IProgress<ChdProgress>? progress = null)` | Verify a (possibly child) CHD, resolving parent references. Pass `null` for standalone. Single-threaded. |
-| `CheckFileWithParent` | `static ChdError CheckFileWithParent(string, string?, out uint?, out byte[]?, out byte[]?, IProgress<ChdProgress>? progress = null)` | Out-parameter variant. |
+| `CheckFile` | `static ChdResult CheckFile(Stream s, string filename, bool deepCheck, IProgress<ChdProgress>? progress = null, CancellationToken ct = default)` | Verify a standalone CHD. `deepCheck: true` decompresses every hunk and validates hashes; `false` is header-only. Reports progress per hunk when `progress` is supplied. Throws `OperationCanceledException` when cancelled. |
+| `CheckFile` | `static ChdError CheckFile(Stream, string, bool, out uint? version, out byte[]? sha1, out byte[]? md5, IProgress<ChdProgress>? progress = null, CancellationToken ct = default)` | Out-parameter variant. |
+| `CheckFileWithParent` | `static ChdResult CheckFileWithParent(string filename, string? parentFilename, IProgress<ChdProgress>? progress = null, CancellationToken ct = default)` | Verify a (possibly child) CHD, resolving parent references. Pass `null` for standalone. Single-threaded. |
+| `CheckFileWithParent` | `static ChdError CheckFileWithParent(string, string?, out uint?, out byte[]?, out byte[]?, IProgress<ChdProgress>? progress = null, CancellationToken ct = default)` | Out-parameter variant. |
 | `IsChdFile` | `static bool IsChdFile(string)` / `static bool IsChdFile(string, out uint version)` | Quick magic/version sniff. Never throws. |
 | `CheckHeader` | `static bool CheckHeader(Stream, out uint length, out uint version)` | Validate signature + version; stream must be at position 0. |
 | `ReadHeader` | `static ChdError ReadHeader(string, out ChdHeaderInfo? header)` | Parse the **full** header DTO from disk without keeping the file open (libchdr `chd_read_header` parity). |
@@ -35,34 +35,34 @@ Open a CHD once, then read hunks or byte ranges on demand. **Not thread-safe** �
 
 | Overload | Description |
 |----------|-------------|
-| `Open(string path, out ChdFile? chd)` | Standalone CHD from disk. |
-| `Open(string path, string parentPath, out ChdFile? chd)` | Child CHD; the parent is opened internally and owned by the child. |
-| `Open(string path, ChdFile? parent, out ChdFile? chd)` | Child with an external parent instance (caller keeps ownership; may be shared). Pass `null` for standalone. |
-| `Open(Stream stream, bool leaveOpen, out ChdFile? chd)` | From any **seekable** readable stream. |
-| `Open(Stream stream, bool leaveOpen, ChdFile? parent, out ChdFile? chd)` | From a stream with an external parent. |
-| `OpenAsync(...)` | Async twins of **all** five overloads above. |
+| `Open(string path, out ChdFile? chd, CancellationToken ct = default)` | Standalone CHD from disk. |
+| `Open(string path, string parentPath, out ChdFile? chd, CancellationToken ct = default)` | Child CHD; the parent is opened internally and owned by the child. |
+| `Open(string path, ChdFile? parent, out ChdFile? chd, CancellationToken ct = default)` | Child with an external parent instance (caller keeps ownership; may be shared). Pass `null` for standalone. |
+| `Open(Stream stream, bool leaveOpen, out ChdFile? chd, CancellationToken ct = default)` | From any **seekable** readable stream. |
+| `Open(Stream stream, bool leaveOpen, ChdFile? parent, out ChdFile? chd, CancellationToken ct = default)` | From a stream with an external parent. |
+| `OpenAsync(...)` | Async twins of **all** five overloads above, each taking an optional trailing `CancellationToken`. |
 
-All overloads seek from the start. Failure codes: `Chderrfilenotfound`, `Chderrcannotopenfile`, `Chderrinvalidparameter`, `Chderrinvalidfile`, `Chderrreaderror`, `Chderrrequiresparent`, `Chderrinvalidparent`, `Chderrunsupportedversion`, `Chderrinvaliddata`.
+All overloads seek from the start. Failure codes: `Chderrfilenotfound`, `Chderrcannotopenfile`, `Chderrinvalidparameter`, `Chderrinvalidfile`, `Chderrreaderror`, `Chderrrequiresparent`, `Chderrinvalidparent`, `Chderrunsupportedversion`, `Chderrinvaliddata`. Cancellation throws `OperationCanceledException`.
 
 ### Instance methods
 
 | Method | Signature | Description |
 |--------|-----------|-------------|
-| `ReadHunk` | `ChdError ReadHunk(uint hunknum, byte[] buffer)` | Decompress one hunk into `buffer` (≥ `HunkBytes`). Serves cached hunks when `CacheSize > 1`. |
-| `Read` | `ChdError Read(ulong byteOffset, byte[] destination, int destinationOffset, int count)` | Read an arbitrary byte range, crossing hunk boundaries. Caches the last hunk. |
-| `ReadAllBytes` | `ChdError ReadAllBytes(out byte[] data, IProgress<ChdProgress>? progress = null)` | Decompress the whole image into one array. Reports per hunk when `progress` is supplied. `Chderroutofmemory` if the image exceeds 2 GiB. |
+| `ReadHunk` | `ChdError ReadHunk(uint hunknum, byte[] buffer, CancellationToken ct = default)` | Decompress one hunk into `buffer` (≥ `HunkBytes`). Serves cached hunks when `CacheSize > 1`. Throws `OperationCanceledException` when cancelled. |
+| `Read` | `ChdError Read(ulong byteOffset, byte[] destination, int destinationOffset, int count, CancellationToken ct = default)` | Read an arbitrary byte range, crossing hunk boundaries. Caches the last hunk. Throws `OperationCanceledException` when cancelled. |
+| `ReadAllBytes` | `ChdError ReadAllBytes(out byte[] data, IProgress<ChdProgress>? progress = null, CancellationToken ct = default)` | Decompress the whole image into one array. Reports per hunk when `progress` is supplied. `Chderroutofmemory` if the image exceeds 2 GiB. Throws `OperationCanceledException` when cancelled. |
 | `ConfigureCache` | `void ConfigureCache(int maxHunks)` | Set the multi-hunk LRU cache size (decompressed hunks retained). `<= 1` disables it (single-slot behaviour). See `CacheSize`. |
 | `Precache` | `ChdError Precache()` | Read the **entire compressed file** into memory; subsequent hunk reads are served from RAM. Idempotent; restores stream position; `Chderroutofmemory` for files > 2 GiB, `Chderrreaderror` on IO failure. |
 | `ReadAllBytes` | `ChdError ReadAllBytes(out byte[] data)` | Decompress the whole image into one array. `Chderroutofmemory` if the image exceeds 2 GiB. |
 | `EnumerateHunks` | `IEnumerable<byte[]> EnumerateHunks(IProgress<ChdProgress>? progress = null)` | Yield each decompressed hunk in order. **The array is reused** — copy it if you need to keep it. Throws `InvalidDataException` on failure. Reports per hunk when `progress` is supplied. |
-| `ReadHunkAsync` | `Task<ChdError> ReadHunkAsync(uint, byte[])` | Async hunk read. |
-| `ReadAsync` | `Task<ChdError> ReadAsync(ulong, byte[], int, int)` | Async byte-range read. |
+| `ReadHunkAsync` | `Task<ChdError> ReadHunkAsync(uint, byte[], CancellationToken ct = default)` | Async hunk read; cancelled via the token. |
+| `ReadAsync` | `Task<ChdError> ReadAsync(ulong, byte[], int, int, CancellationToken ct = default)` | Async byte-range read; cancelled via the token. |
 | `GetMetadata` | `ChdError GetMetadata(string? tag, uint index, out ChdMetadataEntry? entry)` | Search metadata by 4-char tag and occurrence index; `null`/empty tag = wildcard. Returns `Chderrmetadatanotfound` when absent. |
 | `GenerateCueSheet` | `string GenerateCueSheet(string binFileName)` | CUE sheet (single-bin) for CD CHDs. |
 | `GenerateGdiDescriptor` | `string GenerateGdiDescriptor(string[] trackFiles)` | GDI descriptor for GD-ROM CHDs. |
 | `ExportToc` | `string ExportToc()` | Human-readable TOC dump. |
-| `ExtractToDirectory` | `List<string> ExtractToDirectory(string outputDir, string baseFileName, IProgress<ChdProgress>? progress = null)` | Extract to files; returns created paths. Throws `InvalidDataException` on track failures. Reports per hunk when `progress` is supplied. |
-| `ExtractToDirectoryWithReporting` | `ExtractResult ExtractToDirectoryWithReporting(string outputDir, string baseFileName, IProgress<ChdProgress>? progress = null)` | Reporting variant (per-track results, no exceptions). |
+| `ExtractToDirectory` | `List<string> ExtractToDirectory(string outputDir, string baseFileName, IProgress<ChdProgress>? progress = null, CancellationToken ct = default)` | Extract to files; returns created paths. Throws `InvalidDataException` on track failures. Reports per hunk when `progress` is supplied; throws `OperationCanceledException` when cancelled. |
+| `ExtractToDirectoryWithReporting` | `ExtractResult ExtractToDirectoryWithReporting(string outputDir, string baseFileName, IProgress<ChdProgress>? progress = null, CancellationToken ct = default)` | Reporting variant (per-track results, no exceptions). Cancellation still throws `OperationCanceledException`. |
 | `Dispose` / `DisposeAsync` | — | Release the stream (unless `leaveOpen`) and any internally-owned parent. |
 
 ### Properties
@@ -152,6 +152,19 @@ var result = Chd.CheckFile(File.OpenRead("game.chd"), "game.chd", deepCheck: tru
 ```
 
 For `Chd.CheckFile(deepCheck: true)`, reports arrive in hunk order from the internal hashing thread — an `IProgress<T>` built with `new Progress<ChdProgress>(...)` marshals them back to the capturing context automatically. All parameters default to `null`, so existing callers are unaffected.
+
+---
+
+## Cancellation
+
+Every long-running operation accepts an optional trailing `CancellationToken` (default `default`) and throws `OperationCanceledException` when cancellation is requested: `Chd.CheckFile`, `Chd.CheckFileWithParent`, `ChdFile.Open`/`OpenAsync` (all overloads), `ReadHunk`/`ReadHunkAsync`, `Read`/`ReadAsync`, `ReadAllBytes`, and `ExtractToDirectory`/`ExtractToDirectoryWithReporting`. Async twins pass the token to `Task.Run` too, so a pre-cancelled token yields a cancelled task.
+
+For `CheckFile(deepCheck: true)` the caller token is linked into the verification pipeline's internal `CancellationTokenSource` (`CreateLinkedTokenSource`), so cancellation stops the producer/workers/hasher immediately; the method then throws `OperationCanceledException` rather than returning a bogus hash-mismatch error over partial data. Cancellation is never swallowed into a `ChdError` result by extraction — it always propagates as `OperationCanceledException`.
+
+```csharp
+using var cts = new CancellationTokenSource();
+var result = Chd.CheckFile(File.OpenRead("game.chd"), "game.chd", deepCheck: true, cancellationToken: cts.Token);
+```
 
 ---
 

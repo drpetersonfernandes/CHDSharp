@@ -15,8 +15,8 @@ namespace CHDSharp;
 /// (zlib, LZMA, Huffman, FLAC, Zstd, AVHuff and the CD variants).
 /// </summary>
 /// <remarks>
-/// Use <see cref="CheckFile(Stream,string,bool)"/> for full (parallel) verification of a standalone CHD,
-/// <see cref="CheckFileWithParent(string,string)"/> for child (differential) CHDs,
+/// Use <see cref="CheckFile(Stream,string,bool,IProgress{CHDSharp.Models.ChdProgress}?,System.Threading.CancellationToken)"/> for full (parallel) verification of a standalone CHD,
+    /// <see cref="CheckFileWithParent(string,string?,IProgress{CHDSharp.Models.ChdProgress}?,System.Threading.CancellationToken)"/> for child (differential) CHDs,
 /// <see cref="IsChdFile(string)"/> / <see cref="CheckHeader"/> for fast header-only checks, and
 /// <see cref="ReadHeader(string,out CHDSharp.Models.ChdHeaderInfo?)"/> for the full parsed header without
 /// opening the file for reads.
@@ -87,7 +87,7 @@ public static class Chd
 
     /// <summary>
     /// Number of parallel decompression tasks used during verification (default 8).
-    /// Must be between 1 and 64. Changing it affects subsequent <see cref="CheckFile(Stream,string,bool)"/>
+    /// Must be between 1 and 64. Changing it affects subsequent <see cref="CheckFile(Stream,string,bool,IProgress{CHDSharp.Models.ChdProgress}?,System.Threading.CancellationToken)"/>
     /// calls; verifications already in progress keep the value they started with.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">Thrown when the value is less than 1 or greater than 64.</exception>
@@ -113,18 +113,20 @@ public static class Chd
     /// verification (using up to <see cref="TaskCount"/> parallel workers); if <c>false</c>, only the header is validated.</param>
     /// <param name="progress">An optional <see cref="IProgress{T}"/> receiving a <see cref="ChdProgress"/>
     /// report after each decompressed hunk during deep verification. <c>null</c> (default) disables progress reporting.</param>
+    /// <param name="cancellationToken">A token to cancel deep verification. <see cref="OperationCanceledException"/>
+    /// is thrown if cancellation is requested while hunks are being decompressed or hashed.</param>
     /// <returns>A <see cref="ChdResult"/> with the verification result, CHD version, and header hashes.</returns>
     /// <remarks>
     /// This method does not handle differential (parent/child) CHDs; it returns
-    /// <see cref="ChdError.Chderrrequiresparent"/> for those. Use <see cref="CheckFileWithParent(string,string)"/> instead.
+    /// <see cref="ChdError.Chderrrequiresparent"/> for those. Use <see cref="CheckFileWithParent(string,string?,IProgress{CHDSharp.Models.ChdProgress}?,System.Threading.CancellationToken)"/> instead.
     /// </remarks>
-    public static ChdResult CheckFile(Stream s, string filename, bool deepCheck, IProgress<ChdProgress>? progress = null)
+    public static ChdResult CheckFile(Stream s, string filename, bool deepCheck, IProgress<ChdProgress>? progress = null, CancellationToken cancellationToken = default)
     {
-        var err = CheckFile(s, filename, deepCheck, out var ver, out var sha1, out var md5, progress);
+        var err = CheckFile(s, filename, deepCheck, out var ver, out var sha1, out var md5, progress, cancellationToken);
         return new ChdResult(err, ver, sha1, md5);
     }
 
-    /// <inheritdoc cref="CheckFile(Stream,string,bool)"/>
+    /// <inheritdoc cref="CheckFile(Stream,string,bool,IProgress{CHDSharp.Models.ChdProgress}?,System.Threading.CancellationToken)"/>
     /// <param name="s">A readable, seekable stream positioned at the start of the CHD file.</param>
     /// <param name="filename">The filename associated with the stream, used only for logging.</param>
     /// <param name="deepCheck">If <c>true</c>, performs full decompression of every hunk plus SHA1/MD5 hash
@@ -134,12 +136,16 @@ public static class Chd
     /// <param name="chdMd5">When this method returns, contains the MD5 hash from the header, or <c>null</c> if not available (V4/V5).</param>
     /// <param name="progress">An optional <see cref="IProgress{T}"/> receiving a <see cref="ChdProgress"/>
     /// report after each decompressed hunk during deep verification. <c>null</c> (default) disables progress reporting.</param>
+    /// <param name="cancellationToken">A token to cancel deep verification. <see cref="OperationCanceledException"/>
+    /// is thrown if cancellation is requested while hunks are being decompressed or hashed.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code describing the failure.</returns>
-    public static ChdError CheckFile(Stream s, string filename, bool deepCheck, out uint? chdVersion, out byte[]? chdSha1, out byte[]? chdMd5, IProgress<ChdProgress>? progress = null)
+    public static ChdError CheckFile(Stream s, string filename, bool deepCheck, out uint? chdVersion, out byte[]? chdSha1, out byte[]? chdMd5, IProgress<ChdProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         chdSha1 = null;
         chdMd5 = null;
         chdVersion = null;
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         if (!CheckHeader(s, out _, out var version))
             return ChdError.Chderrinvalidfile;
@@ -223,7 +229,7 @@ public static class Chd
             var blocksToKeep = (1024 * 1024 * 512) / (int)chd.Blocksize;
             ChdBlockRead.KeepMostRepeatedBlocks(chd, blocksToKeep);
 
-            valid = DecompressDataParallel(s, chd, progress);
+            valid = DecompressDataParallel(s, chd, progress, cancellationToken);
 
             if (valid != ChdError.Chderrnone)
             {
@@ -254,20 +260,22 @@ public static class Chd
     /// <param name="parentFilename">Path to the parent CHD, or <c>null</c>/empty for a standalone CHD.</param>
     /// <param name="progress">An optional <see cref="IProgress{T}"/> receiving a <see cref="ChdProgress"/>
     /// report after each decompressed hunk. <c>null</c> (default) disables progress reporting.</param>
+    /// <param name="cancellationToken">A token to cancel verification. <see cref="OperationCanceledException"/>
+    /// is thrown if cancellation is requested while hunks are being read.</param>
     /// <returns>A <see cref="ChdResult"/> with the verification result, CHD version, and header hashes.</returns>
     /// <remarks>
-    /// Unlike <see cref="CheckFile(Stream,string,bool,IProgress{CHDSharp.Models.ChdProgress}?)"/>, this method is single-threaded but supports
+    /// Unlike <see cref="CheckFile(Stream,string,bool,IProgress{CHDSharp.Models.ChdProgress}?,System.Threading.CancellationToken)"/>, this method is single-threaded but supports
     /// parent/child CHD chains. Returns <see cref="ChdError.Chderrinvalidparent"/> when the supplied
     /// parent does not match, and <see cref="ChdError.Chderrrequiresparent"/> when the CHD is a child
     /// and no parent was supplied.
     /// </remarks>
-    public static ChdResult CheckFileWithParent(string filename, string? parentFilename, IProgress<ChdProgress>? progress = null)
+    public static ChdResult CheckFileWithParent(string filename, string? parentFilename, IProgress<ChdProgress>? progress = null, CancellationToken cancellationToken = default)
     {
-        var err = CheckFileWithParent(filename, parentFilename, out var ver, out var sha1, out var md5, progress);
+        var err = CheckFileWithParent(filename, parentFilename, out var ver, out var sha1, out var md5, progress, cancellationToken);
         return new ChdResult(err, ver, sha1, md5);
     }
 
-    /// <inheritdoc cref="CheckFileWithParent(string,string?,IProgress{CHDSharp.Models.ChdProgress}?)"/>
+    /// <inheritdoc cref="CheckFileWithParent(string,string?,IProgress{CHDSharp.Models.ChdProgress}?,System.Threading.CancellationToken)"/>
     /// <param name="filename">Path to the CHD file to verify.</param>
     /// <param name="parentFilename">Path to the parent CHD, or <c>null</c>/empty for a standalone CHD.</param>
     /// <param name="chdVersion">When this method returns, contains the CHD version (1-5), or <c>null</c> if the file could not be opened.</param>
@@ -275,15 +283,17 @@ public static class Chd
     /// <param name="chdMd5">When this method returns, contains the MD5 hash from the header, or <c>null</c> if not available.</param>
     /// <param name="progress">An optional <see cref="IProgress{T}"/> receiving a <see cref="ChdProgress"/>
     /// report after each decompressed hunk. <c>null</c> (default) disables progress reporting.</param>
+    /// <param name="cancellationToken">A token to cancel verification. <see cref="OperationCanceledException"/>
+    /// is thrown if cancellation is requested while hunks are being read.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code describing the failure.</returns>
     public static ChdError CheckFileWithParent(string filename, string? parentFilename,
-        out uint? chdVersion, out byte[]? chdSha1, out byte[]? chdMd5, IProgress<ChdProgress>? progress = null)
+        out uint? chdVersion, out byte[]? chdSha1, out byte[]? chdMd5, IProgress<ChdProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         chdVersion = null;
         chdSha1 = null;
         chdMd5 = null;
 
-        var err = ChdFile.Open(filename, parentFilename, out var chd);
+        var err = ChdFile.Open(filename, parentFilename, out var chd, cancellationToken);
         if (err != ChdError.Chderrnone)
             return err;
 
@@ -307,8 +317,9 @@ public static class Chd
             ulong offset = 0;
             while (sizetoGo > 0)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var chunk = (int)Math.Min((ulong)buffer.Length, sizetoGo);
-                err = chd.Read(offset, buffer, 0, chunk);
+                err = chd.Read(offset, buffer, 0, chunk, cancellationToken);
                 if (err != ChdError.Chderrnone)
                     return err;
 
@@ -465,7 +476,7 @@ public static class Chd
     /// does not exist; <see cref="ChdError.Chderrcannotopenfile"/> if it cannot be opened;
     /// <see cref="ChdError.Chderrinvalidfile"/> if it is not a CHD; otherwise a header parse/validation error.</returns>
     /// <remarks>
-    /// Unlike <see cref="ChdFile.Open(string, out ChdFile?)"/>, this performs no hunk-map linking,
+    /// Unlike <see cref="ChdFile.Open(string, out ChdFile, System.Threading.CancellationToken)"/>, this performs no hunk-map linking,
     /// codec setup, or parent resolution, and does not retain a stream. Use it to inspect a CHD
     /// (version, sizes, codecs, hashes, parent linkage) cheaply.
     /// </remarks>
@@ -654,9 +665,12 @@ public static class Chd
     /// <param name="chd">The parsed CHD header containing compression and hunk information.</param>
     /// <param name="progress">An optional <see cref="IProgress{T}"/> receiving a <see cref="ChdProgress"/>
     /// report after each hunk is hashed (in order). <c>null</c> disables progress reporting.</param>
+    /// <param name="cancellationToken">A token to cancel the pipeline; linked into the internal
+    /// cancellation source so workers stop on caller cancellation. <see cref="OperationCanceledException"/>
+    /// is thrown after the pipeline drains if cancellation was requested.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
     [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
-    private static ChdError DecompressDataParallel(Stream file, ChdHeader chd, IProgress<ChdProgress>? progress = null)
+    private static ChdError DecompressDataParallel(Stream file, ChdHeader chd, IProgress<ChdProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         var taskCount = TaskCount; // snapshot so a concurrent change cannot desync sentinels vs workers
         var md5Check = MD5.Create();
@@ -664,7 +678,7 @@ public static class Chd
         var blocksToDecompress = new BlockingCollection<int>(taskCount * 100);
         var blocksToHash = new BlockingCollection<int>(taskCount * 100);
         var allTasks = new List<Task>();
-        var ts = new CancellationTokenSource();
+        var ts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var sw = progress != null ? Stopwatch.StartNew() : null;
         try
         {
@@ -870,6 +884,10 @@ public static class Chd
 
             if (errMaster != ChdError.Chderrnone)
                 return errMaster;
+
+            // External cancellation: the pipeline drained early (workers threw/caught OCE), so the
+            // partial hashes below would otherwise report a bogus decompression error. Throw instead.
+            cancellationToken.ThrowIfCancellationRequested();
 
             var tmp = Array.Empty<byte>();
             md5Check.TransformFinalBlock(tmp, 0, 0);

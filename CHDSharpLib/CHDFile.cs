@@ -13,14 +13,14 @@ namespace CHDSharp;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Open a standalone CHD with <see cref="Open(string, out ChdFile)"/>. For a
-/// child (differential) CHD, supply its parent with
-/// <see cref="Open(string, string, out ChdFile)"/> or
-/// <see cref="Open(string, ChdFile, out ChdFile)"/>. Then decompress individual
-/// hunks with <see cref="ReadHunk"/>, read arbitrary byte ranges with
-/// <see cref="Read"/>, or iterate the whole image with <see cref="EnumerateHunks"/>.
-/// Async variants of every operation are available (<see cref="OpenAsync(string)"/>,
-/// <see cref="ReadHunkAsync"/>, <see cref="ReadAsync"/>).
+/// Open a standalone CHD with <see cref="Open(string, out ChdFile, System.Threading.CancellationToken)"/>. For a
+    /// child (differential) CHD, supply its parent with
+    /// <see cref="Open(string, string, out ChdFile, System.Threading.CancellationToken)"/> or
+    /// <see cref="Open(string, ChdFile, out ChdFile, System.Threading.CancellationToken)"/>. Then decompress individual
+    /// hunks with <see cref="ReadHunk"/>, read arbitrary byte ranges with
+    /// <see cref="Read"/>, or iterate the whole image with <see cref="EnumerateHunks"/>.
+    /// Async variants of every operation are available (<see cref="OpenAsync(string, System.Threading.CancellationToken)"/>,
+    /// <see cref="ReadHunkAsync"/>, <see cref="ReadAsync"/>).
 /// </para>
 /// <para>
 /// Always dispose the instance (<c>using</c> / <c>await using</c>); this closes the
@@ -505,84 +505,105 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         _isHdd = ChdTocParser.HasHddMetadata(_metadata!);
     }
 
-    /// <inheritdoc cref="Open(string,out ChdFile)"/>
-    /// <summary>Asynchronously opens a standalone CHD file from disk (see <see cref="Open(string,out ChdFile)"/>).</summary>
+    /// <summary>Asynchronously opens a standalone CHD file from disk (see <see cref="Open(string,out ChdFile,System.Threading.CancellationToken)"/>).</summary>
+    /// <param name="filename">Path to the CHD file to open.</param>
+    /// <param name="cancellationToken">A token to cancel the open. <see cref="OperationCanceledException"/>
+    /// is thrown (or the returned task is cancelled) if cancellation is requested.</param>
     /// <returns>A task producing a tuple of the <see cref="ChdError"/> result and the opened <see cref="ChdFile"/> (or <c>null</c> on error).</returns>
-    public static Task<(ChdError error, ChdFile? file)> OpenAsync(string filename)
+    public static Task<(ChdError error, ChdFile? file)> OpenAsync(string filename, CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
         {
-            var err = Open(filename, out var chd);
+            var err = Open(filename, out var chd, cancellationToken);
             return (err, chd);
-        });
+        }, cancellationToken);
     }
 
-    /// <inheritdoc cref="Open(string,string,out ChdFile)"/>
     /// <summary>Asynchronously opens a (possibly child) CHD from disk, resolving parent references against
-    /// the CHD at <paramref name="parentFilename"/> (see <see cref="Open(string,string,out ChdFile)"/>).</summary>
+    /// the CHD at <paramref name="parentFilename"/> (see <see cref="Open(string,string,out ChdFile,System.Threading.CancellationToken)"/>).</summary>
+    /// <param name="filename">Path to the CHD file to open.</param>
+    /// <param name="parentFilename">Path to the parent CHD, or <c>null</c>/empty for a standalone CHD.</param>
+    /// <param name="cancellationToken">A token to cancel the open. <see cref="OperationCanceledException"/>
+    /// is thrown (or the returned task is cancelled) if cancellation is requested.</param>
     /// <returns>A task producing a tuple of the <see cref="ChdError"/> result and the opened <see cref="ChdFile"/> (or <c>null</c> on error).</returns>
-    public static Task<(ChdError error, ChdFile? file)> OpenAsync(string filename, string? parentFilename)
+    public static Task<(ChdError error, ChdFile? file)> OpenAsync(string filename, string? parentFilename, CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
         {
-            var err = Open(filename, parentFilename, out var chd);
+            var err = Open(filename, parentFilename, out var chd, cancellationToken);
             return (err, chd);
-        });
+        }, cancellationToken);
     }
 
-    /// <inheritdoc cref="Open(string,ChdFile,out ChdFile)"/>
     /// <summary>Asynchronously opens a (possibly child) CHD from disk against an already-open parent
-    /// (see <see cref="Open(string,ChdFile,out ChdFile)"/>).</summary>
+    /// (see <see cref="Open(string,ChdFile,out ChdFile,System.Threading.CancellationToken)"/>).</summary>
+    /// <param name="filename">Path to the CHD file to open.</param>
+    /// <param name="parent">An already-open parent <see cref="ChdFile"/>, or <c>null</c> for a standalone CHD. The caller retains ownership.</param>
+    /// <param name="cancellationToken">A token to cancel the open. <see cref="OperationCanceledException"/>
+    /// is thrown (or the returned task is cancelled) if cancellation is requested.</param>
     /// <returns>A task producing a tuple of the <see cref="ChdError"/> result and the opened <see cref="ChdFile"/> (or <c>null</c> on error).</returns>
-    public static Task<(ChdError error, ChdFile? file)> OpenAsync(string filename, ChdFile? parent)
+    public static Task<(ChdError error, ChdFile? file)> OpenAsync(string filename, ChdFile? parent, CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
         {
-            var err = Open(filename, parent, out var chd);
+            var err = Open(filename, parent, out var chd, cancellationToken);
             return (err, chd);
-        });
+        }, cancellationToken);
     }
 
-    /// <inheritdoc cref="Open(Stream,bool,out ChdFile)"/>
     /// <summary>Asynchronously opens a standalone CHD from an existing seekable stream
-    /// (see <see cref="Open(Stream,bool,out ChdFile)"/>).</summary>
+    /// (see <see cref="Open(Stream,bool,out ChdFile,System.Threading.CancellationToken)"/>).</summary>
+    /// <param name="stream">Seekable, readable stream positioned anywhere; it will be seeked as needed.</param>
+    /// <param name="leaveOpen">If false, the stream is disposed when this instance is disposed.</param>
+    /// <param name="cancellationToken">A token to cancel the open. <see cref="OperationCanceledException"/>
+    /// is thrown (or the returned task is cancelled) if cancellation is requested.</param>
     /// <returns>A task producing a tuple of the <see cref="ChdError"/> result and the opened <see cref="ChdFile"/> (or <c>null</c> on error).</returns>
-    public static Task<(ChdError error, ChdFile? file)> OpenAsync(Stream stream, bool leaveOpen)
+    public static Task<(ChdError error, ChdFile? file)> OpenAsync(Stream stream, bool leaveOpen, CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
         {
-            var err = Open(stream, leaveOpen, out var chd);
+            var err = Open(stream, leaveOpen, out var chd, cancellationToken);
             return (err, chd);
-        });
+        }, cancellationToken);
     }
 
-    /// <inheritdoc cref="Open(Stream,bool,ChdFile,out ChdFile)"/>
     /// <summary>Asynchronously opens a (possibly child) CHD from an existing seekable stream
-    /// against an already-open parent (see <see cref="Open(Stream,bool,ChdFile,out ChdFile)"/>).</summary>
+    /// against an already-open parent (see <see cref="Open(Stream,bool,ChdFile,out ChdFile,System.Threading.CancellationToken)"/>).</summary>
+    /// <param name="stream">Seekable, readable stream positioned anywhere; it will be seeked as needed.</param>
+    /// <param name="leaveOpen">If false, the stream is disposed when this instance is disposed.</param>
+    /// <param name="parent">An already-open parent <see cref="ChdFile"/>, or <c>null</c> for a standalone CHD. The caller retains ownership.</param>
+    /// <param name="cancellationToken">A token to cancel the open. <see cref="OperationCanceledException"/>
+    /// is thrown (or the returned task is cancelled) if cancellation is requested.</param>
     /// <returns>A task producing a tuple of the <see cref="ChdError"/> result and the opened <see cref="ChdFile"/> (or <c>null</c> on error).</returns>
-    public static Task<(ChdError error, ChdFile? file)> OpenAsync(Stream stream, bool leaveOpen, ChdFile? parent)
+    public static Task<(ChdError error, ChdFile? file)> OpenAsync(Stream stream, bool leaveOpen, ChdFile? parent, CancellationToken cancellationToken = default)
     {
         return Task.Run(() =>
         {
-            var err = Open(stream, leaveOpen, parent, out var chd);
+            var err = Open(stream, leaveOpen, parent, out var chd, cancellationToken);
             return (err, chd);
-        });
+        }, cancellationToken);
     }
 
-    /// <inheritdoc cref="ReadHunk"/>
     /// <summary>Asynchronously decompresses a single hunk into <paramref name="buffer"/> (see <see cref="ReadHunk"/>).</summary>
+    /// <param name="hunknum">Zero-based hunk index (0 to <see cref="HunkCount"/> - 1).</param>
+    /// <param name="buffer">Destination buffer of at least <see cref="HunkBytes"/> bytes.</param>
+    /// <param name="cancellationToken">A token to cancel the read. <see cref="OperationCanceledException"/> is thrown if cancellation is requested.</param>
     /// <returns>A task producing the <see cref="ChdError"/> result.</returns>
-    public Task<ChdError> ReadHunkAsync(uint hunknum, byte[] buffer)
+    public Task<ChdError> ReadHunkAsync(uint hunknum, byte[] buffer, CancellationToken cancellationToken = default)
     {
-        return Task.Run(() => ReadHunk(hunknum, buffer));
+        return Task.Run(() => ReadHunk(hunknum, buffer, cancellationToken), cancellationToken);
     }
 
-    /// <inheritdoc cref="Read"/>
     /// <summary>Asynchronously reads a byte range from the decompressed image (see <see cref="Read"/>).</summary>
+    /// <param name="byteOffset">Byte offset into the decompressed image (0 to <see cref="TotalBytes"/> - 1).</param>
+    /// <param name="destination">Destination buffer.</param>
+    /// <param name="destinationOffset">Offset in <paramref name="destination"/> at which to start writing.</param>
+    /// <param name="count">Number of bytes to read.</param>
+    /// <param name="cancellationToken">A token to cancel the read. <see cref="OperationCanceledException"/> is thrown if cancellation is requested.</param>
     /// <returns>A task producing the <see cref="ChdError"/> result.</returns>
-    public Task<ChdError> ReadAsync(ulong byteOffset, byte[] destination, int destinationOffset, int count)
+    public Task<ChdError> ReadAsync(ulong byteOffset, byte[] destination, int destinationOffset, int count, CancellationToken cancellationToken = default)
     {
-        return Task.Run(() => Read(byteOffset, destination, destinationOffset, count));
+        return Task.Run(() => Read(byteOffset, destination, destinationOffset, count, cancellationToken), cancellationToken);
     }
 
     /// <summary>
@@ -591,25 +612,29 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <param name="data">When this method returns, contains the full decompressed image on success; an empty array on failure.</param>
     /// <param name="progress">An optional <see cref="IProgress{T}"/> receiving a <see cref="ChdProgress"/>
     /// report after each decompressed hunk. <c>null</c> (default) disables progress reporting.</param>
+    /// <param name="cancellationToken">A token to cancel the read. <see cref="OperationCanceledException"/>
+    /// is thrown if cancellation is requested before a hunk is decompressed.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success; <see cref="ChdError.Chderroutofmemory"/>
     /// if the image is larger than 2 GiB (<see cref="int.MaxValue"/> bytes); otherwise a read/decompression error code.</returns>
     /// <remarks>Be cautious: CHD images can be tens of gigabytes. Prefer <see cref="EnumerateHunks"/> or <see cref="Read"/> for large images.</remarks>
-    public ChdError ReadAllBytes(out byte[] data, IProgress<ChdProgress>? progress = null)
+    public ChdError ReadAllBytes(out byte[] data, IProgress<ChdProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         data = [];
+        cancellationToken.ThrowIfCancellationRequested();
         if (_chd.Totalbytes > int.MaxValue)
             return ChdError.Chderroutofmemory;
 
         data = new byte[_chd.Totalbytes];
         if (progress == null)
-            return Read(0, data, 0, data.Length);
+            return Read(0, data, 0, data.Length, cancellationToken);
 
         var sw = Stopwatch.StartNew();
         var bytesRead = 0;
         while (bytesRead < data.Length)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var count = (int)Math.Min((ulong)_chd.Blocksize, (ulong)(data.Length - bytesRead));
-            var err = Read((ulong)bytesRead, data, bytesRead, count);
+            var err = Read((ulong)bytesRead, data, bytesRead, count, cancellationToken);
             if (err != ChdError.Chderrnone)
                 return err;
 
@@ -657,12 +682,13 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// </summary>
     /// <param name="filename">Path to the CHD file to open.</param>
     /// <param name="chdFile">When this method returns, contains the opened <see cref="ChdFile"/>, or <c>null</c> on error.</param>
+    /// <param name="cancellationToken">A token to cancel the open. <see cref="OperationCanceledException"/> is thrown if cancellation is requested.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code
     /// (e.g. <see cref="ChdError.Chderrfilenotfound"/>, <see cref="ChdError.Chderrinvalidfile"/>,
     /// <see cref="ChdError.Chderrrequiresparent"/>).</returns>
-    public static ChdError Open(string filename, out ChdFile? chdFile)
+    public static ChdError Open(string filename, out ChdFile? chdFile, CancellationToken cancellationToken = default)
     {
-        return Open(filename, (ChdFile?)null, out chdFile);
+        return Open(filename, (ChdFile?)null, out chdFile, cancellationToken);
     }
 
     /// <summary>
@@ -673,21 +699,23 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <param name="filename">Path to the CHD file to open.</param>
     /// <param name="parentFilename">Path to the parent CHD, or <c>null</c>/empty for a standalone CHD.</param>
     /// <param name="chdFile">When this method returns, contains the opened <see cref="ChdFile"/>, or <c>null</c> on error.</param>
+    /// <param name="cancellationToken">A token to cancel the open. <see cref="OperationCanceledException"/> is thrown if cancellation is requested.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code
     /// (e.g. <see cref="ChdError.Chderrinvalidparent"/> if the parent's hashes do not match).</returns>
-    public static ChdError Open(string filename, string? parentFilename, out ChdFile? chdFile)
+    public static ChdError Open(string filename, string? parentFilename, out ChdFile? chdFile, CancellationToken cancellationToken = default)
     {
         chdFile = null;
+        cancellationToken.ThrowIfCancellationRequested();
 
         ChdFile? parent = null;
         if (!string.IsNullOrEmpty(parentFilename))
         {
-            var perr = Open(parentFilename, (ChdFile?)null, out parent);
+            var perr = Open(parentFilename, (ChdFile?)null, out parent, cancellationToken);
             if (perr != ChdError.Chderrnone)
                 return perr;
         }
 
-        var err = Open(filename, parent, out chdFile);
+        var err = Open(filename, parent, out chdFile, cancellationToken);
         if (err != ChdError.Chderrnone)
         {
             parent?.Dispose();
@@ -713,10 +741,12 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <param name="parent">An already-open parent <see cref="ChdFile"/>, or <c>null</c> for a standalone CHD.
     /// The same parent instance may be shared by multiple children as long as all access is single-threaded.</param>
     /// <param name="chdFile">When this method returns, contains the opened <see cref="ChdFile"/>, or <c>null</c> on error.</param>
+    /// <param name="cancellationToken">A token to cancel the open. <see cref="OperationCanceledException"/> is thrown if cancellation is requested.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
-    public static ChdError Open(string filename, ChdFile? parent, out ChdFile? chdFile)
+    public static ChdError Open(string filename, ChdFile? parent, out ChdFile? chdFile, CancellationToken cancellationToken = default)
     {
         chdFile = null;
+        cancellationToken.ThrowIfCancellationRequested();
         if (!File.Exists(filename))
             return ChdError.Chderrfilenotfound;
 
@@ -738,7 +768,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             return ChdError.Chderrcannotopenfile;
         }
 
-        var err = Open(fs, false, parent, out chdFile);
+        var err = Open(fs, false, parent, out chdFile, cancellationToken);
         if (err != ChdError.Chderrnone)
             fs.Dispose();
         return err;
@@ -750,10 +780,11 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <param name="stream">Seekable, readable stream positioned anywhere; it will be seeked as needed.</param>
     /// <param name="leaveOpen">If false, the stream is disposed when this instance is disposed.</param>
     /// <param name="chdFile">When this method returns, contains the opened <see cref="ChdFile"/> instance, or <c>null</c> on error.</param>
+    /// <param name="cancellationToken">A token to cancel the open. <see cref="OperationCanceledException"/> is thrown if cancellation is requested.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
-    public static ChdError Open(Stream stream, bool leaveOpen, out ChdFile? chdFile)
+    public static ChdError Open(Stream stream, bool leaveOpen, out ChdFile? chdFile, CancellationToken cancellationToken = default)
     {
-        return Open(stream, leaveOpen, null, out chdFile);
+        return Open(stream, leaveOpen, null, out chdFile, cancellationToken);
     }
 
     /// <summary>
@@ -764,10 +795,12 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <param name="leaveOpen">If false, the stream is disposed when this instance is disposed.</param>
     /// <param name="parent">An already-open parent <see cref="ChdFile"/>, or <c>null</c> for a standalone CHD. The caller retains ownership.</param>
     /// <param name="chdFile">When this method returns, contains the opened <see cref="ChdFile"/> instance, or <c>null</c> on error.</param>
+    /// <param name="cancellationToken">A token to cancel the open. <see cref="OperationCanceledException"/> is thrown if cancellation is requested.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
-    public static ChdError Open(Stream stream, bool leaveOpen, ChdFile? parent, out ChdFile? chdFile)
+    public static ChdError Open(Stream stream, bool leaveOpen, ChdFile? parent, out ChdFile? chdFile, CancellationToken cancellationToken = default)
     {
         chdFile = null;
+        cancellationToken.ThrowIfCancellationRequested();
         if (stream is not { CanRead: true } || !stream.CanSeek)
             return ChdError.Chderrinvalidparameter;
 
@@ -886,6 +919,8 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// </summary>
     /// <param name="hunknum">Zero-based hunk index (0 to <see cref="HunkCount"/> - 1).</param>
     /// <param name="buffer">Destination buffer of at least <see cref="HunkBytes"/> bytes.</param>
+    /// <param name="cancellationToken">A token to cancel the decompression. <see cref="OperationCanceledException"/>
+    /// is thrown if cancellation is requested before the hunk is decompressed.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success;
     /// <see cref="ChdError.Chderrhunkoutofrange"/> if <paramref name="hunknum"/> is out of range;
     /// <see cref="ChdError.Chderrinvalidparameter"/> if <paramref name="buffer"/> is too small;
@@ -893,8 +928,9 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <see cref="ChdError.Chderrdecompressionerror"/> if the compressed data is corrupt.</returns>
     /// <remarks>The final hunk of an image whose size is not a multiple of <see cref="HunkBytes"/> is
     /// still <see cref="HunkBytes"/> long (padded as stored in the file).</remarks>
-    public ChdError ReadHunk(uint hunknum, byte[] buffer)
+    public ChdError ReadHunk(uint hunknum, byte[] buffer, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (hunknum >= _chd.Totalblocks)
             return ChdError.Chderrhunkoutofrange;
         if (buffer.Length < _chd.Blocksize)
@@ -1088,15 +1124,19 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <param name="destination">Destination buffer.</param>
     /// <param name="destinationOffset">Offset in <paramref name="destination"/> at which to start writing.</param>
     /// <param name="count">Number of bytes to read.</param>
+    /// <param name="cancellationToken">A token to cancel the read. <see cref="OperationCanceledException"/>
+    /// is thrown if cancellation is requested before a hunk is decompressed.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success;
     /// <see cref="ChdError.Chderrinvalidparameter"/> if the requested range is outside the image or
     /// the destination bounds; otherwise a decompression error code.</returns>
-    public ChdError Read(ulong byteOffset, byte[] destination, int destinationOffset, int count)
+    public ChdError Read(ulong byteOffset, byte[] destination, int destinationOffset, int count, CancellationToken cancellationToken = default)
     {
         if (destinationOffset < 0 || count < 0 ||
             count > destination.Length - destinationOffset ||
             byteOffset > _chd.Totalbytes || (ulong)count > _chd.Totalbytes - byteOffset)
             return ChdError.Chderrinvalidparameter;
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         _hunkBuffer ??= new byte[_chd.Blocksize];
 
@@ -1108,7 +1148,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 
             if (hunk != _cachedHunk)
             {
-                var err = ReadHunk((uint)hunk, _hunkBuffer);
+                var err = ReadHunk((uint)hunk, _hunkBuffer, cancellationToken);
                 if (err != ChdError.Chderrnone)
                 {
                     _cachedHunk = -1;
@@ -1287,10 +1327,12 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <param name="baseFileName">Base filename (without extension) for output files.</param>
     /// <param name="progress">An optional <see cref="IProgress{T}"/> receiving a <see cref="ChdProgress"/>
     /// report after each decompressed hunk. <c>null</c> (default) disables progress reporting.</param>
+    /// <param name="cancellationToken">A token to cancel the extraction. <see cref="OperationCanceledException"/>
+    /// is thrown if cancellation is requested between hunk writes.</param>
     /// <returns>List of created file paths.</returns>
-    public IReadOnlyList<string> ExtractToDirectory(string outputDir, string baseFileName, IProgress<ChdProgress>? progress = null)
+    public IReadOnlyList<string> ExtractToDirectory(string outputDir, string baseFileName, IProgress<ChdProgress>? progress = null, CancellationToken cancellationToken = default)
     {
-        var result = ExtractToDirectoryWithReporting(outputDir, baseFileName, progress);
+        var result = ExtractToDirectoryWithReporting(outputDir, baseFileName, progress, cancellationToken);
         if (result.Error != ChdError.Chderrnone)
             throw new InvalidDataException($"Extraction failed: {result.Error}");
 
@@ -1312,8 +1354,10 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <param name="baseFileName">Base filename (without extension) for output files.</param>
     /// <param name="progress">An optional <see cref="IProgress{T}"/> receiving a <see cref="ChdProgress"/>
     /// report after each decompressed hunk. <c>null</c> (default) disables progress reporting.</param>
+    /// <param name="cancellationToken">A token to cancel the extraction. <see cref="OperationCanceledException"/>
+    /// is thrown if cancellation is requested between hunk writes.</param>
     /// <returns>An <see cref="ExtractResult"/> with created files, per-track results, and overall error.</returns>
-    public ExtractResult ExtractToDirectoryWithReporting(string outputDir, string baseFileName, IProgress<ChdProgress>? progress = null)
+    public ExtractResult ExtractToDirectoryWithReporting(string outputDir, string baseFileName, IProgress<ChdProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         var created = new List<string>();
         var trackResults = new List<TrackExtractResult>();
@@ -1324,7 +1368,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             foreach (var track in Tracks!)
             {
                 var trackFile = Path.Combine(outputDir, $"track{track.TrackNumber:D2}.bin");
-                var err = TryWriteTrackToFile(track, trackFile, progress);
+                var err = TryWriteTrackToFile(track, trackFile, progress, cancellationToken);
                 trackResults.Add(new TrackExtractResult(track.TrackNumber, trackFile, err));
                 if (err == ChdError.Chderrnone)
                     created.Add(trackFile);
@@ -1352,7 +1396,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             if (IsCd)
             {
                 imageFile = Path.Combine(outputDir, $"{baseFileName}.bin");
-                WriteAllBytesSlow(imageFile, progress);
+                WriteAllBytesSlow(imageFile, progress, cancellationToken);
                 created.Add(imageFile);
 
                 var descriptorFile = Path.Combine(outputDir, $"{baseFileName}.cue");
@@ -1362,23 +1406,27 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             else if (IsDvd)
             {
                 imageFile = Path.Combine(outputDir, $"{baseFileName}.iso");
-                WriteAllBytesSlow(imageFile, progress);
+                WriteAllBytesSlow(imageFile, progress, cancellationToken);
                 created.Add(imageFile);
             }
             else if (IsHdd)
             {
                 imageFile = Path.Combine(outputDir, $"{baseFileName}.img");
-                WriteAllBytesSlow(imageFile, progress);
+                WriteAllBytesSlow(imageFile, progress, cancellationToken);
                 created.Add(imageFile);
             }
             else
             {
                 imageFile = Path.Combine(outputDir, $"{baseFileName}.raw");
-                WriteAllBytesSlow(imageFile, progress);
+                WriteAllBytesSlow(imageFile, progress, cancellationToken);
                 created.Add(imageFile);
             }
 
             return new ExtractResult(created, trackResults, ChdError.Chderrnone);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -1387,14 +1435,15 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         }
     }
 
-    private void WriteAllBytesSlow(string path, IProgress<ChdProgress>? progress)
+    private void WriteAllBytesSlow(string path, IProgress<ChdProgress>? progress, CancellationToken cancellationToken)
     {
         using var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024);
         var sw = progress != null ? Stopwatch.StartNew() : null;
         var buf = new byte[HunkBytes];
         for (uint i = 0; i < HunkCount; i++)
         {
-            var err = ReadHunk(i, buf);
+            cancellationToken.ThrowIfCancellationRequested();
+            var err = ReadHunk(i, buf, cancellationToken);
             if (err != ChdError.Chderrnone)
                 throw new InvalidDataException($"Failed to read hunk {i}: {err}");
 
@@ -1412,7 +1461,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         }
     }
 
-    private ChdError TryWriteTrackToFile(ChdTrackInfo track, string path, IProgress<ChdProgress>? progress)
+    private ChdError TryWriteTrackToFile(ChdTrackInfo track, string path, IProgress<ChdProgress>? progress, CancellationToken cancellationToken)
     {
         var unitBytes = UnitBytes;
         var startByte = track.StartFrame * unitBytes;
@@ -1435,8 +1484,9 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 
             while (remaining > 0)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var toRead = (int)Math.Min(hunkSize, remaining);
-                var err = Read(offset, buf, 0, toRead);
+                var err = Read(offset, buf, 0, toRead, cancellationToken);
                 if (err != ChdError.Chderrnone)
                     return err;
 
@@ -1461,6 +1511,10 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             }
 
             return ChdError.Chderrnone;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception)
         {

@@ -11,6 +11,7 @@
 | `HeaderAndApiTests` | Unit | Header magic validation, version detection, `CheckHeader`, `IsChdFile`, open/read error paths |
 | `ReadHeaderTests` | Unit | `Chd.ReadHeader` / `ReadHeaderAsync` full header DTO (libchdr `chd_read_header` parity): all versions, field parity with an opened `ChdFile`, codec slots, child/parent hashes, V1 geometry, error paths, stream leave-open |
 | `ProgressReportingTests` | Unit | `IProgress<ChdProgress>` reporting on `CheckFile`, `CheckFileWithParent`, `ReadAllBytes`, `EnumerateHunks`, `ExtractToDirectory` |
+| `CancellationTokenTests` | Unit | `CancellationToken` support on all public APIs (pre-cancelled throws, cancelled async tasks, mid-run pipeline cancellation) |
 | `ChecksumTests` | Unit | CRC-32 and CRC-16 test vectors |
 | `TrackInfoTests` | Unit | CD/GD-ROM TOC parsing across all metadata formats (CHTR, CHT2, CHCD, CHGD, CHGT) |
 | `TrackInfoEdgeCaseTests` | Unit | Edge cases: missing/invalid metadata, GD-ROM pad frames, binary track parsing |

@@ -139,6 +139,7 @@ internal static class SourceData
             if (rng.Next(12) == 0)
                 sb.Append('\n');
         }
+
         Encoding.ASCII.GetBytes(sb.ToString(0, hunk.Length), hunk);
     }
 

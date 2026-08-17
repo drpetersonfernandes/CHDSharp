@@ -136,6 +136,7 @@ internal static class AviWriter
             w.Write((uint)audioBytes);
             w.Write(audio, f * audioBytes, audioBytes);
         }
+
         EndList(w, moviSizePos);
 
         // idx1
@@ -172,8 +173,10 @@ internal static class AviWriter
                     frame[(y * width + x) * 2 + 1] = chroma;
                 }
             }
+
             result[f] = frame;
         }
+
         return result;
     }
 
@@ -188,6 +191,7 @@ internal static class AviWriter
             audio[i * 2] = (byte)s;
             audio[i * 2 + 1] = (byte)(s >> 8);
         }
+
         return audio;
     }
 

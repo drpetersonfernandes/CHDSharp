@@ -233,6 +233,7 @@ public class ChdmanWrapper
 
         return Run(args.ToArray());
     }
+
     private static int ParseIntField(string text, string pattern)
     {
         var m = Regex.Match(text, pattern);

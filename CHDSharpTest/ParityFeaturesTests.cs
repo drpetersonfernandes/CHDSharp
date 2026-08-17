@@ -359,7 +359,12 @@ public class ParityFeaturesTests
         public override bool CanSeek => true;
         public override bool CanWrite => false;
         public override long Length => _inner.Length;
-        public override long Position { get => _inner.Position; set => _inner.Position = value; }
+
+        public override long Position
+        {
+            get => _inner.Position;
+            set => _inner.Position = value;
+        }
 
         public override void Flush()
         {
@@ -403,7 +408,12 @@ public class ParityFeaturesTests
         public override bool CanSeek => true;
         public override bool CanWrite => false;
         public override long Length => _inner.Length;
-        public override long Position { get => _inner.Position; set => _inner.Position = value; }
+
+        public override long Position
+        {
+            get => _inner.Position;
+            set => _inner.Position = value;
+        }
 
         public override void Flush()
         {

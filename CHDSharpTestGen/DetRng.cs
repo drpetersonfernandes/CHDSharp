@@ -42,6 +42,7 @@ internal sealed class DetRng
                 buffer[i++] = (byte)(v >> (b * 8));
             }
         }
+
         while (i < buffer.Length)
         {
             buffer[i++] = NextByte();

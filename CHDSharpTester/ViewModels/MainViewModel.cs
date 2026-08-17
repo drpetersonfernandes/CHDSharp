@@ -53,6 +53,7 @@ internal class MainViewModel : INotifyPropertyChanged
     }
 
     private string _chdmanPath = string.Empty;
+
     /// <summary>Gets or sets the full path to the chdman executable.</summary>
     public string ChdmanPath
     {
@@ -74,6 +75,7 @@ internal class MainViewModel : INotifyPropertyChanged
 
     /// <summary>Gets or sets a summary string describing the currently selected files.</summary>
     private string _filesSummary = "No files selected.";
+
     public string FilesSummary
     {
         get => _filesSummary;
@@ -122,6 +124,7 @@ internal class MainViewModel : INotifyPropertyChanged
 
     /// <summary>Gets or sets whether a test run is currently executing.</summary>
     private bool _isRunning;
+
     public bool IsRunning
     {
         get => _isRunning;
@@ -159,6 +162,7 @@ internal class MainViewModel : INotifyPropertyChanged
     }
 
     private string _statusText = "Ready.";
+
     /// <summary>Gets or sets the status bar text shown at the bottom of the window.</summary>
     public string StatusText
     {
@@ -171,6 +175,7 @@ internal class MainViewModel : INotifyPropertyChanged
     }
 
     private string _progressText = "Ready.";
+
     /// <summary>Gets or sets the current progress status text.</summary>
     public string ProgressText
     {
@@ -183,6 +188,7 @@ internal class MainViewModel : INotifyPropertyChanged
     }
 
     private string _currentTest = string.Empty;
+
     /// <summary>Gets or sets the name of the test currently executing.</summary>
     public string CurrentTest
     {
@@ -195,6 +201,7 @@ internal class MainViewModel : INotifyPropertyChanged
     }
 
     private string _fileProgress = string.Empty;
+
     /// <summary>Gets or sets the file progress display text (e.g., "File 3/10").</summary>
     public string FileProgress
     {
@@ -207,6 +214,7 @@ internal class MainViewModel : INotifyPropertyChanged
     }
 
     private string _logText = string.Empty;
+
     /// <summary>Gets or sets the accumulated log text with timestamps.</summary>
     public string LogText
     {
@@ -261,6 +269,7 @@ internal class MainViewModel : INotifyPropertyChanged
         : string.Empty;
 
     private string _summarySubText = string.Empty;
+
     /// <summary>Gets or sets the sub-summary text shown below the main summary.</summary>
     public string SummarySubText
     {
@@ -283,6 +292,7 @@ internal class MainViewModel : INotifyPropertyChanged
                     ? new ObservableCollection<PerFileResult>(SessionResult.FileResults)
                     : [];
             }
+
             return _cachedFileResults;
         }
     }
@@ -316,6 +326,7 @@ internal class MainViewModel : INotifyPropertyChanged
             {
                 AddFileIfNew(path);
             }
+
             UpdateFilesSummary();
             AddLog($"Added {dlg.FileNames.Length} file(s). Total: {Files.Count}");
         }
@@ -336,6 +347,7 @@ internal class MainViewModel : INotifyPropertyChanged
                 {
                     AddFileIfNew(path);
                 }
+
                 UpdateFilesSummary();
                 AddLog($"Added {chdFiles.Length} file(s) from folder. Total: {Files.Count}");
             }
@@ -382,6 +394,7 @@ internal class MainViewModel : INotifyPropertyChanged
                 // File may be inaccessible
             }
         }
+
         var sizeStr = totalSize switch
         {
             < 1024 => $"{totalSize} B",
@@ -464,6 +477,7 @@ internal class MainViewModel : INotifyPropertyChanged
                 _cts?.Dispose();
                 _cts = null;
             }
+
             IsRunning = false;
             CommandManager.InvalidateRequerySuggested();
         }
@@ -482,6 +496,7 @@ internal class MainViewModel : INotifyPropertyChanged
                 // CTS may already be disposed
             }
         }
+
         AddLog("Cancelling test run...");
     }
 
@@ -589,6 +604,7 @@ internal class MainViewModel : INotifyPropertyChanged
                 };
                 sb.AppendLine(CultureInfo.InvariantCulture, $"  {icon} {t.TestName,-22} {t.ElapsedSeconds,6:N2}s  {t.Detail}");
             }
+
             sb.AppendLine();
         }
 

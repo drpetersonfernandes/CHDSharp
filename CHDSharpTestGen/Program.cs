@@ -61,6 +61,7 @@ internal static class Program
                     Console.Error.WriteLine("--hunkdebug requires a CHD file path argument");
                     return 1;
                 }
+
                 return HunkDebug(args[hunkDebugIdx + 1]);
             }
 
@@ -129,6 +130,7 @@ internal static class Program
                     Console.WriteLine(FormattableString.Invariant($"hunk {h}: hunk index exceeds raw image size ({SourceData.RawHunks} hunks)"));
                     continue;
                 }
+
                 var match = buffer.AsSpan().SequenceEqual(raw.AsSpan((int)(h * hdr.Blocksize), (int)hdr.Blocksize));
                 if (err != ChdError.Chderrnone || !match)
                 {
@@ -140,6 +142,7 @@ internal static class Program
                             firstDiff = i;
                             break;
                         }
+
                     Console.WriteLine(FormattableString.Invariant($"hunk {h}: err={err} match={match} firstDiff={firstDiff} complen={me.Length}"));
                 }
             }
@@ -149,6 +152,7 @@ internal static class Program
                 Console.WriteLine(FormattableString.Invariant($"hunk {h}: EXCEPTION {ex.GetType().Name}: {ex.Message}"));
             }
         }
+
         Console.WriteLine(FormattableString.Invariant($"{failures} failing {codec0} hunks of {hdr.Totalblocks}"));
         return 0;
     }
@@ -171,6 +175,7 @@ internal static class Program
                 Console.WriteLine(FormattableString.Invariant($"  FAIL {vw}x{vh}@{fps}: {ex.Message.Replace("\n", " | ")}"));
             }
         }
+
         return 0;
     }
 

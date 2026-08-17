@@ -842,6 +842,7 @@ public class ChdTestRunner
                     failures++;
                 }
             }
+
             if (hunkPass)
             {
                 detail.Add("ReadHunk first/middle/last: OK");
@@ -879,6 +880,7 @@ public class ChdTestRunner
                         break;
                     }
                 }
+
                 if (match)
                 {
                     detail.Add("Read vs ReadHunk first hunk: OK");
@@ -1129,6 +1131,7 @@ public class ChdTestRunner
                     ]
                 };
             }
+
             session.FileResults.Add(cdzsResult);
 
             // zstd — use any openable file (not necessarily CD-type)
@@ -1218,6 +1221,7 @@ public class ChdTestRunner
                         ]
                     };
                 }
+
                 session.FileResults.Add(zstdResult);
             }
         }

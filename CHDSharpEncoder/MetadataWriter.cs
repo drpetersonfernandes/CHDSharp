@@ -12,14 +12,19 @@ public static class MetadataWriter
 {
     /// <summary>The metadata entry header size in bytes.</summary>
     public const int MetadataHeaderSize = 16;
+
     /// <summary>'CHT2' CD-ROM track metadata v2 tag (big-endian).</summary>
     public const uint CdRomTrackMetadata2Tag = 0x43485432;
+
     /// <summary>'CHGD' GD-ROM track metadata tag (big-endian).</summary>
     public const uint GdRomTrackMetadataTag = 0x43484744;
+
     /// <summary>'GDDD' hard-disk geometry metadata tag (big-endian).</summary>
     public const uint HardDiskMetadataTag = 0x47444444;
+
     /// <summary>'DVD ' DVD-ROM metadata tag (big-endian).</summary>
     public const uint DvdMetadataTag = 0x44564420;
+
     /// <summary>CHD_MDFLAGS_CHECKSUM: the entry is covered by the combined SHA-1 verification.</summary>
     public const byte ChdMdflagsChecksum = 0x01;
 
@@ -41,7 +46,7 @@ public static class MetadataWriter
         if (bytesPerSector > 0)
         {
             ulong perCylinder = (ulong)bytesPerSector * heads * sectorsPerTrack;
-            cylinders = perCylinder > 0 ? (totalBytes + perCylinder - 1) / perCylinder : 0;
+            cylinders = (totalBytes + perCylinder - 1) / perCylinder;
             if (cylinders > uint.MaxValue)
             {
                 cylinders = uint.MaxValue;
@@ -148,6 +153,7 @@ public static class MetadataWriter
                 Payload = Encoding.ASCII.GetBytes(text + '\0')
             });
         }
+
         return entries;
     }
 
@@ -207,6 +213,7 @@ public static class MetadataWriter
             if (v != 0)
                 return v;
         }
+
         return x.Length.CompareTo(y.Length);
     }
 
@@ -262,10 +269,13 @@ public class MetadataEntry
 {
     /// <summary>The 4-character metadata tag (e.g. 'CHT2').</summary>
     public uint Tag { get; init; }
+
     /// <summary>The metadata flags byte (bit 0 = CHD_MDFLAGS_CHECKSUM).</summary>
     public byte Flags { get; init; }
+
     /// <summary>The entry payload (typically a null-terminated ASCII string).</summary>
     public byte[] Payload { get; init; } = Array.Empty<byte>();
+
     /// <summary>File offset of the next entry in the linked list (0 = end of list).</summary>
     public ulong NextOffset { get; set; }
 

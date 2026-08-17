@@ -29,8 +29,6 @@ public class LargeFileTests
 
         var ms = new MemoryStream();
 
-        void Write(byte[] b) => ms.Write(b, 0, b.Length);
-
         // Preamble (16 bytes): magic + length + version.
         Write("MComprHD"u8.ToArray());
         Write(EndianHelpers.Be(124));
@@ -64,6 +62,8 @@ public class LargeFileTests
 
         ms.Position = 0;
         return ms;
+
+        void Write(byte[] b) => ms.Write(b, 0, b.Length);
     }
 
     [Fact]

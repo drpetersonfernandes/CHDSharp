@@ -8,7 +8,7 @@ namespace CHDSharpEncoder;
 /// The parsing logic mirrors MAME's <c>cdrom_file::parse_cue</c> (src/lib/util/cdrom.cpp),
 /// including track length and file offset resolution.
 /// </summary>
-public class CueParser
+public abstract class CueParser
 {
     /// <summary>
     /// Parses a CUE sheet file into a table of contents.
@@ -17,7 +17,7 @@ public class CueParser
     /// <returns>The parsed table of contents.</returns>
     /// <exception cref="FileNotFoundException">The CUE file or a referenced data file does not exist.</exception>
     /// <exception cref="InvalidDataException">The CUE file is malformed or uses an unsupported track/file type.</exception>
-    public CdToc Parse(string cueFilePath)
+    public static CdToc Parse(string cueFilePath)
     {
         ArgumentNullException.ThrowIfNull(cueFilePath);
         if (!File.Exists(cueFilePath))
@@ -49,7 +49,6 @@ public class CueParser
                     switch (tokens[2])
                     {
                         case "BINARY":
-                            break;
                         case "MOTOROLA":
                             break;
                         case "WAVE":
@@ -61,6 +60,7 @@ public class CueParser
                         default:
                             throw new InvalidDataException($"Unhandled file type [{tokens[2]}]");
                     }
+
                     break;
                 }
 
@@ -119,24 +119,28 @@ public class CueParser
                     var track = currentTrack.Value;
                     int frames = ParseMsfToFrames(tokens[2]);
 
-                    if (indexNumber == 1)
+                    switch (indexNumber)
                     {
-                        if (track.Pregap == 0 && track.Index00 != -1)
+                        case 1:
                         {
-                            track.Pregap = frames - track.Index00;
-                            track.PgType = track.TrackType;
-                            track.PgDataSize = track.DataSize;
+                            if (track.Pregap == 0 && track.Index00 != -1)
+                            {
+                                track.Pregap = frames - track.Index00;
+                                track.PgType = track.TrackType;
+                                track.PgDataSize = track.DataSize;
+                            }
+                            else if (track.Index00 == -1)
+                            {
+                                // no pregap sectors in the file; INDEX 00 defaults to the INDEX 01 position
+                                track.Index00 = frames;
+                            }
+
+                            track.Index01 = frames;
+                            break;
                         }
-                        else if (track.Index00 == -1)
-                        {
-                            // no pregap sectors in the file; INDEX 00 defaults to the INDEX 01 position
+                        case 0:
                             track.Index00 = frames;
-                        }
-                        track.Index01 = frames;
-                    }
-                    else if (indexNumber == 0)
-                    {
-                        track.Index00 = frames;
+                            break;
                     }
 
                     currentTrack = track;
@@ -168,10 +172,6 @@ public class CueParser
                     currentTrack = track;
                     break;
                 }
-
-                default:
-                    // REM comments and any unknown commands are ignored, like MAME's parse_cue
-                    break;
             }
         }
 
@@ -189,21 +189,23 @@ public class CueParser
     public static int ParseMsfToFrames(string token)
     {
         string[] parts = token.Split(':');
-        if (parts.Length == 1)
+        switch (parts.Length)
         {
-            if (!int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out int frames))
-                throw new InvalidDataException($"Invalid frame count [{token}]");
+            case 1:
+            {
+                if (!int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out int frames))
+                    throw new InvalidDataException($"Invalid frame count [{token}]");
 
-            return frames;
+                return frames;
+            }
+            case 3 when
+                int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out int minutes) &&
+                int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out int seconds) &&
+                int.TryParse(parts[2], NumberStyles.None, CultureInfo.InvariantCulture, out int frame):
+                return minutes * 60 * 75 + seconds * 75 + frame;
+            default:
+                throw new InvalidDataException($"Invalid MSF time format [{token}]");
         }
-        if (parts.Length == 3 &&
-            int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out int minutes) &&
-            int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out int seconds) &&
-            int.TryParse(parts[2], NumberStyles.None, CultureInfo.InvariantCulture, out int frame))
-        {
-            return minutes * 60 * 75 + seconds * 75 + frame;
-        }
-        throw new InvalidDataException($"Invalid MSF time format [{token}]");
     }
 
     private static void ResolveTrackLengths(List<CdTrack> tracks)
@@ -347,12 +349,12 @@ public class CueParser
         long fileSize = fs.Length;
         long offset = 0;
 
-        if (ReadFourCc(fs, offset, out _) != "RIFF")
+        if (!string.Equals(ReadFourCc(fs, offset, out _), "RIFF", StringComparison.Ordinal))
             throw new InvalidDataException($"Could not find RIFF header ({fileName})");
 
         offset += 4;
         ReadU32Le(fs, ref offset);
-        if (ReadFourCc(fs, offset, out _) != "WAVE")
+        if (!string.Equals(ReadFourCc(fs, offset, out _), "WAVE", StringComparison.Ordinal))
             throw new InvalidDataException($"Could not find WAVE header ({fileName})");
 
         offset += 4;
@@ -364,7 +366,7 @@ public class CueParser
             string tag = ReadFourCc(fs, offset, out _);
             offset += 4;
             length = ReadU32Le(fs, ref offset);
-            if (tag == "fmt ")
+            if (string.Equals(tag, "fmt ", StringComparison.Ordinal))
                 break;
 
             offset += length;
@@ -395,7 +397,7 @@ public class CueParser
             string tag = ReadFourCc(fs, offset, out _);
             offset += 4;
             length = ReadU32Le(fs, ref offset);
-            if (tag == "data")
+            if (string.Equals(tag, "data", StringComparison.Ordinal))
                 break;
 
             offset += length;

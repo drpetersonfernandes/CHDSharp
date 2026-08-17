@@ -5,29 +5,40 @@ public class ChdHeaderV5
 {
     /// <summary>The CHD header tag as a string.</summary>
     public const string TagString = "MComprHD";
+
     /// <summary>The CHD header tag as a byte array.</summary>
-    public static readonly byte[] Tag = { (byte)'M', (byte)'C', (byte)'o', (byte)'m', (byte)'p', (byte)'r', (byte)'H', (byte)'D' };
+    public static readonly byte[] Tag = "MComprHD"u8.ToArray();
+
     /// <summary>The serialized header length in bytes.</summary>
     public const uint Length = 124;
+
     /// <summary>The CHD format version (5).</summary>
     public const uint Version = 5;
 
     /// <summary>Gets or sets the four compressor codec tags.</summary>
     public uint[] Compressors { get; set; } = new uint[4];
+
     /// <summary>Gets or sets the total logical (uncompressed) size in bytes.</summary>
     public ulong LogicalBytes { get; set; }
+
     /// <summary>Gets or sets the byte offset of the hunk map within the file.</summary>
     public ulong MapOffset { get; set; }
+
     /// <summary>Gets or sets the byte offset of metadata within the file.</summary>
     public ulong MetaOffset { get; set; }
+
     /// <summary>Gets or sets the size of each hunk in bytes.</summary>
     public uint HunkBytes { get; set; }
+
     /// <summary>Gets or sets the unit size in bytes.</summary>
     public uint UnitBytes { get; set; }
+
     /// <summary>Gets or sets the SHA-1 hash of the raw (uncompressed) data.</summary>
     public byte[] RawSha1 { get; set; } = new byte[20];
+
     /// <summary>Gets or sets the SHA-1 hash of the final CHD data.</summary>
     public byte[] Sha1 { get; set; } = new byte[20];
+
     /// <summary>Gets or sets the SHA-1 hash of the parent CHD, if applicable.</summary>
     public byte[] ParentSha1 { get; set; } = new byte[20];
 

@@ -85,18 +85,10 @@ public class Huffman168
     /// <param name="bs">The bit stream to write the RLE-encoded tree to.</param>
     public void ExportTreeRle(BitStreamOut bs)
     {
-        var numbits = MaxBits >= 16 ? 5 : MaxBits >= 8 ? 4 : 3;
+        const int numbits = 4;
 
         var lastVal = -1;
         var repCount = 0;
-
-        void Flush(int val)
-        {
-            if (repCount == 0) return;
-
-            WriteRleTreeBits(bs, val, repCount, numbits);
-            repCount = 0;
-        }
 
         for (var i = 0; i < NumCodes; i++)
         {
@@ -112,7 +104,17 @@ public class Huffman168
                 repCount = 1;
             }
         }
+
         Flush(lastVal);
+        return;
+
+        void Flush(int val)
+        {
+            if (repCount == 0) return;
+
+            WriteRleTreeBits(bs, val, repCount, numbits);
+            repCount = 0;
+        }
     }
 
     /// <summary>Encodes a symbol and writes its Huffman code to the bit stream.</summary>
@@ -157,9 +159,9 @@ public class Huffman168
         var nextAlloc = NumCodes;
         while (activeIndices.Count > 1)
         {
-            var idx0 = activeIndices[activeIndices.Count - 1];
+            var idx0 = activeIndices[^1];
             activeIndices.RemoveAt(activeIndices.Count - 1);
-            var idx1 = activeIndices[activeIndices.Count - 1];
+            var idx1 = activeIndices[^1];
             activeIndices.RemoveAt(activeIndices.Count - 1);
 
             var newIdx = nextAlloc++;

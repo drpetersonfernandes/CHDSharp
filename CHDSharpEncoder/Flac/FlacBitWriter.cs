@@ -28,6 +28,7 @@ internal sealed class FlacBitWriter
         {
             _buffer[_bitPosition >> 3] |= (byte)(0x80 >> (_bitPosition & 7));
         }
+
         _bitPosition++;
     }
 
@@ -47,6 +48,7 @@ internal sealed class FlacBitWriter
         {
             WriteBit(0);
         }
+
         WriteBit(1);
     }
 

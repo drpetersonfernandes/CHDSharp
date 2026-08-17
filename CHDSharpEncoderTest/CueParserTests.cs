@@ -170,7 +170,7 @@ public class CueParserTests : IDisposable
         Assert.Equal(0L, toc.Tracks[0].FileOffset);
         Assert.Equal(100, toc.Tracks[1].Frames);
         Assert.Equal(0L, toc.Tracks[1].FileOffset);
-        Assert.NotEqual(toc.Tracks[0].FileName, toc.Tracks[1].FileName);
+        Assert.NotEqual(toc.Tracks[0].FileName, toc.Tracks[1].FileName, StringComparer.Ordinal);
     }
 
     [Fact]
@@ -322,7 +322,7 @@ public class CueParserTests : IDisposable
     [Fact]
     public void MissingCueFile_Throws()
     {
-        Assert.Throws<FileNotFoundException>(() => new CueParser().Parse(Path.Combine(_dir, "nope.cue")));
+        Assert.Throws<FileNotFoundException>(() => CueParser.Parse(Path.Combine(_dir, "nope.cue")));
     }
 
     [Fact]
@@ -360,7 +360,7 @@ public class CueParserTests : IDisposable
 
     private CdToc Parse()
     {
-        return new CueParser().Parse(Path.Combine(_dir, "test.cue"));
+        return CueParser.Parse(Path.Combine(_dir, "test.cue"));
     }
 
     private void WriteCue(string content)
@@ -389,8 +389,6 @@ public class CueParserTests : IDisposable
         using var fs = new FileStream(Path.Combine(_dir, "audio.wav"), FileMode.Create, FileAccess.Write);
         using var w = new BinaryWriter(fs);
 
-        void WriteFourCc(string tag) => w.Write(System.Text.Encoding.ASCII.GetBytes(tag));
-
         WriteFourCc("RIFF");
         w.Write(36 + dataLength); // RIFF chunk size
         WriteFourCc("WAVE");
@@ -408,5 +406,8 @@ public class CueParserTests : IDisposable
         byte[] silence = new byte[CdConstants.MaxSectorData];
         for (int i = 0; i < frames; i++)
             w.Write(silence);
+        return;
+
+        void WriteFourCc(string tag) => w.Write(System.Text.Encoding.ASCII.GetBytes(tag));
     }
 }

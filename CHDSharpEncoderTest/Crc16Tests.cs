@@ -41,7 +41,7 @@ public class Crc16Tests
     [Fact]
     public void OffsetAndLength()
     {
-        byte[] data = { 0x00, 0x00, (byte)'1', (byte)'2', (byte)'3', (byte)'4', (byte)'5', (byte)'6', (byte)'7', (byte)'8', (byte)'9' };
+        byte[] data = "\0\0123456789"u8.ToArray();
         ushort result = Crc16.Compute(data, 2, 9);
         Assert.Equal(0x29B1, result);
     }

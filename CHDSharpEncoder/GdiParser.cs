@@ -73,25 +73,23 @@ public class GdiParser
                 PgSub = CdSubType.None
             };
 
-            if (trktype == 4 && trksize == 2352)
+            switch (trktype)
             {
-                track.TrackType = CdTrackType.Mode1Raw;
-                track.DataSize = 2352;
-            }
-            else if (trktype == 4 && trksize == 2048)
-            {
-                track.TrackType = CdTrackType.Mode1;
-                track.DataSize = 2048;
-            }
-            else if (trktype == 0)
-            {
-                track.TrackType = CdTrackType.Audio;
-                track.DataSize = 2352;
-                track.Swap = true;
-            }
-            else
-            {
-                throw new InvalidDataException($"Unknown track type {trktype} and track size {trksize} combination encountered");
+                case 4 when trksize == 2352:
+                    track.TrackType = CdTrackType.Mode1Raw;
+                    track.DataSize = 2352;
+                    break;
+                case 4 when trksize == 2048:
+                    track.TrackType = CdTrackType.Mode1;
+                    track.DataSize = 2048;
+                    break;
+                case 0:
+                    track.TrackType = CdTrackType.Audio;
+                    track.DataSize = 2352;
+                    track.Swap = true;
+                    break;
+                default:
+                    throw new InvalidDataException($"Unknown track type {trktype} and track size {trksize} combination encountered");
             }
 
             if (!File.Exists(fileName))

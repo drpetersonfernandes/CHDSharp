@@ -167,8 +167,7 @@ public class HunkProcessor
             throw new InvalidOperationException(
                 "Parallel compression requires the codec-tag constructor; codec instances are not thread-safe to share.");
 
-        var taskCount = _taskCount;
-        var queueCapacity = taskCount * 8;
+        var queueCapacity = _taskCount * 8;
         using var toCompress = new BlockingCollection<int>(queueCapacity);
         using var toWrite = new BlockingCollection<int>(queueCapacity);
         var items = new HunkItem[hunkCount];
@@ -178,25 +177,15 @@ public class HunkProcessor
         }
 
         var ts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var tasks = new List<Task>(taskCount + 1);
+        var tasks = new List<Task>(_taskCount + 1);
         Exception? error = null;
         var errorLock = new object();
-
-        void RecordError(Exception ex)
-        {
-            lock (errorLock)
-            {
-                error ??= ex;
-            }
-
-            ts.Cancel();
-        }
 
         tasks.Add(Task.Factory.StartNew(
             () => ProducerLoop(hunkCount, readHunk, rawSha1, toCompress, items, ts, RecordError),
             CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default));
 
-        for (int t = 0; t < taskCount; t++)
+        for (int t = 0; t < _taskCount; t++)
         {
             int workerIndex = t;
             tasks.Add(Task.Factory.StartNew(
@@ -247,6 +236,17 @@ public class HunkProcessor
         if (error != null)
             ExceptionDispatchInfo.Capture(error).Throw();
         cancellationToken.ThrowIfCancellationRequested();
+        return;
+
+        void RecordError(Exception ex)
+        {
+            lock (errorLock)
+            {
+                error ??= ex;
+            }
+
+            ts.Cancel();
+        }
     }
 
     /// <summary>Per-hunk state shared between the producer, workers, and consumer.</summary>
@@ -254,18 +254,25 @@ public class HunkProcessor
     {
         /// <summary>The rented raw hunk buffer; <c>null</c> once handed off (COMPRESSION_NONE) or returned to the pool.</summary>
         public byte[]? Raw;
+
         /// <summary>SHA-1 of the raw hunk (20 bytes), computed by a worker for SELF-dedup.</summary>
         public byte[] Sha1 = Array.Empty<byte>();
+
         /// <summary>CRC-16 of the raw hunk, computed by a worker.</summary>
         public ushort Crc16;
+
         /// <summary>The winning compression type (codec index or COMPRESSION_NONE), set by a worker.</summary>
         public byte Compression;
+
         /// <summary>The number of bytes to write from <see cref="Data"/>.</summary>
         public uint CompLength;
+
         /// <summary>The result data (rented compressed buffer, or the raw buffer for COMPRESSION_NONE).</summary>
         public byte[]? Data;
+
         /// <summary><c>true</c> when <see cref="Data"/> is the raw hunk buffer (COMPRESSION_NONE), which returns to the raw pool.</summary>
         public bool DataIsRaw;
+
         /// <summary>Set by the consumer when the result has been taken from the results queue.</summary>
         public bool Done;
     }

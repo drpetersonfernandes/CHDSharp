@@ -21,8 +21,6 @@ public class LruCacheTests
         var mapoffset = (ulong)hunkCount * Blocksize + Blocksize; // after data blocks
         var ms = new MemoryStream();
 
-        void Write(byte[] b) => ms.Write(b, 0, b.Length);
-
         Write("MComprHD"u8.ToArray());
         Write(EndianHelpers.Be(124));
         Write(EndianHelpers.Be(5));
@@ -56,6 +54,8 @@ public class LruCacheTests
 
         ms.Position = 0;
         return ms;
+
+        void Write(byte[] b) => ms.Write(b, 0, b.Length);
     }
 
     private static byte[] ExpectedPattern(uint h, int count = (int)Blocksize)
@@ -76,7 +76,9 @@ public class LruCacheTests
         var err = ChdFile.Open(ms, true, out var chd);
         Assert.Equal(ChdError.Chderrnone, err);
         using (chd)
+        {
             Assert.Equal(1, chd!.CacheSize);
+        }
     }
 
     [Fact]

@@ -92,9 +92,14 @@ public class HunkProgressTests : IDisposable
         string without = Path.Combine(_dir, "without.chd");
         string with = Path.Combine(_dir, "with.chd");
         using (var ms = new MemoryStream(source))
+        {
             ChdEncoder.EncodeRaw(ms, without, 4096, 512);
+        }
+
         using (var ms = new MemoryStream(source))
+        {
             ChdEncoder.EncodeRaw(ms, with, 4096, 512, options: new ChdEncodeOptions { HunkCompleted = _ => { } });
+        }
 
         Assert.Equal(File.ReadAllBytes(without), File.ReadAllBytes(with));
     }

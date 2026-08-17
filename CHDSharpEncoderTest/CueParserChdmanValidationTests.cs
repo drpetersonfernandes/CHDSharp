@@ -56,13 +56,15 @@ public class CueParserChdmanValidationTests : IDisposable
         string chdPath = Path.Combine(_testDataDir, "saturn.chd");
         File.WriteAllText(cuePath, cue);
         using (var fs = File.Create(binPath))
+        {
             fs.SetLength(2352L * 54550);
+        }
 
         var (exitCode, stdout, stderr) = RunChdman("createcd", "-i", cuePath, "-o", chdPath, "-c", "zlib", "-f");
         Assert.True(exitCode == 0, $"chdman createcd failed (exit={exitCode})\nstdout: {stdout}\nstderr: {stderr}");
 
         // parse the CUE with our parser and build the CHT2 metadata strings it implies
-        var toc = new CueParser().Parse(cuePath);
+        var toc = CueParser.Parse(cuePath);
         var expected = toc.Tracks.Select(MetadataWriter.BuildChd2String).ToList();
 
         // read the metadata chdman actually wrote
@@ -99,14 +101,19 @@ public class CueParserChdmanValidationTests : IDisposable
         string chdPath = Path.Combine(_testDataDir, "twofile.chd");
         File.WriteAllText(cuePath, cue);
         using (var fs = File.Create(Path.Combine(_testDataDir, "data.bin")))
+        {
             fs.SetLength(2352L * 300);
+        }
+
         using (var fs = File.Create(Path.Combine(_testDataDir, "audio.bin")))
+        {
             fs.SetLength(2352L * 100);
+        }
 
         var (exitCode, stdout, stderr) = RunChdman("createcd", "-i", cuePath, "-o", chdPath, "-c", "zlib", "-f");
         Assert.True(exitCode == 0, $"chdman createcd failed (exit={exitCode})\nstdout: {stdout}\nstderr: {stderr}");
 
-        var toc = new CueParser().Parse(cuePath);
+        var toc = CueParser.Parse(cuePath);
         var expected = toc.Tracks.Select(MetadataWriter.BuildChd2String).ToList();
 
         var openErr = ChdFile.Open(chdPath, out var chd);

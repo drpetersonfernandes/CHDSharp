@@ -1,10 +1,12 @@
+using System.Runtime.InteropServices;
+
 namespace CHDSharpEncoder;
 
 /// <summary>
 /// Static Huffman encoder matching MAME's <c>huffman_context_base</c> / <c>huffman_encoder</c>
 /// (src/lib/util/huffman.cpp): canonical codes over a histogram with weight-scaled tree
 /// building (binary search over the weight multiplier so all codes fit in
-/// <see cref="MaxBits"/>), and the Huffman-encoded tree export used by the 8-bit
+/// <c>maxBits</c>), and the Huffman-encoded tree export used by the 8-bit
 /// <c>huff</c> codec (MAME's <c>export_tree_huffman</c>).
 /// </summary>
 internal sealed class HuffmanEncoder
@@ -13,8 +15,6 @@ internal sealed class HuffmanEncoder
     private readonly int _maxBits;
     private readonly int[] _histogram;
     private readonly HuffmanNode[] _nodes;
-    private readonly int[] _numBits;
-    private readonly uint[] _codes;
 
     /// <summary>Creates a Huffman encoder over a fixed-size symbol alphabet.</summary>
     /// <param name="numCodes">Alphabet size (e.g. 256 for the huff codec, 24 for the small tree).</param>
@@ -28,15 +28,15 @@ internal sealed class HuffmanEncoder
         _maxBits = maxBits;
         _histogram = new int[numCodes];
         _nodes = new HuffmanNode[numCodes * 2];
-        _numBits = new int[numCodes];
-        _codes = new uint[numCodes];
+        NumBits = new int[numCodes];
+        Codes = new uint[numCodes];
     }
 
-    /// <summary>Gets the canonical Huffman code for each symbol (valid after <see cref="BuildTree"/>).</summary>
-    public uint[] Codes => _codes;
+    /// <summary>Gets the canonical Huffman code for each symbol (valid after <see cref="BuildTree()"/>).</summary>
+    public uint[] Codes { get; }
 
-    /// <summary>Gets the number of bits of each symbol's canonical code (valid after <see cref="BuildTree"/>).</summary>
-    public int[] NumBits => _numBits;
+    /// <summary>Gets the number of bits of each symbol's canonical code (valid after <see cref="BuildTree()"/>).</summary>
+    public int[] NumBits { get; }
 
     /// <summary>Resets the symbol frequency histogram.</summary>
     public void ResetHistogram()
@@ -68,7 +68,7 @@ internal sealed class HuffmanEncoder
 
         if (totalData == 0)
         {
-            Array.Clear(_numBits);
+            Array.Clear(NumBits);
             return;
         }
 
@@ -111,11 +111,13 @@ internal sealed class HuffmanEncoder
 
         for (int curCode = 0; curCode < _numCodes; curCode++)
         {
-            int newVal = _numBits[curCode];
+            int newVal = NumBits[curCode];
             if (newVal != last && repCount > 0)
             {
                 if (repCount == 1)
+                {
                     rleData.Add((byte)(last + 1));
+                }
                 else
                 {
                     rleData.Add(0);
@@ -138,7 +140,9 @@ internal sealed class HuffmanEncoder
         if (repCount > 0)
         {
             if (repCount == 1)
+            {
                 rleData.Add((byte)(last + 1));
+            }
             else
             {
                 rleData.Add(0);
@@ -156,7 +160,7 @@ internal sealed class HuffmanEncoder
         int firstNonZero = 31, lastNonZero = 0;
         for (int index = 1; index < 24; index++)
         {
-            if (smallHuff._numBits[index] != 0)
+            if (smallHuff.NumBits[index] != 0)
             {
                 if (firstNonZero == 31)
                 {
@@ -172,10 +176,10 @@ internal sealed class HuffmanEncoder
 
         // output the small tree: node 0's length, first non-zero, the lengths of the
         // following nodes, terminated by a 7
-        bs.Write((uint)smallHuff._numBits[0], 3);
+        bs.Write((uint)smallHuff.NumBits[0], 3);
         bs.Write((uint)(firstNonZero - 1), 3);
         for (int index = firstNonZero; index <= lastNonZero; index++)
-            bs.Write((uint)smallHuff._numBits[index], 3);
+            bs.Write((uint)smallHuff.NumBits[index], 3);
         bs.Write(7, 3);
 
         // the maximum length of an RLE count
@@ -196,7 +200,9 @@ internal sealed class HuffmanEncoder
             {
                 int count = rleLengths[lengthIndex++];
                 if (count < 7)
+                {
                     bs.Write((uint)count, 3);
+                }
                 else
                 {
                     bs.Write(7, 3);
@@ -212,8 +218,8 @@ internal sealed class HuffmanEncoder
         if (symbol >= _numCodes)
             return;
 
-        if (_numBits[symbol] > 0)
-            bs.Write(Codes[symbol], _numBits[symbol]);
+        if (NumBits[symbol] > 0)
+            bs.Write(Codes[symbol], NumBits[symbol]);
     }
 
     /// <summary>Builds a Huffman tree with the given total weight; returns the maximum code length.</summary>
@@ -272,7 +278,7 @@ internal sealed class HuffmanEncoder
 
         // compute the number of bits in each code
         int maxBits = 0;
-        Array.Clear(_numBits);
+        Array.Clear(NumBits);
         for (int curCode = 0; curCode < _numCodes; curCode++)
         {
             if (_histogram[curCode] != 0)
@@ -288,7 +294,7 @@ internal sealed class HuffmanEncoder
                     numbits = 1;
                 }
 
-                _numBits[curCode] = numbits;
+                NumBits[curCode] = numbits;
                 maxBits = Math.Max(maxBits, numbits);
             }
         }
@@ -302,7 +308,7 @@ internal sealed class HuffmanEncoder
         var bitHisto = new int[33];
         for (int curCode = 0; curCode < _numCodes; curCode++)
         {
-            int numbits = _numBits[curCode];
+            int numbits = NumBits[curCode];
             if (numbits is > 0 and <= 32)
             {
                 bitHisto[numbits]++;
@@ -319,13 +325,14 @@ internal sealed class HuffmanEncoder
 
         for (int curCode = 0; curCode < _numCodes; curCode++)
         {
-            if (_numBits[curCode] > 0)
+            if (NumBits[curCode] > 0)
             {
-                _codes[curCode] = (uint)bitHisto[_numBits[curCode]]++;
+                Codes[curCode] = (uint)bitHisto[NumBits[curCode]]++;
             }
         }
     }
 
+    [StructLayout(LayoutKind.Auto)]
     private struct HuffmanNode
     {
         public int Weight;

@@ -188,7 +188,10 @@ public class ReadRawHunkTests : IDisposable
         using var input = new MemoryStream(deflate);
         using var output = new MemoryStream();
         using (var ds = new DeflateStream(input, CompressionMode.Decompress))
+        {
             ds.CopyTo(output);
+        }
+
         return output.ToArray();
     }
 

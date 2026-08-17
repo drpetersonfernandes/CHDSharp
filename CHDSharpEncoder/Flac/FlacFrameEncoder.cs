@@ -13,17 +13,17 @@ internal static class FlacFrameEncoder
 
     private const int MaxFixedOrder = 4;
 
-/// <summary>
-/// Encodes interleaved little-endian signed samples as a sequence of FLAC frames.
-/// </summary>
-/// <param name="output">Destination buffer; must be large enough for the worst case (verbatim).</param>
-/// <param name="interleavedLeSamples">Interleaved little-endian sample bytes.</param>
-/// <param name="sampleRate">Sample rate in Hz (only 44100 is supported).</param>
-/// <param name="channels">Channel count (only 2 is supported).</param>
-/// <param name="bitsPerSample">Bits per sample (only 16 is supported).</param>
-/// <param name="blockSize">Samples per frame. Defaults to 2352 (MAME's cdfl blocksize =
-/// 4 CD sectors), which MAME's flac decoder requires to match its custom STREAMINFO.</param>
-/// <returns>The number of bytes written to <paramref name="output"/>.</returns>
+    /// <summary>
+    /// Encodes interleaved little-endian signed samples as a sequence of FLAC frames.
+    /// </summary>
+    /// <param name="output">Destination buffer; must be large enough for the worst case (verbatim).</param>
+    /// <param name="interleavedLeSamples">Interleaved little-endian sample bytes.</param>
+    /// <param name="sampleRate">Sample rate in Hz (only 44100 is supported).</param>
+    /// <param name="channels">Channel count (only 2 is supported).</param>
+    /// <param name="bitsPerSample">Bits per sample (only 16 is supported).</param>
+    /// <param name="blockSize">Samples per frame. Defaults to 2352 (MAME's cdfl blocksize =
+    /// 4 CD sectors), which MAME's flac decoder requires to match its custom STREAMINFO.</param>
+    /// <returns>The number of bytes written to <paramref name="output"/>.</returns>
     public static int Encode(byte[] output, ReadOnlySpan<byte> interleavedLeSamples,
         int sampleRate = 44100, int channels = 2, int bitsPerSample = 16, int blockSize = 2352)
     {
@@ -33,7 +33,7 @@ internal static class FlacFrameEncoder
             throw new ArgumentException("Only 2 channels are supported");
         if (bitsPerSample != 16)
             throw new ArgumentException("Only 16 bits per sample are supported");
-        if (blockSize < 1 || blockSize > 65535)
+        if (blockSize is < 1 or > 65535)
             throw new ArgumentException($"Invalid block size {blockSize}");
 
         int bytesPerSample = bitsPerSample / 8;
@@ -157,6 +157,7 @@ internal static class FlacFrameEncoder
 
             wasted++;
         }
+
         int effectiveBps = bitsPerSample - wasted;
         uint mask = (1u << effectiveBps) - 1;
 
@@ -186,6 +187,7 @@ internal static class FlacFrameEncoder
                 uint folded = ((uint)residual[i] << 1) ^ (uint)(residual[i] >> 31);
                 bits += (folded >> k) + 1 + k;
             }
+
             if (bits < bestBits)
             {
                 bestBits = bits;
@@ -245,6 +247,7 @@ internal static class FlacFrameEncoder
             if ((samples[i] & 1) != 0)
                 return false;
         }
+
         return true;
     }
 
@@ -255,6 +258,7 @@ internal static class FlacFrameEncoder
             if (samples[i] != samples[0])
                 return false;
         }
+
         return true;
     }
 
@@ -325,6 +329,7 @@ internal static class FlacFrameEncoder
         {
             k++;
         }
+
         return k;
     }
 }

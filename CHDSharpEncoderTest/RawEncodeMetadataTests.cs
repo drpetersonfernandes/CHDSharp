@@ -98,7 +98,7 @@ public class RawEncodeMetadataTests : IDisposable
             Assert.True(file!.IsHdd);
             Assert.False(file.IsDvd);
 
-            var meta = file.Metadata.Single(m => m.Tag == "GDDD");
+            var meta = file.Metadata.Single(m => string.Equals(m.Tag, "GDDD", StringComparison.Ordinal));
             string text = meta.GetText();
             Assert.StartsWith("CYLS:", text, StringComparison.Ordinal);
             Assert.Contains("HEADS:16", text, StringComparison.Ordinal);

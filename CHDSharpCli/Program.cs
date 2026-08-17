@@ -128,7 +128,7 @@ internal static class Program
 
     /// <summary>
     /// Verifies a child (differential) CHD file against its parent.
-    /// Opens the child with its parent, reads sample hunks, and runs <see cref="Chd.CheckFileWithParent(string, string?)"/>.
+    /// Opens the child with its parent, reads sample hunks, and runs <see cref="Chd.CheckFileWithParent(string, string?, IProgress{CHDSharp.Models.ChdProgress}?, System.Threading.CancellationToken)"/>.
     /// </summary>
     /// <param name="childPath">Path to the child CHD file.</param>
     /// <param name="parentPath">Path to the parent CHD file.</param>
@@ -176,7 +176,7 @@ internal static class Program
 
     /// <summary>
     /// Verifies all CHD files listed in a text file (one path per line).
-    /// Each file is fully decompressed and verified using <see cref="Chd.CheckFile(Stream, string, bool)"/>.
+    /// Each file is fully decompressed and verified using <see cref="Chd.CheckFile(Stream, string, bool, IProgress{CHDSharp.Models.ChdProgress}?, System.Threading.CancellationToken)"/>.
     /// </summary>
     /// <param name="listFile">Path to a text file containing one CHD path per line.</param>
     private static void VerifyList(string listFile)
@@ -395,7 +395,7 @@ internal static class Program
     }
 
     /// <summary>
-    /// Recursively scans a directory for <c>*.chd</c> files and runs <see cref="Chd.CheckFile(Stream, string, bool)"/>
+    /// Recursively scans a directory for <c>*.chd</c> files and runs <see cref="Chd.CheckFile(Stream, string, bool, IProgress{CHDSharp.Models.ChdProgress}?, System.Threading.CancellationToken)"/>
     /// on each one found.
     /// </summary>
     /// <param name="di">The directory to scan.</param>

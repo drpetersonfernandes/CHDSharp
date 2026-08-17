@@ -3,7 +3,7 @@ using CHDSharp;
 namespace CHDSharpEncoder;
 
 /// <summary>
-/// Creates CHD v5 files from raw binary data (<see cref="EncodeRaw"/>) or from CD
+/// Creates CHD v5 files from raw binary data (<see cref="EncodeRaw(Stream, string, uint, uint, IReadOnlyList{uint}?, ChdEncodeOptions?, System.Threading.CancellationToken)"/>) or from CD
 /// CUE/BIN sources (<see cref="EncodeCd"/>). Uses the zlib codec by default, matching chdman's
 /// <c>--compression zlib</c> output; produced files pass <c>chdman verify</c> and
 /// extract byte-identically via <c>chdman extractraw</c>.
@@ -81,7 +81,7 @@ public static class ChdEncoder
 
         var entries = new MapEntry[hunkCount];
         using var sha1 = new Sha1();
-        var selfMap = new Dictionary<string, uint>((int)hunkCount);
+        var selfMap = new Dictionary<string, uint>((int)hunkCount, StringComparer.Ordinal);
         var processor = new HunkProcessor(hunkBytes, codecTags, options?.TaskCount ?? Chd.TaskCount);
 
         using var fs = new FileStream(chdPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
@@ -241,7 +241,7 @@ public static class ChdEncoder
         // single consumer writes blocks and map entries in hunk order
         var entries = new MapEntry[hunkCount];
         using var sha1 = new Sha1();
-        var selfMap = new Dictionary<string, uint>((int)hunkCount);
+        var selfMap = new Dictionary<string, uint>((int)hunkCount, StringComparer.Ordinal);
         var processor = new HunkProcessor(hunkBytes, codecTags, options?.TaskCount ?? Chd.TaskCount);
         var sourceFiles = new Dictionary<string, FileStream>(StringComparer.OrdinalIgnoreCase);
 
@@ -403,6 +403,7 @@ public static class ChdEncoder
             if (frame >= track.LogicalFrameStart && frame < track.LogicalFrameStart + track.PaddedFrames)
                 return track;
         }
+
         throw new InvalidDataException($"Frame {frame} falls outside all tracks");
     }
 

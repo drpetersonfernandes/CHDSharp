@@ -16,6 +16,7 @@ public static class Crc16
             var index = ((crc >> 8) ^ data[i]) & 0xFF;
             crc = (ushort)((crc << 8) ^ Table[index]);
         }
+
         return crc;
     }
 
@@ -46,8 +47,10 @@ public static class Crc16
                     crc <<= 1;
                 }
             }
+
             table[i] = crc;
         }
+
         return table;
     }
 }

@@ -53,9 +53,14 @@ public class ParallelEncodeTests : IDisposable
         string single = Path.Combine(_dir, "single.chd");
         string parallel = Path.Combine(_dir, "parallel.chd");
         using (var ms = new MemoryStream(source))
+        {
             ChdEncoder.EncodeRaw(ms, single, 4096, 512, options: new ChdEncodeOptions { TaskCount = 1 });
+        }
+
         using (var ms = new MemoryStream(source))
+        {
             ChdEncoder.EncodeRaw(ms, parallel, 4096, 512, options: new ChdEncodeOptions { TaskCount = 8 });
+        }
 
         Assert.Equal(File.ReadAllBytes(single), File.ReadAllBytes(parallel));
 
@@ -81,9 +86,14 @@ public class ParallelEncodeTests : IDisposable
         string single = Path.Combine(_dir, "multi_single.chd");
         string parallel = Path.Combine(_dir, "multi_parallel.chd");
         using (var ms = new MemoryStream(source))
+        {
             ChdEncoder.EncodeRaw(ms, single, 4096, 512, codecTags: tags, options: new ChdEncodeOptions { TaskCount = 1 });
+        }
+
         using (var ms = new MemoryStream(source))
+        {
             ChdEncoder.EncodeRaw(ms, parallel, 4096, 512, codecTags: tags, options: new ChdEncodeOptions { TaskCount = 8 });
+        }
 
         Assert.Equal(File.ReadAllBytes(single), File.ReadAllBytes(parallel));
 
@@ -156,18 +166,26 @@ public class ParallelEncodeTests : IDisposable
 
         // warm the parallel path first so JIT costs don't inflate the single-threaded time
         using (var warm = new MemoryStream(source))
+        {
             ChdEncoder.EncodeRaw(warm, Path.Combine(_dir, "warm.chd"), hunkBytes, 4096,
                 options: new ChdEncodeOptions { TaskCount = 8 });
+        }
 
         var sw = Stopwatch.StartNew();
         using (var ms = new MemoryStream(source))
+        {
             ChdEncoder.EncodeRaw(ms, parallel, hunkBytes, 4096, options: new ChdEncodeOptions { TaskCount = 8 });
+        }
+
         sw.Stop();
         var parallelTime = sw.Elapsed;
 
         sw.Restart();
         using (var ms = new MemoryStream(source))
+        {
             ChdEncoder.EncodeRaw(ms, single, hunkBytes, 4096, options: new ChdEncodeOptions { TaskCount = 1 });
+        }
+
         sw.Stop();
         var singleTime = sw.Elapsed;
 

@@ -56,7 +56,7 @@ public class TocParser
                     track.FileName = CdImageParser.ResolveFileName(tocPath, tokens[1]);
 
                     int tokenIndex = 2;
-                    if (tokenIndex < tokens.Count && tokens[tokenIndex] == "SWAP")
+                    if (tokenIndex < tokens.Count && string.Equals(tokens[tokenIndex], "SWAP", StringComparison.Ordinal))
                     {
                         track.Swap = true;
                         tokenIndex++;

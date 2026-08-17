@@ -5,8 +5,10 @@ public static class MapCompressor
 {
     private const byte CompressionRleSmall = 7;
     private const byte CompressionRleLarge = 8;
+
     /// <summary>Promoted map type: SELF reference to the same source hunk as the previous SELF entry.</summary>
     private const byte CompressionSelf0 = 9;
+
     /// <summary>Promoted map type: SELF reference to the source hunk after the previous SELF entry.</summary>
     private const byte CompressionSelf1 = 10;
 
@@ -30,6 +32,7 @@ public static class MapCompressor
                 maxCompLen = Math.Max(maxCompLen, entries[i].CompLength);
             }
         }
+
         var lengthBits = BitsForValue(maxCompLen);
         var selfBits = BitsForValue(maxSelf);
 
@@ -63,20 +66,20 @@ public static class MapCompressor
             else
             {
                 var val = rleList[rleIndex++];
-                if (val == CompressionRleSmall)
+                switch (val)
                 {
-                    type = lastComp;
-                    repCount = 2 + rleList[rleIndex++];
-                }
-                else if (val == CompressionRleLarge)
-                {
-                    type = lastComp;
-                    repCount = 2 + 16 + (rleList[rleIndex++] << 4);
-                    repCount += rleList[rleIndex++];
-                }
-                else
-                {
-                    type = lastComp = val;
+                    case CompressionRleSmall:
+                        type = lastComp;
+                        repCount = 2 + rleList[rleIndex++];
+                        break;
+                    case CompressionRleLarge:
+                        type = lastComp;
+                        repCount = 2 + 16 + (rleList[rleIndex++] << 4);
+                        repCount += rleList[rleIndex++];
+                        break;
+                    default:
+                        type = lastComp = val;
+                        break;
                 }
             }
 
@@ -186,6 +189,7 @@ public static class MapCompressor
                 count = 1;
             }
         }
+
         Flush(count);
 
         return rleList;
@@ -200,24 +204,26 @@ public static class MapCompressor
             var repCount = totalCount - 1;
             while (repCount > 0)
             {
-                if (repCount < 3)
+                switch (repCount)
                 {
-                    rleList.Add(lastcomp);
-                    repCount--;
-                }
-                else if (repCount <= 3 + 15)
-                {
-                    rleList.Add(CompressionRleSmall);
-                    rleList.Add((byte)(repCount - 3));
-                    repCount = 0;
-                }
-                else
-                {
-                    var n = Math.Min(repCount, 3 + 16 + 255);
-                    rleList.Add(CompressionRleLarge);
-                    rleList.Add((byte)((n - 3 - 16) >> 4));
-                    rleList.Add((byte)((n - 3 - 16) & 15));
-                    repCount -= n;
+                    case < 3:
+                        rleList.Add(lastcomp);
+                        repCount--;
+                        break;
+                    case <= 3 + 15:
+                        rleList.Add(CompressionRleSmall);
+                        rleList.Add((byte)(repCount - 3));
+                        repCount = 0;
+                        break;
+                    default:
+                    {
+                        var n = Math.Min(repCount, 3 + 16 + 255);
+                        rleList.Add(CompressionRleLarge);
+                        rleList.Add((byte)((n - 3 - 16) >> 4));
+                        rleList.Add((byte)((n - 3 - 16) & 15));
+                        repCount -= n;
+                        break;
+                    }
                 }
             }
         }
@@ -226,7 +232,12 @@ public static class MapCompressor
     private static byte BitsForValue(uint value)
     {
         byte result = 0;
-        while (value != 0) { value >>= 1; result++; }
+        while (value != 0)
+        {
+            value >>= 1;
+            result++;
+        }
+
         return result;
     }
 }

@@ -56,8 +56,8 @@ public class Huffman168Tests
     {
         var huff = new Huffman168();
         for (int i = 0; i < 16; i++)
-            for (int j = 0; j < i + 1; j++)
-                huff.CountSymbol((uint)i);
+        for (int j = 0; j < i + 1; j++)
+            huff.CountSymbol((uint)i);
         huff.BuildTree();
 
         for (int i = 0; i < 16; i++)

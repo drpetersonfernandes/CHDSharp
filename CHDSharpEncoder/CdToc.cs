@@ -30,18 +30,25 @@ public static class CdTrackType
 {
     /// <summary>Mode 1, 2048 bytes/sector.</summary>
     public const int Mode1 = 0;
+
     /// <summary>Mode 1 raw, 2352 bytes/sector.</summary>
     public const int Mode1Raw = 1;
+
     /// <summary>Mode 2, 2336 bytes/sector.</summary>
     public const int Mode2 = 2;
+
     /// <summary>Mode 2 Form 1, 2048 bytes/sector.</summary>
     public const int Mode2Form1 = 3;
+
     /// <summary>Mode 2 Form 2, 2324 bytes/sector.</summary>
     public const int Mode2Form2 = 4;
+
     /// <summary>Mode 2 Form Mix, 2336 bytes/sector.</summary>
     public const int Mode2FormMix = 5;
+
     /// <summary>Mode 2 raw, 2352 bytes/sector.</summary>
     public const int Mode2Raw = 6;
+
     /// <summary>Redbook audio track, 2352 bytes/sector (588 samples).</summary>
     public const int Audio = 7;
 }
@@ -51,8 +58,10 @@ public static class CdSubType
 {
     /// <summary>"Cooked" 96 bytes per sector.</summary>
     public const int Normal = 0;
+
     /// <summary>Raw uninterleaved 96 bytes per sector.</summary>
     public const int Raw = 1;
+
     /// <summary>No subcode data stored.</summary>
     public const int None = 2;
 }
@@ -62,8 +71,10 @@ public static class CdTocFlags
 {
     /// <summary>The disc is a GD-ROM; tracks use CHGD metadata and physical (LBA) offsets.</summary>
     public const uint GdRom = 0x00000001;
+
     /// <summary>Legacy GD-ROM with little-endian CDDA data.</summary>
     public const uint GdRomLe = 0x00000002;
+
     /// <summary>Multisession CD.</summary>
     public const uint MultiSession = 0x00000004;
 }
@@ -73,42 +84,61 @@ public struct CdTrack
 {
     /// <summary>The 1-based track number.</summary>
     public int Number;
+
     /// <summary>The track type (see <see cref="CdTrackType"/>).</summary>
     public int TrackType;
+
     /// <summary>The subcode data type (see <see cref="CdSubType"/>).</summary>
     public int SubType;
+
     /// <summary>Size of data in each sector of this track.</summary>
     public int DataSize;
+
     /// <summary>Size of subchannel data in each sector of this track.</summary>
     public int SubSize;
+
     /// <summary>Number of frames in this track (includes pregap and pad frames where applicable).</summary>
     public int Frames;
+
     /// <summary>Number of "spillage" frames the track is padded to (CHD layout).</summary>
     public int PaddedFrames;
+
     /// <summary>Number of pregap frames.</summary>
     public int Pregap;
+
     /// <summary>Number of postgap frames.</summary>
     public int Postgap;
+
     /// <summary>Type of sectors in the pregap.</summary>
     public int PgType;
+
     /// <summary>Type of subchannel data in the pregap.</summary>
     public int PgSub;
+
     /// <summary>Size of data in each sector of the pregap.</summary>
     public int PgDataSize;
+
     /// <summary>Path to the source data file (BIN/WAV).</summary>
     public string? FileName;
+
     /// <summary>Byte offset of the track within its source data file.</summary>
     public long FileOffset;
+
     /// <summary>Absolute frame position of INDEX 00, or -1 when absent.</summary>
     public int Index00;
+
     /// <summary>Absolute frame position of INDEX 01.</summary>
     public int Index01;
+
     /// <summary>True when the track data must be byte-swapped for CHD storage (audio).</summary>
     public bool Swap;
+
     /// <summary>Frame number this track starts at within the CHD logical image.</summary>
     public long LogicalFrameStart;
+
     /// <summary>Zero-filled frames appended at the end of the track's data region (GDI gaps).</summary>
     public int PadFrames;
+
     /// <summary>Physical (LBA) frame offset of the track on the disc (GDI).</summary>
     public int PhysicalFrameOffset;
 }

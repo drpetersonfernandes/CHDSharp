@@ -56,13 +56,15 @@ public class MetadataWriterChdmanValidationTests : IDisposable
         string chdPath = Path.Combine(_testDataDir, "saturn.chd");
         File.WriteAllText(cuePath, cue);
         using (var fs = File.Create(binPath))
+        {
             fs.SetLength(2352L * 54550);
+        }
 
         var (exitCode, stdout, stderr) = RunChdman("createcd", "-i", cuePath, "-o", chdPath, "-c", "zlib", "-f");
         Assert.True(exitCode == 0, $"chdman createcd failed (exit={exitCode})\nstdout: {stdout}\nstderr: {stderr}");
 
         // our metadata chain, from the same CUE through CueParser + MetadataWriter
-        var toc = new CueParser().Parse(cuePath);
+        var toc = CueParser.Parse(cuePath);
         using var ourStream = new MemoryStream();
         ourStream.SetLength(4096); // simulate prior file content; also keeps first offset > 0
         ourStream.Position = 4096;
@@ -108,13 +110,15 @@ public class MetadataWriterChdmanValidationTests : IDisposable
         string chdPath = Path.Combine(_testDataDir, "saturn.chd");
         File.WriteAllText(cuePath, cue);
         using (var fs = File.Create(binPath))
+        {
             fs.SetLength(2352L * (4500 + 4650 + 8));
+        }
 
         var (exitCode, stdout, stderr) = RunChdman("createcd", "-i", cuePath, "-o", chdPath, "-c", "zlib", "-f");
         Assert.True(exitCode == 0, $"chdman createcd failed (exit={exitCode})\nstdout: {stdout}\nstderr: {stderr}");
 
         // build the expected entries from our parser + writer
-        var toc = new CueParser().Parse(cuePath);
+        var toc = CueParser.Parse(cuePath);
         using var ms = new MemoryStream();
         MetadataWriter.WriteCdMetadata(ms, toc);
         ms.Position = 0;

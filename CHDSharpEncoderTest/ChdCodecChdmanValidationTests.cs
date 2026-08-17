@@ -120,7 +120,9 @@ public class ChdCodecChdmanValidationTests : IDisposable
         string chdPath = Path.Combine(_testDataDir, "cd.chd");
         File.WriteAllText(cuePath, cue);
         using (var fs = File.Create(binPath))
+        {
             fs.SetLength(2352L * 82);
+        }
 
         ChdEncoder.EncodeCd(cuePath, chdPath, hunkBytes: CdConstants.FramesPerHunk * CdConstants.FrameSize,
             unitBytes: CdConstants.FrameSize, codecTags: [CodecTags.Zstd]);

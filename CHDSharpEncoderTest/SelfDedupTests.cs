@@ -172,7 +172,10 @@ public class SelfDedupTests : IDisposable
         string cuePath = Path.Combine(_dir, "silent.cue");
         File.WriteAllText(cuePath, cue);
         using (var fs = File.Create(Path.Combine(_dir, "game.bin")))
+        {
             fs.SetLength(2352L * (60 * 75 + 60 * 75 + 8));
+        }
+
         string chdPath = Path.Combine(_dir, "silent.chd");
 
         ChdEncoder.EncodeCd(cuePath, chdPath);

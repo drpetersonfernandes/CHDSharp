@@ -328,7 +328,7 @@ public class ParityFeaturesTests
         if (!File.Exists(childPath) || !File.Exists(parentPath)) return;
 
         // standalone stream open of a child must demand a parent
-        using var fs = File.OpenRead(childPath);
+        await using var fs = File.OpenRead(childPath);
         var (err, chd) = await ChdFile.OpenAsync(fs, true);
         Assert.Equal(ChdError.Chderrrequiresparent, err);
         chd?.Dispose();
@@ -336,9 +336,9 @@ public class ParityFeaturesTests
         // stream open with an external parent must succeed
         var pErr = ChdFile.Open(parentPath, out var parent);
         Assert.Equal(ChdError.Chderrnone, pErr);
-        using (parent)
+        await using (parent)
         {
-            using var fs2 = File.OpenRead(childPath);
+            await using var fs2 = File.OpenRead(childPath);
             var (err2, chd2) = await ChdFile.OpenAsync(fs2, true, parent);
             Assert.Equal(ChdError.Chderrnone, err2);
             chd2?.Dispose();

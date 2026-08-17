@@ -30,10 +30,10 @@ internal class RiceContext
     /// <summary>
     /// Rice parameters
     /// </summary>
-    public int[] Rparams;
+    public readonly int[] Rparams;
 
     /// <summary>
     /// bps if using escape code
     /// </summary>
-    public int[] EscBps;
+    public readonly int[] EscBps;
 }

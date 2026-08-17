@@ -22,7 +22,14 @@ public class ParallelEncodeTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch { }
+        try
+        {
+            Directory.Delete(_dir, recursive: true);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     [Fact]
@@ -37,16 +44,14 @@ public class ParallelEncodeTests : IDisposable
             switch (h % 4)
             {
                 case 0:
-                    Array.Fill(source, (byte)(h & 0xFF), h * 4096, 4096);   // compressible
+                    Array.Fill(source, (byte)(h & 0xFF), h * 4096, 4096); // compressible
                     break;
                 case 1:
-                    rng.NextBytes(source.AsSpan(h * 4096, 4096));           // incompressible
+                    rng.NextBytes(source.AsSpan(h * 4096, 4096)); // incompressible
                     break;
                 case 2:
-                    Array.Copy(source, 0, source, h * 4096, 4096);         // duplicate of hunk 0 → SELF
+                    Array.Copy(source, 0, source, h * 4096, 4096); // duplicate of hunk 0 → SELF
                     break;
-                default:
-                    break;                                                  // zero-filled → SELF after first
             }
         }
 
@@ -125,6 +130,7 @@ public class ParallelEncodeTests : IDisposable
                 bin[f * CdConstants.MaxSectorData + j] = (byte)(f & 1);
             }
         }
+
         File.WriteAllBytes(Path.Combine(_dir, "game.bin"), bin);
 
         string single = Path.Combine(_dir, "cd_single.chd");

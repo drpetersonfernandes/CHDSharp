@@ -862,10 +862,12 @@ internal class AudioDecoder : IAudioSource
                     _framesBufferLength -= 4 + len;
                     _framesBufferOffset += 4 + len;
                 }
+
                 if (isLast)
                     break;
             }
         } while (true);
+
         _firstFrameOffset = _io.Position - _framesBufferLength;
     }
 }

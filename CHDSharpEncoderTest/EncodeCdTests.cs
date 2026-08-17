@@ -169,9 +169,9 @@ public class EncodeCdTests : IDisposable
                 .Where(m => string.Equals(m.Tag, "CHT2", StringComparison.Ordinal))
                 .ToList();
             Assert.Equal(2, cht2.Count);
-            Assert.Contains("TRACK:1 TYPE:MODE1_RAW", cht2[0].GetText());
-            Assert.Contains("TRACK:2 TYPE:AUDIO", cht2[1].GetText());
-            Assert.Contains("PREGAP:150 PGTYPE:VAUDIO", cht2[1].GetText());
+            Assert.Contains("TRACK:1 TYPE:MODE1_RAW", cht2[0].GetText(), StringComparison.Ordinal);
+            Assert.Contains("TRACK:2 TYPE:AUDIO", cht2[1].GetText(), StringComparison.Ordinal);
+            Assert.Contains("PREGAP:150 PGTYPE:VAUDIO", cht2[1].GetText(), StringComparison.Ordinal);
         }
     }
 

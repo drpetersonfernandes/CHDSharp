@@ -81,7 +81,7 @@ public class MetadataWriterTests
         {
             Tag = 0x43485432,
             Flags = 0x01,
-            Payload = Encoding.ASCII.GetBytes("TRACK:1\0"),
+            Payload = "TRACK:1\0"u8.ToArray(),
             NextOffset = 0x1234
         };
 
@@ -92,10 +92,10 @@ public class MetadataWriterTests
         Assert.Equal(0x48, data[1]);
         Assert.Equal(0x54, data[2]);
         Assert.Equal(0x32, data[3]);
-        Assert.Equal(0x01, data[4]);           // flags
-        Assert.Equal(0, data[5]);              // length high byte (fits in 24 bits)
+        Assert.Equal(0x01, data[4]); // flags
+        Assert.Equal(0, data[5]); // length high byte (fits in 24 bits)
         Assert.Equal(0, data[6]);
-        Assert.Equal(8, data[7]);              // length = payload length including null
+        Assert.Equal(8, data[7]); // length = payload length including null
         Assert.Equal(0x00001234UL, ReadU64Be(data, 8));
         Assert.Equal("TRACK:1\0", Encoding.ASCII.GetString(data, 16, 8));
     }

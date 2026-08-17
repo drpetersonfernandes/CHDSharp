@@ -19,7 +19,14 @@ public class ReadRawHunkTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch { }
+        try
+        {
+            Directory.Delete(_dir, recursive: true);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     [Fact]
@@ -122,7 +129,7 @@ public class ReadRawHunkTests : IDisposable
 
         var err = ChdFile.Open(chdPath, out var file);
         Assert.Equal(ChdError.Chderrnone, err);
-        using (file)
+        await using (file)
         {
             Assert.Equal(file!.ReadRawHunk(0), await file.ReadRawHunkAsync(0));
         }
@@ -207,6 +214,7 @@ public class ReadRawHunkTests : IDisposable
             else
                 rng.NextBytes(source.AsSpan(h * 4096, 4096));
         }
+
         return source;
     }
 }

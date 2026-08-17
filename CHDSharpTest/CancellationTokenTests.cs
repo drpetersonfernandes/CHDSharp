@@ -222,7 +222,7 @@ public class CancellationTokenTests
     {
         var err = ChdFile.Open(DataPath("v5_zlib.chd"), out var chd);
         Assert.Equal(ChdError.Chderrnone, err);
-        using (chd)
+        await using (chd)
         {
             var buffer = new byte[chd!.HunkBytes];
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
@@ -235,7 +235,7 @@ public class CancellationTokenTests
     {
         var err = ChdFile.Open(DataPath("v5_zlib.chd"), out var chd);
         Assert.Equal(ChdError.Chderrnone, err);
-        using (chd)
+        await using (chd)
         {
             var buffer = new byte[1024];
             await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>

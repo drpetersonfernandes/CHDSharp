@@ -125,7 +125,7 @@ public sealed class ReadRawHunkCorpusTests
         string path = Path.Combine(TestDataDir, "v3_zlib.chd");
         var err = ChdFile.Open(path, out var file);
         Assert.Equal(ChdError.Chderrnone, err);
-        using (file)
+        await using (file)
         {
             for (uint h = 0; h < file!.HunkCount; h++)
             {

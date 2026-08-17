@@ -17,7 +17,14 @@ public class SelfDedupTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch { }
+        try
+        {
+            Directory.Delete(_dir, recursive: true);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     [Fact]
@@ -161,14 +168,14 @@ public class SelfDedupTests : IDisposable
     public void EncodeCd_SilentAudio_Deduplicates()
     {
         // two audio tracks of silence (all-zero sectors) → every hunk identical
-        string cue = """
-            FILE "game.bin" BINARY
-              TRACK 01 AUDIO
-                INDEX 01 00:00:00
-              TRACK 02 AUDIO
-                INDEX 00 00:01:00
-                INDEX 01 00:01:02
-            """;
+        const string cue = """
+                           FILE "game.bin" BINARY
+                             TRACK 01 AUDIO
+                               INDEX 01 00:00:00
+                             TRACK 02 AUDIO
+                               INDEX 00 00:01:00
+                               INDEX 01 00:01:02
+                           """;
         string cuePath = Path.Combine(_dir, "silent.cue");
         File.WriteAllText(cuePath, cue);
         using (var fs = File.Create(Path.Combine(_dir, "game.bin")))

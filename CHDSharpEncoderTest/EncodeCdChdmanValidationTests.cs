@@ -109,11 +109,11 @@ public class EncodeCdChdmanValidationTests : IDisposable
         var (exitCode, stdout, stderr) = RunChdman("info", "-i", chdPath);
         string output = stdout + stderr;
         Assert.True(exitCode == 0, $"chdman info failed (exit={exitCode})\n{output}");
-        Assert.Contains("File Version: 5", output);
-        Assert.Contains("Compression:  zlib", output);
-        Assert.Contains("TRACK:1 TYPE:MODE1_RAW", output);
-        Assert.Contains("TRACK:2 TYPE:AUDIO", output);
-        Assert.DoesNotContain("Error", output);
+        Assert.Contains("File Version: 5", output, StringComparison.Ordinal);
+        Assert.Contains("Compression:  zlib", output, StringComparison.Ordinal);
+        Assert.Contains("TRACK:1 TYPE:MODE1_RAW", output, StringComparison.Ordinal);
+        Assert.Contains("TRACK:2 TYPE:AUDIO", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("Error", output, StringComparison.Ordinal);
     }
 
     [Fact]

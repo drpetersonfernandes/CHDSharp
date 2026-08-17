@@ -7,10 +7,12 @@ namespace CHDSharp.Flac.FlacDeps;
 internal static class Crc16
 {
     private const int Gf2Dim = 16;
+
     /// <summary>
     /// Precomputed CRC-16 lookup table (256 entries).
     /// </summary>
-    internal static ushort[] Table = new ushort[256];
+    internal static readonly ushort[] Table = new ushort[256];
+
     private static readonly ushort[,] SubstractTable = new ushort[Gf2Dim, Gf2Dim];
 
     /// <summary>

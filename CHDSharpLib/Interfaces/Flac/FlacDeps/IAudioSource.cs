@@ -16,6 +16,7 @@ internal interface IAudioSource
     /// Gets the PCM configuration of the audio source.
     /// </summary>
     AudioPcmConfig Pcm { get; }
+
     /// <summary>
     /// Gets the path to the audio file.
     /// </summary>
@@ -25,14 +26,17 @@ internal interface IAudioSource
     /// Gets the total duration of the audio source.
     /// </summary>
     TimeSpan Duration { get; }
+
     /// <summary>
     /// Gets the total length of the audio source in samples.
     /// </summary>
     long Length { get; }
+
     /// <summary>
     /// Gets or sets the current playback position in samples.
     /// </summary>
     long Position { get; set; }
+
     /// <summary>
     /// Gets the number of samples remaining from the current position.
     /// </summary>

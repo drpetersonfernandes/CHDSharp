@@ -57,7 +57,7 @@ internal unsafe class FlacSubframeInfo
     /// <summary>
     /// The best subframe encoding found so far.
     /// </summary>
-    public FlacSubframe Best;
+    public readonly FlacSubframe Best;
 
     /// <summary>
     /// Number of significant bits per sample (after removing wasted bits).
@@ -82,13 +82,13 @@ internal unsafe class FlacSubframeInfo
     /// <summary>
     /// Estimated sizes for each fixed prediction order.
     /// </summary>
-    public ulong[] BestFixed;
+    public readonly ulong[] BestFixed;
     /// <summary>
     /// LPC analysis contexts, one per window.
     /// </summary>
-    public LpcContext[] LpcCtx;
+    public readonly LpcContext[] LpcCtx;
     /// <summary>
     /// LPC subframe information for the current encoding pass.
     /// </summary>
-    public LpcSubframeInfo Sf;
+    public readonly LpcSubframeInfo Sf;
 }

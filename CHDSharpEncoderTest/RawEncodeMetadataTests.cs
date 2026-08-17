@@ -36,7 +36,7 @@ public class RawEncodeMetadataTests : IDisposable
         {
             Tag = 0x54455354, // 'TEST'
             Flags = MetadataWriter.ChdMdflagsChecksum,
-            Payload = Encoding.ASCII.GetBytes("hello\0")
+            Payload = "hello\0"u8.ToArray()
         };
 
         string chdPath = Path.Combine(_dir, "user.chd");
@@ -130,7 +130,7 @@ public class RawEncodeMetadataTests : IDisposable
 
             Assert.Single(file.Metadata);
             Assert.Equal("DVD ", file.Metadata[0].Tag);
-            Assert.Equal(1, file.Metadata[0].Data.Length); // single null byte, chdman parity
+            Assert.Single(file.Metadata[0].Data); // single null byte, chdman parity
             Assert.Equal(0, file.Metadata[0].Data[0]);
 
             Assert.Equal(ChdError.Chderrnone, file.ReadAllBytes(out byte[] actual));
@@ -214,7 +214,7 @@ public class RawEncodeMetadataTests : IDisposable
         {
             Tag = 0x54455354, // 'TEST'
             Flags = MetadataWriter.ChdMdflagsChecksum,
-            Payload = Encoding.ASCII.GetBytes("extra\0")
+            Payload = "extra\0"u8.ToArray()
         };
 
         string chdPath = Path.Combine(_dir, "cd_meta.chd");

@@ -22,7 +22,14 @@ public class NewCodecChdmanValidationTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_testDataDir, recursive: true); } catch { }
+        try
+        {
+            Directory.Delete(_testDataDir, recursive: true);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     [Theory]
@@ -37,9 +44,9 @@ public class NewCodecChdmanValidationTests : IDisposable
         var rng = new Random(1234);
         for (int i = 0; i < source.Length; i += 4)
         {
-            source[i] = (byte)rng.Next(0, 0x8000);         // left sample (LE)
+            source[i] = (byte)rng.Next(0, 0x8000); // left sample (LE)
             source[i + 1] = (byte)(rng.Next(0, 0x8000) >> 8);
-            source[i + 2] = (byte)((i / 4) % 0x7FFF);      // right ramp
+            source[i + 2] = (byte)((i / 4) % 0x7FFF); // right ramp
             source[i + 3] = (byte)(((i / 4) % 0x7FFF) >> 8);
         }
 
@@ -51,7 +58,7 @@ public class NewCodecChdmanValidationTests : IDisposable
         var (infoExit, infoOut, infoErr) = RunChdman("info", "-i", chdPath);
         string info = infoOut + infoErr;
         Assert.True(infoExit == 0, $"chdman info failed (exit={infoExit})\n{info}");
-        Assert.Contains(chdmanCodecName, info);
+        Assert.Contains(chdmanCodecName, info, StringComparison.Ordinal);
 
         var (verifyExit, vOut, vErr) = RunChdman("verify", "-i", chdPath);
         Assert.True(verifyExit == 0, $"chdman verify failed (exit={verifyExit})\n{vOut}{vErr}");
@@ -71,14 +78,14 @@ public class NewCodecChdmanValidationTests : IDisposable
     {
         if (ChdmanPath == null) return;
 
-        string cue = """
-            FILE "game.bin" BINARY
-              TRACK 01 MODE1/2352
-                INDEX 01 00:00:00
-              TRACK 02 AUDIO
-                INDEX 00 00:00:20
-                INDEX 01 00:00:22
-            """;
+        const string cue = """
+                           FILE "game.bin" BINARY
+                             TRACK 01 MODE1/2352
+                               INDEX 01 00:00:00
+                             TRACK 02 AUDIO
+                               INDEX 00 00:00:20
+                               INDEX 01 00:00:22
+                           """;
         string cuePath = Path.Combine(_testDataDir, "test.cue");
         File.WriteAllText(cuePath, cue);
 
@@ -91,6 +98,7 @@ public class NewCodecChdmanValidationTests : IDisposable
                 bin[offset + i] = (byte)(i & 0xFF);
             }
         }
+
         for (int f = 20; f < 40; f++)
         {
             int offset = f * CdConstants.MaxSectorData;
@@ -103,6 +111,7 @@ public class NewCodecChdmanValidationTests : IDisposable
                 bin[offset + s * 4 + 3] = (byte)(sample >> 8);
             }
         }
+
         File.WriteAllBytes(Path.Combine(_testDataDir, "game.bin"), bin);
 
         string chdPath = Path.Combine(_testDataDir, $"{codecName}.chd");
@@ -112,7 +121,7 @@ public class NewCodecChdmanValidationTests : IDisposable
         var (infoExit, infoOut, infoErr) = RunChdman("info", "-i", chdPath);
         string info = infoOut + infoErr;
         Assert.True(infoExit == 0, $"chdman info failed (exit={infoExit})\n{info}");
-        Assert.Contains(chdmanCodecName, info);
+        Assert.Contains(chdmanCodecName, info, StringComparison.Ordinal);
 
         var (verifyExit, vOut, vErr) = RunChdman("verify", "-i", chdPath);
         Assert.True(verifyExit == 0, $"chdman verify failed (exit={verifyExit})\n{vOut}{vErr}");
@@ -154,6 +163,7 @@ public class NewCodecChdmanValidationTests : IDisposable
             if (File.Exists(path))
                 return path;
         }
+
         return null;
     }
 

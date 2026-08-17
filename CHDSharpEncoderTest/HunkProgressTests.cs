@@ -15,7 +15,14 @@ public class HunkProgressTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch { }
+        try
+        {
+            Directory.Delete(_dir, recursive: true);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     [Fact]
@@ -128,7 +135,7 @@ public class HunkProgressTests : IDisposable
         ChdEncoder.EncodeCd(cuePath, Path.Combine(_dir, "cd.chd"),
             options: new ChdEncodeOptions { HunkCompleted = reports.Add });
 
-        int framesPerHunk = CdConstants.FramesPerHunk;
+        const int framesPerHunk = CdConstants.FramesPerHunk;
         Assert.Equal(4u, (uint)reports.Count);
         for (int i = 0; i < reports.Count; i++)
             Assert.Equal((uint)i, reports[i].HunkIndex);

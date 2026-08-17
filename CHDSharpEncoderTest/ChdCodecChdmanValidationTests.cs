@@ -41,7 +41,7 @@ public class ChdCodecChdmanValidationTests : IDisposable
         var (infoExit, infoOut, infoErr) = RunChdman("info", "-i", chdPath);
         string info = infoOut + infoErr;
         Assert.True(infoExit == 0, $"chdman info failed (exit={infoExit})\n{info}");
-        Assert.Contains("Zstandard", info);
+        Assert.Contains("Zstandard", info, StringComparison.Ordinal);
 
         var (verifyExit, vOut, vErr) = RunChdman("verify", "-i", chdPath);
         Assert.True(verifyExit == 0, $"chdman verify failed (exit={verifyExit})\n{vOut}{vErr}");
@@ -68,7 +68,7 @@ public class ChdCodecChdmanValidationTests : IDisposable
         var (infoExit, infoOut, infoErr) = RunChdman("info", "-i", chdPath);
         string info = infoOut + infoErr;
         Assert.True(infoExit == 0, $"chdman info failed (exit={infoExit})\n{info}");
-        Assert.Contains("LZMA", info);
+        Assert.Contains("LZMA", info, StringComparison.Ordinal);
 
         var (verifyExit, vOut, vErr) = RunChdman("verify", "-i", chdPath);
         Assert.True(verifyExit == 0, $"chdman verify failed (exit={verifyExit})\n{vOut}{vErr}");
@@ -94,9 +94,9 @@ public class ChdCodecChdmanValidationTests : IDisposable
         var (infoExit, infoOut, infoErr) = RunChdman("info", "-i", chdPath);
         string info = infoOut + infoErr;
         Assert.True(infoExit == 0, $"chdman info failed (exit={infoExit})\n{info}");
-        Assert.Contains("zlib", info);
-        Assert.Contains("Zstandard", info);
-        Assert.Contains("LZMA", info);
+        Assert.Contains("zlib", info, StringComparison.Ordinal);
+        Assert.Contains("Zstandard", info, StringComparison.Ordinal);
+        Assert.Contains("LZMA", info, StringComparison.Ordinal);
 
         var (verifyExit, vOut, vErr) = RunChdman("verify", "-i", chdPath);
         Assert.True(verifyExit == 0, $"chdman verify failed (exit={verifyExit})\n{vOut}{vErr}");
@@ -132,7 +132,7 @@ public class ChdCodecChdmanValidationTests : IDisposable
 
         var (infoExit, infoOut, infoErr) = RunChdman("info", "-i", chdPath);
         Assert.True(infoExit == 0, $"chdman info failed (exit={infoExit})\n{infoOut}{infoErr}");
-        Assert.Contains("Zstandard", infoOut + infoErr);
+        Assert.Contains("Zstandard", infoOut + infoErr, StringComparison.Ordinal);
     }
 
     // ----- helpers -----

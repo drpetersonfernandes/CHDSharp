@@ -48,6 +48,7 @@ internal static class Crc32
 
             val >>= 1;
         }
+
         return value;
     }
 

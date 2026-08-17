@@ -102,8 +102,8 @@ public class ChdImageChdmanValidationTests : IDisposable
         var (infoExit, infoOut, infoErr) = RunChdman("info", "-i", ourChd);
         string info = infoOut + infoErr;
         Assert.True(infoExit == 0, $"chdman info failed (exit={infoExit})\n{info}");
-        Assert.Contains("CHGD", info);
-        Assert.Contains("PAD:", info);
+        Assert.Contains("CHGD", info, StringComparison.Ordinal);
+        Assert.Contains("PAD:", info, StringComparison.Ordinal);
 
         string ourExtract = Path.Combine(_testDataDir, "our.raw");
         string chdmanExtract = Path.Combine(_testDataDir, "chdman.raw");

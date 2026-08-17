@@ -26,7 +26,7 @@ internal unsafe class FlacFrame
     /// <summary>
     /// Array of subframe processing information, one per channel.
     /// </summary>
-    public FlacSubframeInfo[] Subframes;
+    public readonly FlacSubframeInfo[] Subframes;
     /// <summary>
     /// Frame number (sample number of the first sample in this frame).
     /// </summary>

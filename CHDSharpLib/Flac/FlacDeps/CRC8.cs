@@ -31,6 +31,7 @@ internal class Crc8
                     crc <<= 1;
                 }
             }
+
             Table[i] = (ushort)(crc & 0x00ff);
         }
     }

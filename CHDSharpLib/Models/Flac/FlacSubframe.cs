@@ -31,7 +31,7 @@ internal unsafe class FlacSubframe
     /// <summary>
     /// Rice coding context for decoding residual values.
     /// </summary>
-    public RiceContext Rc;
+    public readonly RiceContext Rc;
     /// <summary>
     /// Estimated size of this subframe in bits.
     /// </summary>
@@ -48,7 +48,7 @@ internal unsafe class FlacSubframe
     /// <summary>
     /// LPC coefficients for LPC subframes.
     /// </summary>
-    public int[] Coefs;
+    public readonly int[] Coefs;
     /// <summary>
     /// Window index used during encoding.
     /// </summary>

@@ -73,7 +73,7 @@ public class CdflChdmanValidationTests : IDisposable
         var (infoExit, infoOut, infoErr) = RunChdman("info", "-i", chdPath);
         string info = infoOut + infoErr;
         Assert.True(infoExit == 0, $"chdman info failed (exit={infoExit})\n{info}");
-        Assert.Contains("CD FLAC", info);
+        Assert.Contains("CD FLAC", info, StringComparison.Ordinal);
 
         var (verifyExit, vOut, vErr) = RunChdman("verify", "-i", chdPath);
         Assert.True(verifyExit == 0, $"chdman verify failed (exit={verifyExit})\n{vOut}{vErr}");

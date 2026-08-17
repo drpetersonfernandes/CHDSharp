@@ -20,6 +20,7 @@ internal static class ChdBlockRead
 
     private static readonly Action<ILogger, int, Exception?> LogRepeatedBlocksCount =
         LoggerMessage.Define<int>(LogLevel.Debug, new EventId(4), "{Count} repeated used blocks");
+
     /// <summary>Scans the map for <see cref="CompressionType.Compressionself"/> entries and builds usage counts for referenced source blocks.</summary>
     /// <param name="chd">The parsed CHD header containing the block map.</param>
     internal static void FindRepeatedBlocks(ChdHeader chd)

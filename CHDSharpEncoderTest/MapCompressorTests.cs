@@ -89,7 +89,7 @@ public class MapCompressorTests
     [Fact]
     public void ManyEntries_sameType_rleCompresses()
     {
-        int count = 100;
+        const int count = 100;
         var entries = new MapEntry[count];
         for (int i = 0; i < count; i++)
         {

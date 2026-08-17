@@ -37,9 +37,9 @@ public class ChdmanValidationTests : IDisposable
         Assert.True(exitCode == 0, $"chdman info exit code: {exitCode}\nstdout: {stdout}\nstderr: {stderr}");
 
         string output = stdout + stderr;
-        Assert.Contains("File Version: 5", output);
-        Assert.Contains("zlib", output);
-        Assert.DoesNotContain("Error", output);
+        Assert.Contains("File Version: 5", output, StringComparison.Ordinal);
+        Assert.Contains("zlib", output, StringComparison.Ordinal);
+        Assert.DoesNotContain("Error", output, StringComparison.Ordinal);
     }
 
     [Fact]

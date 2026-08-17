@@ -163,6 +163,170 @@ public class ChdCodecTests : IDisposable
         Assert.Throws<ArgumentException>(() => ChdCodecs.ParseCodecTags("zlib,broccoli"));
     }
 
+    [Theory]
+    [InlineData("huff")]
+    [InlineData("flac")]
+    [InlineData("cdzl")]
+    [InlineData("cdlz")]
+    [InlineData("cdzs")]
+    public void ParseCodecTags_AcceptsAllMameNames(string name)
+    {
+        // recognized names must parse (so the error surfaces at CreateAll with a
+        // "not implemented" message, not as an "unknown codec" one)
+        Assert.Equal(1, ChdCodecs.ParseCodecTags(name).Length);
+    }
+
+    [Fact]
+    public void CreateAll_UnknownTag_Throws()
+    {
+        var ex = Assert.Throws<ArgumentException>(() => ChdCodecs.CreateAll([0x12345678], 4096));
+        Assert.Contains("Unknown codec", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CreateAll_TooManyCodecs_Throws()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            ChdCodecs.CreateAll([CodecTags.ZLIB, CodecTags.ZSTD, CodecTags.LZMA, CodecTags.CDFL, CodecTags.ZLIB], 19584));
+    }
+
+    [Fact]
+    public void CreateAll_None_Throws()
+    {
+        // uncompressed CHD (-c none) is not supported yet; it must fail loudly instead
+        // of silently producing a file whose map format contradicts the header
+        Assert.Throws<NotSupportedException>(() => ChdCodecs.CreateAll([CodecTags.NONE], 4096));
+    }
+
+    [Fact]
+    public void CreateAll_NoneCombinedWithOthers_Throws()
+    {
+        Assert.Throws<ArgumentException>(() => ChdCodecs.CreateAll([CodecTags.ZLIB, CodecTags.NONE], 4096));
+    }
+
+    [Fact]
+    public void CreateAll_CdflOnNonCdHunks_Throws()
+    {
+        var ex = Assert.Throws<ArgumentException>(() => ChdCodecs.CreateAll([CodecTags.CDFL], 4096));
+        Assert.Contains("cdfl", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("CD-sized", ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CreateAll_CdflOnCdHunks_Works()
+    {
+        var codecs = ChdCodecs.CreateAll([CodecTags.CDFL], 19584);
+        Assert.Single(codecs);
+        Assert.Equal(CodecTags.CDFL, codecs[0].Tag);
+    }
+
+    [Fact]
+    public void CreateAll_EmptyList_Throws()
+    {
+        // an empty codec list would produce a header claiming no compression while the
+        // written map is the compressed format — reject it like 'none'
+        Assert.Throws<ArgumentException>(() => ChdCodecs.CreateAll([], 4096));
+    }
+
+    [Fact]
+    public void EncodeRaw_UnknownCodec_Throws()
+    {
+        using var ms = new MemoryStream(new byte[4096]);
+        Assert.Throws<ArgumentException>(() => ChdEncoder.EncodeRaw(ms, Path.Combine(_dir, "unknown.chd"), 4096, 512, [0x12345678]));
+    }
+
+    [Fact]
+    public void EncodeRaw_WithHuffCodec_RoundTrips()
+    {
+        byte[] source = CreateCompressible(32);
+        string chdPath = Path.Combine(_dir, "huff.chd");
+        using var ms = new MemoryStream(source);
+        ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.HUFF]);
+
+        var openErr = ChdFile.Open(chdPath, out var file);
+        Assert.Equal(ChdError.Chderrnone, openErr);
+        using (file)
+        {
+            Assert.Equal(ChdError.Chderrnone, file!.ReadAllBytes(out byte[] actual));
+            Assert.Equal(source, actual);
+        }
+    }
+
+    [Fact]
+    public void EncodeRaw_WithFlacCodec_RoundTrips()
+    {
+        // 16-bit stereo samples that compress well: constant + ramp channels
+        byte[] source = new byte[4096 * 8];
+        for (int i = 0; i < source.Length; i += 4)
+        {
+            source[i] = 0x34;         // left sample (LE bytes)
+            source[i + 1] = 0x12;
+            source[i + 2] = (byte)(i & 0xFF); // right sample ramp
+            source[i + 3] = (byte)((i >> 8) & 0xFF);
+        }
+
+        string chdPath = Path.Combine(_dir, "flac.chd");
+        using var ms = new MemoryStream(source);
+        ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.FLAC]);
+
+        var openErr = ChdFile.Open(chdPath, out var file);
+        Assert.Equal(ChdError.Chderrnone, openErr);
+        using (file)
+        {
+            Assert.Equal(ChdError.Chderrnone, file!.ReadAllBytes(out byte[] actual));
+            Assert.Equal(source, actual);
+        }
+    }
+
+    [Fact]
+    public void EncodeRaw_WithFlacCodec_StoresMarkerByte()
+    {
+        // compressible 16-bit stereo samples so hunks actually use the flac codec
+        byte[] source = new byte[4096 * 8];
+        for (int i = 0; i < source.Length; i += 4)
+        {
+            source[i] = 0x34;
+            source[i + 1] = 0x12;
+            source[i + 2] = (byte)((i / 4) & 0xFF);
+            source[i + 3] = (byte)(((i / 4) >> 8) & 0xFF);
+        }
+
+        string chdPath = Path.Combine(_dir, "flac_marker.chd");
+        using var ms = new MemoryStream(source);
+        ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.FLAC]);
+
+        var openErr = ChdFile.Open(chdPath, out var file);
+        Assert.Equal(ChdError.Chderrnone, openErr);
+        using (file)
+        {
+            byte[]? raw = file!.ReadRawHunk(0);
+            Assert.NotNull(raw);
+            Assert.True(raw![0] is (byte)'L' or (byte)'B', $"unexpected marker byte 0x{raw[0]:X2}");
+        }
+    }
+
+    [Fact]
+    public void EncodeRaw_WithHuffCodec_SingleValueHunks_RoundTrips()
+    {
+        // every hunk contains a single distinct byte value (leaf never merged into the
+        // tree): the tree has one 1-bit code and must round-trip without hanging
+        byte[] source = new byte[4096 * 4];
+        for (int h = 0; h < 4; h++)
+            Array.Fill(source, (byte)(h * 37), h * 4096, 4096);
+
+        string chdPath = Path.Combine(_dir, "huff_single.chd");
+        using var ms = new MemoryStream(source);
+        ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.HUFF]);
+
+        var openErr = ChdFile.Open(chdPath, out var file);
+        Assert.Equal(ChdError.Chderrnone, openErr);
+        using (file)
+        {
+            Assert.Equal(ChdError.Chderrnone, file!.ReadAllBytes(out byte[] actual));
+            Assert.Equal(source, actual);
+        }
+    }
+
     // ----- helpers -----
 
     /// <summary>Builds compressible data: repeated zero runs with distinct markers per hunk.</summary>

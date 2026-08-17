@@ -13,15 +13,19 @@ public static class CodecTags
     public const uint ZSTD = 0x7A737464; // 'zstd'
     /// <summary>LZMA compression codec tag.</summary>
     public const uint LZMA = 0x6C7A6D61; // 'lzma'
-    /// <summary>Huffman (MAME generic) codec tag (not implemented by the encoder).</summary>
+    /// <summary>Huffman (MAME generic) codec tag (recognized but not implemented by the encoder yet).</summary>
     public const uint HUFF = 0x68756666; // 'huff'
-    /// <summary>FLAC (audio) codec tag (not implemented by the encoder).</summary>
+    /// <summary>FLAC (audio) codec tag (recognized but not implemented by the encoder yet).</summary>
     public const uint FLAC = 0x666C6163; // 'flac'
-    /// <summary>CD zlib codec tag (not implemented by the encoder; plain zlib works on CD hunks).</summary>
+    /// <summary>CD zlib codec tag (recognized but not implemented by the encoder yet).</summary>
     public const uint CDZL = 0x63647A6C; // 'cdzl'
-    /// <summary>CD FLAC codec tag (not implemented by the encoder).</summary>
+    /// <summary>CD LZMA codec tag (recognized but not implemented by the encoder yet).</summary>
+    public const uint CDLZ = 0x63646C7A; // 'cdlz'
+    /// <summary>CD Zstandard codec tag (recognized but not implemented by the encoder yet).</summary>
+    public const uint CDZS = 0x63647A73; // 'cdzs'
+    /// <summary>CD FLAC codec tag (implemented by the encoder; CD-sized hunks only).</summary>
     public const uint CDFL = 0x6364666C; // 'cdfl'
-    /// <summary>No-compression codec tag.</summary>
+    /// <summary>No-compression codec tag (recognized but not supported by the encoder yet).</summary>
     public const uint NONE = 0x00000000;
 
     /// <summary>Converts a 32-bit codec tag to a four-character ASCII string.</summary>
@@ -35,6 +39,29 @@ public static class CodecTags
         chars[2] = (char)((tag >> 8) & 0xFF);
         chars[3] = (char)(tag & 0xFF);
         return new string(chars);
+    }
+
+    /// <summary>Converts a codec name ("zlib", "huff", ...) to its tag.</summary>
+    /// <param name="name">The codec name.</param>
+    /// <returns>The codec tag.</returns>
+    /// <exception cref="ArgumentException">An unknown codec name was supplied.</exception>
+    public static uint FromName(string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+        return name.ToLowerInvariant() switch
+        {
+            "zlib" => ZLIB,
+            "zstd" => ZSTD,
+            "lzma" => LZMA,
+            "huff" => HUFF,
+            "flac" => FLAC,
+            "cdzl" => CDZL,
+            "cdlz" => CDLZ,
+            "cdzs" => CDZS,
+            "cdfl" => CDFL,
+            "none" => NONE,
+            _ => throw new ArgumentException($"Unknown codec [{name}]"),
+        };
     }
 }
 
@@ -135,31 +162,70 @@ public sealed class LzmaCodec : IChdCodec
 /// <summary>Creates codec instances from four-character tags.</summary>
 public static class ChdCodecs
 {
+    /// <summary>Comma-separated list of codec names the encoder can actually compress with.</summary>
+    public const string SupportedCodecNames = "zlib, zstd, lzma, huff, flac, cdzl, cdlz, cdzs, cdfl";
+
     /// <summary>
     /// Creates one codec instance per tag, in order (up to 4, per the CHD header).
-    /// Unsupported tags produce a codec that always fails to compress, so hunks fall
-    /// back to COMPRESSION_NONE instead of corrupting the file.
+    /// Throws instead of silently degrading: a requested codec that the encoder does not
+    /// implement would otherwise store every hunk uncompressed while the header claims the
+    /// codec is in use.
     /// </summary>
     /// <param name="codecTags">The codec tags to instantiate.</param>
     /// <param name="hunkBytes">The hunk size in bytes (codec configuration).</param>
-    /// <returns>An array of up to 4 codec instances.</returns>
+    /// <returns>An array of codec instances (empty when the single tag is <see cref="CodecTags.NONE"/>).</returns>
+    /// <exception cref="ArgumentException">A tag is unknown, not implemented by the encoder, combined
+    /// with other codecs, or (<see cref="CodecTags.CDFL"/>) used on non-CD-sized hunks.</exception>
+    /// <exception cref="NotSupportedException">The only tag is <see cref="CodecTags.NONE"/> (uncompressed CHD).</exception>
     public static IChdCodec[] CreateAll(IReadOnlyList<uint> codecTags, uint hunkBytes)
     {
-        var result = new List<IChdCodec>(Math.Min(codecTags.Count, 4));
-        foreach (var tag in codecTags.Take(4))
+        ArgumentNullException.ThrowIfNull(codecTags);
+        if (codecTags.Count == 0)
+            throw new ArgumentException("At least one codec is required; use 'zlib', 'zstd', 'lzma' or 'cdfl'", nameof(codecTags));
+        if (codecTags.Count > 4)
+            throw new ArgumentException($"At most 4 codecs are supported, got {codecTags.Count}", nameof(codecTags));
+
+        if (codecTags.Count == 1 && codecTags[0] == CodecTags.NONE)
+            throw new NotSupportedException("Codec 'none' (uncompressed CHD) is not supported by the encoder yet; use one of: " + SupportedCodecNames);
+
+        var result = new List<IChdCodec>(codecTags.Count);
+        foreach (var tag in codecTags)
         {
+            if (tag == CodecTags.NONE)
+                throw new ArgumentException("Codec 'none' cannot be combined with other codecs", nameof(codecTags));
+
             IChdCodec codec = tag switch
             {
                 CodecTags.ZLIB => new ZlibCodec(),
                 CodecTags.ZSTD => new ZstdCodec(),
                 CodecTags.LZMA => new LzmaCodec(hunkBytes),
-                // CD FLAC only applies to CD-sized hunks (whole frames); elsewhere it can't compress
+                CodecTags.HUFF => new HuffCodec(),
+                CodecTags.FLAC => new FlacCodec(hunkBytes),
+                // CD codecs only apply to CD-sized hunks (whole frames); elsewhere they can't compress
                 CodecTags.CDFL when hunkBytes % CdConstants.FrameSize == 0 => new CdflCodec(hunkBytes),
-                _ => new UnsupportedCodec(tag),
+                CodecTags.CDZL or CodecTags.CDLZ or CodecTags.CDZS when hunkBytes % CdConstants.FrameSize == 0 =>
+                    CreateCdCodec(tag, hunkBytes),
+                CodecTags.CDFL or CodecTags.CDZL or CodecTags.CDLZ or CodecTags.CDZS => throw new ArgumentException(
+                    $"Codec '{CodecTags.ToString(tag)}' requires CD-sized hunks (multiple of {CdConstants.FrameSize} bytes); hunk is {hunkBytes} bytes",
+                    nameof(codecTags)),
+                _ => throw new ArgumentException(
+                    $"Unknown codec tag [{CodecTags.ToString(tag)}]; supported codecs: {SupportedCodecNames}",
+                    nameof(codecTags)),
             };
             result.Add(codec);
         }
         return result.ToArray();
+    }
+
+    private static IChdCodec CreateCdCodec(uint tag, uint hunkBytes)
+    {
+        return tag switch
+        {
+            CodecTags.CDZL => new CdzlCodec(hunkBytes),
+            CodecTags.CDLZ => new CdlzCodec(hunkBytes),
+            CodecTags.CDZS => new CdzsCodec(hunkBytes),
+            _ => throw new ArgumentException($"Unknown CD codec tag [{CodecTags.ToString(tag)}]"),
+        };
     }
 
     /// <summary>Parses a comma-separated codec list ("zlib,zstd,lzma") into tags.</summary>
@@ -179,26 +245,16 @@ public static class ChdCodecs
                 "zlib" => CodecTags.ZLIB,
                 "zstd" => CodecTags.ZSTD,
                 "lzma" => CodecTags.LZMA,
+                "huff" => CodecTags.HUFF,
+                "flac" => CodecTags.FLAC,
+                "cdzl" => CodecTags.CDZL,
+                "cdlz" => CodecTags.CDLZ,
+                "cdzs" => CodecTags.CDZS,
                 "cdfl" => CodecTags.CDFL,
                 "none" => CodecTags.NONE,
                 _ => throw new ArgumentException($"Unknown codec [{name}]"),
             });
         }
         return tags.ToArray();
-    }
-
-    private sealed class UnsupportedCodec : IChdCodec
-    {
-        public UnsupportedCodec(uint tag)
-        {
-            Tag = tag;
-        }
-
-        public uint Tag { get; }
-
-        public byte[]? Compress(byte[] data)
-        {
-            return null;
-        }
     }
 }

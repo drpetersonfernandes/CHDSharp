@@ -1012,6 +1012,69 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
+    /// Reads the raw on-disk bytes of a hunk exactly as stored in the CHD file, without
+    /// decompression (chd-rs <c>read_raw_in</c> parity). Useful for debugging, repacking,
+    /// and map analysis.
+    /// </summary>
+    /// <param name="hunknum">Zero-based hunk index (0 to <see cref="HunkCount"/> - 1).</param>
+    /// <returns>The raw stored bytes: the compressed block for codec entries (types 0-3 and the
+    /// V3/V4 secondary codec), the raw block for <see cref="CompressionType.Compressionnone"/>
+    /// entries, or the referenced hunk's bytes for <see cref="CompressionType.Compressionself"/>
+    /// entries. <c>null</c> when the hunk has no on-disk data (parent reference, V3/V4 mini
+    /// inline pattern, V5 zero-fill) or its stored range lies outside the file.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="hunknum"/> is out of range.</exception>
+    public byte[]? ReadRawHunk(uint hunknum)
+    {
+        if (hunknum >= _chd.Totalblocks)
+            throw new ArgumentOutOfRangeException(nameof(hunknum), $"Hunk {hunknum} is out of range (0..{_chd.Totalblocks - 1})");
+
+        // Resolve the entry that actually holds the stored data (follow SELF links).
+        MapEntry? dataEntry = _chd.Map[hunknum];
+        while (dataEntry is { Comptype: CompressionType.Compressionself })
+        {
+            dataEntry = dataEntry.SelfMapEntry;
+        }
+
+        if (dataEntry is null || dataEntry.Length == 0)
+            return null;
+
+        // Entries without on-disk data: parent references read from another CHD,
+        // V3/V4 mini entries store the 8-byte pattern inline in the map offset field,
+        // and V5 zero-fill hunks have no stored bytes at all.
+        if (dataEntry.Comptype is CompressionType.Compressionparent
+            or CompressionType.Compressionmini
+            or CompressionType.Compressionzero
+            or CompressionType.Compressionerror)
+            return null;
+
+        var fileLength = (ulong)(_precache?.Length ?? _stream.Length);
+        if (dataEntry.Offset + dataEntry.Length > fileLength)
+            return null;
+
+        var raw = new byte[dataEntry.Length];
+        if (_precache != null)
+        {
+            Array.Copy(_precache, (int)dataEntry.Offset, raw, 0, (int)dataEntry.Length);
+        }
+        else
+        {
+            _stream.Seek((long)dataEntry.Offset, SeekOrigin.Begin);
+            _stream.ReadExactly(raw, 0, raw.Length);
+        }
+
+        return raw;
+    }
+
+    /// <summary>Asynchronously reads the raw on-disk bytes of a hunk (see <see cref="ReadRawHunk"/>).</summary>
+    /// <param name="hunknum">Zero-based hunk index (0 to <see cref="HunkCount"/> - 1).</param>
+    /// <param name="cancellationToken">A token to cancel the read. <see cref="OperationCanceledException"/> is thrown if cancellation is requested.</param>
+    /// <returns>A task producing the raw stored bytes (<c>null</c> when the hunk has no on-disk data).</returns>
+    public Task<byte[]?> ReadRawHunkAsync(uint hunknum, CancellationToken cancellationToken = default)
+    {
+        return Task.Run(() => ReadRawHunk(hunknum), cancellationToken);
+    }
+
+    /// <summary>
     /// Copies the cached decompressed hunk <paramref name="hunknum"/> into <paramref name="buffer"/>
     /// (promoting it to most-recently-used) and returns <c>true</c> on a cache hit.
     /// </summary>

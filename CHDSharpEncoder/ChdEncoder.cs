@@ -8,6 +8,11 @@ namespace CHDSharpEncoder;
 /// </summary>
 public static class ChdEncoder
 {
+    private const uint DefaultHunkBytes = 4096;
+    private const uint DefaultUnitBytes = 512;
+    private const uint DvdSectorSize = 2048;
+    private const ulong Iso9660PvdOffset = 16 * DvdSectorSize;
+
     /// <summary>
     /// Encodes a raw binary stream into a compressed CHD v5 file. The last hunk is
     /// zero-padded in the file when the source size is not a multiple of
@@ -17,9 +22,10 @@ public static class ChdEncoder
     /// <param name="sourceStream">The raw source data; the full stream is consumed from its start.</param>
     /// <param name="chdPath">Path of the output .chd file (created/overwritten).</param>
     /// <param name="hunkBytes">Hunk size in bytes (default 4096).</param>
-    /// <param name="unitBytes">Unit size in bytes (default 512).</param>
+    /// <param name="unitBytes">Unit size in bytes (default 512; 2048 when
+    /// <see cref="ChdEncodeOptions.AutoClassify"/> detects an ISO-9660 DVD image).</param>
     /// <exception cref="ArgumentException"><paramref name="hunkBytes"/> is not a multiple of <paramref name="unitBytes"/>.</exception>
-    public static void EncodeRaw(Stream sourceStream, string chdPath, uint hunkBytes = 4096, uint unitBytes = 512,
+    public static void EncodeRaw(Stream sourceStream, string chdPath, uint hunkBytes = DefaultHunkBytes, uint unitBytes = DefaultUnitBytes,
         IReadOnlyList<uint>? codecTags = null, ChdEncodeOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(sourceStream);
@@ -30,6 +36,27 @@ public static class ChdEncoder
         var codecs = ChdCodecs.CreateAll(codecTags, hunkBytes);
 
         var logicalBytes = (ulong)sourceStream.Length;
+
+        // User-supplied metadata entries plus optional automatic classification
+        // ('DVD ' for ISO-9660 images, synthesized 'GDDD' hard-disk geometry otherwise).
+        var metadataEntries = new List<MetadataEntry>();
+        if (options?.Metadata is { Count: > 0 } userMetadata)
+            metadataEntries.AddRange(userMetadata);
+
+        if (options?.AutoClassify == true)
+        {
+            if (IsIso9660Image(sourceStream, logicalBytes))
+            {
+                metadataEntries.Add(MetadataWriter.BuildDvdMetadata());
+                if (unitBytes == DefaultUnitBytes && hunkBytes % DvdSectorSize == 0)
+                    unitBytes = DvdSectorSize;
+            }
+            else
+            {
+                metadataEntries.Add(MetadataWriter.BuildHardDiskMetadata(logicalBytes, unitBytes));
+            }
+        }
+
         var hunkCount = (uint)((logicalBytes + hunkBytes - 1) / hunkBytes);
         if (hunkCount == 0)
         {
@@ -86,22 +113,65 @@ public static class ChdEncoder
         foreach (var block in blockList)
             fs.Write(block, 0, block.Length);
 
+        // Metadata lives between the compressed blocks and the map; the header's metaoffset
+        // field is patched below (0 when no metadata is present, as chdman leaves it).
+        long? metaOffset = null;
+        if (metadataEntries.Count > 0)
+        {
+            metaOffset = MetadataWriter.WriteCdMetadata(fs, metadataEntries);
+            mapOffset = (ulong)fs.Position;
+        }
+
         fs.Write(compressedMap, 0, compressedMap.Length);
 
-        // Patch header: mapoffset at byte 40
+        // Patch header: mapoffset at byte 40, metaoffset at byte 48
         var patchW = new BigEndianWriter();
         patchW.WriteU64(mapOffset);
         fs.Position = 40;
         fs.Write(patchW.ToArray(), 0, 8);
 
+        if (metaOffset.HasValue)
+        {
+            patchW = new BigEndianWriter();
+            patchW.WriteU64((ulong)metaOffset.Value);
+            fs.Position = 48;
+            fs.Write(patchW.ToArray(), 0, 8);
+        }
+
         // Patch rawsha1 at byte 64
         fs.Position = 64;
         fs.Write(rawSha1, 0, 20);
 
-        // Patch sha1 (combined raw+meta, with no metadata: SHA1(rawSha1))
-        var combinedSha1 = Sha1.Compute(rawSha1);
+        // Patch sha1 (combined raw+meta; with no metadata: SHA1(rawSha1))
+        var combinedSha1 = metadataEntries.Count > 0
+            ? MetadataWriter.ComputeCombinedSha1(rawSha1, metadataEntries)
+            : Sha1.Compute(rawSha1);
         fs.Position = 84;
         fs.Write(combinedSha1, 0, 20);
+    }
+
+    /// <summary>
+    /// Detects an ISO-9660 filesystem image: the primary volume descriptor at sector 16
+    /// (byte offset 0x8000) starts with the "CD001" magic. Restores the stream position.
+    /// </summary>
+    private static bool IsIso9660Image(Stream sourceStream, ulong length)
+    {
+        if (length < Iso9660PvdOffset + 5)
+            return false;
+
+        var original = sourceStream.Position;
+        try
+        {
+            sourceStream.Position = (long)Iso9660PvdOffset;
+            Span<byte> magic = stackalloc byte[5];
+            if (sourceStream.Read(magic) != 5)
+                return false;
+            return magic.SequenceEqual("CD001"u8);
+        }
+        finally
+        {
+            sourceStream.Position = original;
+        }
     }
 
     /// <summary>
@@ -112,7 +182,7 @@ public static class ChdEncoder
     /// <param name="hunkBytes">Hunk size in bytes (default 4096).</param>
     /// <param name="unitBytes">Unit size in bytes (default 512).</param>
     /// <exception cref="ArgumentException"><paramref name="hunkBytes"/> is not a multiple of <paramref name="unitBytes"/>.</exception>
-    public static void EncodeRaw(string sourcePath, string chdPath, uint hunkBytes = 4096, uint unitBytes = 512,
+    public static void EncodeRaw(string sourcePath, string chdPath, uint hunkBytes = DefaultHunkBytes, uint unitBytes = DefaultUnitBytes,
         IReadOnlyList<uint>? codecTags = null, ChdEncodeOptions? options = null)
     {
         using var fs = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
@@ -233,8 +303,10 @@ public static class ChdEncoder
 
         var rawSha1 = sha1.Finish();
 
-        // 4. Build metadata entries and compressed map
+        // 4. Build metadata entries (track entries + any user-supplied entries) and compressed map
         var metadataEntries = MetadataWriter.BuildCdMetadataEntries(toc);
+        if (options?.Metadata is { Count: > 0 } userMetadata)
+            metadataEntries.AddRange(userMetadata);
         var compressedMap = MapCompressor.Compress(entries, hunkCount, hunkBytes, unitBytes);
 
         // 5. Write output file

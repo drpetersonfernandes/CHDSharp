@@ -16,8 +16,58 @@ public static class MetadataWriter
     public const uint CdRomTrackMetadata2Tag = 0x43485432;
     /// <summary>'CHGD' GD-ROM track metadata tag (big-endian).</summary>
     public const uint GdRomTrackMetadataTag = 0x43484744;
+    /// <summary>'GDDD' hard-disk geometry metadata tag (big-endian).</summary>
+    public const uint HardDiskMetadataTag = 0x47444444;
+    /// <summary>'DVD ' DVD-ROM metadata tag (big-endian).</summary>
+    public const uint DvdMetadataTag = 0x44564420;
     /// <summary>CHD_MDFLAGS_CHECKSUM: the entry is covered by the combined SHA-1 verification.</summary>
     public const byte ChdMdflagsChecksum = 0x01;
+
+    /// <summary>
+    /// Builds the 'GDDD' hard-disk geometry metadata entry, matching MAME's
+    /// <c>HARD_DISK_METADATA_FORMAT</c> (<c>"CYLS:%d,HEADS:%d,SECS:%d,BPS:%d"</c>, written by
+    /// chdman <c>createhd</c>). The geometry is synthesized from the image size with a classic
+    /// CHS layout (16 heads, 63 sectors/track); readers only consume the BPS value (used as the
+    /// unit size), so any consistent geometry is valid.
+    /// </summary>
+    /// <param name="totalBytes">The logical image size in bytes.</param>
+    /// <param name="bytesPerSector">The sector size in bytes (BPS; normally the unit size).</param>
+    public static MetadataEntry BuildHardDiskMetadata(ulong totalBytes, uint bytesPerSector)
+    {
+        const uint heads = 16;
+        const uint sectorsPerTrack = 63;
+
+        ulong cylinders = 0;
+        if (bytesPerSector > 0)
+        {
+            ulong perCylinder = (ulong)bytesPerSector * heads * sectorsPerTrack;
+            cylinders = perCylinder > 0 ? (totalBytes + perCylinder - 1) / perCylinder : 0;
+            if (cylinders > uint.MaxValue)
+                cylinders = uint.MaxValue;
+        }
+
+        var text = $"CYLS:{cylinders},HEADS:{heads},SECS:{sectorsPerTrack},BPS:{bytesPerSector}";
+        return new MetadataEntry
+        {
+            Tag = HardDiskMetadataTag,
+            Flags = ChdMdflagsChecksum,
+            Payload = Encoding.ASCII.GetBytes(text + '\0'),
+        };
+    }
+
+    /// <summary>
+    /// Builds the 'DVD ' metadata entry for a DVD-ROM image, matching chdman <c>createdvd</c>
+    /// (<c>write_metadata(DVD_METADATA_TAG, 0, "")</c>): the payload is a single null byte.
+    /// </summary>
+    public static MetadataEntry BuildDvdMetadata()
+    {
+        return new MetadataEntry
+        {
+            Tag = DvdMetadataTag,
+            Flags = ChdMdflagsChecksum,
+            Payload = [0x00],
+        };
+    }
 
     /// <summary>
     /// Appends one CHT2 metadata entry per track at the current stream position, linking them

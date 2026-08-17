@@ -30,4 +30,21 @@ public sealed class ChdEncodeOptions
     /// compression-ratio logging. Default: <c>null</c> (no reporting).
     /// </summary>
     public Action<HunkProgress>? HunkCompleted { get; set; }
+
+    /// <summary>
+    /// Additional metadata entries to write into the CHD, appended after any entries the
+    /// encoder generates itself (e.g. the CD/GD-ROM track entries of <see cref="ChdEncoder.EncodeCd"/>).
+    /// Each entry is checksummed (CHD_MDFLAGS_CHECKSUM) and folded into the combined SHA-1.
+    /// Default: <c>null</c> (no extra metadata). Writing metadata shifts the map offset, so
+    /// the produced file is not byte-identical to chdman output without metadata.
+    /// </summary>
+    public IReadOnlyList<MetadataEntry>? Metadata { get; set; }
+
+    /// <summary>
+    /// When <c>true</c>, <see cref="ChdEncoder.EncodeRaw"/> classifies the source automatically:
+    /// an ISO-9660 image (DVD) gets 'DVD ' metadata and a 2048-byte unit size, any other raw
+    /// image gets synthesized 'GDDD' hard-disk geometry metadata (CYLS/HEADS/SECS/BPS with
+    /// BPS = the unit size). Default: <c>false</c> (chdman-compatible output without metadata).
+    /// </summary>
+    public bool AutoClassify { get; set; }
 }

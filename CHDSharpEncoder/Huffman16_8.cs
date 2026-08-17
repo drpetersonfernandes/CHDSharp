@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace CHDSharpEncoder;
 
 /// <summary>Huffman encoder supporting up to 16 symbols with a maximum code length of 8 bits.</summary>
@@ -263,6 +265,7 @@ public class Huffman168
         }
     }
 
+    [StructLayout(LayoutKind.Auto)]
     private struct TreeNode
     {
         public int Weight;

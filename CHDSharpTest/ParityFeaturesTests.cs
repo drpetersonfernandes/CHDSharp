@@ -26,7 +26,7 @@ public class ParityFeaturesTests
             var gErr = chd!.GetMetadata("CHT2", 0, out var entry);
             Assert.Equal(ChdError.Chderrnone, gErr);
             Assert.NotNull(entry);
-            Assert.Equal("CHT2", entry!.Tag);
+            Assert.Equal("CHT2", entry.Tag);
             Assert.StartsWith("TRACK:1", entry.GetText(), StringComparison.Ordinal);
         }
     }
@@ -44,7 +44,7 @@ public class ParityFeaturesTests
             var gErr = chd!.GetMetadata("CHT2", 1, out var entry);
             Assert.Equal(ChdError.Chderrnone, gErr);
             Assert.NotNull(entry);
-            Assert.Equal("CHT2", entry!.Tag);
+            Assert.Equal("CHT2", entry.Tag);
             Assert.StartsWith("TRACK:2", entry.GetText(), StringComparison.Ordinal);
         }
     }
@@ -62,7 +62,7 @@ public class ParityFeaturesTests
             var gErr = chd!.GetMetadata(null, 0, out var entry);
             Assert.Equal(ChdError.Chderrnone, gErr);
             Assert.NotNull(entry);
-            Assert.Equal("CHT2", entry!.Tag);
+            Assert.Equal("CHT2", entry.Tag);
 
             var gErr2 = chd.GetMetadata(string.Empty, 0, out _);
             Assert.Equal(ChdError.Chderrnone, gErr2);
@@ -137,7 +137,7 @@ public class ParityFeaturesTests
                     var gErr = chd.GetMetadata(tag, (uint)i, out var entry);
                     Assert.Equal(ChdError.Chderrnone, gErr);
                     Assert.NotNull(entry);
-                    Assert.Equal(occurrences[i].Tag, entry!.Tag);
+                    Assert.Equal(occurrences[i].Tag, entry.Tag);
                     Assert.Same(occurrences[i].Data, entry.Data);
                 }
             }
@@ -259,7 +259,7 @@ public class ParityFeaturesTests
             var gErr = chd!.GetMetadata("GDDD", 0, out var entry);
             Assert.Equal(ChdError.Chderrnone, gErr);
             Assert.NotNull(entry);
-            Assert.Equal("GDDD", entry!.Tag);
+            Assert.Equal("GDDD", entry.Tag);
             Assert.Equal("CYLS:16,HEADS:4,SECS:16,BPS:512", entry.GetText());
             Assert.Equal(512u, chd.UnitBytes);
             Assert.True(chd.IsHdd);
@@ -279,7 +279,7 @@ public class ParityFeaturesTests
             var gErr = chd!.GetMetadata("GDDD", 0, out var entry);
             Assert.Equal(ChdError.Chderrnone, gErr);
             Assert.NotNull(entry);
-            Assert.Equal("GDDD", entry!.Tag);
+            Assert.Equal("GDDD", entry.Tag);
             Assert.StartsWith("CYLS:", entry.GetText(), StringComparison.Ordinal);
             Assert.Contains("BPS:512", entry.GetText(), StringComparison.Ordinal);
             Assert.Equal(512u, chd.UnitBytes);
@@ -361,11 +361,30 @@ public class ParityFeaturesTests
         public override long Length => _inner.Length;
         public override long Position { get => _inner.Position; set => _inner.Position = value; }
 
-        public override void Flush() => _inner.Flush();
-        public override int Read(byte[] buffer, int offset, int count) => throw new IOException("simulated read failure");
-        public override long Seek(long offset, SeekOrigin origin) => _inner.Seek(offset, origin);
-        public override void SetLength(long value) => throw new NotSupportedException();
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override void Flush()
+        {
+            _inner.Flush();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            throw new IOException("simulated read failure");
+        }
+
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            return _inner.Seek(offset, origin);
+        }
+
+        public override void SetLength(long value)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            throw new NotSupportedException();
+        }
     }
 
     /// <summary>Wraps a seekable stream that allows only the first <paramref name="budget"/> bytes to be read; later reads throw.</summary>
@@ -386,7 +405,10 @@ public class ParityFeaturesTests
         public override long Length => _inner.Length;
         public override long Position { get => _inner.Position; set => _inner.Position = value; }
 
-        public override void Flush() => _inner.Flush();
+        public override void Flush()
+        {
+            _inner.Flush();
+        }
 
         public override int Read(byte[] buffer, int offset, int count)
         {
@@ -398,8 +420,19 @@ public class ParityFeaturesTests
             return n;
         }
 
-        public override long Seek(long offset, SeekOrigin origin) => _inner.Seek(offset, origin);
-        public override void SetLength(long value) => throw new NotSupportedException();
-        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+        public override long Seek(long offset, SeekOrigin origin)
+        {
+            return _inner.Seek(offset, origin);
+        }
+
+        public override void SetLength(long value)
+        {
+            throw new NotSupportedException();
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            throw new NotSupportedException();
+        }
     }
 }

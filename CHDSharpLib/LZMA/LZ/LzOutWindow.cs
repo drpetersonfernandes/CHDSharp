@@ -13,6 +13,7 @@ internal class OutWindow
 
     /// <summary>Total number of bytes written so far.</summary>
     internal long Total;
+
     /// <summary>Maximum number of bytes allowed to be written.</summary>
     internal long Limit;
 
@@ -121,6 +122,7 @@ internal class OutWindow
             if (_pos >= _windowSize)
                 Flush();
         }
+
         _pendingLen = size;
         _pendingDist = distance;
     }
@@ -173,6 +175,7 @@ internal class OutWindow
             if (_pos >= _windowSize)
                 Flush();
         }
+
         return len - size;
     }
 
@@ -207,6 +210,7 @@ internal class OutWindow
             _pos = 0;
             _streamPos = 0;
         }
+
         return size;
     }
 

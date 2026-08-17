@@ -8,7 +8,10 @@ public class ProgressReportingTests
 {
     private static readonly string TestDataDir = Path.Combine(AppContext.BaseDirectory, "TestData");
 
-    private static string DataPath(string name) => Path.Combine(TestDataDir, name);
+    private static string DataPath(string name)
+    {
+        return Path.Combine(TestDataDir, name);
+    }
 
     /// <summary>An <see cref="IProgress{T}"/> that records reports thread-safely.</summary>
     private sealed class CollectingProgress : IProgress<ChdProgress>

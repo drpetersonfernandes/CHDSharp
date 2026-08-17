@@ -163,6 +163,7 @@ public class ChdFileTests
             Assert.Equal((int)chd.HunkBytes, hunk.Length);
             count++;
         }
+
         Assert.Equal((int)chd.HunkCount, count);
         chd.Dispose();
     }

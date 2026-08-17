@@ -55,7 +55,10 @@ public class LruCacheTests
         ms.Position = 0;
         return ms;
 
-        void Write(byte[] b) => ms.Write(b, 0, b.Length);
+        void Write(byte[] b)
+        {
+            ms.Write(b, 0, b.Length);
+        }
     }
 
     private static byte[] ExpectedPattern(uint h, int count = (int)Blocksize)

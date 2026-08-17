@@ -44,7 +44,7 @@ public class CdflCodecTests : IDisposable
         byte[]? compressed = codec.Compress(hunk);
 
         Assert.NotNull(compressed);
-        Assert.True(compressed!.Length < hunk.Length, $"expected compression, got {compressed.Length}");
+        Assert.True(compressed.Length < hunk.Length, $"expected compression, got {compressed.Length}");
 
         // the chunk starts with a FLAC frame sync code
         Assert.Equal(0xFF, compressed[0]);
@@ -63,7 +63,7 @@ public class CdflCodecTests : IDisposable
 
         Assert.NotNull(compressed);
         // silence should collapse dramatically (8×2352 = 18816 bytes of audio → tiny)
-        Assert.True(compressed!.Length < 512);
+        Assert.True(compressed.Length < 512);
     }
 
     [Fact]

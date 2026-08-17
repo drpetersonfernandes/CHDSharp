@@ -179,7 +179,9 @@ public class HunkProcessor
         var ts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var tasks = new List<Task>(_taskCount + 1);
         Exception? error = null;
+#pragma warning disable MA0158 // Use System.Threading.Lock — not available on net8.0
         var errorLock = new object();
+#pragma warning restore MA0158
 
         tasks.Add(Task.Factory.StartNew(
             () => ProducerLoop(hunkCount, readHunk, rawSha1, toCompress, items, ts, RecordError),
@@ -396,7 +398,9 @@ public class HunkProcessor
     {
         private readonly int _arraySize;
         private readonly Stack<byte[]> _pool = new();
+#pragma warning disable MA0158 // Use System.Threading.Lock — not available on net8.0
         private readonly object _lock = new();
+#pragma warning restore MA0158
 
         public ByteArrayPool(int arraySize)
         {

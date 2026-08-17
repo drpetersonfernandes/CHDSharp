@@ -5,6 +5,7 @@ internal class Crc
 {
     /// <summary>Precomputed CRC-32 lookup tables (8 tables, 256 entries each) for fast slicing.</summary>
     private static readonly uint[] Crc32Lookup;
+
     private uint _crc;
     private long _totalBytesRead;
 

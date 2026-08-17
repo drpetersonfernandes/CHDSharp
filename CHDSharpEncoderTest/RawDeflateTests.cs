@@ -15,7 +15,7 @@ public class RawDeflateTests
 
         byte[]? compressed = RawDeflate.Compress(original);
         Assert.NotNull(compressed);
-        byte[] decompressed = RawDeflate.Decompress(compressed!, original.Length);
+        byte[] decompressed = RawDeflate.Decompress(compressed, original.Length);
         Assert.Equal(original, decompressed);
     }
 
@@ -25,7 +25,7 @@ public class RawDeflateTests
         byte[] data = new byte[4096];
         byte[]? compressed = RawDeflate.Compress(data);
         Assert.NotNull(compressed);
-        Assert.True(compressed!.Length < 100);
+        Assert.True(compressed.Length < 100);
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class RawDeflateTests
 
         byte[]? compressed = RawDeflate.Compress(original);
         Assert.NotNull(compressed);
-        byte[] decompressed = RawDeflate.Decompress(compressed!, original.Length);
+        byte[] decompressed = RawDeflate.Decompress(compressed, original.Length);
         Assert.Equal(original, decompressed);
     }
 
@@ -63,7 +63,7 @@ public class RawDeflateTests
 
         byte[]? compressed = RawDeflate.Compress(original);
         Assert.NotNull(compressed);
-        byte[] decompressed = RawDeflate.Decompress(compressed!, original.Length);
+        byte[] decompressed = RawDeflate.Decompress(compressed, original.Length);
         Assert.Equal(original, decompressed);
     }
 
@@ -79,7 +79,7 @@ public class RawDeflateTests
         byte[]? compressed = RawDeflate.Compress(data);
         Assert.NotNull(compressed);
 
-        bool isZlibWrapped = compressed!.Length >= 2 &&
+        bool isZlibWrapped = compressed.Length >= 2 &&
                              (compressed[0] & 0x0F) == 8 &&
                              ((compressed[0] * 256 + compressed[1]) % 31 == 0);
         Assert.False(isZlibWrapped);
@@ -96,7 +96,7 @@ public class RawDeflateTests
 
         byte[]? compressed = RawDeflate.Compress(original);
         Assert.NotNull(compressed);
-        byte[] decompressed = RawDeflate.Decompress(compressed!, original.Length);
+        byte[] decompressed = RawDeflate.Decompress(compressed, original.Length);
         Assert.Equal(original, decompressed);
     }
 
@@ -106,7 +106,7 @@ public class RawDeflateTests
         byte[] data = new byte[65536];
         byte[]? compressed = RawDeflate.Compress(data);
         Assert.NotNull(compressed);
-        double ratio = (double)compressed!.Length / data.Length;
+        double ratio = (double)compressed.Length / data.Length;
         Assert.True(ratio < 0.01); // highly compressible
     }
 }

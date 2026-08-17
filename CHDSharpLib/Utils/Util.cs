@@ -1,4 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 
 namespace CHDSharp.Utils;
 
@@ -36,6 +36,7 @@ internal static class Util
                 return false;
             }
         }
+
         return true;
     }
 
@@ -63,6 +64,7 @@ internal static class Util
             if (b != 0 && b < 32)
                 return false;
         }
+
         return true;
     }
 }

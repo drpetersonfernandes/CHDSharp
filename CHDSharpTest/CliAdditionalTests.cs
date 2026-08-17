@@ -20,6 +20,7 @@ public class CliAdditionalTests
                 return Path.Combine(slnRoot, "CHDSharpCli", "bin", "Debug",
                     "net10.0", "CHDSharpCli.dll");
             }
+
             return Path.Combine(AppContext.BaseDirectory, "CHDSharpCli.dll");
         }
     }

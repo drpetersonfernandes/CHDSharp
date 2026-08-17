@@ -29,17 +29,17 @@ public class ChdReadersSwapTests
     {
         // Simulate a frame: 6 bytes of sector data followed by 4 bytes of subcode.
         // Only the first 6 (sector) bytes per frame should be swapped.
-        var frameBytes = 10;
-        var sectorBytes = 6;
+        const int frameBytes = 10;
+        const int sectorBytes = 6;
         var buf = new byte[]
         {
-            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0xA1, 0xA2, 0xA3, 0xA4,  // frame 0
-            0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0xB1, 0xB2, 0xB3, 0xB4   // frame 1
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0xA1, 0xA2, 0xA3, 0xA4, // frame 0
+            0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0xB1, 0xB2, 0xB3, 0xB4 // frame 1
         };
 
         ChdReaders.SwapCdda16(buf, buf.Length, sectorBytes, frameBytes);
 
-        Assert.Equal(Swapped, buf[0..6]);
+        Assert.Equal(Swapped, buf[..6]);
         Assert.Equal(new byte[] { 0x12, 0x11, 0x14, 0x13, 0x16, 0x15 }, buf[10..16]);
         // subcode bytes unchanged
         Assert.Equal(new byte[] { 0xA1, 0xA2, 0xA3, 0xA4 }, buf[6..10]);

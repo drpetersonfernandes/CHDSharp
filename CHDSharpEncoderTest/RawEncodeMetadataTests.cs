@@ -130,8 +130,8 @@ public class RawEncodeMetadataTests : IDisposable
 
             Assert.Single(file.Metadata);
             Assert.Equal("DVD ", file.Metadata[0].Tag);
-            Assert.Single(file.Metadata[0].Data); // single null byte, chdman parity
-            Assert.Equal(0, file.Metadata[0].Data[0]);
+            var item = Assert.Single(file.Metadata[0].Data); // single null byte, chdman parity
+            Assert.Equal(0, item);
 
             Assert.Equal(ChdError.Chderrnone, file.ReadAllBytes(out byte[] actual));
             Assert.Equal(source, actual);

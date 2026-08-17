@@ -49,6 +49,7 @@ internal interface IAudioSource
     /// <param name="maxLength">The maximum number of samples to read.</param>
     /// <returns>The number of samples actually read.</returns>
     int Read(AudioBuffer buffer, int maxLength);
+
     /// <summary>
     /// Closes the audio source and releases resources.
     /// </summary>
@@ -67,14 +68,17 @@ internal interface IAudioTitle
     /// Gets the list of chapter time positions.
     /// </summary>
     List<TimeSpan> Chapters { get; }
+
     /// <summary>
     /// Gets the PCM configuration for this title.
     /// </summary>
     AudioPcmConfig Pcm { get; }
+
     /// <summary>
     /// Gets the codec name for this title.
     /// </summary>
     string Codec { get; }
+
     /// <summary>
     /// Gets the language of this title.
     /// </summary>

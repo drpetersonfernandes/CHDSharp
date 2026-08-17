@@ -408,6 +408,9 @@ public class CueParserTests : IDisposable
             w.Write(silence);
         return;
 
-        void WriteFourCc(string tag) => w.Write(System.Text.Encoding.ASCII.GetBytes(tag));
+        void WriteFourCc(string tag)
+        {
+            w.Write(System.Text.Encoding.ASCII.GetBytes(tag));
+        }
     }
 }

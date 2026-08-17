@@ -96,7 +96,7 @@ public class ChdTocParserTests
 
         Assert.NotNull(result);
         Assert.True(isGdRom);
-        Assert.Equal(ChdTrackType.Audio, result![0].TrackType);
+        Assert.Equal(ChdTrackType.Audio, result[0].TrackType);
     }
 
     [Fact]

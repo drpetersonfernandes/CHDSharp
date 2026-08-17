@@ -102,7 +102,7 @@ public class ChdCodecTests : IDisposable
 
         byte[]? compressed = codec.Compress(data);
         Assert.NotNull(compressed);
-        Assert.True(compressed!.Length < data.Length);
+        Assert.True(compressed.Length < data.Length);
 
         // headerless: payload must not start with the standard LZMA props byte 0x5D
         Assert.NotEqual(0x5D, compressed[0]);
@@ -177,7 +177,7 @@ public class ChdCodecTests : IDisposable
     {
         // recognized names must parse (so the error surfaces at CreateAll with a
         // "not implemented" message, not as an "unknown codec" one)
-        Assert.Equal(1, ChdCodecs.ParseCodecTags(name).Length);
+        Assert.Single(ChdCodecs.ParseCodecTags(name));
     }
 
     [Fact]
@@ -305,7 +305,7 @@ public class ChdCodecTests : IDisposable
         {
             byte[]? raw = file!.ReadRawHunk(0);
             Assert.NotNull(raw);
-            Assert.True(raw![0] is (byte)'L' or (byte)'B', $"unexpected marker byte 0x{raw[0]:X2}");
+            Assert.True(raw[0] is (byte)'L' or (byte)'B', $"unexpected marker byte 0x{raw[0]:X2}");
         }
     }
 

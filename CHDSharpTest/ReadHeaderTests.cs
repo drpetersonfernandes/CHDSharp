@@ -8,7 +8,10 @@ public class ReadHeaderTests
 {
     private static readonly string TestDataDir = Path.Combine(AppContext.BaseDirectory, "TestData");
 
-    private static string DataPath(string name) => Path.Combine(TestDataDir, name);
+    private static string DataPath(string name)
+    {
+        return Path.Combine(TestDataDir, name);
+    }
 
     private static string TempPath(string name)
     {
@@ -88,7 +91,7 @@ public class ReadHeaderTests
         var err = Chd.ReadHeader(DataPath(file), out var header);
         Assert.Equal(ChdError.Chderrnone, err);
         Assert.NotNull(header);
-        Assert.Equal(version, header!.Version);
+        Assert.Equal(version, header.Version);
         Assert.Equal(length, header.Length);
     }
 
@@ -103,7 +106,7 @@ public class ReadHeaderTests
         Assert.Equal(ChdError.Chderrnone, openErr);
         using (chd)
         {
-            Assert.Equal(chd!.Version, info!.Version);
+            Assert.Equal(chd!.Version, info.Version);
             Assert.Equal(chd.HunkBytes, info.HunkBytes);
             Assert.Equal(chd.TotalBytes, info.TotalBytes);
             Assert.Equal(chd.HunkCount, info.TotalHunks);
@@ -137,7 +140,7 @@ public class ReadHeaderTests
         Assert.Equal(ChdError.Chderrnone, openErr);
         using (chd)
         {
-            Assert.Equal(chd!.HunkBytes, info!.HunkBytes);
+            Assert.Equal(chd!.HunkBytes, info.HunkBytes);
             Assert.Equal(chd.TotalBytes, info.TotalBytes);
             Assert.Equal(chd.HunkCount, info.TotalHunks);
             Assert.Equal(chd.UnitBytes, info.UnitBytes);
@@ -151,7 +154,7 @@ public class ReadHeaderTests
         Assert.Equal(ChdError.Chderrnone, err);
         Assert.NotNull(info);
 
-        Assert.Equal(2448u, info!.UnitBytes);
+        Assert.Equal(2448u, info.UnitBytes);
         Assert.Equal((info.TotalBytes + 2447) / 2448, info.UnitCount);
     }
 
@@ -162,7 +165,7 @@ public class ReadHeaderTests
         Assert.Equal(ChdError.Chderrnone, err);
         Assert.NotNull(info);
 
-        Assert.Equal(new[] { ChdCodec.Lzma, ChdCodec.Zlib, ChdCodec.Huffman, ChdCodec.Flac }, info!.Compression);
+        Assert.Equal(new[] { ChdCodec.Lzma, ChdCodec.Zlib, ChdCodec.Huffman, ChdCodec.Flac }, info.Compression);
     }
 
     [Fact]
@@ -172,7 +175,7 @@ public class ReadHeaderTests
         Assert.Equal(ChdError.Chderrnone, err);
         Assert.NotNull(info);
 
-        Assert.All(info!.Compression, c => Assert.Equal(ChdCodec.None, c));
+        Assert.All(info.Compression, c => Assert.Equal(ChdCodec.None, c));
         Assert.False(info.HasParent);
     }
 
@@ -182,14 +185,14 @@ public class ReadHeaderTests
         var err = Chd.ReadHeader(DataPath("v5_child.chd"), out var childInfo);
         Assert.Equal(ChdError.Chderrnone, err);
         Assert.NotNull(childInfo);
-        Assert.True(childInfo!.HasParent);
+        Assert.True(childInfo.HasParent);
 
         var pErr = Chd.ReadHeader(DataPath("v5_parent.chd"), out var parentInfo);
         Assert.Equal(ChdError.Chderrnone, pErr);
         Assert.NotNull(parentInfo);
 
         // The child's parentsha1 must equal the parent's full-image sha1 (libchdr semantics).
-        Assert.Equal(parentInfo!.Sha1, childInfo.ParentSha1);
+        Assert.Equal(parentInfo.Sha1, childInfo.ParentSha1);
     }
 
     [Fact]
@@ -199,7 +202,7 @@ public class ReadHeaderTests
         Assert.Equal(ChdError.Chderrnone, err);
         Assert.NotNull(info);
 
-        Assert.Equal(16u, info!.ObsoleteCylinders);
+        Assert.Equal(16u, info.ObsoleteCylinders);
         Assert.Equal(4u, info.ObsoleteHeads);
         Assert.Equal(16u, info.ObsoleteSectors);
         Assert.Equal(512u, info.UnitBytes);
@@ -213,7 +216,7 @@ public class ReadHeaderTests
         Assert.NotNull(info);
 
         // V5 has no flags field on disk.
-        Assert.Equal(0u, info!.Flags);
+        Assert.Equal(0u, info.Flags);
         // The map must lie after the 124-byte header.
         Assert.True(info.MapOffset >= 124);
     }
@@ -227,7 +230,7 @@ public class ReadHeaderTests
         var err = Chd.ReadHeader(fs, out var header);
         Assert.Equal(ChdError.Chderrnone, err);
         Assert.NotNull(header);
-        Assert.Equal(5u, header!.Version);
+        Assert.Equal(5u, header.Version);
         Assert.True(fs.CanRead); // stream must not be disposed
     }
 
@@ -271,7 +274,7 @@ public class ReadHeaderTests
         var (err, header) = await Chd.ReadHeaderAsync(DataPath("v5_zlib.chd"));
         Assert.Equal(ChdError.Chderrnone, err);
         Assert.NotNull(header);
-        Assert.Equal(5u, header!.Version);
+        Assert.Equal(5u, header.Version);
         Assert.Equal(124u, header.Length);
     }
 

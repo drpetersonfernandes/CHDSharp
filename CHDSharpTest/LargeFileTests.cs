@@ -24,8 +24,8 @@ public class LargeFileTests
         // target hunk at logical offset 5 GiB (well past 4 GiB).
         targetHunk = (uint)(5UL * 1024 * 1024 * 1024 / Blocksize); // 5120
 
-        var totalblocks = (uint)((TotalBytes + Blocksize - 1) / Blocksize);
-        var mapoffset = 2UL * Blocksize; // place map after the data region
+        const uint totalblocks = (uint)((TotalBytes + Blocksize - 1) / Blocksize);
+        const ulong mapoffset = 2UL * Blocksize; // place map after the data region
 
         var ms = new MemoryStream();
 
@@ -37,12 +37,12 @@ public class LargeFileTests
         // Compression slots all None → uncompressed map.
         for (var i = 0; i < 4; i++) Write(EndianHelpers.Be(0));
 
-        Write(EndianHelpers.Be64(TotalBytes));   // totalbytes
-        Write(EndianHelpers.Be64(mapoffset));    // mapoffset
-        Write(EndianHelpers.Be64(0));            // metaoffset
-        Write(EndianHelpers.Be(Blocksize));      // blocksize
-        Write(EndianHelpers.Be(Blocksize));      // unitbytes
-        Write(new byte[60]);                     // sha1 * 3
+        Write(EndianHelpers.Be64(TotalBytes)); // totalbytes
+        Write(EndianHelpers.Be64(mapoffset)); // mapoffset
+        Write(EndianHelpers.Be64(0)); // metaoffset
+        Write(EndianHelpers.Be(Blocksize)); // blocksize
+        Write(EndianHelpers.Be(Blocksize)); // unitbytes
+        Write(new byte[60]); // sha1 * 3
 
         // Physical data block at offset Blocksize (= offsetWord 1).
         var pattern = new byte[Blocksize];
@@ -63,7 +63,10 @@ public class LargeFileTests
         ms.Position = 0;
         return ms;
 
-        void Write(byte[] b) => ms.Write(b, 0, b.Length);
+        void Write(byte[] b)
+        {
+            ms.Write(b, 0, b.Length);
+        }
     }
 
     [Fact]

@@ -8,7 +8,10 @@ public class CancellationTokenTests
 {
     private static readonly string TestDataDir = Path.Combine(AppContext.BaseDirectory, "TestData");
 
-    private static string DataPath(string name) => Path.Combine(TestDataDir, name);
+    private static string DataPath(string name)
+    {
+        return Path.Combine(TestDataDir, name);
+    }
 
     // Long-lived pre-cancelled source: tokens must outlive any operation that uses them
     // (disposing the CTS while a token is in flight can throw ObjectDisposedException).

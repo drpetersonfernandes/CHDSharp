@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
 <PropertyGroup>
         <OutputType>Library</OutputType>
@@ -12,13 +12,21 @@
         <NoWarn>$(NoWarn);NU1902</NoWarn>
     </PropertyGroup>
 
-    <ItemGroup>
+<ItemGroup>
         <InternalsVisibleTo Include="CHDSharpEncoderTest" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="SharpCompress" Version="0.39.0" />
+      <ProjectReference Include="..\CHDSharpLib\CHDSharpLib.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="SharpCompress" Version="0.50.4" />
       <PackageReference Include="ZstdSharp.Port" Version="0.8.8" />
+      <PackageReference Update="Meziantou.Analyzer" Version="3.0.159">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
     </ItemGroup>
 
 </Project>

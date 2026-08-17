@@ -61,28 +61,37 @@ dotnet test CHDSharpEncoderTest/ --filter "FullyQualifiedName~LargeFileValidatio
 
 ## Performance
 
-Hunk compression is **single-threaded** — parallel compression is deliberately deferred
-until the sequential pipeline is fully validated (see the plan's roadmap). Because every
-codec is deterministic and dedup/offset assignment stays sequential, a future worker
-pool cannot change the output bytes.
+Encoding runs a **producer→worker→consumer pipeline** (`HunkProcessor.CompressAll`, the
+same shape as the library's parallel `CheckFile`): a single producer reads the raw hunks
+and maintains the running raw SHA-1, `N` workers (default `Chd.TaskCount`, 1–64, override
+via `ChdEncodeOptions.TaskCount` or CLI `-t`) hash and compress each hunk with private,
+persistent codec instances, and a single consumer writes blocks and map entries strictly
+in hunk order. Every codec is deterministic and dedup/offset assignment stays sequential,
+so the worker count can never change the output bytes (`ParallelEncodeTests` asserts
+byte-identical output across task counts).
+
+Measured on a 24-core machine (512 MB mixed corpus, zlib): **5.1× faster with 8 workers**
+vs. 1 (5.0 s → 0.98 s, identical 179 MB output).
 
 For tuning and measurement today:
 
+- `ChdEncodeOptions.TaskCount` (or CLI `-t N`) controls the worker count per encode; the
+  default follows `Chd.TaskCount`, the same knob that tunes parallel verification.
 - Per-hunk compression-ratio logging (`ChdEncodeOptions.HunkCompleted`, CLI `-v`).
-- Memory is constant: hunks are compressed one at a time, so multi-GB sources encode
-  without proportional RAM growth.
+- Memory is bounded: raw hunks and compressed results circulate through fixed-size pools
+  sized by the worker count, so multi-GB sources encode without proportional RAM growth.
 
 ## CLI
 
 ```bash
-CHDSharpCli --create in.bin out.chd [-c zlib,zstd,lzma] [-hs 65536] [-us 4096] [-v]
-CHDSharpCli --createcd in.cue out.chd [-c zlib,zstd,lzma] [-hs N] [-us N] [-v]
+CHDSharpCli --create in.bin out.chd [-c zlib,zstd,lzma] [-hs 65536] [-us 4096] [-t 8] [-v]
+CHDSharpCli --createcd in.cue out.chd [-c zlib,zstd,lzma] [-hs N] [-us N] [-t 8] [-v]
 ```
 
 Both commands deep-verify the result with CHDSharpLib before exiting.
 
 ## Roadmap
 
-- Parallel hunk compression (worker pool) — deferred; see [EncoderPlan.md §5](../References/EncoderPlan.md).
 - Parent (differential) CHD creation.
 - NRG (Nero) input parsing.
+- `-c none` (uncompressed) CHD creation.

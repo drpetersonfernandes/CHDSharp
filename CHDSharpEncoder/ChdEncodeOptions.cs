@@ -47,4 +47,12 @@ public sealed class ChdEncodeOptions
     /// BPS = the unit size). Default: <c>false</c> (chdman-compatible output without metadata).
     /// </summary>
     public bool AutoClassify { get; set; }
+
+    /// <summary>
+    /// Number of parallel hunk-compression workers used by the encoder's producer→worker→consumer
+    /// pipeline (each worker owns a private set of codec instances). When <c>null</c> (default),
+    /// <c>CHDSharp.Chd.TaskCount</c> is used, so the same global knob that tunes parallel
+    /// verification also tunes parallel encoding. Must be between 1 and 64.
+    /// </summary>
+    public int? TaskCount { get; set; }
 }

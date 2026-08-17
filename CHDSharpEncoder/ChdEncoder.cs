@@ -1,11 +1,21 @@
+using CHDSharp;
+
 namespace CHDSharpEncoder;
 
 /// <summary>
 /// Creates CHD v5 files from raw binary data (<see cref="EncodeRaw"/>) or from CD
-/// CUE/BIN sources (<see cref="EncodeCd"/>). Uses the zlib codec, matching chdman's
+/// CUE/BIN sources (<see cref="EncodeCd"/>). Uses the zlib codec by default, matching chdman's
 /// <c>--compression zlib</c> output; produced files pass <c>chdman verify</c> and
 /// extract byte-identically via <c>chdman extractraw</c>.
 /// </summary>
+/// <remarks>
+/// Encoding runs a producer→worker→consumer pipeline (<see cref="HunkProcessor.CompressAll"/>):
+/// hunks are read and hashed on one thread, compressed in parallel by <c>TaskCount</c> workers
+/// (each with private, persistent codec instances), and written back strictly in hunk order by a
+/// single consumer. The output is byte-identical to a single-threaded encode regardless of the
+/// worker count, because codec outputs are deterministic and dedup/offset assignment stays
+/// sequential.
+/// </remarks>
 public static class ChdEncoder
 {
     private const uint DefaultHunkBytes = 4096;
@@ -24,9 +34,13 @@ public static class ChdEncoder
     /// <param name="hunkBytes">Hunk size in bytes (default 4096).</param>
     /// <param name="unitBytes">Unit size in bytes (default 512; 2048 when
     /// <see cref="ChdEncodeOptions.AutoClassify"/> detects an ISO-9660 DVD image).</param>
+    /// <param name="codecTags">The codec tags to use, tried per hunk in order (default zlib).</param>
+    /// <param name="options">Optional encoding configuration (see <see cref="ChdEncodeOptions"/>).</param>
+    /// <param name="cancellationToken">Cancels the encode; <see cref="OperationCanceledException"/>
+    /// is thrown when cancellation is requested.</param>
     /// <exception cref="ArgumentException"><paramref name="hunkBytes"/> is not a multiple of <paramref name="unitBytes"/>.</exception>
     public static void EncodeRaw(Stream sourceStream, string chdPath, uint hunkBytes = DefaultHunkBytes, uint unitBytes = DefaultUnitBytes,
-        IReadOnlyList<uint>? codecTags = null, ChdEncodeOptions? options = null)
+        IReadOnlyList<uint>? codecTags = null, ChdEncodeOptions? options = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(sourceStream);
         if (hunkBytes == 0 || unitBytes == 0 || hunkBytes % unitBytes != 0)
@@ -64,54 +78,29 @@ public static class ChdEncoder
         }
 
         var entries = new MapEntry[hunkCount];
-        var blockList = new List<byte[]>();
-        var sha1 = new Sha1();
-        long currentOffset = ChdHeaderV5.LENGTH;
-        var processor = new HunkProcessor(hunkBytes, codecs);
+        using var sha1 = new Sha1();
         var selfMap = new Dictionary<string, uint>((int)hunkCount);
+        var processor = new HunkProcessor(hunkBytes, codecTags, options?.TaskCount ?? Chd.TaskCount);
 
-        var readBuffer = new byte[hunkBytes];
+        using var fs = new FileStream(chdPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
+        var header = ChdHeaderV5.CreateRaw(codecTags.ToArray(), logicalBytes, hunkBytes, unitBytes);
+        header.WriteToStream(fs);
 
-        for (uint h = 0; h < hunkCount; h++)
-        {
-            Array.Clear(readBuffer, 0, (int)hunkBytes);
-
-            var streamOffset = (long)h * hunkBytes;
-            int bytesRead = 0;
-            if (streamOffset < (long)logicalBytes)
-            {
-                sourceStream.Position = streamOffset;
-                bytesRead = sourceStream.Read(readBuffer, 0, (int)hunkBytes);
-                // remaining bytes stay zero (default)
-            }
-
-            // the raw SHA-1 covers only the actual source bytes, not the zero padding
-            // of a partial final hunk (chdman verify computes it over logicalbytes)
-            sha1.Append(readBuffer, 0, bytesRead);
-
-            var (entry, data) = ProcessHunkWithDedup(processor, readBuffer, currentOffset, h, selfMap);
-            entries[h] = entry;
-            ReportHunkProgress(options, codecs, entry, h, hunkCount, hunkBytes);
-            if (data != null)
-            {
-                blockList.Add(data);
-                currentOffset += data.Length;
-            }
-        }
+        // the compressed blocks are appended to the file in hunk order by the pipeline's
+        // single consumer; offsets and the dedup map advance in the same order, so the
+        // output is byte-identical to the sequential path
+        long currentOffset = ChdHeaderV5.LENGTH;
+        processor.CompressAll(
+            hunkCount,
+            (hunkIndex, buffer) => ReadRawHunk(sourceStream, hunkIndex, buffer, logicalBytes, hunkBytes),
+            sha1,
+            result => ConsumeHunk(result, entries, selfMap, fs, ref currentOffset, codecs, options, hunkCount, hunkBytes),
+            cancellationToken);
 
         var rawSha1 = sha1.Finish();
 
         var compressedMap = MapCompressor.Compress(entries, hunkCount, hunkBytes, unitBytes);
         var mapOffset = (ulong)currentOffset;
-
-        // Write file
-        using var fs = new FileStream(chdPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
-
-        var header = ChdHeaderV5.CreateRaw(codecTags.ToArray(), logicalBytes, hunkBytes, unitBytes);
-        header.WriteToStream(fs);
-
-        foreach (var block in blockList)
-            fs.Write(block, 0, block.Length);
 
         // Metadata lives between the compressed blocks and the map; the header's metaoffset
         // field is patched below (0 when no metadata is present, as chdman leaves it).
@@ -181,12 +170,16 @@ public static class ChdEncoder
     /// <param name="chdPath">Path of the output .chd file (created/overwritten).</param>
     /// <param name="hunkBytes">Hunk size in bytes (default 4096).</param>
     /// <param name="unitBytes">Unit size in bytes (default 512).</param>
+    /// <param name="codecTags">The codec tags to use, tried per hunk in order (default zlib).</param>
+    /// <param name="options">Optional encoding configuration (see <see cref="ChdEncodeOptions"/>).</param>
+    /// <param name="cancellationToken">Cancels the encode; <see cref="OperationCanceledException"/>
+    /// is thrown when cancellation is requested.</param>
     /// <exception cref="ArgumentException"><paramref name="hunkBytes"/> is not a multiple of <paramref name="unitBytes"/>.</exception>
     public static void EncodeRaw(string sourcePath, string chdPath, uint hunkBytes = DefaultHunkBytes, uint unitBytes = DefaultUnitBytes,
-        IReadOnlyList<uint>? codecTags = null, ChdEncodeOptions? options = null)
+        IReadOnlyList<uint>? codecTags = null, ChdEncodeOptions? options = null, CancellationToken cancellationToken = default)
     {
         using var fs = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        EncodeRaw(fs, chdPath, hunkBytes, unitBytes, codecTags, options);
+        EncodeRaw(fs, chdPath, hunkBytes, unitBytes, codecTags, options, cancellationToken);
     }
 
     /// <summary>
@@ -198,13 +191,17 @@ public static class ChdEncoder
     /// <param name="chdPath">Path of the output .chd file (created/overwritten).</param>
     /// <param name="hunkBytes">Hunk size in bytes (default 19584 = 8 CD frames).</param>
     /// <param name="unitBytes">Unit size in bytes (default 2448 = CD frame with subcode).</param>
+    /// <param name="codecTags">The codec tags to use, tried per hunk in order (default zlib).</param>
+    /// <param name="options">Optional encoding configuration (see <see cref="ChdEncodeOptions"/>).</param>
+    /// <param name="cancellationToken">Cancels the encode; <see cref="OperationCanceledException"/>
+    /// is thrown when cancellation is requested.</param>
     /// <exception cref="ArgumentException"><paramref name="unitBytes"/> is not the CD frame size, or
     /// <paramref name="hunkBytes"/> is not a multiple of it.</exception>
     /// <exception cref="FileNotFoundException">The CUE file or a referenced data file does not exist.</exception>
     /// <exception cref="InvalidDataException">The CUE sheet is malformed or contains no tracks.</exception>
     public static void EncodeCd(string cuePath, string chdPath,
         uint hunkBytes = CdConstants.FramesPerHunk * CdConstants.FrameSize, uint unitBytes = CdConstants.FrameSize,
-        IReadOnlyList<uint>? codecTags = null, ChdEncodeOptions? options = null)
+        IReadOnlyList<uint>? codecTags = null, ChdEncodeOptions? options = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(cuePath);
         if (unitBytes != CdConstants.FrameSize)
@@ -236,64 +233,28 @@ public static class ChdEncoder
         uint hunkCount = (uint)((logicalBytes + hunkBytes - 1) / hunkBytes);
         int framesPerHunk = (int)(hunkBytes / CdConstants.FrameSize);
 
-        // 3. Process hunks (track-aware reads from the BIN file(s))
+        // 3. Parallel pipeline: the producer performs track-aware reads from the BIN file(s)
+        // (only the producer thread touches the source files), workers compress, and the
+        // single consumer writes blocks and map entries in hunk order
         var entries = new MapEntry[hunkCount];
-        var blockList = new List<byte[]>();
-        var sha1 = new Sha1();
-        long currentOffset = ChdHeaderV5.LENGTH;
-        var processor = new HunkProcessor(hunkBytes, codecs);
+        using var sha1 = new Sha1();
         var selfMap = new Dictionary<string, uint>((int)hunkCount);
-        var readBuffer = new byte[hunkBytes];
+        var processor = new HunkProcessor(hunkBytes, codecTags, options?.TaskCount ?? Chd.TaskCount);
         var sourceFiles = new Dictionary<string, FileStream>(StringComparer.OrdinalIgnoreCase);
 
+        using var fs = new FileStream(chdPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
+        var header = ChdHeaderV5.CreateRaw(codecTags.ToArray(), logicalBytes, hunkBytes, unitBytes);
+        header.WriteToStream(fs);
+
+        long currentOffset = ChdHeaderV5.LENGTH;
         try
         {
-            for (uint h = 0; h < hunkCount; h++)
-            {
-                Array.Clear(readBuffer, 0, (int)hunkBytes);
-
-                long hunkStartFrame = (long)h * framesPerHunk;
-                for (int f = 0; f < framesPerHunk; f++)
-                {
-                    long frame = hunkStartFrame + f;
-                    if (frame >= (long)totalFrames)
-                        break;
-
-                    var track = FindTrackContainingFrame(toc, frame);
-                    int frameInTrack = (int)(frame - track.LogicalFrameStart);
-
-                    // frames past the track's data and GDI gap (pad) frames are zero-filled
-                    if (frameInTrack >= track.Frames)
-                        continue;
-                    if (track.PadFrames > 0 && frameInTrack >= track.Frames - track.PadFrames)
-                        continue;
-
-                    // the BIN file stores datasize+subsize bytes per sector (no subcode → 2352);
-                    // the remainder of the 2448-byte CHD frame stays zero-filled
-                    int binFrameSize = track.DataSize + track.SubSize;
-                    long sourceOffset = track.FileOffset + (long)frameInTrack * binFrameSize;
-                    var file = GetSourceFile(sourceFiles, track.FileName!);
-                    file.Position = sourceOffset;
-                    var bytesRead = file.Read(readBuffer, f * CdConstants.FrameSize, binFrameSize);
-                    if (bytesRead != binFrameSize)
-                        throw new InvalidDataException($"Unexpected end of file [{track.FileName}]");
-
-                    // audio sectors are little-endian in BIN files; swap to big-endian for CHD
-                    if (track.Swap)
-                        SwapPairs(readBuffer, f * CdConstants.FrameSize, track.DataSize);
-                }
-
-                sha1.Append(readBuffer, 0, (int)hunkBytes);
-
-                var (entry, data) = ProcessHunkWithDedup(processor, readBuffer, currentOffset, h, selfMap);
-                entries[h] = entry;
-                ReportHunkProgress(options, codecs, entry, h, hunkCount, hunkBytes);
-                if (data != null)
-                {
-                    blockList.Add(data);
-                    currentOffset += data.Length;
-                }
-            }
+            processor.CompressAll(
+                hunkCount,
+                (hunkIndex, buffer) => ReadCdHunk(hunkIndex, buffer, toc, framesPerHunk, totalFrames, sourceFiles),
+                sha1,
+                result => ConsumeHunk(result, entries, selfMap, fs, ref currentOffset, codecs, options, hunkCount, hunkBytes),
+                cancellationToken);
         }
         finally
         {
@@ -309,15 +270,7 @@ public static class ChdEncoder
             metadataEntries.AddRange(userMetadata);
         var compressedMap = MapCompressor.Compress(entries, hunkCount, hunkBytes, unitBytes);
 
-        // 5. Write output file
-        using var fs = new FileStream(chdPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None);
-
-        var header = ChdHeaderV5.CreateRaw(codecTags.ToArray(), logicalBytes, hunkBytes, unitBytes);
-        header.WriteToStream(fs);
-
-        foreach (var block in blockList)
-            fs.Write(block, 0, block.Length);
-
+        // 5. Write metadata + map (the compressed blocks were already appended by the pipeline)
         long metaOffset = MetadataWriter.WriteCdMetadata(fs, metadataEntries);
         ulong mapOffset = (ulong)fs.Position;
         fs.Write(compressedMap, 0, compressedMap.Length);
@@ -342,6 +295,104 @@ public static class ChdEncoder
         fs.Write(combinedSha1, 0, 20);
     }
 
+    /// <summary>Reads hunk <paramref name="hunkIndex"/> from a raw stream; returns the number of
+    /// valid bytes (the tail of a partial final hunk stays zero-filled for the file, but is
+    /// excluded from the raw SHA-1 — matching chdman's verify semantics).</summary>
+    private static int ReadRawHunk(Stream source, uint hunkIndex, byte[] buffer, ulong logicalBytes, uint hunkBytes)
+    {
+        var streamOffset = (long)hunkIndex * hunkBytes;
+        if (streamOffset >= (long)logicalBytes)
+            return 0;
+
+        source.Position = streamOffset;
+        return source.Read(buffer, 0, (int)hunkBytes);
+    }
+
+    /// <summary>Reads hunk <paramref name="hunkIndex"/> of a CD image: track-aware reads from the
+    /// BIN/WAV file(s), zero-filled padding frames, and little-endian→big-endian audio swapping.
+    /// CD hunks are always fully hashed (including zero padding), like the sequential path.</summary>
+    private static int ReadCdHunk(uint hunkIndex, byte[] buffer, CdToc toc, int framesPerHunk, ulong totalFrames,
+        Dictionary<string, FileStream> files)
+    {
+        long hunkStartFrame = (long)hunkIndex * framesPerHunk;
+        for (int f = 0; f < framesPerHunk; f++)
+        {
+            long frame = hunkStartFrame + f;
+            if (frame >= (long)totalFrames)
+                break;
+
+            var track = FindTrackContainingFrame(toc, frame);
+            int frameInTrack = (int)(frame - track.LogicalFrameStart);
+
+            // frames past the track's data and GDI gap (pad) frames are zero-filled
+            if (frameInTrack >= track.Frames)
+                continue;
+            if (track.PadFrames > 0 && frameInTrack >= track.Frames - track.PadFrames)
+                continue;
+
+            // the BIN file stores datasize+subsize bytes per sector (no subcode → 2352);
+            // the remainder of the 2448-byte CHD frame stays zero-filled
+            int binFrameSize = track.DataSize + track.SubSize;
+            long sourceOffset = track.FileOffset + (long)frameInTrack * binFrameSize;
+            var file = GetSourceFile(files, track.FileName!);
+            file.Position = sourceOffset;
+            var bytesRead = file.Read(buffer, f * CdConstants.FrameSize, binFrameSize);
+            if (bytesRead != binFrameSize)
+                throw new InvalidDataException($"Unexpected end of file [{track.FileName}]");
+
+            // audio sectors are little-endian in BIN files; swap to big-endian for CHD
+            if (track.Swap)
+                SwapPairs(buffer, f * CdConstants.FrameSize, track.DataSize);
+        }
+
+        return buffer.Length;
+    }
+
+    /// <summary>
+    /// Single-consumer hunk sink, invoked by the pipeline in hunk order: performs SELF-dedup
+    /// (the map is only ever updated with already-consumed hunks, so references never chain),
+    /// assigns the sequential file offset, appends the block to the output, and reports progress.
+    /// </summary>
+    private static void ConsumeHunk(HunkResult result, MapEntry[] entries, Dictionary<string, uint> selfMap,
+        Stream output, ref long currentOffset, IReadOnlyList<IChdCodec> codecs, ChdEncodeOptions? options,
+        uint hunkCount, uint hunkBytes)
+    {
+        var sha1Hex = Convert.ToHexString(result.Sha1);
+        MapEntry entry;
+        byte[]? data = result.Data;
+        if (selfMap.TryGetValue(sha1Hex, out var sourceHunk))
+        {
+            entry = new MapEntry
+            {
+                Compression = MapEntry.COMPRESSION_SELF,
+                CompLength = 0,
+                Offset = sourceHunk,
+                Crc16 = 0,
+            };
+            data = null;
+        }
+        else
+        {
+            entry = new MapEntry
+            {
+                Compression = result.Compression,
+                CompLength = result.CompLength,
+                Offset = (ulong)currentOffset,
+                Crc16 = result.Crc16,
+            };
+            selfMap[sha1Hex] = result.HunkIndex;
+        }
+
+        entries[result.HunkIndex] = entry;
+        if (data != null)
+        {
+            output.Write(data, 0, (int)result.CompLength);
+            currentOffset += result.CompLength;
+        }
+
+        ReportHunkProgress(options, codecs, entry, result.HunkIndex, hunkCount, hunkBytes);
+    }
+
     private static CdTrack FindTrackContainingFrame(CdToc toc, long frame)
     {
         foreach (var track in toc.Tracks)
@@ -350,37 +401,6 @@ public static class ChdEncoder
                 return track;
         }
         throw new InvalidDataException($"Frame {frame} falls outside all tracks");
-    }
-
-    /// <summary>
-    /// Compresses a hunk unless an identical hunk was already stored, in which case a
-    /// COMPRESSION_SELF map entry referencing it is produced and no data is written.
-    /// Only data-bearing hunks are added to the self map, so SELF references never chain
-    /// (mirrors MAME's chd_file_compressor self map).
-    /// </summary>
-    /// <returns>The map entry and the data to write, or <c>null</c> data for a SELF reference.</returns>
-    private static (MapEntry Entry, byte[]? Data) ProcessHunkWithDedup(
-        HunkProcessor processor, byte[] rawHunk, long currentOffset, uint hunkIndex,
-        Dictionary<string, uint> selfMap)
-    {
-        var sha1Hex = Convert.ToHexString(Sha1.Compute(rawHunk));
-        if (selfMap.TryGetValue(sha1Hex, out var sourceHunk))
-        {
-            return (
-                new MapEntry
-                {
-                    Compression = MapEntry.COMPRESSION_SELF,
-                    CompLength = 0,
-                    Offset = sourceHunk,
-                    Crc16 = 0,
-                },
-                null
-            );
-        }
-
-        var (entry, data) = processor.ProcessHunk(rawHunk, currentOffset);
-        selfMap[sha1Hex] = hunkIndex;
-        return (entry, data);
     }
 
     private static FileStream GetSourceFile(Dictionary<string, FileStream> files, string fileName)

@@ -1,9 +1,9 @@
 # CHDSharpEncoder
 
-**A minimal CHD v5 encoder in pure C#** — a companion to the CHDSharp reader library. It
+**A CHD v5 encoder in pure C#** — a companion to the CHDSharp reader library. It
 produces files that pass `chdman verify` and extract byte-identically via
 `chdman extractraw`, with a **100% byte-for-byte match** with `chdman` when it uses the
-same codec (`zlib`, `zstd`, `lzma`, `cdfl`).
+same codec, and parallel compression across up to 64 workers.
 
 > Implementation plan and validation history: [`References/EncoderPlan.md`](../References/EncoderPlan.md).
 > Format references: MAME 0.288 (`References/mame-mame0288`), chd-rs (`References/chd-rs-master`), CHDlite (`References/CHDlite-main`).
@@ -16,18 +16,19 @@ same codec (`zlib`, `zstd`, `lzma`, `cdfl`).
 |------------|--------|
 | Raw binary → CHD (`EncodeRaw`) | ✅ |
 | CD images → CHD (`EncodeCd`) via CUE, GDI, ISO, TOC | ✅ |
-| Codecs | `zlib`, `zstd`, `lzma`, `cdfl` (up to 4 per file, best-per-hunk) |
+| Codecs | all 10 MAME codecs (`zlib`, `zstd`, `lzma`, `huff`, `flac`, `cdzl`, `cdlz`, `cdzs`, `cdfl`, `none`); up to 4 per file, best-per-hunk |
 | SELF-hunk deduplication (COMPRESSION_SELF, with SELF_0/SELF_1 map promotion) | ✅ |
 | CHT2 / CHGD metadata (linked list, checksummed, combined SHA-1) | ✅ |
 | Audio byte-swap (little-endian BIN → big-endian CHD, like chdman) | ✅ |
 | Per-hunk compression-ratio logging (`ChdEncodeOptions.HunkCompleted`) | ✅ |
-| Parallel hunk compression | deferred (see [Performance](#performance)) |
+| Parallel hunk compression (producer→worker→consumer pipeline, `TaskCount` 1–64) | ✅ |
 | Parent CHD (`COMPRESSION_PARENT`) | not implemented |
 | NRG (Nero) input | not implemented |
 
-**Validation**: 258 xUnit tests (`CHDSharpEncoderTest`), cross-checked against
+**Validation**: 316 xUnit tests (`CHDSharpEncoderTest`), cross-checked against
 `chdman.exe` v0.288 (`chdman info` / `verify` / `extractraw` / `createcd` /
-`createraw`) and the CHDSharpLib reader — including 100 MB+ integration tests.
+`createraw`) and the CHDSharpLib reader — including 100 MB+ integration tests and
+byte-identical-output tests across worker counts.
 
 ---
 
@@ -47,11 +48,14 @@ ChdEncoder.EncodeRaw("game.bin", "game.chd", 4096, 512,
     codecTags: ChdCodecs.ParseCodecTags("zlib,zstd,lzma"));
 ```
 
-Both APIs also accept a `ChdEncodeOptions` for per-hunk compression-ratio logging:
+Both APIs also accept a `ChdEncodeOptions` for per-hunk compression-ratio logging and
+parallelism control:
 
 ```csharp
 var options = new ChdEncodeOptions
 {
+    // parallel compression workers (default: CHDSharp.Chd.TaskCount, 1-64)
+    TaskCount = 8,
     HunkCompleted = p => Console.WriteLine(
         $"hunk {p.HunkIndex,6}/{p.HunkCount}  {p.CodecName,-5} {p.RawBytes,8} -> {p.StoredBytes,8} B  ({p.Ratio:P1})")
 };
@@ -81,14 +85,15 @@ Callbacks fire once per hunk, **in hunk order**, and never affect the output byt
 
 ```bash
 # Raw binary → CHD
-CHDSharpCli --create in.bin out.chd [-c zlib,zstd,lzma] [-hs 65536] [-us 4096] [-v]
+CHDSharpCli --create in.bin out.chd [-c zlib,zstd,lzma] [-hs 65536] [-us 4096] [-t 8] [-v]
 
 # CD image → CHD (CUE/GDI/ISO/TOC)
-CHDSharpCli --createcd in.cue out.chd [-c zlib,zstd,lzma] [-hs N] [-us N] [-v]
+CHDSharpCli --createcd in.cue out.chd [-c zlib,zstd,lzma] [-hs N] [-us N] [-t 8] [-v]
 ```
 
 `-v` / `--verbose` prints one line per hunk (codec, sizes, ratio) plus an overall
-stored-bytes summary. Both commands run a deep CHDSharpLib `CheckFile` on the result
+stored-bytes summary. `-t N` sets the parallel compression worker count (default:
+`Chd.TaskCount`). Both commands run a deep CHDSharpLib `CheckFile` on the result
 before exiting.
 
 ---
@@ -100,7 +105,11 @@ before exiting.
 | `zlib` | Deflate (`System.IO.Compression`, `SmallestSize`) | Default; matches `chdman -c zlib` byte-for-byte |
 | `zstd` | Zstandard at max level (ZstdSharp.Port) | Matches MAME's `ZSTD_maxCLevel()` |
 | `lzma` | Raw headerless LZMA (SharpCompress 0.39.0) | lc=3/lp=0/pb=2, dictionary = hunk size; see plan §3 |
-| `cdfl` | CD FLAC + deflated subcode | From-scratch FLAC frame encoder; 2352-sample blocks (MAME's cdfl blocksize), validated against libFLAC |
+| `huff` | MAME generic Huffman | Weight-scaled canonical tree, Huffman-encoded tree export (see plan §1) |
+| `flac` | Raw FLAC (2-pass LE/BE, marker byte) | From-scratch FLAC frame encoder; MAME blocksize formula |
+| `cdzl`/`cdlz`/`cdzs` | CD compound (ECC + zlib/LZMA/zstd) | `[ecc bitmap][base length][base][subcode]` layout, Mode-1 sync/ECC clearing |
+| `cdfl` | CD FLAC + deflated subcode | 2352-sample blocks (MAME's cdfl blocksize), validated against libFLAC |
+| `none` | Uncompressed CHD | recognized, throws `NotSupportedException` (roadmap: Phase 4.2) |
 
 All codecs are deterministic: the same input always produces the same output, so
 parallelism can never change the bytes (see [Performance](#performance)).
@@ -115,7 +124,7 @@ CHDSharpEncoder/
 ├── ChdEncodeOptions.cs  HunkProgress record + options (per-hunk ratio logging)
 ├── ChdCodec.cs          IChdCodec, zlib/zstd/lzma codecs, tag parsing
 ├── CdflCodec.cs         CD FLAC codec (+ Flac/ frame encoder)
-├── HunkProcessor.cs     Per-hunk compression + map entry generation
+├── HunkProcessor.cs     Producer→worker→consumer compression pipeline + map entries
 ├── MapCompressor.cs     V5 compressed map (RLE + Huffman, SELF promotion)
 ├── MetadataWriter.cs    CHT2/CHGD metadata, combined SHA-1
 ├── CdImageParser.cs     CUE / GDI / ISO / TOC dispatch
@@ -129,16 +138,23 @@ CHDSharpEncoder/
 
 ## Performance
 
-Hunk compression is currently **single-threaded** by design: parallel hunk compression
-was deferred until the sequential pipeline is fully validated against `chdman` — see the
-roadmap in [`References/EncoderPlan.md`](../References/EncoderPlan.md).
-Because every codec is deterministic and deduplication/offset assignment is sequential,
-a worker pool can be added later without changing a single output byte.
+Encoding runs a **producer→worker→consumer pipeline** (`HunkProcessor.CompressAll`, the
+same shape as the library's parallel `CheckFile`): a single producer reads the raw hunks
+and maintains the running raw SHA-1, `N` workers (default `Chd.TaskCount`; 1–64) hash and
+compress each hunk with their own persistent codec instances, and a single consumer writes
+blocks and map entries strictly in hunk order. Because every codec is deterministic and
+dedup/offset assignment is sequential, the worker count never changes a single output byte
+(`ParallelEncodeTests` asserts byte-identical files across task counts).
+
+Measured on a 24-core machine (512 MB mixed corpus, zlib): **5.1× faster with 8 workers**
+than 1 (5.0 s → 0.98 s, byte-identical output).
 
 What exists today:
 
 - **Per-hunk compression-ratio logging** via `ChdEncodeOptions.HunkCompleted` (library)
   and `-v` (CLI) — aggregate or chart ratios per codec without touching output bytes.
+- **Parallelism control** via `ChdEncodeOptions.TaskCount` (library) or `-t N` (CLI); the
+  default follows `Chd.TaskCount`, the same knob that tunes parallel verification.
 - **100 MB+ integration tests** (`LargeFileValidationTests`): 100 MB raw and ~100 MB CD
   round-trips validated with `chdman verify`, `chdman extractraw` (SHA-1 vs. source) and
   a deep CHDSharpLib `CheckFile`. Run them with:
@@ -147,8 +163,8 @@ What exists today:
 dotnet test CHDSharpEncoderTest/ --filter "FullyQualifiedName~LargeFileValidationTests"
 ```
 
-Memory use is bounded: hunks are processed one at a time (raw + compressed buffers per
-hunk only), so multi-GB sources encode in constant memory.
+Memory use is bounded: raw hunks and compressed results circulate through fixed-size
+buffer pools sized by the worker count, so multi-GB sources encode in constant memory.
 
 ---
 
@@ -156,9 +172,7 @@ hunk only), so multi-GB sources encode in constant memory.
 
 - No `COMPRESSION_PARENT` (differential) CHD creation.
 - No NRG (Nero) input parsing.
-- No multithreaded compression yet (single-threaded, validated).
-- `huff`/`flac`/`cdzl`/`cdzs` codec tags are accepted in the header but always fall back
-  to `COMPRESSION_NONE` (unsupported by the encoder).
+- `-c none` (uncompressed CHD) throws `NotSupportedException` (roadmap).
 
 ## License
 

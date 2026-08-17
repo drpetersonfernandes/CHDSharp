@@ -1,4 +1,6 @@
 using CHDSharp;
+using CHDSharpEncoder.Interfaces;
+using CHDSharpEncoder.Models;
 
 namespace CHDSharpEncoder;
 

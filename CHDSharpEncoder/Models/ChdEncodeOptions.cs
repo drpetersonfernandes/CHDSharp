@@ -1,4 +1,4 @@
-namespace CHDSharpEncoder;
+namespace CHDSharpEncoder.Models;
 
 /// <summary>
 /// Per-hunk progress information reported by <see cref="ChdEncoder"/> via

@@ -1,4 +1,4 @@
-namespace CHDSharpTester.Services;
+namespace CHDSharpTester.Models;
 
 /// <summary>Reports the current progress of a test session, including the current file, test, and completion status.</summary>
 /// <param name="CurrentFile">The name of the file currently being tested.</param>

@@ -1,4 +1,5 @@
 using CHDSharpEncoder.Flac;
+using CHDSharpEncoder.Interfaces;
 
 namespace CHDSharpEncoder;
 

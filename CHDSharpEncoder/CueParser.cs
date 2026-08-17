@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using CHDSharpEncoder.Models;
 
 namespace CHDSharpEncoder;
 

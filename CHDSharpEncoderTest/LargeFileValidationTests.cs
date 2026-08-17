@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using CHDSharp;
 using CHDSharp.Models;
 using CHDSharpEncoder;
+using CHDSharpEncoder.Models;
 
 namespace CHDSharpEncoderTest;
 

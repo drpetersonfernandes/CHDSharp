@@ -1,4 +1,4 @@
-namespace CHDSharpEncoder;
+namespace CHDSharpEncoder.Models;
 
 /// <summary>Constants describing the physical layout of CD-ROM sectors.</summary>
 public static class CdConstants

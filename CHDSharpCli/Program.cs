@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Security.Cryptography;
 using CHDSharp.Models;
 using CHDSharpEncoder;
+using CHDSharpEncoder.Models;
 using Serilog;
 using Serilog.Extensions.Logging;
 

@@ -1,3 +1,5 @@
+using CHDSharpEncoder.Interfaces;
+
 namespace CHDSharpEncoder;
 
 /// <summary>

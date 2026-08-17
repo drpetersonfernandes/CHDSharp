@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace CHDSharpEncoder;
+namespace CHDSharpEncoder.Models;
 
 /// <summary>Represents a single entry in a CHD v5 hunk map.</summary>
 [StructLayout(LayoutKind.Auto)]

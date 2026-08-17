@@ -1,4 +1,4 @@
-namespace CHDSharpEncoder;
+namespace CHDSharpEncoder.Models;
 
 /// <summary>Represents the header structure for CHD version 5 files.</summary>
 public class ChdHeaderV5

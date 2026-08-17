@@ -28,11 +28,11 @@ public class ChdCodecTests : IDisposable
 
         string chdPath = Path.Combine(_dir, "zstd.chd");
         using var ms = new MemoryStream(source);
-        ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.ZSTD]);
+        ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.Zstd]);
 
         byte[] chd = File.ReadAllBytes(chdPath);
-        Assert.Equal(CodecTags.ZSTD, ReadU32BE(chd, 16)); // compressors[0] = zstd
-        Assert.Equal(0u, ReadU32BE(chd, 20));             // compressors[1] = none
+        Assert.Equal(CodecTags.Zstd, ReadU32Be(chd, 16)); // compressors[0] = zstd
+        Assert.Equal(0u, ReadU32Be(chd, 20));             // compressors[1] = none
 
         var openErr = ChdFile.Open(chdPath, out var file);
         Assert.Equal(ChdError.Chderrnone, openErr);
@@ -52,10 +52,10 @@ public class ChdCodecTests : IDisposable
 
         string chdPath = Path.Combine(_dir, "lzma.chd");
         using var ms = new MemoryStream(source);
-        ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.LZMA]);
+        ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.Lzma]);
 
         byte[] chd = File.ReadAllBytes(chdPath);
-        Assert.Equal(CodecTags.LZMA, ReadU32BE(chd, 16));
+        Assert.Equal(CodecTags.Lzma, ReadU32Be(chd, 16));
 
         var openErr = ChdFile.Open(chdPath, out var file);
         Assert.Equal(ChdError.Chderrnone, openErr);
@@ -73,13 +73,13 @@ public class ChdCodecTests : IDisposable
         string chdPath = Path.Combine(_dir, "multi.chd");
 
         using var ms = new MemoryStream(source);
-        ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.ZLIB, CodecTags.ZSTD, CodecTags.LZMA]);
+        ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.Zlib, CodecTags.Zstd, CodecTags.Lzma]);
 
         byte[] chd = File.ReadAllBytes(chdPath);
-        Assert.Equal(CodecTags.ZLIB, ReadU32BE(chd, 16));
-        Assert.Equal(CodecTags.ZSTD, ReadU32BE(chd, 20));
-        Assert.Equal(CodecTags.LZMA, ReadU32BE(chd, 24));
-        Assert.Equal(0u, ReadU32BE(chd, 28));
+        Assert.Equal(CodecTags.Zlib, ReadU32Be(chd, 16));
+        Assert.Equal(CodecTags.Zstd, ReadU32Be(chd, 20));
+        Assert.Equal(CodecTags.Lzma, ReadU32Be(chd, 24));
+        Assert.Equal(0u, ReadU32Be(chd, 28));
 
         var openErr = ChdFile.Open(chdPath, out var file);
         Assert.Equal(ChdError.Chderrnone, openErr);
@@ -96,7 +96,9 @@ public class ChdCodecTests : IDisposable
         var codec = new LzmaCodec(4096);
         byte[] data = new byte[4096];
         for (int i = 0; i < data.Length; i++)
+        {
             data[i] = (byte)(i & 0xFF); // repeating pattern 0..255
+        }
 
         byte[]? compressed = codec.Compress(data);
         Assert.NotNull(compressed);
@@ -122,13 +124,15 @@ public class ChdCodecTests : IDisposable
         // deflate wins on repetitive text; both zlib and zstd compress it
         byte[] data = new byte[4096];
         for (int i = 0; i < data.Length; i++)
+        {
             data[i] = (byte)((i % 37 == 0) ? 0xFF : 0);
+        }
 
         var processor = new HunkProcessor(4096, [new ZlibCodec(), new ZstdCodec()]);
         var (entry, _) = processor.ProcessHunk(data, 124);
 
-        Assert.NotEqual(MapEntry.COMPRESSION_NONE, entry.Compression);
-        Assert.InRange(entry.Compression, MapEntry.COMPRESSION_TYPE_0, MapEntry.COMPRESSION_TYPE_3);
+        Assert.NotEqual(MapEntry.CompressionNone, entry.Compression);
+        Assert.InRange(entry.Compression, MapEntry.CompressionType0, MapEntry.CompressionType3);
         Assert.True(entry.CompLength < data.Length);
     }
 
@@ -136,13 +140,13 @@ public class ChdCodecTests : IDisposable
     public void HunkProcessor_UnknownCodec_FallsBackToNone()
     {
         // 'huff' is not implemented; hunks must be stored uncompressed, not corrupted
-        var processor = new HunkProcessor(4096, [new UnsafeCodec(CodecTags.HUFF)]);
+        var processor = new HunkProcessor(4096, [new UnsafeCodec(CodecTags.Huff)]);
         byte[] data = new byte[4096];
         new Random(7).NextBytes(data);
 
         var (entry, written) = processor.ProcessHunk(data, 124);
 
-        Assert.Equal(MapEntry.COMPRESSION_NONE, entry.Compression);
+        Assert.Equal(MapEntry.CompressionNone, entry.Compression);
         Assert.Equal(data, written);
     }
 
@@ -187,7 +191,7 @@ public class ChdCodecTests : IDisposable
     public void CreateAll_TooManyCodecs_Throws()
     {
         Assert.Throws<ArgumentException>(() =>
-            ChdCodecs.CreateAll([CodecTags.ZLIB, CodecTags.ZSTD, CodecTags.LZMA, CodecTags.CDFL, CodecTags.ZLIB], 19584));
+            ChdCodecs.CreateAll([CodecTags.Zlib, CodecTags.Zstd, CodecTags.Lzma, CodecTags.Cdfl, CodecTags.Zlib], 19584));
     }
 
     [Fact]
@@ -195,19 +199,19 @@ public class ChdCodecTests : IDisposable
     {
         // uncompressed CHD (-c none) is not supported yet; it must fail loudly instead
         // of silently producing a file whose map format contradicts the header
-        Assert.Throws<NotSupportedException>(() => ChdCodecs.CreateAll([CodecTags.NONE], 4096));
+        Assert.Throws<NotSupportedException>(() => ChdCodecs.CreateAll([CodecTags.None], 4096));
     }
 
     [Fact]
     public void CreateAll_NoneCombinedWithOthers_Throws()
     {
-        Assert.Throws<ArgumentException>(() => ChdCodecs.CreateAll([CodecTags.ZLIB, CodecTags.NONE], 4096));
+        Assert.Throws<ArgumentException>(() => ChdCodecs.CreateAll([CodecTags.Zlib, CodecTags.None], 4096));
     }
 
     [Fact]
     public void CreateAll_CdflOnNonCdHunks_Throws()
     {
-        var ex = Assert.Throws<ArgumentException>(() => ChdCodecs.CreateAll([CodecTags.CDFL], 4096));
+        var ex = Assert.Throws<ArgumentException>(() => ChdCodecs.CreateAll([CodecTags.Cdfl], 4096));
         Assert.Contains("cdfl", ex.Message, StringComparison.Ordinal);
         Assert.Contains("CD-sized", ex.Message, StringComparison.Ordinal);
     }
@@ -215,9 +219,9 @@ public class ChdCodecTests : IDisposable
     [Fact]
     public void CreateAll_CdflOnCdHunks_Works()
     {
-        var codecs = ChdCodecs.CreateAll([CodecTags.CDFL], 19584);
+        var codecs = ChdCodecs.CreateAll([CodecTags.Cdfl], 19584);
         Assert.Single(codecs);
-        Assert.Equal(CodecTags.CDFL, codecs[0].Tag);
+        Assert.Equal(CodecTags.Cdfl, codecs[0].Tag);
     }
 
     [Fact]
@@ -241,7 +245,7 @@ public class ChdCodecTests : IDisposable
         byte[] source = CreateCompressible(32);
         string chdPath = Path.Combine(_dir, "huff.chd");
         using var ms = new MemoryStream(source);
-        ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.HUFF]);
+        ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.Huff]);
 
         var openErr = ChdFile.Open(chdPath, out var file);
         Assert.Equal(ChdError.Chderrnone, openErr);
@@ -267,7 +271,7 @@ public class ChdCodecTests : IDisposable
 
         string chdPath = Path.Combine(_dir, "flac.chd");
         using var ms = new MemoryStream(source);
-        ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.FLAC]);
+        ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.Flac]);
 
         var openErr = ChdFile.Open(chdPath, out var file);
         Assert.Equal(ChdError.Chderrnone, openErr);
@@ -293,7 +297,7 @@ public class ChdCodecTests : IDisposable
 
         string chdPath = Path.Combine(_dir, "flac_marker.chd");
         using var ms = new MemoryStream(source);
-        ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.FLAC]);
+        ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.Flac]);
 
         var openErr = ChdFile.Open(chdPath, out var file);
         Assert.Equal(ChdError.Chderrnone, openErr);
@@ -316,7 +320,7 @@ public class ChdCodecTests : IDisposable
 
         string chdPath = Path.Combine(_dir, "huff_single.chd");
         using var ms = new MemoryStream(source);
-        ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.HUFF]);
+        ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.Huff]);
 
         var openErr = ChdFile.Open(chdPath, out var file);
         Assert.Equal(ChdError.Chderrnone, openErr);
@@ -337,9 +341,14 @@ public class ChdCodecTests : IDisposable
         {
             // mostly zeros (highly compressible) with a per-hunk marker
             for (int i = 0; i < 4064; i++)
+            {
                 source[h * 4096 + i] = 0;
+            }
+
             for (int i = 4064; i < 4096; i++)
+            {
                 source[h * 4096 + i] = (byte)(h + i);
+            }
         }
         return source;
     }
@@ -360,7 +369,7 @@ public class ChdCodecTests : IDisposable
         }
     }
 
-    private static uint ReadU32BE(byte[] data, int offset)
+    private static uint ReadU32Be(byte[] data, int offset)
     {
         return ((uint)data[offset] << 24) | ((uint)data[offset + 1] << 16) |
                ((uint)data[offset + 2] << 8) | data[offset + 3];

@@ -31,7 +31,7 @@ public class IsoParser
             Index01 = 0,
             SubType = CdSubType.None,
             SubSize = 0,
-            Swap = false,
+            Swap = false
         };
 
         if (size % 2048 == 0)

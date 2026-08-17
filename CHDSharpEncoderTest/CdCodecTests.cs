@@ -26,9 +26,9 @@ public class CdCodecTests : IDisposable
     }
 
     [Theory]
-    [InlineData(CodecTags.CDZL)]
-    [InlineData(CodecTags.CDLZ)]
-    [InlineData(CodecTags.CDZS)]
+    [InlineData(CodecTags.Cdzl)]
+    [InlineData(CodecTags.Cdlz)]
+    [InlineData(CodecTags.Cdzs)]
     public void EncodeCd_RoundTrips_ThroughChdSharpLib(uint tag)
     {
         string codecName = CodecTags.ToString(tag);
@@ -48,7 +48,7 @@ public class CdCodecTests : IDisposable
 
         // the CHD's compression slot must carry the requested tag
         byte[] chd = File.ReadAllBytes(chdPath);
-        Assert.Equal(tag, ReadU32BE(chd, 16));
+        Assert.Equal(tag, ReadU32Be(chd, 16));
 
         var openErr = ChdFile.Open(chdPath, out var file);
         Assert.Equal(ChdError.Chderrnone, openErr);
@@ -65,9 +65,9 @@ public class CdCodecTests : IDisposable
     }
 
     [Theory]
-    [InlineData(CodecTags.CDZL)]
-    [InlineData(CodecTags.CDLZ)]
-    [InlineData(CodecTags.CDZS)]
+    [InlineData(CodecTags.Cdzl)]
+    [InlineData(CodecTags.Cdlz)]
+    [InlineData(CodecTags.Cdzs)]
     public void EncodeCd_LargeHunk_ThreeByteLength(uint tag)
     {
         // hunk size >= 65536 -> the base compressed length uses 3 bytes (MAME parity)
@@ -108,13 +108,13 @@ public class CdCodecTests : IDisposable
     {
         // CD compound codecs are only valid on CD-sized hunks
         using var ms = new MemoryStream(new byte[4096]);
-        Assert.Throws<ArgumentException>(() => ChdEncoder.EncodeRaw(ms, Path.Combine(_dir, "bad.chd"), 4096, 512, [CodecTags.CDZL]));
+        Assert.Throws<ArgumentException>(() => ChdEncoder.EncodeRaw(ms, Path.Combine(_dir, "bad.chd"), 4096, 512, [CodecTags.Cdzl]));
     }
 
     [Theory]
-    [InlineData(CodecTags.CDZL)]
-    [InlineData(CodecTags.CDLZ)]
-    [InlineData(CodecTags.CDZS)]
+    [InlineData(CodecTags.Cdzl)]
+    [InlineData(CodecTags.Cdlz)]
+    [InlineData(CodecTags.Cdzs)]
     public void EncodeCd_ValidEccSectors_RegenerateByteIdentically(uint tag)
     {
         // A Mode-1 sector that is all zero except the sync header and mode byte has
@@ -133,7 +133,10 @@ public class CdCodecTests : IDisposable
             int offset = f * CdConstants.MaxSectorData;
             // sync header (12 bytes) + zero address + mode byte 1, rest zero
             for (int i = 0; i < 12; i++)
+            {
                 bin[offset + i] = i is 0 or 11 ? (byte)0x00 : (byte)0xFF;
+            }
+
             bin[offset + 0x0F] = 0x01;
             // ECC P/Q areas stay zero = valid ECC for this sector
         }
@@ -167,7 +170,9 @@ public class CdCodecTests : IDisposable
             {
                 // MODE1-style data pattern (no ECC)
                 for (int i = 0; i < CdConstants.MaxSectorData; i++)
+                {
                     result[offset + i] = (byte)((f * 31 + i * 7) & 0xFF);
+                }
             }
             else
             {
@@ -194,7 +199,9 @@ public class CdCodecTests : IDisposable
             if (swap)
             {
                 for (int i = 0; i < CdConstants.MaxSectorData; i += 2)
+                {
                     (image[dest + i], image[dest + i + 1]) = (image[dest + i + 1], image[dest + i]);
+                }
             }
         }
     }
@@ -204,7 +211,7 @@ public class CdCodecTests : IDisposable
         File.WriteAllText(Path.Combine(_dir, "test.cue"), content);
     }
 
-    private static uint ReadU32BE(byte[] data, int offset)
+    private static uint ReadU32Be(byte[] data, int offset)
     {
         return ((uint)data[offset] << 24) | ((uint)data[offset + 1] << 16) |
                ((uint)data[offset + 2] << 8) | data[offset + 3];

@@ -47,7 +47,9 @@ public class CdflChdmanValidationTests : IDisposable
         {
             int offset = f * CdConstants.MaxSectorData;
             for (int i = 0; i < CdConstants.MaxSectorData; i++)
+            {
                 bin[offset + i] = (byte)(i & 0xFF); // MODE1 pattern
+            }
         }
         for (int f = 20; f < 40; f++)
         {
@@ -66,7 +68,7 @@ public class CdflChdmanValidationTests : IDisposable
 
         string chdPath = Path.Combine(_testDataDir, "test.chd");
         ChdEncoder.EncodeCd(cuePath, chdPath, hunkBytes: CdConstants.FramesPerHunk * CdConstants.FrameSize,
-            unitBytes: CdConstants.FrameSize, codecTags: [CodecTags.CDFL]);
+            unitBytes: CdConstants.FrameSize, codecTags: [CodecTags.Cdfl]);
 
         var (infoExit, infoOut, infoErr) = RunChdman("info", "-i", chdPath);
         string info = infoOut + infoErr;
@@ -97,7 +99,9 @@ public class CdflChdmanValidationTests : IDisposable
             if (swap)
             {
                 for (int i = 0; i < CdConstants.MaxSectorData; i += 2)
+                {
                     (image[dest + i], image[dest + i + 1]) = (image[dest + i + 1], image[dest + i]);
+                }
             }
         }
     }

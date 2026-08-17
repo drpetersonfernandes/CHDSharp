@@ -168,7 +168,9 @@ public class ProgressReportingTests
             var progress = new CollectingProgress();
             var count = 0;
             foreach (var _ in chd!.EnumerateHunks(progress))
+            {
                 count++;
+            }
 
             var reports = progress.Reports;
             Assert.Equal((long)chd.HunkCount, count);

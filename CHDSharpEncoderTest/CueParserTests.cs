@@ -392,7 +392,7 @@ public class CueParserTests : IDisposable
         void WriteFourCc(string tag) => w.Write(System.Text.Encoding.ASCII.GetBytes(tag));
 
         WriteFourCc("RIFF");
-        w.Write((uint)(36 + dataLength)); // RIFF chunk size
+        w.Write(36 + dataLength); // RIFF chunk size
         WriteFourCc("WAVE");
         WriteFourCc("fmt ");
         w.Write(16u);       // fmt chunk size

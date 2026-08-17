@@ -2,21 +2,21 @@ using CHDSharpEncoder;
 
 namespace CHDSharpEncoderTest;
 
-public class Huffman16_8Tests
+public class Huffman168Tests
 {
     [Fact]
     public void EmptyHistogram_buildsWithoutCrash()
     {
-        var huff = new Huffman16_8();
+        var huff = new Huffman168();
         huff.BuildTree();
-        for (int i = 0; i < Huffman16_8.NUM_CODES; i++)
+        for (int i = 0; i < Huffman168.NumCodes; i++)
             Assert.Equal(0, huff.NumBits[i]);
     }
 
     [Fact]
     public void SingleSymbol_getsShortestCode()
     {
-        var huff = new Huffman16_8();
+        var huff = new Huffman168();
         huff.CountSymbol(0);
         huff.CountSymbol(0);
         huff.CountSymbol(0);
@@ -29,7 +29,7 @@ public class Huffman16_8Tests
     [Fact]
     public void TwoSymbols_frequentShorter()
     {
-        var huff = new Huffman16_8();
+        var huff = new Huffman168();
         for (int i = 0; i < 10; i++) huff.CountSymbol(0);
         for (int i = 0; i < 5; i++) huff.CountSymbol(1);
         huff.BuildTree();
@@ -42,19 +42,19 @@ public class Huffman16_8Tests
     [Fact]
     public void All16Symbols_buildsWithinMaxBits()
     {
-        var huff = new Huffman16_8();
+        var huff = new Huffman168();
         for (int i = 0; i < 16; i++)
             huff.CountSymbol((uint)i);
         huff.BuildTree();
 
         for (int i = 0; i < 16; i++)
-            Assert.True(huff.NumBits[i] <= Huffman16_8.MAX_BITS);
+            Assert.True(huff.NumBits[i] <= Huffman168.MaxBits);
     }
 
     [Fact]
     public void All16Symbols_allHaveCodes()
     {
-        var huff = new Huffman16_8();
+        var huff = new Huffman168();
         for (int i = 0; i < 16; i++)
             for (int j = 0; j < i + 1; j++)
                 huff.CountSymbol((uint)i);
@@ -67,7 +67,7 @@ public class Huffman16_8Tests
     [Fact]
     public void CanonicalCodesAreCorrect()
     {
-        var huff = new Huffman16_8();
+        var huff = new Huffman168();
         huff.CountSymbol(0);
         huff.CountSymbol(0);
         huff.CountSymbol(1);
@@ -83,7 +83,7 @@ public class Huffman16_8Tests
     [Fact]
     public void Encode_noBitsForZeroCodeLength()
     {
-        var huff = new Huffman16_8();
+        var huff = new Huffman168();
         for (int i = 0; i < 5; i++) huff.CountSymbol(0);
         huff.BuildTree();
 
@@ -99,7 +99,7 @@ public class Huffman16_8Tests
     [Fact]
     public void Encode_encodeSequence_matchesDecode()
     {
-        var huff = new Huffman16_8();
+        var huff = new Huffman168();
         for (int i = 0; i < 20; i++) huff.CountSymbol(0);
         for (int i = 0; i < 10; i++) huff.CountSymbol(1);
         for (int i = 0; i < 5; i++) huff.CountSymbol(2);
@@ -119,7 +119,7 @@ public class Huffman16_8Tests
     [Fact]
     public void ExportTreeRle_producesOutput()
     {
-        var huff = new Huffman16_8();
+        var huff = new Huffman168();
         for (int i = 0; i < 10; i++) huff.CountSymbol(0);
         for (int i = 0; i < 5; i++) huff.CountSymbol(1);
         huff.BuildTree();
@@ -133,7 +133,7 @@ public class Huffman16_8Tests
     [Fact]
     public void ExportTreeRle_allZero_singleEscape()
     {
-        var huff = new Huffman16_8();
+        var huff = new Huffman168();
         huff.CountSymbol(0);
         huff.BuildTree();
 
@@ -148,7 +148,7 @@ public class Huffman16_8Tests
     [Fact]
     public void ResetHistogram_clearsState()
     {
-        var huff = new Huffman16_8();
+        var huff = new Huffman168();
         huff.CountSymbol(0);
         huff.CountSymbol(0);
         huff.ResetHistogram();
@@ -161,25 +161,25 @@ public class Huffman16_8Tests
     [Fact]
     public void BuildTwice_consistentResults()
     {
-        var huff = new Huffman16_8();
+        var huff = new Huffman168();
         huff.CountSymbol(0);
         huff.CountSymbol(0);
         huff.CountSymbol(1);
         huff.BuildTree();
 
-        int bits0_first = huff.NumBits[0];
-        uint code0_first = huff.Codes[0];
+        int bits0First = huff.NumBits[0];
+        uint code0First = huff.Codes[0];
 
         huff.BuildTree();
 
-        Assert.Equal(bits0_first, huff.NumBits[0]);
-        Assert.Equal(code0_first, huff.Codes[0]);
+        Assert.Equal(bits0First, huff.NumBits[0]);
+        Assert.Equal(code0First, huff.Codes[0]);
     }
 
     [Fact]
     public void HeavySkew_frequentBelowOthers()
     {
-        var huff = new Huffman16_8();
+        var huff = new Huffman168();
         for (int i = 0; i < 100; i++) huff.CountSymbol(5);
         huff.CountSymbol(0);
         huff.CountSymbol(1);

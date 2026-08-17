@@ -44,7 +44,7 @@ dotnet test
 dotnet test --filter "FullyQualifiedName~HeaderAndApiTests"
 
 # Run with verbose output
-dotnet test --logger "console;verbosity=detailed"
+dotnet test -v detailed
 ```
 
 ### Dependencies

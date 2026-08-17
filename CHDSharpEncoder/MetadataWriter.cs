@@ -43,7 +43,9 @@ public static class MetadataWriter
             ulong perCylinder = (ulong)bytesPerSector * heads * sectorsPerTrack;
             cylinders = perCylinder > 0 ? (totalBytes + perCylinder - 1) / perCylinder : 0;
             if (cylinders > uint.MaxValue)
+            {
                 cylinders = uint.MaxValue;
+            }
         }
 
         var text = $"CYLS:{cylinders},HEADS:{heads},SECS:{sectorsPerTrack},BPS:{bytesPerSector}";
@@ -51,7 +53,7 @@ public static class MetadataWriter
         {
             Tag = HardDiskMetadataTag,
             Flags = ChdMdflagsChecksum,
-            Payload = Encoding.ASCII.GetBytes(text + '\0'),
+            Payload = Encoding.ASCII.GetBytes(text + '\0')
         };
     }
 
@@ -65,7 +67,7 @@ public static class MetadataWriter
         {
             Tag = DvdMetadataTag,
             Flags = ChdMdflagsChecksum,
-            Payload = [0x00],
+            Payload = [0x00]
         };
     }
 
@@ -143,7 +145,7 @@ public static class MetadataWriter
             {
                 Tag = tag,
                 Flags = ChdMdflagsChecksum,
-                Payload = Encoding.ASCII.GetBytes(text + '\0'),
+                Payload = Encoding.ASCII.GetBytes(text + '\0')
             });
         }
         return entries;

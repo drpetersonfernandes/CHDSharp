@@ -13,16 +13,22 @@ internal static class CdEcc
 
     /// <summary>Offset of the mode byte within a sector.</summary>
     private const int ModeOffset = 0x00f;
+
     /// <summary>Offset of the P ECC area within a sector.</summary>
     private const int EccPOffset = 0x81c;
+
     /// <summary>2 lots of 86.</summary>
     private const int EccPNumBytes = 86;
+
     /// <summary>24 bytes each.</summary>
     private const int EccPComp = 24;
+
     /// <summary>Offset of the Q ECC area within a sector.</summary>
     private const int EccQOffset = EccPOffset + 2 * EccPNumBytes;
+
     /// <summary>2 lots of 52.</summary>
     private const int EccQNumBytes = 52;
+
     /// <summary>43 bytes each.</summary>
     private const int EccQComp = 43;
 
@@ -229,6 +235,7 @@ internal static class CdEcc
             val2 ^= EccSourceByte(data, sectorOffset, row[component]);
             val1 = Ecclow[val1];
         }
+
         val1 = Ecchigh[Ecclow[val1] ^ val2];
         val2 ^= val1;
         return (val1, val2);

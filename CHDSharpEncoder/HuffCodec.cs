@@ -18,7 +18,7 @@ public sealed class HuffCodec : IChdCodec
     private readonly HuffmanEncoder _encoder = new(NumCodes, MaxBits);
 
     /// <inheritdoc/>
-    public uint Tag => CodecTags.HUFF;
+    public uint Tag => CodecTags.Huff;
 
     /// <inheritdoc/>
     public byte[]? Compress(byte[] data)

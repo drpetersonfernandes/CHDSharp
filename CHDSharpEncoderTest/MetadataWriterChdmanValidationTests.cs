@@ -71,7 +71,7 @@ public class MetadataWriterChdmanValidationTests : IDisposable
 
         // chdman's metadata chain, walked from the header's metaoffset
         byte[] chdBytes = File.ReadAllBytes(chdPath);
-        ulong chdMetaOffset = ReadU64BE(chdBytes, 48);
+        ulong chdMetaOffset = ReadU64Be(chdBytes, 48);
 
         var ours = WalkChain(ourBytes, (ulong)ourFirstOffset);
         var theirs = WalkChain(chdBytes, chdMetaOffset);
@@ -124,8 +124,8 @@ public class MetadataWriterChdmanValidationTests : IDisposable
         {
             var header = new byte[16];
             ms.ReadExactly(header, 0, header.Length);
-            uint tag = ReadU32BE(header, 0);
-            uint length = ReadU24BE(header, 5);
+            uint tag = ReadU32Be(header, 0);
+            uint length = ReadU24Be(header, 5);
             byte[] payload = new byte[length];
             ms.ReadExactly(payload, 0, payload.Length);
             expectedEntries.Add(new ChdMetadataEntry(
@@ -164,10 +164,10 @@ public class MetadataWriterChdmanValidationTests : IDisposable
             Assert.True(visited.Add(offset), "metadata chain contains a cycle");
             Assert.True((long)offset + 16 <= fileBytes.Length, "metadata header out of range");
 
-            uint tag = ReadU32BE(fileBytes, (int)offset);
+            uint tag = ReadU32Be(fileBytes, (int)offset);
             byte flags = fileBytes[(int)offset + 4];
-            uint length = ReadU24BE(fileBytes, (int)offset + 5);
-            ulong next = ReadU64BE(fileBytes, (int)offset + 8);
+            uint length = ReadU24Be(fileBytes, (int)offset + 5);
+            ulong next = ReadU64Be(fileBytes, (int)offset + 8);
 
             Assert.True(length <= 1024 * 1024, "metadata length out of range");
             byte[] payload = new byte[length];
@@ -179,12 +179,12 @@ public class MetadataWriterChdmanValidationTests : IDisposable
                 Flags = flags,
                 Length = length,
                 Next = next,
-                Payload = payload,
+                Payload = payload
             });
 
             // a non-zero next must point exactly past this entry (chained, not scattered)
             if (next != 0)
-                Assert.Equal((ulong)(offset + 16 + length), next);
+                Assert.Equal(offset + 16 + length, next);
             offset = next;
         }
         return entries;
@@ -199,20 +199,20 @@ public class MetadataWriterChdmanValidationTests : IDisposable
         public byte[] Payload = Array.Empty<byte>();
     }
 
-    private static uint ReadU32BE(byte[] data, int offset)
+    private static uint ReadU32Be(byte[] data, int offset)
     {
         return ((uint)data[offset] << 24) | ((uint)data[offset + 1] << 16) |
                ((uint)data[offset + 2] << 8) | data[offset + 3];
     }
 
-    private static uint ReadU24BE(byte[] data, int offset)
+    private static uint ReadU24Be(byte[] data, int offset)
     {
         return ((uint)data[offset] << 16) | ((uint)data[offset + 1] << 8) | data[offset + 2];
     }
 
-    private static ulong ReadU64BE(byte[] data, int offset)
+    private static ulong ReadU64Be(byte[] data, int offset)
     {
-        return ((ulong)ReadU32BE(data, offset) << 32) | ReadU32BE(data, offset + 4);
+        return ((ulong)ReadU32Be(data, offset) << 32) | ReadU32Be(data, offset + 4);
     }
 
     private static (int ExitCode, string StdOut, string StdErr) RunChdman(params string[] args)

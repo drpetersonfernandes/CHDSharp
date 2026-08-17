@@ -6,26 +6,26 @@ namespace CHDSharpEncoderTest;
 
 public class ChdValidationTests : IDisposable
 {
-    private readonly string TestDataDir;
+    private readonly string _testDataDir;
 
     public ChdValidationTests()
     {
         // unique per test class instance: the test host runs per-TFM in parallel
-        TestDataDir = Path.Combine(Path.GetTempPath(), "chd_validation_tests_" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(TestDataDir);
+        _testDataDir = Path.Combine(Path.GetTempPath(), "chd_validation_tests_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(_testDataDir);
     }
 
     public void Dispose()
     {
-        try { Directory.Delete(TestDataDir, recursive: true); } catch { }
+        try { Directory.Delete(_testDataDir, recursive: true); } catch { }
     }
 
     [Fact]
     public void OpenWithChdSharpLib_HeaderCorrect()
     {
         var source = CreateTestFile(8192, 42);
-        var srcPath = Path.Combine(TestDataDir, "v_hdr_src.bin");
-        var chdPath = Path.Combine(TestDataDir, "v_hdr.chd");
+        var srcPath = Path.Combine(_testDataDir, "v_hdr_src.bin");
+        var chdPath = Path.Combine(_testDataDir, "v_hdr.chd");
         File.WriteAllBytes(srcPath, source);
 
         try
@@ -51,8 +51,8 @@ public class ChdValidationTests : IDisposable
     public void Extract_producesIdenticalData()
     {
         var source = CreateTestFile(65536, 456);
-        var srcPath = Path.Combine(TestDataDir, "v_extract_src.bin");
-        var chdPath = Path.Combine(TestDataDir, "v_extract.chd");
+        var srcPath = Path.Combine(_testDataDir, "v_extract_src.bin");
+        var chdPath = Path.Combine(_testDataDir, "v_extract.chd");
         File.WriteAllBytes(srcPath, source);
 
         try
@@ -86,8 +86,8 @@ public class ChdValidationTests : IDisposable
     public void LargeFile_RoundTrip()
     {
         var source = CreateTestFile(10 * 1024 * 1024, 42);
-        var srcPath = Path.Combine(TestDataDir, "v_large_src.bin");
-        var chdPath = Path.Combine(TestDataDir, "v_large.chd");
+        var srcPath = Path.Combine(_testDataDir, "v_large_src.bin");
+        var chdPath = Path.Combine(_testDataDir, "v_large.chd");
         File.WriteAllBytes(srcPath, source);
 
         try
@@ -123,8 +123,8 @@ public class ChdValidationTests : IDisposable
     public void NonAlignedSize_works()
     {
         var source = CreateTestFile(10000, 42);
-        var srcPath = Path.Combine(TestDataDir, "v_na_src.bin");
-        var chdPath = Path.Combine(TestDataDir, "v_na.chd");
+        var srcPath = Path.Combine(_testDataDir, "v_na_src.bin");
+        var chdPath = Path.Combine(_testDataDir, "v_na.chd");
         File.WriteAllBytes(srcPath, source);
 
         try
@@ -149,8 +149,8 @@ public class ChdValidationTests : IDisposable
     {
         var source = new byte[4096];
         new Random(123).NextBytes(source);
-        var srcPath = Path.Combine(TestDataDir, "v_suh_src.bin");
-        var chdPath = Path.Combine(TestDataDir, "v_suh.chd");
+        var srcPath = Path.Combine(_testDataDir, "v_suh_src.bin");
+        var chdPath = Path.Combine(_testDataDir, "v_suh.chd");
         File.WriteAllBytes(srcPath, source);
 
         try
@@ -177,8 +177,8 @@ public class ChdValidationTests : IDisposable
     {
         var source = new byte[8192];
         new Random(456).NextBytes(source);
-        var srcPath = Path.Combine(TestDataDir, "v_tuh_src.bin");
-        var chdPath = Path.Combine(TestDataDir, "v_tuh.chd");
+        var srcPath = Path.Combine(_testDataDir, "v_tuh_src.bin");
+        var chdPath = Path.Combine(_testDataDir, "v_tuh.chd");
         File.WriteAllBytes(srcPath, source);
 
         try
@@ -207,8 +207,8 @@ public class ChdValidationTests : IDisposable
     {
         var source = new byte[12288];
         new Random(789).NextBytes(source);
-        var srcPath = Path.Combine(TestDataDir, "v_thuh_src.bin");
-        var chdPath = Path.Combine(TestDataDir, "v_thuh.chd");
+        var srcPath = Path.Combine(_testDataDir, "v_thuh_src.bin");
+        var chdPath = Path.Combine(_testDataDir, "v_thuh.chd");
         File.WriteAllBytes(srcPath, source);
 
         try
@@ -238,8 +238,8 @@ public class ChdValidationTests : IDisposable
     {
         var source = new byte[8192];
         new Random(456).NextBytes(source);
-        var srcPath = Path.Combine(TestDataDir, "v_hct_src.bin");
-        var chdPath = Path.Combine(TestDataDir, "v_hct.chd");
+        var srcPath = Path.Combine(_testDataDir, "v_hct_src.bin");
+        var chdPath = Path.Combine(_testDataDir, "v_hct.chd");
         File.WriteAllBytes(srcPath, source);
 
         try

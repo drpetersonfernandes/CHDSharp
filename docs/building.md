@@ -69,7 +69,7 @@ dotnet test -f net10.0
 dotnet test --filter "FullyQualifiedName~CorpusTests"
 
 # Verbose console output
-dotnet test --logger "console;verbosity=detailed"
+dotnet test -v detailed
 ```
 
 The suite contains **468 tests** (unit + corpus) that run against 30 deterministic CHD fixtures covering V1–V5 and every codec. See [Testing](testing.md).

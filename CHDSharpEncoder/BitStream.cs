@@ -68,6 +68,7 @@ public class BitStreamOut
             _bitBuf <<= 8;
             _bitsInBuf -= 8;
         }
+
         _bitBuf = 0;
         return ByteLength;
     }

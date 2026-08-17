@@ -34,7 +34,7 @@ public sealed class CdflCodec : IChdCodec
     }
 
     /// <inheritdoc/>
-    public uint Tag => CodecTags.CDFL;
+    public uint Tag => CodecTags.Cdfl;
 
     /// <inheritdoc/>
     public byte[]? Compress(byte[] data)

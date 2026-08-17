@@ -9,7 +9,9 @@ public class RawDeflateTests
     {
         byte[] original = new byte[4096];
         for (int i = 0; i < original.Length; i++)
+        {
             original[i] = (byte)((i * 3 + 7) & 0xFF);
+        }
 
         byte[]? compressed = RawDeflate.Compress(original);
         Assert.NotNull(compressed);
@@ -40,7 +42,9 @@ public class RawDeflateTests
     {
         byte[] original = new byte[4096];
         for (int i = 0; i < original.Length; i++)
+        {
             original[i] = (byte)(i & 0xFF);
+        }
 
         byte[]? compressed = RawDeflate.Compress(original);
         Assert.NotNull(compressed);
@@ -53,7 +57,9 @@ public class RawDeflateTests
     {
         byte[] original = new byte[4096];
         for (int i = 0; i < original.Length; i++)
+        {
             original[i] = (byte)(i / 16);
+        }
 
         byte[]? compressed = RawDeflate.Compress(original);
         Assert.NotNull(compressed);
@@ -66,7 +72,9 @@ public class RawDeflateTests
     {
         byte[] data = new byte[2048];
         for (int i = 0; i < data.Length; i++)
+        {
             data[i] = (byte)((i * 3 + 7) & 0xFF);
+        }
 
         byte[]? compressed = RawDeflate.Compress(data);
         Assert.NotNull(compressed);
@@ -82,7 +90,9 @@ public class RawDeflateTests
     {
         byte[] original = new byte[18816]; // 8 CD frames, 2352 each
         for (int i = 0; i < original.Length; i++)
+        {
             original[i] = (byte)((i * 17 + 31) & 0xFF);
+        }
 
         byte[]? compressed = RawDeflate.Compress(original);
         Assert.NotNull(compressed);

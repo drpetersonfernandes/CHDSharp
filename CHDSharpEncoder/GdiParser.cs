@@ -32,7 +32,7 @@ public class GdiParser
 
         var toc = new CdToc
         {
-            Flags = CdTocFlags.GdRom,
+            Flags = CdTocFlags.GdRom
         };
         var tracks = new CdTrack?[numTracks];
         int trackCount = 0;
@@ -70,7 +70,7 @@ public class GdiParser
                 FileOffset = 0,
                 SubType = CdSubType.None,
                 SubSize = 0,
-                PgSub = CdSubType.None,
+                PgSub = CdSubType.None
             };
 
             if (trktype == 4 && trksize == 2352)
@@ -96,6 +96,7 @@ public class GdiParser
 
             if (!File.Exists(fileName))
                 throw new FileNotFoundException($"Couldn't find data file [{fileName}]", fileName);
+
             track.Frames = (int)(new FileInfo(fileName).Length / trksize);
             track.PadFrames = 0;
 
@@ -120,6 +121,7 @@ public class GdiParser
         {
             if (track is null)
                 throw new InvalidDataException("GDI is missing tracks");
+
             toc.Tracks.Add(track.Value);
         }
 

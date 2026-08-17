@@ -49,7 +49,10 @@ public class LargeFileTests
         // Physical data block at offset Blocksize (= offsetWord 1).
         var pattern = new byte[Blocksize];
         for (var i = 0; i < pattern.Length; i++)
+        {
             pattern[i] = (byte)(i & 0xFF);
+        }
+
         ms.Seek(Blocksize, SeekOrigin.Begin);
         Write(pattern);
 

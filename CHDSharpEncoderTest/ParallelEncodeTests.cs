@@ -76,7 +76,7 @@ public class ParallelEncodeTests : IDisposable
         for (int h = 0; h < 256; h += 2)
             Array.Fill(source, (byte)(h & 0xFF), h * 4096, 4096);
 
-        uint[] tags = [CodecTags.ZLIB, CodecTags.ZSTD, CodecTags.LZMA];
+        uint[] tags = [CodecTags.Zlib, CodecTags.Zstd, CodecTags.Lzma];
 
         string single = Path.Combine(_dir, "multi_single.chd");
         string parallel = Path.Combine(_dir, "multi_parallel.chd");
@@ -111,7 +111,9 @@ public class ParallelEncodeTests : IDisposable
         for (int f = 48; f < 80; f++)
         {
             for (int j = 0; j < CdConstants.MaxSectorData; j++)
+            {
                 bin[f * CdConstants.MaxSectorData + j] = (byte)(f & 1);
+            }
         }
         File.WriteAllBytes(Path.Combine(_dir, "game.bin"), bin);
 
@@ -180,7 +182,7 @@ public class ParallelEncodeTests : IDisposable
     [Fact]
     public void CompressAll_DeliversResultsInHunkOrder_WithPooledBuffers()
     {
-        var processor = new HunkProcessor(4096, [CodecTags.ZLIB], 4);
+        var processor = new HunkProcessor(4096, [CodecTags.Zlib], 4);
         var sha1 = new Sha1();
         uint expectedIndex = 0;
 
@@ -188,7 +190,10 @@ public class ParallelEncodeTests : IDisposable
             (h, buf) =>
             {
                 for (int i = 0; i < buf.Length; i++)
+                {
                     buf[i] = (byte)((h * 31 + i) & 0xFF);
+                }
+
                 return buf.Length;
             },
             sha1,
@@ -200,7 +205,10 @@ public class ParallelEncodeTests : IDisposable
                 Assert.NotNull(result.Data);
                 byte[] expected = new byte[4096];
                 for (int i = 0; i < 4096; i++)
+                {
                     expected[i] = (byte)((result.HunkIndex * 31 + i) & 0xFF);
+                }
+
                 Assert.Equal(expected, RawDeflate.Decompress(result.Data!, 4096));
             });
 
@@ -210,13 +218,15 @@ public class ParallelEncodeTests : IDisposable
     [Fact]
     public void CompressAll_Sha1IsAppendedInHunkOrder()
     {
-        var processor = new HunkProcessor(4096, [CodecTags.ZLIB], 4);
+        var processor = new HunkProcessor(4096, [CodecTags.Zlib], 4);
         var sha1 = new Sha1();
         byte[] expectedRaw = new byte[4096 * 16];
         for (int h = 0; h < 16; h++)
         {
             for (int i = 0; i < 4096; i++)
+            {
                 expectedRaw[h * 4096 + i] = (byte)((h * 3 + i) & 0xFF);
+            }
         }
 
         processor.CompressAll(16,
@@ -243,7 +253,7 @@ public class ParallelEncodeTests : IDisposable
         ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, options: new ChdEncodeOptions
         {
             TaskCount = 8,
-            HunkCompleted = reports.Add,
+            HunkCompleted = reports.Add
         });
 
         Assert.Equal(128, reports.Count);
@@ -253,8 +263,8 @@ public class ParallelEncodeTests : IDisposable
     [Fact]
     public void TaskCount_Invalid_Throws()
     {
-        Assert.Throws<ArgumentOutOfRangeException>(() => new HunkProcessor(4096, [CodecTags.ZLIB], 0));
-        Assert.Throws<ArgumentOutOfRangeException>(() => new HunkProcessor(4096, [CodecTags.ZLIB], -1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new HunkProcessor(4096, [CodecTags.Zlib], 0));
+        Assert.Throws<ArgumentOutOfRangeException>(() => new HunkProcessor(4096, [CodecTags.Zlib], -1));
     }
 
     [Fact]
@@ -262,7 +272,9 @@ public class ParallelEncodeTests : IDisposable
     {
         byte[] source = new byte[4096 * 4];
         for (int i = 0; i < source.Length; i++)
+        {
             source[i] = (byte)(i & 0xFF);
+        }
 
         string chdPath = Path.Combine(_dir, "many_tasks.chd");
         using var ms = new MemoryStream(source);
@@ -306,7 +318,7 @@ public class ParallelEncodeTests : IDisposable
                     {
                         if (Interlocked.Increment(ref seen) == 16)
                             cts.Cancel();
-                    },
+                    }
                 },
                 cancellationToken: cts.Token));
     }

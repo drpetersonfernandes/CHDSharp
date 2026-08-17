@@ -36,7 +36,7 @@ public class ChdCodecChdmanValidationTests : IDisposable
         string extractPath = Path.Combine(_testDataDir, "zstd.raw");
         File.WriteAllBytes(srcPath, source);
 
-        ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512, [CodecTags.ZSTD]);
+        ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512, [CodecTags.Zstd]);
 
         var (infoExit, infoOut, infoErr) = RunChdman("info", "-i", chdPath);
         string info = infoOut + infoErr;
@@ -63,7 +63,7 @@ public class ChdCodecChdmanValidationTests : IDisposable
         string extractPath = Path.Combine(_testDataDir, "lzma.raw");
         File.WriteAllBytes(srcPath, source);
 
-        ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512, [CodecTags.LZMA]);
+        ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512, [CodecTags.Lzma]);
 
         var (infoExit, infoOut, infoErr) = RunChdman("info", "-i", chdPath);
         string info = infoOut + infoErr;
@@ -89,7 +89,7 @@ public class ChdCodecChdmanValidationTests : IDisposable
         string chdPath = Path.Combine(_testDataDir, "multi.chd");
         File.WriteAllBytes(srcPath, source);
 
-        ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512, [CodecTags.ZLIB, CodecTags.ZSTD, CodecTags.LZMA]);
+        ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512, [CodecTags.Zlib, CodecTags.Zstd, CodecTags.Lzma]);
 
         var (infoExit, infoOut, infoErr) = RunChdman("info", "-i", chdPath);
         string info = infoOut + infoErr;
@@ -123,7 +123,7 @@ public class ChdCodecChdmanValidationTests : IDisposable
             fs.SetLength(2352L * 82);
 
         ChdEncoder.EncodeCd(cuePath, chdPath, hunkBytes: CdConstants.FramesPerHunk * CdConstants.FrameSize,
-            unitBytes: CdConstants.FrameSize, codecTags: [CodecTags.ZSTD]);
+            unitBytes: CdConstants.FrameSize, codecTags: [CodecTags.Zstd]);
 
         var (verifyExit, vOut, vErr) = RunChdman("verify", "-i", chdPath);
         Assert.True(verifyExit == 0, $"chdman verify failed (exit={verifyExit})\n{vOut}{vErr}");
@@ -141,9 +141,14 @@ public class ChdCodecChdmanValidationTests : IDisposable
         for (int h = 0; h < hunkCount; h++)
         {
             for (int i = 0; i < 4064; i++)
+            {
                 source[h * 4096 + i] = 0;
+            }
+
             for (int i = 4064; i < 4096; i++)
+            {
                 source[h * 4096 + i] = (byte)(h + i);
+            }
         }
         return source;
     }

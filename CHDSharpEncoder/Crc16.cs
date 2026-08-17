@@ -3,7 +3,7 @@ namespace CHDSharpEncoder;
 /// <summary>Computes CRC-16 (CCITT) checksums using a table-driven approach.</summary>
 public static class Crc16
 {
-    private static readonly ushort[] _table = GenerateTable();
+    private static readonly ushort[] Table = GenerateTable();
 
     /// <summary>Computes the CRC-16 checksum of a byte span.</summary>
     /// <param name="data">The data to checksum.</param>
@@ -14,7 +14,7 @@ public static class Crc16
         for (var i = 0; i < data.Length; i++)
         {
             var index = ((crc >> 8) ^ data[i]) & 0xFF;
-            crc = (ushort)((crc << 8) ^ _table[index]);
+            crc = (ushort)((crc << 8) ^ Table[index]);
         }
         return crc;
     }

@@ -73,7 +73,10 @@ public class HunkProcessor
         _taskCount = taskCount;
         _workerCodecSets = new IChdCodec[taskCount][];
         for (int t = 0; t < taskCount; t++)
+        {
             _workerCodecSets[t] = ChdCodecs.CreateAll(codecTags, hunkBytes);
+        }
+
         _syncCodecs = _workerCodecSets[0];
         _rawPool = new ByteArrayPool((int)hunkBytes);
     }
@@ -111,7 +114,7 @@ public class HunkProcessor
                     Compression = (byte)bestCodec,
                     CompLength = (uint)bestData!.Length,
                     Offset = (ulong)fileOffset,
-                    Crc16 = crc16,
+                    Crc16 = crc16
                 },
                 bestData
             );
@@ -120,10 +123,10 @@ public class HunkProcessor
         return (
             new MapEntry
             {
-                Compression = MapEntry.COMPRESSION_NONE,
+                Compression = MapEntry.CompressionNone,
                 CompLength = _hunkBytes,
                 Offset = (ulong)fileOffset,
-                Crc16 = crc16,
+                Crc16 = crc16
             },
             (byte[])rawHunk.Clone()
         );
@@ -159,6 +162,7 @@ public class HunkProcessor
         ArgumentNullException.ThrowIfNull(onHunkConsumed);
         if (hunkCount == 0)
             return;
+
         if (_workerCodecSets == null)
             throw new InvalidOperationException(
                 "Parallel compression requires the codec-tag constructor; codec instances are not thread-safe to share.");
@@ -169,7 +173,9 @@ public class HunkProcessor
         using var toWrite = new BlockingCollection<int>(queueCapacity);
         var items = new HunkItem[hunkCount];
         for (int i = 0; i < hunkCount; i++)
+        {
             items[i] = new HunkItem();
+        }
 
         var ts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         var tasks = new List<Task>(taskCount + 1);
@@ -343,7 +349,7 @@ public class HunkProcessor
                 else
                 {
                     // nothing compresses: hand the raw hunk buffer over as the stored block
-                    item.Compression = MapEntry.COMPRESSION_NONE;
+                    item.Compression = MapEntry.CompressionNone;
                     item.CompLength = _hunkBytes;
                     item.Data = raw;
                     item.DataIsRaw = true;

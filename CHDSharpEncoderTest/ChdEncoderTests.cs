@@ -21,11 +21,11 @@ public class ChdEncoderTests
             string magic = System.Text.Encoding.ASCII.GetString(chd, 0, 8);
             Assert.Equal("MComprHD", magic);
 
-            uint version = ReadU32BE(chd, 12);
+            uint version = ReadU32Be(chd, 12);
             Assert.Equal(5u, version);
 
-            uint compressor = ReadU32BE(chd, 16);
-            Assert.Equal(CodecTags.ZLIB, compressor);
+            uint compressor = ReadU32Be(chd, 16);
+            Assert.Equal(CodecTags.Zlib, compressor);
         }
         finally
         {
@@ -45,7 +45,7 @@ public class ChdEncoderTests
             ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512);
 
             byte[] chd = File.ReadAllBytes(chdPath);
-            ulong logical = ReadU64BE(chd, 32);
+            ulong logical = ReadU64Be(chd, 32);
             Assert.Equal(8192uL, logical);
         }
         finally
@@ -66,7 +66,7 @@ public class ChdEncoderTests
             ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512);
 
             byte[] chd = File.ReadAllBytes(chdPath);
-            ulong mapOffset = ReadU64BE(chd, 40);
+            ulong mapOffset = ReadU64Be(chd, 40);
             Assert.NotEqual(0uL, mapOffset);
         }
         finally
@@ -112,7 +112,7 @@ public class ChdEncoderTests
             ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512);
 
             byte[] chd = File.ReadAllBytes(chdPath);
-            Assert.True(chd.Length > ChdHeaderV5.LENGTH);
+            Assert.True(chd.Length > ChdHeaderV5.Length);
         }
         finally
         {
@@ -124,7 +124,11 @@ public class ChdEncoderTests
     public void FileHasExpectedLayout()
     {
         byte[] source = new byte[8192];
-        for (int i = 0; i < source.Length; i++) source[i] = (byte)((i * 7) & 0xFF);
+        for (int i = 0; i < source.Length; i++)
+        {
+            source[i] = (byte)((i * 7) & 0xFF);
+        }
+
         string chdPath = Path.GetTempFileName();
 
         try
@@ -139,8 +143,8 @@ public class ChdEncoderTests
             Assert.Equal("MComprHD", magic);
 
             // Map offset should point past all hunk data
-            ulong mapOffset = ReadU64BE(chd, 40);
-            Assert.True(mapOffset >= ChdHeaderV5.LENGTH);
+            ulong mapOffset = ReadU64Be(chd, 40);
+            Assert.True(mapOffset >= ChdHeaderV5.Length);
             Assert.True(mapOffset < (ulong)chd.Length);
         }
         finally
@@ -161,9 +165,9 @@ public class ChdEncoderTests
             ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512);
 
             byte[] chd = File.ReadAllBytes(chdPath);
-            Assert.True(chd.Length > ChdHeaderV5.LENGTH);
+            Assert.True(chd.Length > ChdHeaderV5.Length);
 
-            ulong logical = ReadU64BE(chd, 32);
+            ulong logical = ReadU64Be(chd, 32);
             Assert.Equal(10000uL, logical);
         }
         finally
@@ -178,7 +182,11 @@ public class ChdEncoderTests
         // the raw SHA-1 must cover the actual source bytes, not the zero-padded
         // final hunk, so that chdman verify succeeds for non-aligned sizes
         byte[] source = new byte[10000];
-        for (int i = 0; i < source.Length; i++) source[i] = (byte)((i * 13) & 0xFF);
+        for (int i = 0; i < source.Length; i++)
+        {
+            source[i] = (byte)((i * 13) & 0xFF);
+        }
+
         string chdPath = Path.GetTempFileName();
 
         try
@@ -214,7 +222,11 @@ public class ChdEncoderTests
         try
         {
             byte[] source = new byte[4096];
-            for (int i = 0; i < source.Length; i++) source[i] = (byte)((i * 3 + 1) & 0xFF);
+            for (int i = 0; i < source.Length; i++)
+            {
+                source[i] = (byte)((i * 3 + 1) & 0xFF);
+            }
+
             File.WriteAllBytes(srcPath, source);
 
             ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512);
@@ -229,14 +241,14 @@ public class ChdEncoderTests
         }
     }
 
-    private static uint ReadU32BE(byte[] data, int offset)
+    private static uint ReadU32Be(byte[] data, int offset)
     {
         return ((uint)data[offset] << 24) | ((uint)data[offset + 1] << 16) |
                ((uint)data[offset + 2] << 8) | data[offset + 3];
     }
 
-    private static ulong ReadU64BE(byte[] data, int offset)
+    private static ulong ReadU64Be(byte[] data, int offset)
     {
-        return ((ulong)ReadU32BE(data, offset) << 32) | ReadU32BE(data, offset + 4);
+        return ((ulong)ReadU32Be(data, offset) << 32) | ReadU32Be(data, offset + 4);
     }
 }

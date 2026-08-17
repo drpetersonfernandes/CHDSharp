@@ -33,7 +33,10 @@ public class ChdImageChdmanValidationTests : IDisposable
         byte[] iso = new byte[2048 * 120];
         for (int s = 0; s < 120; s++)
             for (int i = 0; i < 2048; i++)
-                iso[s * 2048 + i] = (byte)((s * 13 + i) & 0xFF);
+        {
+            iso[s * 2048 + i] = (byte)((s * 13 + i) & 0xFF);
+        }
+
         string isoPath = Path.Combine(_testDataDir, "game.iso");
         File.WriteAllBytes(isoPath, iso);
 
@@ -46,10 +49,10 @@ public class ChdImageChdmanValidationTests : IDisposable
 
         string ourExtract = Path.Combine(_testDataDir, "our.raw");
         string chdmanExtract = Path.Combine(_testDataDir, "chdman.raw");
-        var (e1, o1, e1r) = RunChdman("extractraw", "-i", ourChd, "-o", ourExtract, "-f");
-        Assert.True(e1 == 0, $"extractraw our failed (exit={e1})\n{o1}{e1r}");
-        var (e2, o2, e2r) = RunChdman("extractraw", "-i", chdmanChd, "-o", chdmanExtract, "-f");
-        Assert.True(e2 == 0, $"extractraw chdman failed (exit={e2})\n{o2}{e2r}");
+        var (e1, o1, e1R) = RunChdman("extractraw", "-i", ourChd, "-o", ourExtract, "-f");
+        Assert.True(e1 == 0, $"extractraw our failed (exit={e1})\n{o1}{e1R}");
+        var (e2, o2, e2R) = RunChdman("extractraw", "-i", chdmanChd, "-o", chdmanExtract, "-f");
+        Assert.True(e2 == 0, $"extractraw chdman failed (exit={e2})\n{o2}{e2R}");
 
         Assert.Equal(File.ReadAllBytes(chdmanExtract), File.ReadAllBytes(ourExtract));
 
@@ -74,7 +77,10 @@ public class ChdImageChdmanValidationTests : IDisposable
         byte[] audio1 = BuildAudio(40, 100);
         byte[] audio2 = BuildAudio(40, 200);
         for (int i = 0; i < dataBin.Length; i++)
+        {
             dataBin[i] = (byte)(i & 0xFF);
+        }
+
         File.WriteAllBytes(Path.Combine(_testDataDir, "track01.bin"), dataBin);
         File.WriteAllBytes(Path.Combine(_testDataDir, "track02.raw"), audio1);
         File.WriteAllBytes(Path.Combine(_testDataDir, "track03.raw"), audio2);
@@ -101,10 +107,10 @@ public class ChdImageChdmanValidationTests : IDisposable
 
         string ourExtract = Path.Combine(_testDataDir, "our.raw");
         string chdmanExtract = Path.Combine(_testDataDir, "chdman.raw");
-        var (e1, o1, e1r) = RunChdman("extractraw", "-i", ourChd, "-o", ourExtract, "-f");
-        Assert.True(e1 == 0, $"extractraw our failed (exit={e1})\n{o1}{e1r}");
-        var (e2, o2, e2r) = RunChdman("extractraw", "-i", chdmanChd, "-o", chdmanExtract, "-f");
-        Assert.True(e2 == 0, $"extractraw chdman failed (exit={e2})\n{o2}{e2r}");
+        var (e1, o1, e1R) = RunChdman("extractraw", "-i", ourChd, "-o", ourExtract, "-f");
+        Assert.True(e1 == 0, $"extractraw our failed (exit={e1})\n{o1}{e1R}");
+        var (e2, o2, e2R) = RunChdman("extractraw", "-i", chdmanChd, "-o", chdmanExtract, "-f");
+        Assert.True(e2 == 0, $"extractraw chdman failed (exit={e2})\n{o2}{e2R}");
 
         Assert.Equal(File.ReadAllBytes(chdmanExtract), File.ReadAllBytes(ourExtract));
 
@@ -128,7 +134,10 @@ public class ChdImageChdmanValidationTests : IDisposable
         byte[] data = new byte[2352 * 60];
         byte[] audio = BuildAudio(60, 300);
         for (int i = 0; i < data.Length; i++)
+        {
             data[i] = (byte)((i * 7) & 0xFF);
+        }
+
         File.WriteAllBytes(Path.Combine(_testDataDir, "data.bin"), data);
         File.WriteAllBytes(Path.Combine(_testDataDir, "audio.wav"), audio);
         string tocPath = Path.Combine(_testDataDir, "disc.toc");
@@ -149,10 +158,10 @@ public class ChdImageChdmanValidationTests : IDisposable
 
         string ourExtract = Path.Combine(_testDataDir, "our.raw");
         string chdmanExtract = Path.Combine(_testDataDir, "chdman.raw");
-        var (e1, o1, e1r) = RunChdman("extractraw", "-i", ourChd, "-o", ourExtract, "-f");
-        Assert.True(e1 == 0, $"extractraw our failed (exit={e1})\n{o1}{e1r}");
-        var (e2, o2, e2r) = RunChdman("extractraw", "-i", chdmanChd, "-o", chdmanExtract, "-f");
-        Assert.True(e2 == 0, $"extractraw chdman failed (exit={e2})\n{o2}{e2r}");
+        var (e1, o1, e1R) = RunChdman("extractraw", "-i", ourChd, "-o", ourExtract, "-f");
+        Assert.True(e1 == 0, $"extractraw our failed (exit={e1})\n{o1}{e1R}");
+        var (e2, o2, e2R) = RunChdman("extractraw", "-i", chdmanChd, "-o", chdmanExtract, "-f");
+        Assert.True(e2 == 0, $"extractraw chdman failed (exit={e2})\n{o2}{e2R}");
 
         Assert.Equal(File.ReadAllBytes(chdmanExtract), File.ReadAllBytes(ourExtract));
 
@@ -190,7 +199,9 @@ public class ChdImageChdmanValidationTests : IDisposable
             if (swap)
             {
                 for (int i = 0; i < CdConstants.MaxSectorData; i += 2)
+                {
                     (image[dest + i], image[dest + i + 1]) = (image[dest + i + 1], image[dest + i]);
+                }
             }
         }
     }

@@ -333,7 +333,10 @@ public static class Chd
                     var processed = (long)offset;
                     var currentHunk = processed / chd.HunkBytes;
                     if (processed % chd.HunkBytes != 0)
+                    {
                         currentHunk++;
+                    }
+
                     progress.Report(new ChdProgress(currentHunk, chd.HunkCount, processed, (long)chd.TotalBytes, sw!.Elapsed));
                 }
             }
@@ -728,7 +731,10 @@ public static class Chd
                                 Log.LogWarning("Hunk {HunkNumber} compressed length {Length} exceeds cap {Cap}", block, mapEntry.Length, chd.MaxCompressedBlockCap);
                                 ts.Cancel();
                                 if (errMaster == ChdError.Chderrnone)
+                                {
                                     errMaster = ChdError.Chderrinvaliddata;
+                                }
+
                                 break;
                             }
 

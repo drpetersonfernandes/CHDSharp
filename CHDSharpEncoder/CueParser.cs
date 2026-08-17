@@ -44,6 +44,7 @@ public class CueParser
                 {
                     if (tokens.Count < 3)
                         throw new InvalidDataException($"Malformed FILE command: {rawLine}");
+
                     lastFile = Path.Combine(baseDir, tokens[1]);
                     switch (tokens[2])
                     {
@@ -55,6 +56,7 @@ public class CueParser
                             (wavLength, wavOffset) = ParseWavSample(lastFile);
                             if (wavLength == 0)
                                 throw new InvalidDataException($"Couldn't read [{lastFile}] or not a valid .WAV");
+
                             break;
                         default:
                             throw new InvalidDataException($"Unhandled file type [{tokens[2]}]");
@@ -85,7 +87,7 @@ public class CueParser
                         PgType = 0,
                         PgDataSize = 0,
                         Index00 = -1,
-                        Index01 = -1,
+                        Index01 = -1
                     };
 
                     ParseTrackType(tokens[2], ref track);
@@ -147,6 +149,7 @@ public class CueParser
                         throw new InvalidDataException($"PREGAP command without a preceding TRACK: {rawLine}");
                     if (tokens.Count < 2)
                         throw new InvalidDataException($"Malformed PREGAP command: {rawLine}");
+
                     var track = currentTrack.Value;
                     track.Pregap = ParseMsfToFrames(tokens[1]);
                     currentTrack = track;
@@ -159,6 +162,7 @@ public class CueParser
                         throw new InvalidDataException($"POSTGAP command without a preceding TRACK: {rawLine}");
                     if (tokens.Count < 2)
                         throw new InvalidDataException($"Malformed POSTGAP command: {rawLine}");
+
                     var track = currentTrack.Value;
                     track.Postgap = ParseMsfToFrames(tokens[1]);
                     currentTrack = track;
@@ -189,6 +193,7 @@ public class CueParser
         {
             if (!int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out int frames))
                 throw new InvalidDataException($"Invalid frame count [{token}]");
+
             return frames;
         }
         if (parts.Length == 3 &&
@@ -212,7 +217,9 @@ public class CueParser
 
             // audio data must be byte-swapped for CHD storage
             if (track.TrackType == CdTrackType.Audio)
+            {
                 track.Swap = true;
+            }
 
             // WAV tracks already have their length and offset resolved
             if (track.FileOffset != 0)
@@ -236,6 +243,7 @@ public class CueParser
                 track.Frames = tracks[i + 1].Index00 - track.Index00;
                 if (track.Frames == 0)
                     throw new InvalidDataException($"Unable to determine size of track {track.Number}, missing INDEX 01 markers?");
+
                 if (i > 0)
                 {
                     long prevSize = (long)tracks[i - 1].Frames * (tracks[i - 1].DataSize + tracks[i - 1].SubSize);
@@ -257,6 +265,7 @@ public class CueParser
     {
         if (!File.Exists(path))
             throw new FileNotFoundException($"Couldn't find bin file [{path}]", path);
+
         return new FileInfo(path).Length;
     }
 
@@ -340,10 +349,12 @@ public class CueParser
 
         if (ReadFourCc(fs, offset, out _) != "RIFF")
             throw new InvalidDataException($"Could not find RIFF header ({fileName})");
+
         offset += 4;
-        ReadU32LE(fs, ref offset);
+        ReadU32Le(fs, ref offset);
         if (ReadFourCc(fs, offset, out _) != "WAVE")
             throw new InvalidDataException($"Could not find WAVE header ({fileName})");
+
         offset += 4;
 
         // seek until we find a format tag
@@ -352,27 +363,28 @@ public class CueParser
         {
             string tag = ReadFourCc(fs, offset, out _);
             offset += 4;
-            length = ReadU32LE(fs, ref offset);
+            length = ReadU32Le(fs, ref offset);
             if (tag == "fmt ")
                 break;
+
             offset += length;
             if (offset >= fileSize)
                 throw new InvalidDataException($"Could not find fmt tag ({fileName})");
         }
 
         // format must be PCM
-        if (ReadU16LE(fs, ref offset) != 1)
+        if (ReadU16Le(fs, ref offset) != 1)
             throw new InvalidDataException($"Unsupported WAV format - only PCM is supported ({fileName})");
         // only stereo is supported
-        if (ReadU16LE(fs, ref offset) != 2)
+        if (ReadU16Le(fs, ref offset) != 2)
             throw new InvalidDataException($"Unsupported number of channels - only stereo is supported ({fileName})");
         // sample rate
-        if (ReadU32LE(fs, ref offset) != 44100)
+        if (ReadU32Le(fs, ref offset) != 44100)
             throw new InvalidDataException($"Unsupported samplerate - only 44100 is supported ({fileName})");
         // bytes/second and block alignment are ignored
         offset += 6;
         // bits/sample
-        if (ReadU16LE(fs, ref offset) != 16)
+        if (ReadU16Le(fs, ref offset) != 16)
             throw new InvalidDataException($"Unsupported bits/sample - only 16 is supported ({fileName})");
         // seek past any extra data
         offset += length - 16;
@@ -382,9 +394,10 @@ public class CueParser
         {
             string tag = ReadFourCc(fs, offset, out _);
             offset += 4;
-            length = ReadU32LE(fs, ref offset);
+            length = ReadU32Le(fs, ref offset);
             if (tag == "data")
                 break;
+
             offset += length;
             if (offset >= fileSize)
                 throw new InvalidDataException($"Could not find data tag ({fileName})");
@@ -399,26 +412,29 @@ public class CueParser
         byte[] buffer = new byte[4];
         if (stream.Read(buffer, 0, 4) != 4)
             throw new InvalidDataException("Unexpected end of WAV file");
+
         nextPosition = position + 4;
         return Encoding.ASCII.GetString(buffer);
     }
 
-    private static uint ReadU32LE(Stream stream, ref long offset)
+    private static uint ReadU32Le(Stream stream, ref long offset)
     {
         stream.Position = offset;
         byte[] buffer = new byte[4];
         if (stream.Read(buffer, 0, 4) != 4)
             throw new InvalidDataException("Unexpected end of WAV file");
+
         offset += 4;
-        return (uint)buffer[0] | ((uint)buffer[1] << 8) | ((uint)buffer[2] << 16) | ((uint)buffer[3] << 24);
+        return buffer[0] | ((uint)buffer[1] << 8) | ((uint)buffer[2] << 16) | ((uint)buffer[3] << 24);
     }
 
-    private static ushort ReadU16LE(Stream stream, ref long offset)
+    private static ushort ReadU16Le(Stream stream, ref long offset)
     {
         stream.Position = offset;
         byte[] buffer = new byte[2];
         if (stream.Read(buffer, 0, 2) != 2)
             throw new InvalidDataException("Unexpected end of WAV file");
+
         offset += 2;
         return (ushort)(buffer[0] | (buffer[1] << 8));
     }

@@ -30,7 +30,9 @@ internal static class ChdHeaders
 
         // Default the compressed-hunk cap to 2x the hunk size if not explicitly set.
         if (chd.MaxCompressedBlockCap == 0)
+        {
             chd.MaxCompressedBlockCap = checked(chd.Blocksize * DefaultMaxCompressedMultiple);
+        }
 
         // The cap itself must be representable and at least as large as the hunk size.
         if (chd.MaxCompressedBlockCap < chd.Blocksize)

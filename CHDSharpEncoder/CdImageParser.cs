@@ -67,13 +67,17 @@ public static class CdImageParser
                     tokens.Add(sb.ToString());
                     sb.Clear();
                 }
+
                 while (i + 1 < line.Length && char.IsWhiteSpace(line[i + 1]))
+                {
                     i++;
+                }
             }
             else
             {
                 sb.Append(c);
             }
+
             i++;
         }
 

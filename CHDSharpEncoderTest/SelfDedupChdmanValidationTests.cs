@@ -33,7 +33,10 @@ public class SelfDedupChdmanValidationTests : IDisposable
         // 1 MiB made of 256 identical 4 KiB hunks
         byte[] source = new byte[4096 * 256];
         for (int i = 0; i < 4096; i++)
+        {
             source[i] = (byte)(i & 0xFF);
+        }
+
         for (int h = 1; h < 256; h++)
             Array.Copy(source, 0, source, h * 4096, 4096);
 
@@ -89,10 +92,10 @@ public class SelfDedupChdmanValidationTests : IDisposable
 
         string ourExtract = Path.Combine(_testDataDir, "our.raw");
         string chdmanExtract = Path.Combine(_testDataDir, "chdman.raw");
-        var (e1, o1, e1r) = RunChdman("extractraw", "-i", ourChd, "-o", ourExtract, "-f");
-        Assert.True(e1 == 0, $"extractraw our failed (exit={e1})\n{o1}{e1r}");
-        var (e2, o2, e2r) = RunChdman("extractraw", "-i", chdmanChd, "-o", chdmanExtract, "-f");
-        Assert.True(e2 == 0, $"extractraw chdman failed (exit={e2})\n{o2}{e2r}");
+        var (e1, o1, e1R) = RunChdman("extractraw", "-i", ourChd, "-o", ourExtract, "-f");
+        Assert.True(e1 == 0, $"extractraw our failed (exit={e1})\n{o1}{e1R}");
+        var (e2, o2, e2R) = RunChdman("extractraw", "-i", chdmanChd, "-o", chdmanExtract, "-f");
+        Assert.True(e2 == 0, $"extractraw chdman failed (exit={e2})\n{o2}{e2R}");
 
         Assert.Equal(File.ReadAllBytes(chdmanExtract), File.ReadAllBytes(ourExtract));
         Assert.Equal(source, File.ReadAllBytes(ourExtract));

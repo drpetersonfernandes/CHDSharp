@@ -149,7 +149,9 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     public void ConfigureCache(int maxHunks)
     {
         if (maxHunks <= 0)
+        {
             maxHunks = 1;
+        }
 
         _cacheSize = maxHunks;
 
@@ -633,15 +635,18 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         while (bytesRead < data.Length)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var count = (int)Math.Min((ulong)_chd.Blocksize, (ulong)(data.Length - bytesRead));
+            var count = (int)Math.Min(_chd.Blocksize, (ulong)(data.Length - bytesRead));
             var err = Read((ulong)bytesRead, data, bytesRead, count, cancellationToken);
             if (err != ChdError.Chderrnone)
                 return err;
 
             bytesRead += count;
-            var currentHunk = (long)bytesRead / _chd.Blocksize;
-            if ((long)bytesRead % _chd.Blocksize != 0)
+            var currentHunk = bytesRead / _chd.Blocksize;
+            if (bytesRead % _chd.Blocksize != 0)
+            {
                 currentHunk++;
+            }
+
             progress.Report(new ChdProgress(currentHunk, _chd.Totalblocks, bytesRead, (long)_chd.Totalbytes, sw.Elapsed));
         }
 
@@ -977,7 +982,9 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                 }
 
                 if (dataEntry.BuffIn == null || dataEntry.BuffIn.Length < dataEntry.Length)
+                {
                     dataEntry.BuffIn = new byte[dataEntry.Length];
+                }
 
                 if (_precache != null)
                 {
@@ -1572,7 +1579,10 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                     var processed = (long)Math.Min(offset, TotalBytes);
                     var currentHunk = processed / hunkSize;
                     if (processed % hunkSize != 0)
+                    {
                         currentHunk++;
+                    }
+
                     progress.Report(new ChdProgress(currentHunk, HunkCount, processed, (long)TotalBytes, sw!.Elapsed));
                 }
             }

@@ -3,12 +3,12 @@ namespace CHDSharpEncoder;
 /// <summary>Compresses a CHD v5 hunk map using RLE and Huffman encoding.</summary>
 public static class MapCompressor
 {
-    private const byte COMPRESSION_RLE_SMALL = 7;
-    private const byte COMPRESSION_RLE_LARGE = 8;
+    private const byte CompressionRleSmall = 7;
+    private const byte CompressionRleLarge = 8;
     /// <summary>Promoted map type: SELF reference to the same source hunk as the previous SELF entry.</summary>
-    private const byte COMPRESSION_SELF_0 = 9;
+    private const byte CompressionSelf0 = 9;
     /// <summary>Promoted map type: SELF reference to the source hunk after the previous SELF entry.</summary>
-    private const byte COMPRESSION_SELF_1 = 10;
+    private const byte CompressionSelf1 = 10;
 
     /// <summary>Compresses the hunk map entries into a compact binary representation.</summary>
     /// <param name="entries">The array of map entries to compress. SELF entries must carry the source
@@ -25,7 +25,7 @@ public static class MapCompressor
         uint maxCompLen = 0;
         for (uint i = 0; i < hunkCount; i++)
         {
-            if (entries[i].Compression <= MapEntry.COMPRESSION_TYPE_3)
+            if (entries[i].Compression <= MapEntry.CompressionType3)
             {
                 maxCompLen = Math.Max(maxCompLen, entries[i].CompLength);
             }
@@ -33,7 +33,7 @@ public static class MapCompressor
         var lengthBits = BitsForValue(maxCompLen);
         var selfBits = BitsForValue(maxSelf);
 
-        var huff = new Huffman16_8();
+        var huff = new Huffman168();
         foreach (var sym in rleList)
             huff.CountSymbol(sym);
         huff.BuildTree();
@@ -63,12 +63,12 @@ public static class MapCompressor
             else
             {
                 var val = rleList[rleIndex++];
-                if (val == COMPRESSION_RLE_SMALL)
+                if (val == CompressionRleSmall)
                 {
                     type = lastComp;
                     repCount = 2 + rleList[rleIndex++];
                 }
-                else if (val == COMPRESSION_RLE_LARGE)
+                else if (val == CompressionRleLarge)
                 {
                     type = lastComp;
                     repCount = 2 + 16 + (rleList[rleIndex++] << 4);
@@ -83,10 +83,10 @@ public static class MapCompressor
             var entry = entries[i];
             switch (type)
             {
-                case MapEntry.COMPRESSION_TYPE_0:
-                case MapEntry.COMPRESSION_TYPE_1:
-                case MapEntry.COMPRESSION_TYPE_2:
-                case MapEntry.COMPRESSION_TYPE_3:
+                case MapEntry.CompressionType0:
+                case MapEntry.CompressionType1:
+                case MapEntry.CompressionType2:
+                case MapEntry.CompressionType3:
                     bs.Write(entry.CompLength, lengthBits);
                     bs.Write(entry.Crc16, 16);
                     if (firstOffset == 0)
@@ -95,7 +95,7 @@ public static class MapCompressor
                     }
 
                     break;
-                case MapEntry.COMPRESSION_NONE:
+                case MapEntry.CompressionNone:
                     bs.Write(entry.Crc16, 16);
                     if (firstOffset == 0)
                     {
@@ -103,13 +103,13 @@ public static class MapCompressor
                     }
 
                     break;
-                case MapEntry.COMPRESSION_SELF:
+                case MapEntry.CompressionSelf:
                     // writes the source hunk index with selfBits; guaranteed to fit because
                     // maxSelf covers every non-promoted SELF reference
                     bs.Write((uint)entry.Offset, selfBits);
                     break;
-                case COMPRESSION_SELF_0:
-                case COMPRESSION_SELF_1:
+                case CompressionSelf0:
+                case CompressionSelf1:
                     break;
             }
         }
@@ -155,16 +155,23 @@ public static class MapCompressor
         {
             var curcomp = entries[hunknum].Compression;
 
-            if (curcomp == MapEntry.COMPRESSION_SELF)
+            if (curcomp == MapEntry.CompressionSelf)
             {
                 // promote self references to the previous reference's form
                 var refHunk = (uint)entries[hunknum].Offset;
                 if (refHunk == lastSelf)
-                    curcomp = COMPRESSION_SELF_0;
+                {
+                    curcomp = CompressionSelf0;
+                }
                 else if (refHunk == lastSelf + 1)
-                    curcomp = COMPRESSION_SELF_1;
+                {
+                    curcomp = CompressionSelf1;
+                }
                 else
+                {
                     maxSelf = Math.Max(maxSelf, refHunk);
+                }
+
                 lastSelf = refHunk;
             }
 
@@ -200,14 +207,14 @@ public static class MapCompressor
                 }
                 else if (repCount <= 3 + 15)
                 {
-                    rleList.Add(COMPRESSION_RLE_SMALL);
+                    rleList.Add(CompressionRleSmall);
                     rleList.Add((byte)(repCount - 3));
                     repCount = 0;
                 }
                 else
                 {
                     var n = Math.Min(repCount, 3 + 16 + 255);
-                    rleList.Add(COMPRESSION_RLE_LARGE);
+                    rleList.Add(CompressionRleLarge);
                     rleList.Add((byte)((n - 3 - 16) >> 4));
                     rleList.Add((byte)((n - 3 - 16) & 15));
                     repCount -= n;

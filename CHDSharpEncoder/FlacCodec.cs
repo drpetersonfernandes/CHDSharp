@@ -25,13 +25,15 @@ public sealed class FlacCodec : IChdCodec
         // MAME's chd_flac_compressor::blocksize: samples per hunk, halved until ≤ 2048
         _blockSize = (int)(hunkBytes / 4);
         while (_blockSize > 2048)
+        {
             _blockSize /= 2;
+        }
 
         _swappedBuffer = new byte[hunkBytes];
     }
 
     /// <inheritdoc/>
-    public uint Tag => CodecTags.FLAC;
+    public uint Tag => CodecTags.Flac;
 
     /// <inheritdoc/>
     public byte[]? Compress(byte[] data)

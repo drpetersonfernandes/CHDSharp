@@ -38,16 +38,16 @@ public class EncodeCdTests : IDisposable
 
         byte[] chd = File.ReadAllBytes(chdPath);
         Assert.Equal("MComprHD", System.Text.Encoding.ASCII.GetString(chd, 0, 8));
-        Assert.Equal(5u, ReadU32BE(chd, 12));
-        Assert.Equal(CodecTags.ZLIB, ReadU32BE(chd, 16));
+        Assert.Equal(5u, ReadU32Be(chd, 12));
+        Assert.Equal(CodecTags.Zlib, ReadU32Be(chd, 16));
         // 4 padded frames for track 1 + 12 padded for track 2 = 16 frames
-        Assert.Equal(16UL * CdConstants.FrameSize, ReadU64BE(chd, 32));
-        Assert.Equal((uint)CdConstants.FrameSize, ReadU32BE(chd, 60));
-        Assert.Equal((uint)(CdConstants.FramesPerHunk * CdConstants.FrameSize), ReadU32BE(chd, 56));
+        Assert.Equal(16UL * CdConstants.FrameSize, ReadU64Be(chd, 32));
+        Assert.Equal((uint)CdConstants.FrameSize, ReadU32Be(chd, 60));
+        Assert.Equal((uint)(CdConstants.FramesPerHunk * CdConstants.FrameSize), ReadU32Be(chd, 56));
 
-        ulong metaOffset = ReadU64BE(chd, 48);
-        ulong mapOffset = ReadU64BE(chd, 40);
-        Assert.True(metaOffset > ChdHeaderV5.LENGTH, "metaoffset should follow the hunk data");
+        ulong metaOffset = ReadU64Be(chd, 48);
+        ulong mapOffset = ReadU64Be(chd, 40);
+        Assert.True(metaOffset > ChdHeaderV5.Length, "metaoffset should follow the hunk data");
         Assert.True(mapOffset > metaOffset, "map should follow the metadata");
 
         Assert.False(chd.Skip(64).Take(20).All(b => b == 0), "rawsha1 should be filled");
@@ -232,7 +232,9 @@ public class EncodeCdTests : IDisposable
             {
                 // distinguishable per-frame pattern over the full 2352-byte data area
                 for (int j = 0; j < CdConstants.MaxSectorData; j++)
+                {
                     result[offset + j] = (byte)((f * 31 + j * 7) & 0xFF);
+                }
             }
             else
             {
@@ -258,7 +260,9 @@ public class EncodeCdTests : IDisposable
             if (swap)
             {
                 for (int i = 0; i < CdConstants.MaxSectorData; i += 2)
+                {
                     (image[dest + i], image[dest + i + 1]) = (image[dest + i + 1], image[dest + i]);
+                }
             }
         }
     }
@@ -274,14 +278,14 @@ public class EncodeCdTests : IDisposable
         fs.SetLength(size);
     }
 
-    private static uint ReadU32BE(byte[] data, int offset)
+    private static uint ReadU32Be(byte[] data, int offset)
     {
         return ((uint)data[offset] << 24) | ((uint)data[offset + 1] << 16) |
                ((uint)data[offset + 2] << 8) | data[offset + 3];
     }
 
-    private static ulong ReadU64BE(byte[] data, int offset)
+    private static ulong ReadU64Be(byte[] data, int offset)
     {
-        return ((ulong)ReadU32BE(data, offset) << 32) | ReadU32BE(data, offset + 4);
+        return ((ulong)ReadU32Be(data, offset) << 32) | ReadU32Be(data, offset + 4);
     }
 }

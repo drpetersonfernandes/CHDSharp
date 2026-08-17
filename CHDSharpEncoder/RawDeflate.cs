@@ -44,6 +44,7 @@ public static class RawDeflate
             var read = ds.Read(result, offset, originalSize - offset);
             if (read == 0)
                 throw new InvalidDataException("Deflate decompression ended prematurely");
+
             offset += read;
         }
         return result;

@@ -26,7 +26,10 @@ public class SelfDedupTests : IDisposable
         // 256 hunks of identical content
         byte[] source = new byte[4096 * 256];
         for (int i = 0; i < 4096; i++)
+        {
             source[i] = (byte)(i & 0xFF);
+        }
+
         for (int h = 1; h < 256; h++)
             Array.Copy(source, 0, source, h * 4096, 4096);
 
@@ -105,9 +108,11 @@ public class SelfDedupTests : IDisposable
     {
         // 10 hunks: hunk 0 stored, hunks 1..9 SELF references to hunk 7 (max self = 7)
         var entries = new MapEntry[10];
-        entries[0] = new MapEntry { Compression = MapEntry.COMPRESSION_NONE, CompLength = 4096, Offset = 124, Crc16 = 0xFFFF };
+        entries[0] = new MapEntry { Compression = MapEntry.CompressionNone, CompLength = 4096, Offset = 124, Crc16 = 0xFFFF };
         for (int i = 1; i < 10; i++)
-            entries[i] = new MapEntry { Compression = MapEntry.COMPRESSION_SELF, CompLength = 0, Offset = 7, Crc16 = 0 };
+        {
+            entries[i] = new MapEntry { Compression = MapEntry.CompressionSelf, CompLength = 0, Offset = 7, Crc16 = 0 };
+        }
 
         byte[] compressed = MapCompressor.Compress(entries, 10, 4096, 512);
 
@@ -121,9 +126,11 @@ public class SelfDedupTests : IDisposable
         // all SELF entries referencing hunk 0: every entry promotes to SELF_0
         // (refHunk == lastSelf), so maxSelf stays 0 → selfbits = 0
         var entries = new MapEntry[4];
-        entries[0] = new MapEntry { Compression = MapEntry.COMPRESSION_TYPE_0, CompLength = 100, Offset = 124, Crc16 = 1 };
+        entries[0] = new MapEntry { Compression = MapEntry.CompressionType0, CompLength = 100, Offset = 124, Crc16 = 1 };
         for (int i = 1; i < 4; i++)
-            entries[i] = new MapEntry { Compression = MapEntry.COMPRESSION_SELF, CompLength = 0, Offset = 0, Crc16 = 0 };
+        {
+            entries[i] = new MapEntry { Compression = MapEntry.CompressionSelf, CompLength = 0, Offset = 0, Crc16 = 0 };
+        }
 
         byte[] compressed = MapCompressor.Compress(entries, 4, 4096, 512);
 
@@ -135,9 +142,9 @@ public class SelfDedupTests : IDisposable
     {
         // the uncompressed-map CRC must include the raw 12-byte SELF entries
         var entries = new MapEntry[3];
-        entries[0] = new MapEntry { Compression = MapEntry.COMPRESSION_NONE, CompLength = 4096, Offset = 124, Crc16 = 0x1234 };
-        entries[1] = new MapEntry { Compression = MapEntry.COMPRESSION_SELF, CompLength = 0, Offset = 0, Crc16 = 0 };
-        entries[2] = new MapEntry { Compression = MapEntry.COMPRESSION_SELF, CompLength = 0, Offset = 0, Crc16 = 0 };
+        entries[0] = new MapEntry { Compression = MapEntry.CompressionNone, CompLength = 4096, Offset = 124, Crc16 = 0x1234 };
+        entries[1] = new MapEntry { Compression = MapEntry.CompressionSelf, CompLength = 0, Offset = 0, Crc16 = 0 };
+        entries[2] = new MapEntry { Compression = MapEntry.CompressionSelf, CompLength = 0, Offset = 0, Crc16 = 0 };
 
         byte[] compressed = MapCompressor.Compress(entries, 3, 4096, 512);
 

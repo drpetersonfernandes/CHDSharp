@@ -63,7 +63,10 @@ public class Crc16Tests
     {
         byte[] cdFrame = new byte[2352];
         for (int i = 0; i < cdFrame.Length; i++)
+        {
             cdFrame[i] = (byte)(i & 0xFF);
+        }
+
         ushort crc = Crc16.Compute(cdFrame);
         Assert.NotEqual(0xFFFF, crc);
         Assert.NotEqual(0x0000, crc);

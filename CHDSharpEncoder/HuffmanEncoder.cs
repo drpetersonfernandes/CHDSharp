@@ -23,6 +23,7 @@ internal sealed class HuffmanEncoder
     {
         if (maxBits > 24)
             throw new ArgumentOutOfRangeException(nameof(maxBits));
+
         _numCodes = numCodes;
         _maxBits = maxBits;
         _histogram = new int[numCodes];
@@ -47,7 +48,9 @@ internal sealed class HuffmanEncoder
     public void CountSymbol(uint symbol)
     {
         if (symbol < _numCodes)
+        {
             _histogram[symbol]++;
+        }
     }
 
     /// <summary>
@@ -59,7 +62,9 @@ internal sealed class HuffmanEncoder
     {
         int totalData = 0;
         for (int i = 0; i < _numCodes; i++)
+        {
             totalData += _histogram[i];
+        }
 
         if (totalData == 0)
         {
@@ -154,7 +159,10 @@ internal sealed class HuffmanEncoder
             if (smallHuff._numBits[index] != 0)
             {
                 if (firstNonZero == 31)
+                {
                     firstNonZero = index;
+                }
+
                 lastNonZero = index;
             }
         }
@@ -173,7 +181,9 @@ internal sealed class HuffmanEncoder
         // the maximum length of an RLE count
         int rleFullBits = 0;
         for (int temp = _numCodes - 9; temp != 0; temp >>= 1)
+        {
             rleFullBits++;
+        }
 
         // encode the RLE data
         int lengthIndex = 0;
@@ -201,6 +211,7 @@ internal sealed class HuffmanEncoder
     {
         if (symbol >= _numCodes)
             return;
+
         if (_numBits[symbol] > 0)
             bs.Write(Codes[symbol], _numBits[symbol]);
     }
@@ -252,7 +263,10 @@ internal sealed class HuffmanEncoder
             // insert before the first item with strictly smaller weight (equal weights stay first)
             int insertPos = 0;
             while (insertPos < list.Count && _nodes[newNode].Weight <= _nodes[list[insertPos]].Weight)
+            {
                 insertPos++;
+            }
+
             list.Insert(insertPos, newNode);
         }
 
@@ -265,9 +279,14 @@ internal sealed class HuffmanEncoder
             {
                 int numbits = 0;
                 for (int node = curCode; _nodes[node].Parent >= 0; node = _nodes[node].Parent)
+                {
                     numbits++;
+                }
+
                 if (numbits == 0)
+                {
                     numbits = 1;
+                }
 
                 _numBits[curCode] = numbits;
                 maxBits = Math.Max(maxBits, numbits);
@@ -284,8 +303,10 @@ internal sealed class HuffmanEncoder
         for (int curCode = 0; curCode < _numCodes; curCode++)
         {
             int numbits = _numBits[curCode];
-            if (numbits > 0 && numbits <= 32)
+            if (numbits is > 0 and <= 32)
+            {
                 bitHisto[numbits]++;
+            }
         }
 
         uint curStart = 0;

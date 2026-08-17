@@ -113,7 +113,9 @@ public class LargeFileValidationTests : IDisposable
     {
         var pattern = new byte[blockBytes];
         for (int i = 0; i < blockBytes; i++)
+        {
             pattern[i] = (byte)(i & 0xFF);
+        }
 
         var randomBlock = new byte[blockBytes];
         var rng = new Random(seed);
@@ -141,7 +143,10 @@ public class LargeFileValidationTests : IDisposable
         for (int f = 0; f < dataFrames; f++)
         {
             for (int j = 0; j < CdConstants.MaxSectorData; j++)
+            {
                 sector[j] = (byte)((f * 31 + j * 7) & 0xFF);
+            }
+
             fs.Write(sector);
         }
 
@@ -172,7 +177,9 @@ public class LargeFileValidationTests : IDisposable
             if (f < dataFrames)
             {
                 for (int j = 0; j < CdConstants.MaxSectorData; j++)
+                {
                     frame[j] = (byte)((f * 31 + j * 7) & 0xFF);
+                }
             }
             else
             {

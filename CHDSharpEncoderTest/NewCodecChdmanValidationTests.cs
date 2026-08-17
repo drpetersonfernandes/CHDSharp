@@ -87,7 +87,9 @@ public class NewCodecChdmanValidationTests : IDisposable
         {
             int offset = f * CdConstants.MaxSectorData;
             for (int i = 0; i < CdConstants.MaxSectorData; i++)
+            {
                 bin[offset + i] = (byte)(i & 0xFF);
+            }
         }
         for (int f = 20; f < 40; f++)
         {
@@ -136,7 +138,9 @@ public class NewCodecChdmanValidationTests : IDisposable
             if (swap)
             {
                 for (int i = 0; i < CdConstants.MaxSectorData; i += 2)
+                {
                     (image[dest + i], image[dest + i + 1]) = (image[dest + i + 1], image[dest + i]);
+                }
             }
         }
     }
@@ -157,7 +161,10 @@ public class NewCodecChdmanValidationTests : IDisposable
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir != null && !File.Exists(Path.Combine(dir.FullName, "chdman.exe")))
+        {
             dir = dir.Parent;
+        }
+
         return dir?.FullName ?? AppContext.BaseDirectory;
     }
 
@@ -168,7 +175,7 @@ public class NewCodecChdmanValidationTests : IDisposable
             FileName = ChdmanPath!,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-            UseShellExecute = false,
+            UseShellExecute = false
         };
         foreach (var arg in args)
             psi.ArgumentList.Add(arg);

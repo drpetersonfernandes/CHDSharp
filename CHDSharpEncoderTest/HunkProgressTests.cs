@@ -50,10 +50,9 @@ public class HunkProgressTests : IDisposable
 
         Assert.All(reports, r => Assert.True(r.Ratio <= 1.0));
         Assert.Contains(reports, r =>
-            r.CodecName == "zlib" && r.CompressionType == MapEntry.COMPRESSION_TYPE_0 && r.Ratio < 1.0);
+            r is { CodecName: "zlib", CompressionType: MapEntry.CompressionType0, Ratio: < 1.0 });
         Assert.Contains(reports, r =>
-            r.CodecName == "self" && r.CompressionType == MapEntry.COMPRESSION_SELF &&
-            r.StoredBytes == 0 && r.Ratio == 0.0);
+            r is { CodecName: "self", CompressionType: MapEntry.CompressionSelf, StoredBytes: 0, Ratio: 0.0 });
     }
 
     [Fact]
@@ -69,7 +68,7 @@ public class HunkProgressTests : IDisposable
 
         Assert.All(reports, r =>
         {
-            Assert.Equal(MapEntry.COMPRESSION_NONE, r.CompressionType);
+            Assert.Equal(MapEntry.CompressionNone, r.CompressionType);
             Assert.Equal("none", r.CodecName);
             Assert.Equal(4096, r.StoredBytes);
             Assert.Equal(1.0, r.Ratio);
@@ -114,7 +113,10 @@ public class HunkProgressTests : IDisposable
             """);
         byte[] bin = new byte[32 * CdConstants.MaxSectorData];
         for (int i = 0; i < bin.Length; i++)
+        {
             bin[i] = (byte)(i & 0xFF);
+        }
+
         File.WriteAllBytes(Path.Combine(_dir, "game.bin"), bin);
 
         var reports = new List<HunkProgress>();

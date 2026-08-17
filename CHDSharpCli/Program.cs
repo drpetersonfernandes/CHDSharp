@@ -14,7 +14,7 @@ namespace CHDSharp.Cli;
 /// and CHD creation (raw and CUE/BIN CD images).
 /// Uses Serilog for console logging throughout.
 /// </summary>
-internal class Program
+internal static class Program
 {
     /// <summary>
     /// Application entry point. Parses command-line arguments and dispatches to the
@@ -118,6 +118,7 @@ internal class Program
                 serilogLogger.Warning("Directory not found: {Path}", sDir);
                 continue;
             }
+
             var di = new DirectoryInfo(sDir);
             Checkdir(di);
         }
@@ -191,6 +192,7 @@ internal class Program
             log.Warning("Cannot read list file {Path}: {Message}", listFile, ex.Message);
             return;
         }
+
         int pass = 0, fail = 0, skip = 0;
         var failures = new List<string>();
 
@@ -562,9 +564,15 @@ internal class Program
             var logger = verbose ? new VerboseHunkLogger() : null;
             var encodeOptions = logger?.Options;
             if (encodeOptions == null && taskCount.HasValue)
+            {
                 encodeOptions = new ChdEncodeOptions();
+            }
+
             if (encodeOptions != null && taskCount.HasValue)
+            {
                 encodeOptions.TaskCount = taskCount;
+            }
+
             ChdEncoder.EncodeRaw(inputPath, outputPath, hunkBytes, unitBytes, codecTags, encodeOptions);
             logger?.LogSummary();
             log.Information("  Created {Size:N0} bytes", new FileInfo(outputPath).Length);
@@ -592,8 +600,8 @@ internal class Program
             return;
         }
 
-        uint hunkSize = (uint)(CdConstants.FramesPerHunk * CdConstants.FrameSize);
-        uint unitBytes = (uint)CdConstants.FrameSize;
+        uint hunkSize = CdConstants.FramesPerHunk * CdConstants.FrameSize;
+        uint unitBytes = CdConstants.FrameSize;
         string? codecs = null;
         var verbose = false;
         int? taskCount = null;
@@ -610,9 +618,15 @@ internal class Program
             var logger = verbose ? new VerboseHunkLogger() : null;
             var encodeOptions = logger?.Options;
             if (encodeOptions == null && taskCount.HasValue)
+            {
                 encodeOptions = new ChdEncodeOptions();
+            }
+
             if (encodeOptions != null && taskCount.HasValue)
+            {
                 encodeOptions.TaskCount = taskCount;
+            }
+
             ChdEncoder.EncodeCd(inputPath, outputPath, hunkSize, unitBytes, codecTags, encodeOptions);
             logger?.LogSummary();
             log.Information("  Created ({File:N0} bytes)", new FileInfo(outputPath).Length);
@@ -640,6 +654,7 @@ internal class Program
                         Log.Logger.Warning("Invalid hunk size: {Value}", options[i]);
                         return false;
                     }
+
                     hunkSize = hs;
                     break;
                 case "-us" or "--unit-size" when i + 1 < options.Length:
@@ -648,6 +663,7 @@ internal class Program
                         Log.Logger.Warning("Invalid unit size: {Value}", options[i]);
                         return false;
                     }
+
                     unitSize = us;
                     break;
                 case "-t" or "--tasks" when i + 1 < options.Length:
@@ -656,6 +672,7 @@ internal class Program
                         Log.Logger.Warning("Invalid task count (1-64): {Value}", options[i]);
                         return false;
                     }
+
                     taskCount = t;
                     break;
                 case "-v" or "--verbose":
@@ -666,6 +683,7 @@ internal class Program
                     return false;
             }
         }
+
         return true;
     }
 

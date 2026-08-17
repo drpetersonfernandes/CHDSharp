@@ -123,7 +123,7 @@ public class TocParser
                         PgSub = CdSubType.None,
                         PadFrames = 0,
                         Index00 = 0,
-                        Index01 = 0,
+                        Index01 = 0
                     };
 
                     CueParser.ParseTrackType(tokens[1], ref track);

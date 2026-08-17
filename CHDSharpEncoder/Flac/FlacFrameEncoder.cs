@@ -45,7 +45,9 @@ internal static class FlacFrameEncoder
         var frameBuffer = new byte[blockSize * channels * bitsPerSample / 8 + 64];
         var channelSamples = new int[2][];
         for (int c = 0; c < channels; c++)
+        {
             channelSamples[c] = new int[blockSize];
+        }
 
         int outputPos = 0;
         for (int frameIndex = 0; frameIndex < frameCount; frameIndex++)
@@ -149,7 +151,10 @@ internal static class FlacFrameEncoder
         while (wasted < 15 && wasted < bitsPerSample - 1 && AllEven(samples, count))
         {
             for (int i = 0; i < count; i++)
+            {
                 samples[i] >>= 1;
+            }
+
             wasted++;
         }
         int effectiveBps = bitsPerSample - wasted;
@@ -260,25 +265,37 @@ internal static class FlacFrameEncoder
         {
             case 0:
                 for (int i = 0; i < count; i++)
+                {
                     residual[i] = samples[i];
+                }
+
                 break;
             case 1:
                 residual[0] = samples[0];
                 for (int i = 1; i < count; i++)
+                {
                     residual[i] = samples[i] - samples[i - 1];
+                }
+
                 break;
             case 2:
                 residual[0] = samples[0];
                 residual[1] = samples[1] - samples[0];
                 for (int i = 2; i < count; i++)
+                {
                     residual[i] = samples[i] - 2 * samples[i - 1] + samples[i - 2];
+                }
+
                 break;
             case 3:
                 residual[0] = samples[0];
                 residual[1] = samples[1] - samples[0];
                 residual[2] = samples[2] - 2 * samples[1] + samples[0];
                 for (int i = 3; i < count; i++)
+                {
                     residual[i] = samples[i] - 3 * samples[i - 1] + 3 * samples[i - 2] - samples[i - 3];
+                }
+
                 break;
             case 4:
                 residual[0] = samples[0];
@@ -286,7 +303,10 @@ internal static class FlacFrameEncoder
                 residual[2] = samples[2] - 2 * samples[1] + samples[0];
                 residual[3] = samples[3] - 3 * samples[2] + 3 * samples[1] - samples[0];
                 for (int i = 4; i < count; i++)
+                {
                     residual[i] = samples[i] - 4 * samples[i - 1] + 6 * samples[i - 2] - 4 * samples[i - 3] + samples[i - 4];
+                }
+
                 break;
         }
     }

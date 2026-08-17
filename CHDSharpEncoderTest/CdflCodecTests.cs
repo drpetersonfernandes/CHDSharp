@@ -86,7 +86,9 @@ public class CdflCodecTests : IDisposable
         {
             int offset = f * CdConstants.MaxSectorData;
             for (int i = 0; i < CdConstants.MaxSectorData; i++)
+            {
                 bin[offset + i] = (byte)(i & 0xFF); // MODE1 pattern
+            }
         }
         for (int f = 12; f < 24; f++)
         {
@@ -105,10 +107,10 @@ public class CdflCodecTests : IDisposable
 
         string chdPath = Path.Combine(_dir, "test.chd");
         ChdEncoder.EncodeCd(cuePath, chdPath, hunkBytes: CdConstants.FramesPerHunk * CdConstants.FrameSize,
-            unitBytes: CdConstants.FrameSize, codecTags: [CodecTags.CDFL]);
+            unitBytes: CdConstants.FrameSize, codecTags: [CodecTags.Cdfl]);
 
         byte[] chd = File.ReadAllBytes(chdPath);
-        Assert.Equal(CodecTags.CDFL, ReadU32BE(chd, 16)); // compressors[0] = cdfl
+        Assert.Equal(CodecTags.Cdfl, ReadU32Be(chd, 16)); // compressors[0] = cdfl
 
         // expected image: 12 data frames (pad to 12) + 12 audio frames (pad to 12), swapped
         byte[] expected = new byte[24 * CdConstants.FrameSize];
@@ -133,12 +135,14 @@ public class CdflCodecTests : IDisposable
             if (swap)
             {
                 for (int i = 0; i < CdConstants.MaxSectorData; i += 2)
+                {
                     (image[dest + i], image[dest + i + 1]) = (image[dest + i + 1], image[dest + i]);
+                }
             }
         }
     }
 
-    private static uint ReadU32BE(byte[] data, int offset)
+    private static uint ReadU32Be(byte[] data, int offset)
     {
         return ((uint)data[offset] << 24) | ((uint)data[offset + 1] << 16) |
                ((uint)data[offset + 2] << 8) | data[offset + 3];

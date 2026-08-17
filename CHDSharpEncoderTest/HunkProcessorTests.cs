@@ -11,7 +11,7 @@ public class HunkProcessorTests
         var processor = new HunkProcessor(4096);
         var (entry, data) = processor.ProcessHunk(hunk, 124);
 
-        Assert.Equal(MapEntry.COMPRESSION_TYPE_0, entry.Compression);
+        Assert.Equal(MapEntry.CompressionType0, entry.Compression);
         Assert.True(data.Length < 4096);
     }
 
@@ -23,7 +23,7 @@ public class HunkProcessorTests
         var processor = new HunkProcessor(4096);
         var (entry, data) = processor.ProcessHunk(hunk, 124);
 
-        if (entry.Compression == MapEntry.COMPRESSION_NONE)
+        if (entry.Compression == MapEntry.CompressionNone)
         {
             Assert.Equal(4096u, entry.CompLength);
             Assert.Equal(4096, data.Length);
@@ -47,12 +47,14 @@ public class HunkProcessorTests
     {
         byte[] hunk = new byte[4096];
         for (int i = 0; i < hunk.Length; i++)
+        {
             hunk[i] = (byte)(i & 0xFF);
+        }
 
         var processor = new HunkProcessor(4096);
         var (entry, data) = processor.ProcessHunk(hunk, 124);
 
-        Assert.Equal(MapEntry.COMPRESSION_TYPE_0, entry.Compression);
+        Assert.Equal(MapEntry.CompressionType0, entry.Compression);
         Assert.True(data.Length < 4096);
     }
 
@@ -61,12 +63,14 @@ public class HunkProcessorTests
     {
         byte[] original = new byte[4096];
         for (int i = 0; i < original.Length; i++)
+        {
             original[i] = (byte)((i * 7 + 3) & 0xFF);
+        }
 
         var processor = new HunkProcessor(4096);
         var (entry, data) = processor.ProcessHunk(original, 124);
 
-        if (entry.Compression == MapEntry.COMPRESSION_TYPE_0)
+        if (entry.Compression == MapEntry.CompressionType0)
         {
             byte[] decompressed = RawDeflate.Decompress(data, 4096);
             Assert.Equal(original, decompressed);
@@ -97,15 +101,17 @@ public class HunkProcessorTests
     {
         byte[] hunk = new byte[18816]; // 8 CD frames
         for (int i = 0; i < hunk.Length; i++)
+        {
             hunk[i] = (byte)((i * 13 + 7) & 0xFF);
+        }
 
         var processor = new HunkProcessor(18816);
         var (entry, data) = processor.ProcessHunk(hunk, 124);
 
-        Assert.True(entry.Compression == MapEntry.COMPRESSION_TYPE_0 ||
-                    entry.Compression == MapEntry.COMPRESSION_NONE);
+        Assert.True(entry.Compression == MapEntry.CompressionType0 ||
+                    entry.Compression == MapEntry.CompressionNone);
 
-        if (entry.Compression == MapEntry.COMPRESSION_TYPE_0)
+        if (entry.Compression == MapEntry.CompressionType0)
         {
             byte[] decompressed = RawDeflate.Decompress(data, 18816);
             Assert.Equal(hunk, decompressed);
@@ -117,16 +123,16 @@ public class HunkProcessorTests
     {
         var entry = new MapEntry
         {
-            Compression = MapEntry.COMPRESSION_TYPE_0,
+            Compression = MapEntry.CompressionType0,
             CompLength = 12345,
             Offset = 0xABCDEF012345,
-            Crc16 = 0x9876,
+            Crc16 = 0x9876
         };
 
         byte[] rawMap = new byte[12];
         MapEntry.WriteRawMapEntry(rawMap, 0, entry);
 
-        Assert.Equal(MapEntry.COMPRESSION_TYPE_0, rawMap[0]);
+        Assert.Equal(MapEntry.CompressionType0, rawMap[0]);
         Assert.Equal(0x00, rawMap[1]);
         Assert.Equal(0x30, rawMap[2]);
         Assert.Equal(0x39, rawMap[3]);
@@ -143,9 +149,9 @@ public class HunkProcessorTests
     [Fact]
     public void ConstantValues_matchMameDefines()
     {
-        Assert.Equal(0, MapEntry.COMPRESSION_TYPE_0);
-        Assert.Equal(4, MapEntry.COMPRESSION_NONE);
-        Assert.Equal(5, MapEntry.COMPRESSION_SELF);
-        Assert.Equal(6, MapEntry.COMPRESSION_PARENT);
+        Assert.Equal(0, MapEntry.CompressionType0);
+        Assert.Equal(4, MapEntry.CompressionNone);
+        Assert.Equal(5, MapEntry.CompressionSelf);
+        Assert.Equal(6, MapEntry.CompressionParent);
     }
 }

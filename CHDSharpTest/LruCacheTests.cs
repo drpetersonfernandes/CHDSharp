@@ -41,8 +41,11 @@ public class LruCacheTests
         {
             var block = new byte[Blocksize];
             for (var i = 0; i < Blocksize; i++)
+            {
                 block[i] = (byte)(h + i);
-            ms.Seek((long)((h + 1) * Blocksize), SeekOrigin.Begin);
+            }
+
+            ms.Seek((h + 1) * Blocksize, SeekOrigin.Begin);
             Write(block);
         }
 
@@ -59,7 +62,10 @@ public class LruCacheTests
     {
         var data = new byte[count];
         for (var i = 0; i < count; i++)
+        {
             data[i] = (byte)(h + i);
+        }
+
         return data;
     }
 

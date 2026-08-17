@@ -115,7 +115,7 @@ public sealed class CdzlCodec : CdCompoundCodec
     }
 
     /// <inheritdoc/>
-    public override uint Tag => CodecTags.CDZL;
+    public override uint Tag => CodecTags.Cdzl;
 }
 
 /// <summary>CD LZMA codec ('cdlz'): LZMA for sector data, deflate for subcode (MAME parity).</summary>
@@ -129,7 +129,7 @@ public sealed class CdlzCodec : CdCompoundCodec
     }
 
     /// <inheritdoc/>
-    public override uint Tag => CodecTags.CDLZ;
+    public override uint Tag => CodecTags.Cdlz;
 }
 
 /// <summary>CD Zstandard codec ('cdzs'): zstd for sector data and subcode.</summary>
@@ -143,5 +143,5 @@ public sealed class CdzsCodec : CdCompoundCodec
     }
 
     /// <inheritdoc/>
-    public override uint Tag => CodecTags.CDZS;
+    public override uint Tag => CodecTags.Cdzs;
 }

@@ -69,7 +69,7 @@ dotnet test --filter "FullyQualifiedName~CorpusTests"
 dotnet test --filter "FullyQualifiedName~ParityFeatures"
 
 # Detailed console output
-dotnet test --logger "console;verbosity=detailed"
+dotnet test -v detailed
 
 # The encoder suite only (CHDSharpEncoderTest; requires chdman.exe next to the test assembly)
 dotnet test CHDSharpEncoderTest/

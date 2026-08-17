@@ -4,13 +4,13 @@ namespace CHDSharpEncoder;
 public class ChdHeaderV5
 {
     /// <summary>The CHD header tag as a string.</summary>
-    public const string TAG_STRING = "MComprHD";
+    public const string TagString = "MComprHD";
     /// <summary>The CHD header tag as a byte array.</summary>
-    public static readonly byte[] TAG = { (byte)'M', (byte)'C', (byte)'o', (byte)'m', (byte)'p', (byte)'r', (byte)'H', (byte)'D' };
+    public static readonly byte[] Tag = { (byte)'M', (byte)'C', (byte)'o', (byte)'m', (byte)'p', (byte)'r', (byte)'H', (byte)'D' };
     /// <summary>The serialized header length in bytes.</summary>
-    public const uint LENGTH = 124;
+    public const uint Length = 124;
     /// <summary>The CHD format version (5).</summary>
-    public const uint VERSION = 5;
+    public const uint Version = 5;
 
     /// <summary>Gets or sets the four compressor codec tags.</summary>
     public uint[] Compressors { get; set; } = new uint[4];
@@ -32,7 +32,7 @@ public class ChdHeaderV5
     public byte[] ParentSha1 { get; set; } = new byte[20];
 
     /// <summary>Gets a value indicating whether the image uses compression.</summary>
-    public bool IsCompressed => Compressors[0] != CodecTags.NONE;
+    public bool IsCompressed => Compressors[0] != CodecTags.None;
 
     /// <summary>Serializes the header into a 124-byte array in big-endian format.</summary>
     /// <returns>A byte array containing the serialized header.</returns>
@@ -40,9 +40,9 @@ public class ChdHeaderV5
     {
         var w = new BigEndianWriter(124);
 
-        w.WriteBytes(TAG);
-        w.WriteU32(LENGTH);
-        w.WriteU32(VERSION);
+        w.WriteBytes(Tag);
+        w.WriteU32(Length);
+        w.WriteU32(Version);
         w.WriteU32(Compressors[0]);
         w.WriteU32(Compressors[1]);
         w.WriteU32(Compressors[2]);
@@ -57,8 +57,8 @@ public class ChdHeaderV5
         w.WriteBytes(ParentSha1);
 
         var result = w.ToArray();
-        if (result.Length != LENGTH)
-            throw new InvalidOperationException($"Serialized header is {result.Length} bytes, expected {LENGTH}");
+        if (result.Length != Length)
+            throw new InvalidOperationException($"Serialized header is {result.Length} bytes, expected {Length}");
 
         return result;
     }
@@ -76,26 +76,26 @@ public class ChdHeaderV5
     /// <returns>A <see cref="ChdHeaderV5"/> populated from the data.</returns>
     public static ChdHeaderV5 Deserialize(byte[] data)
     {
-        if (data.Length < LENGTH)
-            throw new ArgumentException($"Header data is {data.Length} bytes, need at least {LENGTH}");
+        if (data.Length < Length)
+            throw new ArgumentException($"Header data is {data.Length} bytes, need at least {Length}");
 
         return new ChdHeaderV5
         {
             Compressors = new[]
             {
-                ReadU32BE(data, 16),
-                ReadU32BE(data, 20),
-                ReadU32BE(data, 24),
-                ReadU32BE(data, 28),
+                ReadU32Be(data, 16),
+                ReadU32Be(data, 20),
+                ReadU32Be(data, 24),
+                ReadU32Be(data, 28)
             },
-            LogicalBytes = ReadU64BE(data, 32),
-            MapOffset = ReadU64BE(data, 40),
-            MetaOffset = ReadU64BE(data, 48),
-            HunkBytes = ReadU32BE(data, 56),
-            UnitBytes = ReadU32BE(data, 60),
+            LogicalBytes = ReadU64Be(data, 32),
+            MapOffset = ReadU64Be(data, 40),
+            MetaOffset = ReadU64Be(data, 48),
+            HunkBytes = ReadU32Be(data, 56),
+            UnitBytes = ReadU32Be(data, 60),
             RawSha1 = data.AsSpan(64, 20).ToArray(),
             Sha1 = data.AsSpan(84, 20).ToArray(),
-            ParentSha1 = data.AsSpan(104, 20).ToArray(),
+            ParentSha1 = data.AsSpan(104, 20).ToArray()
         };
     }
 
@@ -111,7 +111,7 @@ public class ChdHeaderV5
     }
 
     /// <summary>Creates a header for a compressed CHD image with up to 4 codecs.</summary>
-    /// <param name="compressors">The compressor codec tags (up to 4; empty slots use <see cref="CodecTags.NONE"/>).</param>
+    /// <param name="compressors">The compressor codec tags (up to 4; empty slots use <see cref="CodecTags.None"/>).</param>
     /// <param name="logicalBytes">The total logical size in bytes.</param>
     /// <param name="hunkBytes">The hunk size in bytes.</param>
     /// <param name="unitBytes">The unit size in bytes.</param>
@@ -122,20 +122,22 @@ public class ChdHeaderV5
 
         var codecArray = new uint[4];
         for (int i = 0; i < 4; i++)
-            codecArray[i] = i < compressors.Length ? compressors[i] : CodecTags.NONE;
+        {
+            codecArray[i] = i < compressors.Length ? compressors[i] : CodecTags.None;
+        }
 
         return new ChdHeaderV5
         {
             Compressors = codecArray,
             LogicalBytes = logicalBytes,
-            MapOffset = codecArray[0] != CodecTags.NONE ? 0uL : LENGTH,
+            MapOffset = codecArray[0] != CodecTags.None ? 0uL : Length,
             MetaOffset = 0,
             HunkBytes = hunkBytes,
-            UnitBytes = unitBytes,
+            UnitBytes = unitBytes
         };
     }
 
-    private static uint ReadU32BE(byte[] data, int offset)
+    private static uint ReadU32Be(byte[] data, int offset)
     {
         return ((uint)data[offset] << 24) |
                ((uint)data[offset + 1] << 16) |
@@ -143,9 +145,9 @@ public class ChdHeaderV5
                data[offset + 3];
     }
 
-    private static ulong ReadU64BE(byte[] data, int offset)
+    private static ulong ReadU64Be(byte[] data, int offset)
     {
-        return ((ulong)ReadU32BE(data, offset) << 32) |
-               ReadU32BE(data, offset + 4);
+        return ((ulong)ReadU32Be(data, offset) << 32) |
+               ReadU32Be(data, offset + 4);
     }
 }

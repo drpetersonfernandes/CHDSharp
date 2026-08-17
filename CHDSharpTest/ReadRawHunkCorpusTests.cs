@@ -63,7 +63,10 @@ public sealed class ReadRawHunkCorpusTests
             {
                 byte[]? raw = file.ReadRawHunk(h);
                 if (raw == null)
+                {
                     parentReferenced++;
+                }
+
                 Assert.Equal(ChdError.Chderrnone, file.ReadHunk(h, hunk));
             }
 

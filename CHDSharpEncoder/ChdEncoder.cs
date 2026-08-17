@@ -46,7 +46,7 @@ public static class ChdEncoder
         if (hunkBytes == 0 || unitBytes == 0 || hunkBytes % unitBytes != 0)
             throw new ArgumentException($"hunkBytes ({hunkBytes}) must be a multiple of unitBytes ({unitBytes})");
 
-        codecTags ??= [CodecTags.ZLIB];
+        codecTags ??= [CodecTags.Zlib];
         var codecs = ChdCodecs.CreateAll(codecTags, hunkBytes);
 
         var logicalBytes = (ulong)sourceStream.Length;
@@ -63,7 +63,9 @@ public static class ChdEncoder
             {
                 metadataEntries.Add(MetadataWriter.BuildDvdMetadata());
                 if (unitBytes == DefaultUnitBytes && hunkBytes % DvdSectorSize == 0)
+                {
                     unitBytes = DvdSectorSize;
+                }
             }
             else
             {
@@ -89,7 +91,7 @@ public static class ChdEncoder
         // the compressed blocks are appended to the file in hunk order by the pipeline's
         // single consumer; offsets and the dedup map advance in the same order, so the
         // output is byte-identical to the sequential path
-        long currentOffset = ChdHeaderV5.LENGTH;
+        long currentOffset = ChdHeaderV5.Length;
         processor.CompressAll(
             hunkCount,
             (hunkIndex, buffer) => ReadRawHunk(sourceStream, hunkIndex, buffer, logicalBytes, hunkBytes),
@@ -155,6 +157,7 @@ public static class ChdEncoder
             Span<byte> magic = stackalloc byte[5];
             if (sourceStream.Read(magic) != 5)
                 return false;
+
             return magic.SequenceEqual("CD001"u8);
         }
         finally
@@ -209,7 +212,7 @@ public static class ChdEncoder
         if (hunkBytes == 0 || hunkBytes % unitBytes != 0)
             throw new ArgumentException($"hunkBytes ({hunkBytes}) must be a multiple of unitBytes ({unitBytes})");
 
-        codecTags ??= [CodecTags.ZLIB];
+        codecTags ??= [CodecTags.Zlib];
         var codecs = ChdCodecs.CreateAll(codecTags, hunkBytes);
 
         // 1. Parse the image descriptor (CUE, GDI, ISO or TOC)
@@ -246,7 +249,7 @@ public static class ChdEncoder
         var header = ChdHeaderV5.CreateRaw(codecTags.ToArray(), logicalBytes, hunkBytes, unitBytes);
         header.WriteToStream(fs);
 
-        long currentOffset = ChdHeaderV5.LENGTH;
+        long currentOffset = ChdHeaderV5.Length;
         try
         {
             processor.CompressAll(
@@ -314,7 +317,7 @@ public static class ChdEncoder
     private static int ReadCdHunk(uint hunkIndex, byte[] buffer, CdToc toc, int framesPerHunk, ulong totalFrames,
         Dictionary<string, FileStream> files)
     {
-        long hunkStartFrame = (long)hunkIndex * framesPerHunk;
+        long hunkStartFrame = hunkIndex * framesPerHunk;
         for (int f = 0; f < framesPerHunk; f++)
         {
             long frame = hunkStartFrame + f;
@@ -364,10 +367,10 @@ public static class ChdEncoder
         {
             entry = new MapEntry
             {
-                Compression = MapEntry.COMPRESSION_SELF,
+                Compression = MapEntry.CompressionSelf,
                 CompLength = 0,
                 Offset = sourceHunk,
-                Crc16 = 0,
+                Crc16 = 0
             };
             data = null;
         }
@@ -378,7 +381,7 @@ public static class ChdEncoder
                 Compression = result.Compression,
                 CompLength = result.CompLength,
                 Offset = (ulong)currentOffset,
-                Crc16 = result.Crc16,
+                Crc16 = result.Crc16
             };
             selfMap[sha1Hex] = result.HunkIndex;
         }
@@ -432,18 +435,18 @@ public static class ChdEncoder
         string codecName;
         switch (entry.Compression)
         {
-            case MapEntry.COMPRESSION_NONE:
+            case MapEntry.CompressionNone:
                 storedBytes = (int)hunkBytes;
                 codecName = "none";
                 break;
-            case MapEntry.COMPRESSION_SELF:
+            case MapEntry.CompressionSelf:
                 storedBytes = 0;
                 codecName = "self";
                 break;
             default:
                 storedBytes = (int)entry.CompLength;
                 codecName = entry.Compression < codecs.Count
-                    ? CodecTags.ToString(codecs[(int)entry.Compression].Tag)
+                    ? CodecTags.ToString(codecs[entry.Compression].Tag)
                     : "?";
                 break;
         }

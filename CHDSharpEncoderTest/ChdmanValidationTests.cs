@@ -97,11 +97,11 @@ public class ChdmanValidationTests : IDisposable
             "createraw", "-i", srcPath, "-o", chdmanChd, "-c", "zlib", "-hs", "4096", "-us", "512", "-f");
         Assert.True(createExit == 0, $"chdman createraw failed (exit={createExit})\nstdout: {cstdout}\nstderr: {cstderr}");
 
-        var (ext1Exit, e1stdout, e1stderr) = RunChdman("extractraw", "-i", ourChd, "-o", ourExtract, "-f");
-        Assert.True(ext1Exit == 0, $"extractraw our failed (exit={ext1Exit})\nstdout: {e1stdout}\nstderr: {e1stderr}");
+        var (ext1Exit, e1Stdout, e1Stderr) = RunChdman("extractraw", "-i", ourChd, "-o", ourExtract, "-f");
+        Assert.True(ext1Exit == 0, $"extractraw our failed (exit={ext1Exit})\nstdout: {e1Stdout}\nstderr: {e1Stderr}");
 
-        var (ext2Exit, e2stdout, e2stderr) = RunChdman("extractraw", "-i", chdmanChd, "-o", chdmanExtract, "-f");
-        Assert.True(ext2Exit == 0, $"extractraw chdman failed (exit={ext2Exit})\nstdout: {e2stdout}\nstderr: {e2stderr}");
+        var (ext2Exit, e2Stdout, e2Stderr) = RunChdman("extractraw", "-i", chdmanChd, "-o", chdmanExtract, "-f");
+        Assert.True(ext2Exit == 0, $"extractraw chdman failed (exit={ext2Exit})\nstdout: {e2Stdout}\nstderr: {e2Stderr}");
 
         byte[] ourExtracted = File.ReadAllBytes(ourExtract);
         byte[] chdmanExtracted = File.ReadAllBytes(chdmanExtract);

@@ -5,16 +5,22 @@ public static class CdConstants
 {
     /// <summary>The maximum amount of data in a CD-ROM sector (raw 2352-byte sector).</summary>
     public const int MaxSectorData = 2352;
+
     /// <summary>The maximum amount of subcode data in a CD-ROM sector.</summary>
     public const int MaxSubcodeData = 96;
+
     /// <summary>The size of a complete CD frame: 2352 data bytes + 96 subcode bytes.</summary>
     public const int FrameSize = MaxSectorData + MaxSubcodeData;
+
     /// <summary>The number of CD frames stored per CHD hunk.</summary>
     public const int FramesPerHunk = 8;
+
     /// <summary>Tracks are padded to a multiple of this many frames.</summary>
     public const int TrackPadding = 4;
+
     /// <summary>The theoretical maximum number of tracks on a CD.</summary>
     public const int MaxTracks = 99;
+
     /// <summary>The maximum INDEX number allowed in a CUE sheet.</summary>
     public const int MaxIndex = 99;
 }

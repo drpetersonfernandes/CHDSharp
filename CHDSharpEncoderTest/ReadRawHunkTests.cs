@@ -30,7 +30,7 @@ public class ReadRawHunkTests : IDisposable
         byte[] source = new byte[4096];
         new Random(5).NextBytes(source);
 
-        string chdPath = Encode(source, [CodecTags.ZLIB]);
+        string chdPath = Encode(source, [CodecTags.Zlib]);
 
         var err = ChdFile.Open(chdPath, out var file);
         Assert.Equal(ChdError.Chderrnone, err);
@@ -54,9 +54,11 @@ public class ReadRawHunkTests : IDisposable
         // stored on disk; inflating them must reproduce the original hunk
         byte[] source = new byte[4096];
         for (int i = 0; i < source.Length; i++)
+        {
             source[i] = (byte)((i % 37 == 0) ? 0xFF : 0);
+        }
 
-        string chdPath = Encode(source, [CodecTags.ZLIB]);
+        string chdPath = Encode(source, [CodecTags.Zlib]);
 
         var err = ChdFile.Open(chdPath, out var file);
         Assert.Equal(ChdError.Chderrnone, err);
@@ -81,10 +83,12 @@ public class ReadRawHunkTests : IDisposable
         {
             int pattern = h % 2; // hunk 0 == hunk 2, hunk 1 == hunk 3
             for (int i = 0; i < 4096; i++)
+            {
                 source[h * 4096 + i] = (byte)(pattern * 31 + (i % 17));
+            }
         }
 
-        string chdPath = Encode(source, [CodecTags.ZLIB]);
+        string chdPath = Encode(source, [CodecTags.Zlib]);
 
         var err = ChdFile.Open(chdPath, out var file);
         Assert.Equal(ChdError.Chderrnone, err);
@@ -98,7 +102,7 @@ public class ReadRawHunkTests : IDisposable
     [Fact]
     public void OutOfRange_Throws()
     {
-        string chdPath = Encode(new byte[4096], [CodecTags.ZLIB]);
+        string chdPath = Encode(new byte[4096], [CodecTags.Zlib]);
 
         var err = ChdFile.Open(chdPath, out var file);
         Assert.Equal(ChdError.Chderrnone, err);
@@ -114,7 +118,7 @@ public class ReadRawHunkTests : IDisposable
         byte[] source = new byte[4096];
         new Random(9).NextBytes(source);
 
-        string chdPath = Encode(source, [CodecTags.ZLIB]);
+        string chdPath = Encode(source, [CodecTags.Zlib]);
 
         var err = ChdFile.Open(chdPath, out var file);
         Assert.Equal(ChdError.Chderrnone, err);
@@ -130,7 +134,7 @@ public class ReadRawHunkTests : IDisposable
         byte[] source = new byte[4096 * 4];
         new Random(11).NextBytes(source);
 
-        string chdPath = Encode(source, [CodecTags.ZLIB]);
+        string chdPath = Encode(source, [CodecTags.Zlib]);
 
         var err = ChdFile.Open(chdPath, out var file);
         Assert.Equal(ChdError.Chderrnone, err);
@@ -147,7 +151,7 @@ public class ReadRawHunkTests : IDisposable
     public void RoundTrips_AllHunks_CompressedFile()
     {
         byte[] source = CreateMixed(32);
-        string chdPath = Encode(source, [CodecTags.ZLIB, CodecTags.LZMA]);
+        string chdPath = Encode(source, [CodecTags.Zlib, CodecTags.Lzma]);
 
         var err = ChdFile.Open(chdPath, out var file);
         Assert.Equal(ChdError.Chderrnone, err);

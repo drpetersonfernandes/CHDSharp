@@ -39,7 +39,7 @@ public sealed record ChdProgress
     public TimeSpan Elapsed { get; }
 
     /// <summary>Percentage of hunks completed (<c>0</c>–<c>100</c>).</summary>
-    public double Percent => TotalHunks == 0 ? 100.0 : Math.Min(100.0, (double)CurrentHunk * 100.0 / TotalHunks);
+    public double Percent => TotalHunks == 0 ? 100.0 : Math.Min(100.0, CurrentHunk * 100.0 / TotalHunks);
 
     /// <summary>Creates a progress snapshot with the given values.</summary>
     /// <param name="currentHunk">Number of hunks processed so far (1-based).</param>

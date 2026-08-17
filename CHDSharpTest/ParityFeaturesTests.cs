@@ -350,7 +350,10 @@ public class ParityFeaturesTests
     {
         private readonly Stream _inner;
 
-        public ReadThrowingStream(Stream inner) => _inner = inner;
+        public ReadThrowingStream(Stream inner)
+        {
+            _inner = inner;
+        }
 
         public override bool CanRead => true;
         public override bool CanSeek => true;

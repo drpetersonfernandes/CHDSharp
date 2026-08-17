@@ -36,7 +36,7 @@ public class RawEncodeMetadataTests : IDisposable
         {
             Tag = 0x54455354, // 'TEST'
             Flags = MetadataWriter.ChdMdflagsChecksum,
-            Payload = Encoding.ASCII.GetBytes("hello\0"),
+            Payload = Encoding.ASCII.GetBytes("hello\0")
         };
 
         string chdPath = Path.Combine(_dir, "user.chd");
@@ -67,7 +67,7 @@ public class RawEncodeMetadataTests : IDisposable
         using var ms = new MemoryStream(source);
         ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, options: new ChdEncodeOptions
         {
-            Metadata = [MetadataWriter.BuildHardDiskMetadata((ulong)source.Length, 512)],
+            Metadata = [MetadataWriter.BuildHardDiskMetadata((ulong)source.Length, 512)]
         });
 
         var err = ChdFile.Open(chdPath, out var file);
@@ -193,7 +193,7 @@ public class RawEncodeMetadataTests : IDisposable
         ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, options: new ChdEncodeOptions
         {
             AutoClassify = true,
-            Metadata = [MetadataWriter.BuildHardDiskMetadata((ulong)source.Length, 512)],
+            Metadata = [MetadataWriter.BuildHardDiskMetadata((ulong)source.Length, 512)]
         });
 
         using var fs = File.OpenRead(chdPath);
@@ -214,7 +214,7 @@ public class RawEncodeMetadataTests : IDisposable
         {
             Tag = 0x54455354, // 'TEST'
             Flags = MetadataWriter.ChdMdflagsChecksum,
-            Payload = Encoding.ASCII.GetBytes("extra\0"),
+            Payload = Encoding.ASCII.GetBytes("extra\0")
         };
 
         string chdPath = Path.Combine(_dir, "cd_meta.chd");

@@ -54,10 +54,10 @@ public class EncodeCdChdmanValidationTests : IDisposable
 
         string ourExtract = Path.Combine(_testDataDir, "our.raw");
         string chdmanExtract = Path.Combine(_testDataDir, "chdman.raw");
-        var (e1, o1, e1r) = RunChdman("extractraw", "-i", ourChd, "-o", ourExtract, "-f");
-        Assert.True(e1 == 0, $"extractraw our failed (exit={e1})\nstdout: {o1}\nstderr: {e1r}");
-        var (e2, o2, e2r) = RunChdman("extractraw", "-i", chdmanChd, "-o", chdmanExtract, "-f");
-        Assert.True(e2 == 0, $"extractraw chdman failed (exit={e2})\nstdout: {o2}\nstderr: {e2r}");
+        var (e1, o1, e1R) = RunChdman("extractraw", "-i", ourChd, "-o", ourExtract, "-f");
+        Assert.True(e1 == 0, $"extractraw our failed (exit={e1})\nstdout: {o1}\nstderr: {e1R}");
+        var (e2, o2, e2R) = RunChdman("extractraw", "-i", chdmanChd, "-o", chdmanExtract, "-f");
+        Assert.True(e2 == 0, $"extractraw chdman failed (exit={e2})\nstdout: {o2}\nstderr: {e2R}");
 
         // byte-identical logical images (audio swapped, tracks padded to 4-frame boundaries)
         Assert.Equal(File.ReadAllBytes(chdmanExtract), File.ReadAllBytes(ourExtract));
@@ -216,7 +216,9 @@ public class EncodeCdChdmanValidationTests : IDisposable
             {
                 // data track: distinct byte pattern
                 for (int j = 0; j < CdConstants.MaxSectorData; j++)
+                {
                     bin[offset + j] = (byte)((f * 31 + j * 7) & 0xFF);
+                }
             }
             else
             {
@@ -241,7 +243,9 @@ public class EncodeCdChdmanValidationTests : IDisposable
             if (swap)
             {
                 for (int i = 0; i < CdConstants.MaxSectorData; i += 2)
+                {
                     (image[dest + i], image[dest + i + 1]) = (image[dest + i + 1], image[dest + i]);
+                }
             }
         }
     }

@@ -1,21 +1,21 @@
 namespace CHDSharpEncoder;
 
 /// <summary>Huffman encoder supporting up to 16 symbols with a maximum code length of 8 bits.</summary>
-public class Huffman16_8
+public class Huffman168
 {
     /// <summary>Number of distinct symbol codes supported.</summary>
-    public const int NUM_CODES = 16;
+    public const int NumCodes = 16;
 
     /// <summary>Maximum allowed code length in bits.</summary>
-    public const int MAX_BITS = 8;
+    public const int MaxBits = 8;
 
-    private readonly int[] _histogram = new int[NUM_CODES];
+    private readonly int[] _histogram = new int[NumCodes];
 
     /// <summary>Gets the number of bits for each symbol's canonical Huffman code.</summary>
-    public int[] NumBits { get; } = new int[NUM_CODES];
+    public int[] NumBits { get; } = new int[NumCodes];
 
     /// <summary>Gets the canonical Huffman code value for each symbol.</summary>
-    public uint[] Codes { get; } = new uint[NUM_CODES];
+    public uint[] Codes { get; } = new uint[NumCodes];
 
     /// <summary>Resets the internal symbol frequency histogram to zero.</summary>
     public void ResetHistogram()
@@ -27,7 +27,7 @@ public class Huffman16_8
     /// <param name="symbol">The symbol whose count is incremented.</param>
     public void CountSymbol(uint symbol)
     {
-        if (symbol < NUM_CODES)
+        if (symbol < NumCodes)
         {
             _histogram[symbol]++;
         }
@@ -37,7 +37,7 @@ public class Huffman16_8
     public void BuildTree()
     {
         var totalData = 0;
-        for (var i = 0; i < NUM_CODES; i++)
+        for (var i = 0; i < NumCodes; i++)
         {
             totalData += _histogram[i];
         }
@@ -61,7 +61,7 @@ public class Huffman16_8
             var curWeight = (lower + upper) / 2;
             var maxbits = BuildWeightedTree(curWeight, totalData);
 
-            if (maxbits <= MAX_BITS)
+            if (maxbits <= MaxBits)
             {
                 bestWeight = curWeight;
                 lower = curWeight;
@@ -71,7 +71,7 @@ public class Huffman16_8
                 upper = curWeight;
             }
 
-            if (curWeight == totalData && maxbits <= MAX_BITS)
+            if (curWeight == totalData && maxbits <= MaxBits)
                 break;
             if (upper - lower <= 1)
                 break;
@@ -85,7 +85,7 @@ public class Huffman16_8
     /// <param name="bs">The bit stream to write the RLE-encoded tree to.</param>
     public void ExportTreeRle(BitStreamOut bs)
     {
-        var numbits = MAX_BITS >= 16 ? 5 : MAX_BITS >= 8 ? 4 : 3;
+        var numbits = MaxBits >= 16 ? 5 : MaxBits >= 8 ? 4 : 3;
 
         var lastVal = -1;
         var repCount = 0;
@@ -93,11 +93,12 @@ public class Huffman16_8
         void Flush(int val)
         {
             if (repCount == 0) return;
+
             WriteRleTreeBits(bs, val, repCount, numbits);
             repCount = 0;
         }
 
-        for (var i = 0; i < NUM_CODES; i++)
+        for (var i = 0; i < NumCodes; i++)
         {
             var val = NumBits[i];
             if (val == lastVal)
@@ -119,8 +120,9 @@ public class Huffman16_8
     /// <param name="symbol">The symbol to encode.</param>
     public void Encode(BitStreamOut bs, uint symbol)
     {
-        if (symbol >= NUM_CODES)
+        if (symbol >= NumCodes)
             return;
+
         if (NumBits[symbol] > 0)
             bs.Write(Codes[symbol], NumBits[symbol]);
     }
@@ -130,11 +132,11 @@ public class Huffman16_8
         var nodes = new TreeNode[32];
         var activeIndices = new List<int>(16);
 
-        for (var i = 0; i < NUM_CODES; i++)
+        for (var i = 0; i < NumCodes; i++)
         {
             if (_histogram[i] != 0)
             {
-                var w = (int)((long)_histogram[i] * (long)totalWeight / (long)totalData);
+                var w = (int)(_histogram[i] * (long)totalWeight / totalData);
                 if (w == 0)
                 {
                     w = 1;
@@ -152,7 +154,7 @@ public class Huffman16_8
 
         SortByWeight(nodes, activeIndices);
 
-        var nextAlloc = NUM_CODES;
+        var nextAlloc = NumCodes;
         while (activeIndices.Count > 1)
         {
             var idx0 = activeIndices[activeIndices.Count - 1];
@@ -177,7 +179,7 @@ public class Huffman16_8
         }
 
         var maxBits = 0;
-        for (var i = 0; i < NUM_CODES; i++)
+        for (var i = 0; i < NumCodes; i++)
         {
             if (_histogram[i] != 0)
             {
@@ -207,10 +209,10 @@ public class Huffman16_8
     private void AssignCanonicalCodes()
     {
         var bithisto = new int[33];
-        for (var i = 0; i < NUM_CODES; i++)
+        for (var i = 0; i < NumCodes; i++)
         {
             var nb = NumBits[i];
-            if (nb > 0 && nb <= 32)
+            if (nb is > 0 and <= 32)
             {
                 bithisto[nb]++;
             }
@@ -224,7 +226,7 @@ public class Huffman16_8
             curstart = nextstart;
         }
 
-        for (var i = 0; i < NUM_CODES; i++)
+        for (var i = 0; i < NumCodes; i++)
         {
             if (NumBits[i] > 0)
             {

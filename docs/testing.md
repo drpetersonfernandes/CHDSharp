@@ -12,6 +12,8 @@ CHDSharp ships a **558-test** xUnit suite plus a deterministic 30-file corpus co
 | Corpus | `CHDSharpTest` | Runs `CheckFile` (deep) and `ReadHunk` against **30 deterministic CHD fixtures** in `TestData/`, driven by `manifest.json` (expected version, parent links, expected pass/fail). |
 | Integration | `CHDSharpTest` | End-to-end CLI tests (`CliIntegrationTests`): directory scan, `--random`, `--list`, `--parent`. |
 | Interactive | `CHDSharpTester` | WPF app that batch-verifies folders and **cross-checks against `chdman`** (header info, deep verify, SHA1, random-access extraction, codec decode, parent chains). |
+| Encoder unit | `CHDSharpEncoderTest` | Tests for the `CHDSharpEncoder` creation library: endian/CRC/SHA1/deflate primitives, Huffman + V5 map compression, header, CUE/GDI/ISO/TOC parsers, metadata writer, per-hunk ratio logging. |
+| Encoder validation | `CHDSharpEncoderTest` | Cross-validation of encoder output against `chdman.exe` v0.288 (`info`, `verify`, `extractraw`, `createcd`, `createraw`) and the CHDSharpLib reader — including **100 MB+ raw/CD round-trips** and byte-for-byte file comparison with `chdman createraw`. |
 
 ---
 
@@ -68,7 +70,13 @@ dotnet test --filter "FullyQualifiedName~ParityFeatures"
 
 # Detailed console output
 dotnet test --logger "console;verbosity=detailed"
+
+# The encoder suite only (CHDSharpEncoderTest; requires chdman.exe next to the test assembly)
+dotnet test CHDSharpEncoderTest/
+dotnet test CHDSharpEncoderTest/ --filter "FullyQualifiedName~LargeFileValidationTests"
 ```
+
+The encoder validation tests use `chdman.exe` (MAME 0.288), resolved from the test output directory or `CHDSharpTester/`; if it is unavailable those tests skip.
 
 ### Regenerating the corpus
 

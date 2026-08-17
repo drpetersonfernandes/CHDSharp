@@ -20,7 +20,7 @@ public static class ChdEncoder
     /// <param name="unitBytes">Unit size in bytes (default 512).</param>
     /// <exception cref="ArgumentException"><paramref name="hunkBytes"/> is not a multiple of <paramref name="unitBytes"/>.</exception>
     public static void EncodeRaw(Stream sourceStream, string chdPath, uint hunkBytes = 4096, uint unitBytes = 512,
-        IReadOnlyList<uint>? codecTags = null)
+        IReadOnlyList<uint>? codecTags = null, ChdEncodeOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(sourceStream);
         if (hunkBytes == 0 || unitBytes == 0 || hunkBytes % unitBytes != 0)
@@ -64,6 +64,7 @@ public static class ChdEncoder
 
             var (entry, data) = ProcessHunkWithDedup(processor, readBuffer, currentOffset, h, selfMap);
             entries[h] = entry;
+            ReportHunkProgress(options, codecs, entry, h, hunkCount, hunkBytes);
             if (data != null)
             {
                 blockList.Add(data);
@@ -112,10 +113,10 @@ public static class ChdEncoder
     /// <param name="unitBytes">Unit size in bytes (default 512).</param>
     /// <exception cref="ArgumentException"><paramref name="hunkBytes"/> is not a multiple of <paramref name="unitBytes"/>.</exception>
     public static void EncodeRaw(string sourcePath, string chdPath, uint hunkBytes = 4096, uint unitBytes = 512,
-        IReadOnlyList<uint>? codecTags = null)
+        IReadOnlyList<uint>? codecTags = null, ChdEncodeOptions? options = null)
     {
         using var fs = new FileStream(sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        EncodeRaw(fs, chdPath, hunkBytes, unitBytes, codecTags);
+        EncodeRaw(fs, chdPath, hunkBytes, unitBytes, codecTags, options);
     }
 
     /// <summary>
@@ -133,7 +134,7 @@ public static class ChdEncoder
     /// <exception cref="InvalidDataException">The CUE sheet is malformed or contains no tracks.</exception>
     public static void EncodeCd(string cuePath, string chdPath,
         uint hunkBytes = CdConstants.FramesPerHunk * CdConstants.FrameSize, uint unitBytes = CdConstants.FrameSize,
-        IReadOnlyList<uint>? codecTags = null)
+        IReadOnlyList<uint>? codecTags = null, ChdEncodeOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(cuePath);
         if (unitBytes != CdConstants.FrameSize)
@@ -216,6 +217,7 @@ public static class ChdEncoder
 
                 var (entry, data) = ProcessHunkWithDedup(processor, readBuffer, currentOffset, h, selfMap);
                 entries[h] = entry;
+                ReportHunkProgress(options, codecs, entry, h, hunkCount, hunkBytes);
                 if (data != null)
                 {
                     blockList.Add(data);
@@ -325,5 +327,36 @@ public static class ChdEncoder
         {
             (buffer[offset + i], buffer[offset + i + 1]) = (buffer[offset + i + 1], buffer[offset + i]);
         }
+    }
+
+    /// <summary>Raises <see cref="ChdEncodeOptions.HunkCompleted"/> for one hunk (no-op when unset).</summary>
+    private static void ReportHunkProgress(ChdEncodeOptions? options, IReadOnlyList<IChdCodec> codecs,
+        MapEntry entry, uint hunkIndex, uint hunkCount, uint hunkBytes)
+    {
+        if (options?.HunkCompleted is not { } callback)
+            return;
+
+        int storedBytes;
+        string codecName;
+        switch (entry.Compression)
+        {
+            case MapEntry.COMPRESSION_NONE:
+                storedBytes = (int)hunkBytes;
+                codecName = "none";
+                break;
+            case MapEntry.COMPRESSION_SELF:
+                storedBytes = 0;
+                codecName = "self";
+                break;
+            default:
+                storedBytes = (int)entry.CompLength;
+                codecName = entry.Compression < codecs.Count
+                    ? CodecTags.ToString(codecs[(int)entry.Compression].Tag)
+                    : "?";
+                break;
+        }
+
+        callback(new HunkProgress(hunkIndex, hunkCount, (int)hunkBytes, storedBytes, entry.Compression,
+            codecName, storedBytes / (double)hunkBytes));
     }
 }

@@ -28,6 +28,12 @@ CHDSharpCli --cue game.chd [optional .bin filename]
 
 # Classify CHD type (cd/dvd/hdd/gd-rom)
 CHDSharpCli --classify game.chd
+
+# Create a CHD from a raw binary
+CHDSharpCli --create in.bin out.chd [-c zlib,zstd,lzma] [-hs 65536] [-us 4096] [-v]
+
+# Create a CD CHD from a CUE/BIN (also GDI/ISO/TOC) image
+CHDSharpCli --createcd in.cue out.chd [-c zlib,zstd,lzma] [-hs N] [-us N] [-v]
 ```
 
 ### Commands
@@ -41,6 +47,8 @@ CHDSharpCli --classify game.chd
 | `--toc <file.chd>` | Parses and prints the table of contents for CD-ROM and GD-ROM CHD files, showing track numbers, types, sector sizes, and frame counts. |
 | `--cue <file.chd> [binfile]` | Generates a CUE sheet for CD-ROM CHDs. Optionally specify a custom .bin filename (defaults to the CHD filename with .bin extension). |
 | `--classify <file.chd>` | Detects and prints the CHD media type: CD-ROM, DVD-ROM, HDD, GD-ROM, or unknown/raw. |
+| `--create <in.bin> <out.chd>` | Creates a CHD v5 from a raw binary via `CHDSharpEncoder`. Options: `-c <codecs>` (comma-separated `zlib,zstd,lzma,cdfl,none`), `-hs <bytes>`, `-us <bytes>`, `-v` (per-hunk ratio logging). Deep-verifies the result before exiting. |
+| `--createcd <in.cue> <out.chd>` | Creates a CD CHD from a CUE/GDI/ISO/TOC image via `CHDSharpEncoder` (CHT2 metadata, audio byte-swap, 4-frame track padding). Same options as `--create`. |
 
 ---
 
@@ -116,6 +124,20 @@ game.chd: cd-rom
 parent.chd: hdd
 grom.chd: gd-rom
 ```
+
+### Creating CHDs (`-v` verbose per-hunk logging)
+
+```
+Creating CHD: in.bin -> out.chd  (hunk 65536B, unit 4096B, codecs zlib)
+  hunk      0/  1600  none       65536 ->      65536 B  (100.0 %)
+  hunk      1/  1600  zlib       65536 ->       1234 B  (  1.9 %)
+  ...
+  Ratio: 52,431,872 / 104,857,600 bytes = 50.0 %  [none: 534, zlib: 1066]
+  Created 52,442,112 bytes
+  Verified OK (V5, sha1=abc123...)
+```
+
+Without `-v`, only the input/output line, file size, and verification result are printed.
 
 ---
 

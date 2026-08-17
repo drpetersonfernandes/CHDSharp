@@ -45,8 +45,8 @@ internal class Program
             serilogLogger.Information("  CHDSharpCli --toc <file.chd>                   Print table-of-contents for CD/GD-ROM CHD");
             serilogLogger.Information("  CHDSharpCli --cue <file.chd> [<binfile>]       Generate CUE sheet for CD CHD");
             serilogLogger.Information("  CHDSharpCli --classify <file.chd>              Classify CHD type (cd/dvd/hdd/gd-rom)");
-            serilogLogger.Information("  CHDSharpCli --create <in.bin> <out.chd>        Create CHD from raw binary [-c zlib,zstd,lzma] [-hs N] [-us N]");
-            serilogLogger.Information("  CHDSharpCli --createcd <in.cue> <out.chd>      Create CD CHD from CUE/BIN [-c zlib,zstd,lzma] [-hs N] [-us N]");
+            serilogLogger.Information("  CHDSharpCli --create <in.bin> <out.chd>        Create CHD from raw binary [-c zlib,zstd,lzma] [-hs N] [-us N] [-v]");
+            serilogLogger.Information("  CHDSharpCli --createcd <in.cue> <out.chd>      Create CD CHD from CUE/BIN [-c zlib,zstd,lzma] [-hs N] [-us N] [-v]");
             return;
         }
 
@@ -547,7 +547,8 @@ internal class Program
         var hunkBytes = 4096u;
         var unitBytes = 512u;
         string? codecs = null;
-        if (!TryParseOptions(options, ref hunkBytes, ref unitBytes, ref codecs))
+        var verbose = false;
+        if (!TryParseOptions(options, ref hunkBytes, ref unitBytes, ref codecs, ref verbose))
             return;
 
         try
@@ -556,7 +557,9 @@ internal class Program
             log.Information("Creating CHD: {Input} -> {Output}  (hunk {Hunk}B, unit {Unit}B, codecs {Codecs})",
                 Path.GetFileName(inputPath), outputPath, hunkBytes, unitBytes,
                 string.Join(",", codecTags.Select(CodecTags.ToString)));
-            ChdEncoder.EncodeRaw(inputPath, outputPath, hunkBytes, unitBytes, codecTags);
+            var logger = verbose ? new VerboseHunkLogger() : null;
+            ChdEncoder.EncodeRaw(inputPath, outputPath, hunkBytes, unitBytes, codecTags, logger?.Options);
+            logger?.LogSummary();
             log.Information("  Created {Size:N0} bytes", new FileInfo(outputPath).Length);
             VerifyResultChd(outputPath);
         }
@@ -585,7 +588,8 @@ internal class Program
         uint hunkSize = (uint)(CdConstants.FramesPerHunk * CdConstants.FrameSize);
         uint unitBytes = (uint)CdConstants.FrameSize;
         string? codecs = null;
-        if (!TryParseOptions(options, ref hunkSize, ref unitBytes, ref codecs))
+        var verbose = false;
+        if (!TryParseOptions(options, ref hunkSize, ref unitBytes, ref codecs, ref verbose))
             return;
 
         try
@@ -594,7 +598,9 @@ internal class Program
             log.Information("Creating CD CHD: {Input} -> {Output}  (hunk {Hunk}B, unit {Unit}B, codecs {Codecs})",
                 Path.GetFileName(inputPath), outputPath, hunkSize, unitBytes,
                 string.Join(",", codecTags.Select(CodecTags.ToString)));
-            ChdEncoder.EncodeCd(inputPath, outputPath, hunkSize, unitBytes, codecTags);
+            var logger = verbose ? new VerboseHunkLogger() : null;
+            ChdEncoder.EncodeCd(inputPath, outputPath, hunkSize, unitBytes, codecTags, logger?.Options);
+            logger?.LogSummary();
             log.Information("  Created ({File:N0} bytes)", new FileInfo(outputPath).Length);
             VerifyResultChd(outputPath);
         }
@@ -604,8 +610,8 @@ internal class Program
         }
     }
 
-    /// <summary>Parses optional <c>-c</c>/<c>-hs</c>/<c>-us</c> arguments from the CLI.</summary>
-    private static bool TryParseOptions(string[] options, ref uint hunkSize, ref uint unitSize, ref string? codecs)
+    /// <summary>Parses optional <c>-c</c>/<c>-hs</c>/<c>-us</c>/<c>-v</c> arguments from the CLI.</summary>
+    private static bool TryParseOptions(string[] options, ref uint hunkSize, ref uint unitSize, ref string? codecs, ref bool verbose)
     {
         for (int i = 0; i < options.Length; i++)
         {
@@ -630,12 +636,49 @@ internal class Program
                     }
                     unitSize = us;
                     break;
+                case "-v" or "--verbose":
+                    verbose = true;
+                    break;
                 default:
                     Log.Logger.Warning("Unknown option: {Option}", options[i]);
                     return false;
             }
         }
         return true;
+    }
+
+    /// <summary>
+    /// Logs one line per hunk (codec, sizes, compression ratio) while encoding, then a
+    /// summary of the stored bytes and per-codec hunk counts.
+    /// </summary>
+    private sealed class VerboseHunkLogger
+    {
+        private long _totalRaw;
+        private long _totalStored;
+        private readonly Dictionary<string, int> _counts = new(StringComparer.Ordinal);
+
+        /// <summary>The <see cref="ChdEncodeOptions"/> to pass to the encoder.</summary>
+        public ChdEncodeOptions Options { get; } = new();
+
+        public VerboseHunkLogger()
+        {
+            Options.HunkCompleted = p =>
+            {
+                _totalRaw += p.RawBytes;
+                _totalStored += p.StoredBytes;
+                _counts[p.CodecName] = _counts.GetValueOrDefault(p.CodecName) + 1;
+                Log.Logger.Information("  hunk {Hunk,6}/{Count,6}  {Codec,-5} {Raw,10} -> {Stored,10} B  ({Ratio,5:P1})",
+                    p.HunkIndex, p.HunkCount, p.CodecName, p.RawBytes, p.StoredBytes, p.Ratio);
+            };
+        }
+
+        public void LogSummary()
+        {
+            var overall = _totalRaw == 0 ? 1.0 : _totalStored / (double)_totalRaw;
+            Log.Logger.Information("  Ratio: {Stored:N0} / {Raw:N0} bytes = {Overall:P1}  [{Counts}]",
+                _totalStored, _totalRaw, overall,
+                string.Join(", ", _counts.OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => $"{kv.Key}: {kv.Value}")));
+        }
     }
 
     /// <summary>Runs a deep CHDSharpLib check on a created CHD file (raw + combined SHA1).</summary>

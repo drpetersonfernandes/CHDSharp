@@ -5,9 +5,10 @@ namespace CHDSharpEncoder;
 /// <summary>
 /// CD FLAC codec ('cdfl'), matching MAME's <c>chd_cd_flac_compressor</c>: the CD audio
 /// portion (frames × 2352 bytes) is encoded as raw FLAC frames (no stream header,
-/// little-endian samples, 2ch/16-bit/44100 Hz, 588 samples per frame) and the subcode
-/// portion (frames × 96 bytes) is deflated and appended. The result is
-/// <c>[FLAC frames][deflated subcode]</c>, decodable by MAME/chdman and CHDSharpLib.
+/// little-endian samples, 2ch/16-bit/44100 Hz, 2352 samples per frame — MAME's cdfl
+/// blocksize) and the subcode portion (frames × 96 bytes) is deflated and appended. The
+/// result is <c>[FLAC frames][deflated subcode]</c>, decodable by MAME/chdman and
+/// CHDSharpLib.
 /// </summary>
 public sealed class CdflCodec : IChdCodec
 {

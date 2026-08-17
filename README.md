@@ -124,6 +124,7 @@ CHDSharpCli --classify game.chd
 - **Parent/child chaining** — transparent differential CHD support with wrong-parent detection
 - **Track info** — parse CD/GD-ROM table of contents (track types, sector sizes, pregap/postgap, frame offsets)
 - **Metadata** — expose game name, disc labels, and other CHD header metadata
+- **CHD creation** — companion [`CHDSharpEncoder`](CHDSharpEncoder/README.md) writes V5 CHDs from raw binaries and CD images (CUE/GDI/ISO/TOC) with `chdman`-matched output
 - **100% chdman match** — cross-checked against `chdman info`, `verify`, and `extractraw` (MAME 0.288)
 - **Pluggable logging** — `Microsoft.Extensions.Logging` integration; silent by default
 
@@ -188,7 +189,7 @@ Chd.LoggerFactory = new SerilogLoggerFactory(
 
 ## Documentation
 
-The full wiki lives in [`docs/`](docs/README.md) — format reference, codecs, API reference, verification, extraction, performance, testing, and troubleshooting.
+The full wiki lives in [`docs/`](docs/README.md) — format reference, codecs, API reference, verification, extraction, performance, testing, and troubleshooting. CHD *creation* is documented in [the `CHDSharpEncoder` README](CHDSharpEncoder/README.md) and the wiki's [Encoder page](docs/encoder.md).
 
 ---
 

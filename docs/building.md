@@ -17,8 +17,8 @@ How to build, test, pack, and publish every component of the repository.
 ```
 CSharp_CHDSharp.sln
 ├── CHDSharpLib/          The library (NuGet package: CHDSharp)
-├── CHDSharpCli/          Command-line verification tool
-├── CHDSharpEncoder/      Companion encoder support library
+├── CHDSharpCli/          Command-line verification + CHD creation tool
+├── CHDSharpEncoder/      Companion encoder library (V5 CHD creation; see [Encoder](encoder.md))
 ├── CHDSharpTest/         xUnit unit + corpus tests
 ├── CHDSharpTestGen/      Deterministic corpus generator
 ├── CHDSharpTester/       WPF interactive tester
@@ -73,6 +73,12 @@ dotnet test --logger "console;verbosity=detailed"
 ```
 
 The suite contains **468 tests** (unit + corpus) that run against 30 deterministic CHD fixtures covering V1–V5 and every codec. See [Testing](testing.md).
+
+The companion **encoder suite** (`CHDSharpEncoderTest`, 258 tests) validates CHD creation against `chdman.exe` — including 100 MB+ raw/CD round-trips:
+
+```bash
+dotnet test CHDSharpEncoderTest/ --filter "FullyQualifiedName~LargeFileValidationTests"
+```
 
 > **Regenerating the corpus** requires the vintage `chdman`/`hdcomp` binaries in `CHDSharpTest/chdman/`:
 >

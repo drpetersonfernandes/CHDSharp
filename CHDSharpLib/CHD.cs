@@ -32,7 +32,7 @@ namespace CHDSharp;
 ///     Console.WriteLine(result.Error.GetMessage());
 /// </code>
 /// </example>
-public static class Chd
+public static partial class Chd
 {
     private static readonly ILogger Log = ChdLogger.GetLogger(nameof(Chd));
 
@@ -124,6 +124,157 @@ public static class Chd
     {
         var err = CheckFile(s, filename, deepCheck, out var ver, out var sha1, out var md5, progress, cancellationToken);
         return new ChdResult(err, ver, sha1, md5);
+    }
+
+    /// <summary>
+    /// Fully verifies a CHD and, when the header SHA-1 hash fields are present but do not match
+    /// the recomputed values, repairs them in place (chdman <c>verify --fix</c> parity):
+    /// V3's <c>sha1</c> field (raw data hash), V4/V5's <c>rawsha1</c> field, and V4/V5's combined
+    /// <c>sha1</c> field (recomputed as SHA-1 of the raw hash plus the sorted checksummed
+    /// metadata hashes, MAME <c>compute_overall_sha1</c> parity). Only the header hash fields are
+    /// patched — the rest of the file is untouched, exactly like chdman. V1/V2 files (MD5 only)
+    /// and V5 uncompressed CHDs (no hash fields) are reported as verified with nothing to fix.
+    /// </summary>
+    /// <param name="filename">Path to the CHD file to verify and repair.</param>
+    /// <param name="repaired">When this method returns, <c>true</c> if a hash mismatch was found
+    /// and the header was rewritten; <c>false</c> when the hashes already matched (or no hash
+    /// fields exist to repair).</param>
+    /// <param name="progress">An optional <see cref="IProgress{T}"/> receiving a <see cref="ChdProgress"/>
+    /// report after each decompressed hunk during the full verification.</param>
+    /// <param name="cancellationToken">A token to cancel the verification.</param>
+    /// <returns>A <see cref="ChdResult"/> with the verification result. On success the computed
+    /// (repaired) hashes are available in <see cref="ChdResult.Sha1"/>.</returns>
+    /// <exception cref="OperationCanceledException">Thrown when <paramref name="cancellationToken"/>
+    /// is cancelled while hunks are being decompressed or hashed.</exception>
+    public static ChdResult CheckFileAndRepair(string filename, out bool repaired,
+        IProgress<ChdProgress>? progress = null, CancellationToken cancellationToken = default)
+    {
+        repaired = false;
+        if (string.IsNullOrEmpty(filename) || !File.Exists(filename))
+            return new ChdResult(ChdError.Chderrfilenotfound, null, null, null);
+
+        using var fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 4096);
+        if (!CheckHeader(fs, out _, out var version))
+            return new ChdResult(ChdError.Chderrinvalidfile, null, null, null);
+
+        // V1/V2 predate SHA-1: there is nothing to repair (chdman reports "no verification to be done").
+        if (version < 3)
+            return new ChdResult(ChdError.Chderrnone, version, null, null);
+
+        var err = VerifyDeep(fs, version, Path.GetFileName(filename), progress, cancellationToken,
+            out var ver, out var headerSha1, out var headerMd5, out var computedRawSha1, out var decompressionOk);
+        if (err != ChdError.Chderrnone)
+            return new ChdResult(err, ver, headerSha1, headerMd5);
+
+        // No raw hash stored in the header (e.g. -c none uncompressed CHDs): nothing to repair.
+        if (computedRawSha1 == null || Util.IsAllZeroArray(computedRawSha1))
+            return new ChdResult(ChdError.Chderrnone, ver, headerSha1, headerMd5);
+
+        // A data corruption deeper than the hash fields is not repairable.
+        if (!decompressionOk)
+            return new ChdResult(ChdError.Chderrdecompressionerror, ver, headerSha1, headerMd5);
+
+        uint rawSha1Offset;
+        uint? combinedSha1Offset;
+        switch (version)
+        {
+            case 3:
+                rawSha1Offset = 80; // V3: sha1 field = raw data hash
+                combinedSha1Offset = null;
+                break;
+            case 4:
+                rawSha1Offset = 88; // V4 rawsha1
+                combinedSha1Offset = 48; // V4 sha1 (combined)
+                break;
+            default:
+                rawSha1Offset = 64; // V5 rawsha1
+                combinedSha1Offset = 84; // V5 sha1 (combined)
+                break;
+        }
+
+        var needRaw = true;
+        var needCombined = combinedSha1Offset.HasValue;
+        byte[]? storedRaw = null;
+        byte[]? storedCombined = null;
+        try
+        {
+            fs.Position = rawSha1Offset;
+            storedRaw = new byte[20];
+            fs.ReadExactly(storedRaw, 0, 20);
+            if (combinedSha1Offset.HasValue)
+            {
+                fs.Position = combinedSha1Offset.Value;
+                storedCombined = new byte[20];
+                fs.ReadExactly(storedCombined, 0, 20);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or EndOfStreamException)
+        {
+            return new ChdResult(ChdError.Chderrreaderror, ver, headerSha1, headerMd5);
+        }
+
+        if (storedRaw != null && Util.ByteArrEquals(storedRaw, computedRawSha1))
+            needRaw = false;
+
+        byte[]? combined = null;
+        if (needCombined)
+        {
+            try
+            {
+                // ReadHeaderByVersion expects the stream right after the 16-byte preamble.
+                fs.Position = 16;
+                var hErr = ChdHeaders.ReadHeaderByVersion(fs, version, out var header);
+                if (hErr == ChdError.Chderrnone)
+                    combined = ChdMetaData.ComputeOverallSha1(fs, header, computedRawSha1);
+            }
+            catch (Exception)
+            {
+                combined = null;
+            }
+
+            if (combined != null && storedCombined != null && Util.ByteArrEquals(combined, storedCombined))
+                needCombined = false;
+        }
+
+        if (!needRaw && !needCombined)
+            return new ChdResult(ChdError.Chderrnone, ver, storedCombined ?? computedRawSha1, headerMd5);
+
+        // Release the read handle first: the patch opens the file read-write, and the read
+        // stream was opened with FileShare.Read, which forbids a second write handle.
+        fs.Dispose();
+
+        // Patch the header in place. Only the 20-byte hash fields are rewritten; the data and
+        // map are untouched, so a crash mid-write leaves either the old or the new hash (both
+        // self-describing, and re-runnable). chdman's --fix uses the same in-place approach.
+        try
+        {
+            using var writeFs = new FileStream(filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
+            if (needRaw)
+            {
+                writeFs.Position = rawSha1Offset;
+                writeFs.Write(computedRawSha1, 0, 20);
+            }
+
+            if (needCombined && combined != null)
+            {
+                writeFs.Position = combinedSha1Offset!.Value;
+                writeFs.Write(combined, 0, 20);
+            }
+
+            writeFs.Flush();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return new ChdResult(ChdError.Chderrcannotopenfile, ver, headerSha1, headerMd5);
+        }
+        catch (IOException ex)
+        {
+            Log.LogWarning(ex, "Failed to patch SHA-1 fields of {Filename}", filename);
+            return new ChdResult(ChdError.Chderrwriteerror, ver, headerSha1, headerMd5);
+        }
+
+        repaired = true;
+        return new ChdResult(ChdError.Chderrnone, ver, combined ?? computedRawSha1, headerMd5);
     }
 
     /// <inheritdoc cref="CheckFile(Stream,string,bool,IProgress{CHDSharp.Models.ChdProgress}?,System.Threading.CancellationToken)"/>
@@ -229,7 +380,7 @@ public static class Chd
             var blocksToKeep = (1024 * 1024 * 512) / (int)chd.Blocksize;
             ChdBlockRead.KeepMostRepeatedBlocks(chd, blocksToKeep);
 
-            valid = DecompressDataParallel(s, chd, progress, cancellationToken);
+            valid = DecompressDataParallel(s, chd, out _, out _, progress, cancellationToken);
 
             if (valid != ChdError.Chderrnone)
             {
@@ -240,14 +391,68 @@ public static class Chd
             valid = ChdMetaData.ReadMetaData(s, chd);
         }
 
-        if (valid != ChdError.Chderrnone)
+if (valid != ChdError.Chderrnone)
         {
-            LogMetaDataFailed(Log, valid, null);
+            LogHeaderReadFailed(Log, valid, null);
             return valid;
         }
 
 
         LogValid(Log, null);
+        return ChdError.Chderrnone;
+    }
+
+    /// <summary>
+    /// Runs the full deep-verification pipeline (decompress every hunk, compute raw SHA-1/MD5)
+    /// without comparing the computed hashes against the header and without validating the
+    /// combined metadata SHA-1 — used by <see cref="CheckFileAndRepair"/> so that a corrupt
+    /// header hash field is reported as repairable instead of as a verification failure.
+    /// </summary>
+    private static ChdError VerifyDeep(Stream s, uint version, string filename,
+        IProgress<ChdProgress>? progress, CancellationToken cancellationToken,
+        out uint? chdVersion, out byte[]? chdSha1, out byte[]? chdMd5,
+        out byte[]? computedRawSha1, out bool decompressionOk)
+    {
+        chdVersion = null;
+        chdSha1 = null;
+        chdMd5 = null;
+        computedRawSha1 = null;
+        decompressionOk = false;
+
+        ChdError valid;
+        ChdHeader chd;
+        try
+        {
+            valid = ChdHeaders.ReadHeaderByVersion(s, version, out chd);
+        }
+        catch (Exception)
+        {
+            return ChdError.Chderrinvaliddata;
+        }
+
+        if (valid != ChdError.Chderrnone)
+            return valid;
+
+        if (ChdHeaders.ValidateSizeLimits(chd) != ChdError.Chderrnone)
+            return ChdError.Chderrinvaliddata;
+
+        chdVersion = version;
+        chdSha1 = chd.Sha1;
+        chdMd5 = chd.Md5;
+
+        if (!Util.IsAllZeroArray(chd.Parentmd5) || !Util.IsAllZeroArray(chd.Parentsha1))
+            return ChdError.Chderrrequiresparent;
+
+        ChdBlockRead.FindBlockReaders(chd);
+        ChdBlockRead.FindRepeatedBlocks(chd);
+        var blocksToKeep = (1024 * 1024 * 512) / (int)chd.Blocksize;
+        ChdBlockRead.KeepMostRepeatedBlocks(chd, blocksToKeep);
+
+        var err = DecompressDataParallel(s, chd, out computedRawSha1, out var computedMd5, progress, cancellationToken, verifyHashes: false);
+        if (err != ChdError.Chderrnone)
+            return err;
+
+        decompressionOk = true;
         return ChdError.Chderrnone;
     }
 
@@ -672,10 +877,20 @@ public static class Chd
     /// <param name="cancellationToken">A token to cancel the pipeline; linked into the internal
     /// cancellation source so workers stop on caller cancellation. <see cref="OperationCanceledException"/>
     /// is thrown after the pipeline drains if cancellation was requested.</param>
+    /// <param name="verifyHashes">When <c>true</c> (default), the computed hashes are compared
+    /// against the header and <see cref="ChdError.Chderrdecompressionerror"/> is returned on
+    /// mismatch. When <c>false</c>, the mismatch check is skipped and only data corruption fails
+    /// (used by <see cref="CheckFileAndRepair"/> so a corrupt header hash can be repaired).</param>
+    /// <param name="computedRawSha1">The SHA-1 of the decompressed raw data (20 bytes), or
+    /// <c>null</c> if the pipeline was cancelled or failed before hashing completed.</param>
+    /// <param name="computedMd5">The MD5 of the decompressed raw data (16 bytes), or <c>null</c>
+    /// if the pipeline was cancelled or failed before hashing completed.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
     [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
-    private static ChdError DecompressDataParallel(Stream file, ChdHeader chd, IProgress<ChdProgress>? progress = null, CancellationToken cancellationToken = default)
+    private static ChdError DecompressDataParallel(Stream file, ChdHeader chd, out byte[]? computedRawSha1, out byte[]? computedMd5, IProgress<ChdProgress>? progress = null, CancellationToken cancellationToken = default, bool verifyHashes = true)
     {
+        computedRawSha1 = null;
+        computedMd5 = null;
         var taskCount = TaskCount; // snapshot so a concurrent change cannot desync sentinels vs workers
         var md5Check = MD5.Create();
         var sha1Check = SHA1.Create();
@@ -902,13 +1117,19 @@ public static class Chd
             md5Check.TransformFinalBlock(tmp, 0, 0);
             sha1Check.TransformFinalBlock(tmp, 0, 0);
 
+            computedMd5 = md5Check.Hash;
+            computedRawSha1 = sha1Check.Hash;
+
+            if (!verifyHashes)
+                return ChdError.Chderrnone;
+
             // here it is now using the rawsha1 value from the header to validate the raw binary data.
-            if (!Util.IsAllZeroArray(chd.Md5) && md5Check is { Hash: not null } && !Util.ByteArrEquals(chd.Md5, md5Check.Hash))
+            if (!Util.IsAllZeroArray(chd.Md5) && computedMd5 is not null && !Util.ByteArrEquals(chd.Md5, computedMd5))
             {
                 return ChdError.Chderrdecompressionerror;
             }
 
-            if (!Util.IsAllZeroArray(chd.Rawsha1) && sha1Check is { Hash: not null } && !Util.ByteArrEquals(chd.Rawsha1, sha1Check.Hash))
+            if (!Util.IsAllZeroArray(chd.Rawsha1) && computedRawSha1 is not null && !Util.ByteArrEquals(chd.Rawsha1, computedRawSha1))
             {
                 return ChdError.Chderrdecompressionerror;
             }

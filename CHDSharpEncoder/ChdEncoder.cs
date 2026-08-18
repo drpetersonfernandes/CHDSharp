@@ -54,7 +54,10 @@ public static class ChdEncoder
 
         codecTags ??= [CodecTags.Zlib];
 
-        var logicalBytes = (ulong)sourceStream.Length;
+        // input_start/input_length (CHDlite input_start_byte/input_bytes parity): the image
+        // covers [InputStartBytes, InputStartBytes + InputLengthBytes) of the source.
+        var startBytes = options?.InputStartBytes ?? 0;
+        var logicalBytes = ComputeLogicalLength(sourceStream, startBytes, options?.InputLengthBytes);
 
         // User-supplied metadata entries plus optional automatic classification
         // ('DVD ' for ISO-9660 images, synthesized 'GDDD' hard-disk geometry otherwise).
@@ -64,7 +67,7 @@ public static class ChdEncoder
 
         if (options?.AutoClassify == true)
         {
-            if (IsIso9660Image(sourceStream, logicalBytes))
+            if (IsIso9660Image(sourceStream, startBytes, logicalBytes))
             {
                 metadataEntries.Add(MetadataWriter.BuildDvdMetadata());
                 if (unitBytes == DefaultUnitBytes && hunkBytes % DvdSectorSize == 0)
@@ -79,23 +82,131 @@ public static class ChdEncoder
         }
 
         EncodeCore(chdPath, hunkBytes, unitBytes, codecTags, options, logicalBytes, metadataEntries,
-            (hunkIndex, buffer) => ReadRawHunk(sourceStream, hunkIndex, buffer, logicalBytes, hunkBytes),
+            CreateRawStreamReader(sourceStream, startBytes, logicalBytes, hunkBytes, sourceStream.CanSeek),
             cancellationToken);
+    }
+
+    /// <summary>Computes the logical image length for a raw encode, honoring
+    /// <see cref="ChdEncodeOptions.InputStartBytes"/> / <see cref="ChdEncodeOptions.InputLengthBytes"/>.</summary>
+    private static ulong ComputeLogicalLength(Stream sourceStream, long startBytes, long? inputLength)
+    {
+        if (startBytes < 0)
+            throw new ArgumentOutOfRangeException(nameof(sourceStream), "InputStartBytes must be >= 0");
+
+        ulong total;
+        if (sourceStream.CanSeek)
+        {
+            var length = sourceStream.Length;
+            if (startBytes > length)
+                throw new ArgumentException($"InputStartBytes ({startBytes}) exceeds the source length ({length})");
+            total = (ulong)(length - startBytes);
+        }
+        else
+        {
+            total = inputLength is { } len
+                ? (ulong)len
+                : throw new ArgumentException(
+                    "InputLengthBytes is required when encoding a non-seekable stream without a known length");
+        }
+
+        if (inputLength is { } lengthBytes)
+        {
+            if (lengthBytes < 0)
+                throw new ArgumentOutOfRangeException(nameof(sourceStream), "InputLengthBytes must be >= 0");
+            total = Math.Min(total, (ulong)lengthBytes);
+        }
+
+        return total;
+    }
+
+    /// <summary>Builds a hunk reader for a raw stream: seekable sources are read by offset,
+    /// non-seekable sources are drained sequentially (the pipeline reads hunks strictly in
+    /// order on a single producer thread, so no rewinding is ever needed).</summary>
+    private static Func<uint, byte[], int> CreateRawStreamReader(Stream source, long startBytes, ulong logicalBytes, uint hunkBytes, bool seekable)
+    {
+        if (seekable)
+        {
+            source.Position = startBytes;
+            return (hunkIndex, buffer) => ReadRawHunk(source, hunkIndex, buffer, logicalBytes, hunkBytes);
+        }
+
+        var reader = new SequentialStreamReader(source, startBytes);
+        return (hunkIndex, buffer) => reader.ReadHunk(hunkIndex, buffer, logicalBytes, hunkBytes);
+    }
+
+    /// <summary>Reads hunks sequentially from a non-seekable stream, skipping
+    /// <see cref="ChdEncodeOptions.InputStartBytes"/> upfront.</summary>
+    private sealed class SequentialStreamReader
+    {
+        private readonly Stream _source;
+        private readonly long _skipBytes;
+        private ulong _position;
+        private bool _skipDone;
+
+        internal SequentialStreamReader(Stream source, long skipBytes)
+        {
+            _source = source;
+            _skipBytes = skipBytes;
+        }
+
+        internal int ReadHunk(uint hunkIndex, byte[] buffer, ulong logicalBytes, uint hunkBytes)
+        {
+            // The pipeline always asks in order; any other access pattern cannot be served
+            // from a forward-only stream.
+            var expected = _position / hunkBytes;
+            if (hunkIndex != expected)
+                throw new InvalidDataException(
+                    $"Non-seekable source cannot rewind: pipeline requested hunk {hunkIndex}, stream is at {expected}");
+
+            var valid = logicalBytes - (ulong)hunkIndex * hunkBytes;
+            if ((long)valid <= 0)
+                return 0;
+
+            var count = (int)Math.Min(hunkBytes, valid);
+
+            // Drain the skip prefix once, on the first hunk.
+            if (!_skipDone)
+            {
+                _skipDone = true;
+                var skip = _skipBytes;
+                var skipBuf = new byte[Math.Min(skip, 256 * 1024)];
+                while (skip > 0)
+                {
+                    var read = _source.Read(skipBuf, 0, (int)Math.Min(skip, skipBuf.Length));
+                    if (read == 0)
+                        throw new EndOfStreamException("Non-seekable source ended before InputStartBytes");
+                    skip -= read;
+                }
+            }
+
+            var total = 0;
+            while (total < count)
+            {
+                var read = _source.Read(buffer, total, count - total);
+                if (read == 0)
+                    break;
+                total += read;
+            }
+
+            _position += (ulong)count;
+            return total;
+        }
     }
 
     /// <summary>
     /// Detects an ISO-9660 filesystem image: the primary volume descriptor at sector 16
-    /// (byte offset 0x8000) starts with the "CD001" magic. Restores the stream position.
+    /// (byte offset 0x8000 from the image start) starts with the "CD001" magic. Restores the
+    /// stream position. Only seekable streams can be probed.
     /// </summary>
-    private static bool IsIso9660Image(Stream sourceStream, ulong length)
+    private static bool IsIso9660Image(Stream sourceStream, long imageStart, ulong length)
     {
-        if (length < Iso9660PvdOffset + 5)
+        if (!sourceStream.CanSeek || length < Iso9660PvdOffset + 5)
             return false;
 
         var original = sourceStream.Position;
         try
         {
-            sourceStream.Position = (long)Iso9660PvdOffset;
+            sourceStream.Position = imageStart + (long)Iso9660PvdOffset;
             Span<byte> magic = stackalloc byte[5];
             if (sourceStream.Read(magic) != 5)
                 return false;
@@ -523,7 +634,10 @@ public static class ChdEncoder
                 continue;
 
             // the BIN file stores datasize+subsize bytes per sector (no subcode → 2352);
-            // the remainder of the 2448-byte CHD frame stays zero-filled
+            // the remainder of the 2448-byte CHD frame stays zero-filled. MAME's physical read
+            // path reads every track sector (pregap included) at the track's file offset
+            // (cdrom.cpp read_partial_sector, phys=true), so the pregap frames are read from
+            // the file exactly like data frames.
             int binFrameSize = track.DataSize + track.SubSize;
             long sourceOffset = track.FileOffset + (long)frameInTrack * binFrameSize;
             var file = GetSourceFile(files, track.FileName!);

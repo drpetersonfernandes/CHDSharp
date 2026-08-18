@@ -132,6 +132,7 @@ public sealed class ZstdCodec : IChdCodec
 public sealed class LzmaCodec : IChdCodec
 {
     private readonly LzmaEncoderProperties _properties;
+    private readonly MemoryStream _ms;
 
     /// <summary>Creates an LZMA codec for the given hunk size.</summary>
     /// <param name="hunkBytes">Hunk size in bytes (becomes the LZMA dictionary size).</param>
@@ -140,6 +141,7 @@ public sealed class LzmaCodec : IChdCodec
         // endMarker: false; dictionary size limited to the hunk size so back-references
         // never exceed what the decoder's per-hunk dictionary buffer provides
         _properties = new LzmaEncoderProperties(false, (int)hunkBytes);
+        _ms = new MemoryStream((int)hunkBytes / 2);
     }
 
     /// <inheritdoc/>
@@ -148,13 +150,18 @@ public sealed class LzmaCodec : IChdCodec
     /// <inheritdoc/>
     public byte[]? Compress(byte[] data)
     {
-        using var ms = new MemoryStream(data.Length / 2);
-        using (var lzma = LzmaStream.Create(_properties, false, ms))
+        // Reuse the output buffer across hunks (CHDlite's persistent-encoder allocation win):
+        // codec instances are per-worker, so the encoder stream is never shared across threads.
+        // The LzmaStream itself is stateful and must be recreated per hunk (raw LZMA frames are
+        // self-contained), but the MemoryStream backing buffer is reused to avoid reallocations.
+        _ms.SetLength(0);
+        _ms.Position = 0;
+        using (var lzma = LzmaStream.Create(_properties, false, _ms))
         {
             lzma.Write(data, 0, data.Length);
         }
 
-        var result = ms.ToArray();
+        var result = _ms.ToArray();
         return result.Length < data.Length ? result : null;
     }
 }

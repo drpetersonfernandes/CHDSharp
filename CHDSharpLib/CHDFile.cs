@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using CHDSharp.Models;
 using CHDSharp.Utils;
@@ -51,7 +52,9 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 {
     private static readonly ILogger Log = ChdLogger.GetLogger(nameof(ChdFile));
 
-    private readonly Stream _stream;
+    // Not readonly: SetMetadata/DeleteMetadata dispose and reopen the underlying stream as
+    // part of the atomic temp-file rewrite.
+    private Stream _stream;
 
     private readonly bool _leaveOpen;
 
@@ -84,6 +87,12 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     private uint? _unitBytes;
 
     private byte[]? _precache;
+
+    // Optional memory-mapped view of the whole file (Phase 7.1): when present, hunk data is
+    // copied straight out of mapped memory, avoiding syscalls entirely. The backing FileStream
+    // stays open for metadata/map reads and as a graceful fallback.
+    private System.IO.MemoryMappedFiles.MemoryMappedFile? _mmf;
+    private System.IO.MemoryMappedFiles.MemoryMappedViewAccessor? _mmfView;
 
     private List<ChdTrackInfo>? _tracks;
     private bool _tracksLoaded;
@@ -345,6 +354,356 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         return ChdError.Chderrmetadatanotfound;
     }
 
+    /// <summary>Flags a metadata entry as covered by the combined-SHA1 verification (CHD_MDFLAGS_CHECKSUM).</summary>
+    public const byte MetadataChecksumFlag = 0x01;
+
+    /// <summary>
+    /// Sets (adds or replaces) a metadata entry in this CHD (chdman <c>addmeta</c> parity).
+    /// The entry at occurrence <paramref name="index"/> among entries with tag
+    /// <paramref name="tag"/> is replaced; when <paramref name="index"/> equals the number of
+    /// existing entries with that tag, the entry is appended. The metadata chain is rewritten
+    /// atomically (temp file + rename), the combined SHA-1 is recomputed for V4/V5, and this
+    /// instance is transparently reopened against the new file.
+    /// </summary>
+    /// <param name="tag">Four-character metadata tag (e.g. "GAME", "GDDD").</param>
+    /// <param name="data">The metadata payload bytes.</param>
+    /// <param name="index">Zero-based occurrence index of the entry to replace, or the number of
+    /// existing entries to append. Default 0.</param>
+    /// <param name="flags">Metadata flags: <see cref="MetadataChecksumFlag"/> (default) includes
+    /// the entry in the combined-SHA1 verification.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success;
+    /// <see cref="ChdError.Chderrinvalidparameter"/> for V1/V2 files, a stream opened with
+    /// <c>leaveOpen</c>, a non-four-character tag, or an out-of-range index;
+    /// <see cref="ChdError.Chderrmetadatanotfound"/> when the metadata chain could not be read;
+    /// otherwise a write/IO error code.</returns>
+    public ChdError SetMetadata(string tag, byte[] data, uint index = 0, byte flags = MetadataChecksumFlag)
+    {
+        ArgumentNullException.ThrowIfNull(tag);
+        ArgumentNullException.ThrowIfNull(data);
+        if (tag.Length != 4)
+            return ChdError.Chderrinvalidparameter;
+        if (data.Length > 0x00FFFFFF)
+            return ChdError.Chderrinvalidmetadatasize;
+
+        var err = EnsureMetadataLoaded();
+        if (err != ChdError.Chderrnone)
+            return err;
+
+        // V1/V2 have no metadata section (chdman addmeta refuses them the same way).
+        if (Version < 3)
+            return ChdError.Chderrinvalidparameter;
+
+        var list = new List<ChdMetadataEntry>(_metadata!);
+        var matches = list.Where(e => string.Equals(e.Tag, tag, StringComparison.Ordinal)).ToList();
+        if (index > matches.Count)
+            return ChdError.Chderrinvalidparameter;
+
+        var newEntry = new ChdMetadataEntry(tag, data) { Flags = flags };
+        if (index < matches.Count)
+        {
+            var position = list.FindIndex(e => ReferenceEquals(e, matches[(int)index]));
+            list[position] = newEntry;
+        }
+        else
+        {
+            list.Add(newEntry);
+        }
+
+        return RewriteMetadata(list);
+    }
+
+    /// <summary>
+    /// Deletes a metadata entry from this CHD (chdman <c>delmeta</c> parity): the entry at
+    /// occurrence <paramref name="index"/> among entries with tag <paramref name="tag"/> is
+    /// removed. The metadata chain is rewritten atomically (temp file + rename), the combined
+    /// SHA-1 is recomputed for V4/V5, and this instance is transparently reopened against the
+    /// new file.
+    /// </summary>
+    /// <param name="tag">Four-character metadata tag (e.g. "GAME", "GDDD").</param>
+    /// <param name="index">Zero-based occurrence index of the entry to delete. Default 0.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success;
+    /// <see cref="ChdError.Chderrinvalidparameter"/> for V1/V2 files or a stream opened with
+    /// <c>leaveOpen</c>; <see cref="ChdError.Chderrmetadatanotfound"/> when no entry matches or
+    /// the metadata chain could not be read; otherwise a write/IO error code.</returns>
+    public ChdError DeleteMetadata(string tag, uint index = 0)
+    {
+        ArgumentNullException.ThrowIfNull(tag);
+        var err = EnsureMetadataLoaded();
+        if (err != ChdError.Chderrnone)
+            return err;
+
+        if (Version < 3)
+            return ChdError.Chderrinvalidparameter;
+
+        var list = new List<ChdMetadataEntry>(_metadata!);
+        var position = -1;
+        var seen = 0;
+        for (var i = 0; i < list.Count; i++)
+        {
+            if (string.Equals(list[i].Tag, tag, StringComparison.Ordinal))
+            {
+                if (seen == index)
+                {
+                    position = i;
+                    break;
+                }
+
+                seen++;
+            }
+        }
+
+        if (position < 0)
+            return ChdError.Chderrmetadatanotfound;
+
+        list.RemoveAt(position);
+        return RewriteMetadata(list);
+    }
+
+    /// <summary>
+    /// Rewrites this CHD with a new metadata chain, atomically (temp file + rename, like the
+    /// extract paths): the header (with patched <c>metaoffset</c> and, for V4/V5, a recomputed
+    /// combined SHA-1) is followed byte-for-byte by the original file content — the map and all
+    /// hunk data keep their exact offsets, so the raw SHA-1 and the raw map stay valid — and the
+    /// new metadata chain is appended at the end. Readers locate metadata purely via
+    /// <c>metaoffset</c>, so the chain does not need to live before the map (chdman writes it
+    /// there, but every reader follows the pointer). This instance is then transparently
+    /// reopened against the new file.
+    /// </summary>
+    private ChdError RewriteMetadata(IReadOnlyList<ChdMetadataEntry> entries)
+    {
+        if (_leaveOpen)
+            return ChdError.Chderrinvalidparameter;
+
+        string path;
+        try
+        {
+            path = ((FileStream)_stream).Name;
+        }
+        catch (Exception)
+        {
+            // Only file-backed instances can be rewritten in place.
+            return ChdError.Chderrinvalidparameter;
+        }
+
+        // Serialize the new chain: [tag(4)][flags(1) | length(3)][next(8)][payload].
+        var chain = new MemoryStream(256);
+        foreach (var entry in entries)
+        {
+            if (entry.Data.Length > 0x00FFFFFF)
+                return ChdError.Chderrinvalidmetadatasize;
+
+            var header = new byte[16];
+            var tag = MetadataTagToUInt(entry.Tag);
+            header[0] = (byte)(tag >> 24);
+            header[1] = (byte)(tag >> 16);
+            header[2] = (byte)(tag >> 8);
+            header[3] = (byte)tag;
+            header[4] = entry.Flags;
+            header[5] = (byte)(entry.Data.Length >> 16);
+            header[6] = (byte)(entry.Data.Length >> 8);
+            header[7] = (byte)entry.Data.Length;
+            // next (bytes 8-15) patched below.
+            chain.Write(header, 0, 16);
+            chain.Write(entry.Data, 0, entry.Data.Length);
+        }
+
+        var chainBytes = chain.ToArray();
+
+        // The chain is appended after the copied original content, so its absolute start is
+        // the current file length; 'next' pointers reference absolute file offsets.
+        var chainOffset = _stream.Length;
+
+        // Patch the 'next' pointers: each entry's 8-byte next field points at the next
+        // entry's absolute file offset (the last entry has next = 0).
+        var absoluteOffsets = new long[entries.Count];
+        var running = chainOffset;
+        for (var i = 0; i < entries.Count; i++)
+        {
+            absoluteOffsets[i] = running;
+            running += 16 + entries[i].Data.Length;
+        }
+
+        for (var i = 0; i < entries.Count; i++)
+        {
+            var next = i + 1 < entries.Count ? absoluteOffsets[i + 1] : 0;
+            WriteUInt64Be(chainBytes, EntriesBytesBefore(entries, i) + 8, (ulong)next);
+        }
+
+        // Recompute the combined SHA-1 for V4/V5 (rawsha1 is unchanged: the data is untouched).
+        byte[]? combinedSha1 = null;
+        if (Version >= 4 && !Util.IsAllZeroArray(_chd.Rawsha1!))
+        {
+            combinedSha1 = ComputeCombinedSha1(_chd.Rawsha1!, entries);
+        }
+
+        var tempPath = path + ".tmp" + Guid.NewGuid().ToString("N")[..8];
+        try
+        {
+            var headerLen = HeaderLengthForVersion(Version);
+            using (var temp = new FileStream(tempPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 128 * 4096))
+            {
+                // 1. Header, with patched metaoffset (+ combined sha1 for V4/V5).
+                _stream.Position = 0;
+                var header = new byte[headerLen];
+                _stream.ReadExactly(header, 0, headerLen);
+                WriteUInt64Be(header, Version >= 5 ? 48u : 36u, (ulong)chainOffset);
+                if (Version >= 4 && combinedSha1 != null)
+                {
+                    Array.Copy(combinedSha1, 0, header, Version >= 5 ? 84 : 48, 20);
+                }
+
+                temp.Write(header, 0, header.Length);
+
+                // 2. The rest of the original file, verbatim (map + data + old metadata chain).
+                _stream.Position = headerLen;
+                var copyBuf = new byte[1024 * 1024];
+                while (true)
+                {
+                    var read = _stream.Read(copyBuf, 0, copyBuf.Length);
+                    if (read == 0)
+                        break;
+                    temp.Write(copyBuf, 0, read);
+                }
+
+                // 3. The new metadata chain at the end.
+                temp.Write(chainBytes, 0, chainBytes.Length);
+                temp.Flush();
+            }
+
+            // 4. Atomically replace the original file.
+            _stream.Dispose();
+            File.Move(tempPath, path, overwrite: true);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            TryDeleteTemp(tempPath);
+            return ChdError.Chderrcannotopenfile;
+        }
+        catch (IOException ex)
+        {
+            Log.LogWarning(ex, "Failed to rewrite metadata of {Path}", path);
+            TryDeleteTemp(tempPath);
+            return ChdError.Chderrwriteerror;
+        }
+
+        // Reopen against the rewritten file and refresh the cached state.
+        try
+        {
+            _stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 4096);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Log.LogWarning(ex, "Failed to reopen {Path} after metadata rewrite", path);
+            return ChdError.Chderrcannotopenfile;
+        }
+
+        _chd.Metaoffset = (ulong)chainOffset;
+        if (Version >= 4 && combinedSha1 != null)
+        {
+            Array.Copy(combinedSha1, 0, _chd.Sha1!, 0, 20);
+        }
+
+        _metadata = new List<ChdMetadataEntry>(entries);
+        _metadataLoaded = true;
+        _metadataError = ChdError.Chderrnone;
+        _tracksLoaded = false;
+        _tracks = null;
+        _isCd = false;
+        _isGdRom = false;
+        _isLegacyGdRom = false;
+        _isDvd = false;
+        _isHdd = false;
+        _unitBytes = null;
+        _precache = null;
+        _cachedHunk = -1;
+
+        return ChdError.Chderrnone;
+    }
+
+    private static void TryDeleteTemp(string tempPath)
+    {
+        try
+        {
+            File.Delete(tempPath);
+        }
+        catch (Exception)
+        {
+            // best effort
+        }
+    }
+
+    private static long EntriesBytesBefore(IReadOnlyList<ChdMetadataEntry> entries, int index)
+    {
+        long total = 0;
+        for (var i = 0; i < index; i++)
+        {
+            total += 16 + entries[i].Data.Length;
+        }
+
+        return total;
+    }
+
+    private static uint MetadataTagToUInt(string tag)
+    {
+        return ((uint)tag[0] << 24) | ((uint)tag[1] << 16) | ((uint)tag[2] << 8) | tag[3];
+    }
+
+    private static int HeaderLengthForVersion(uint version)
+    {
+        return version switch
+        {
+            1 => 76,
+            2 => 80,
+            3 => 120,
+            4 => 108,
+            _ => 124
+        };
+    }
+
+    private static void WriteUInt64Be(byte[] buffer, long offset, ulong value)
+    {
+        buffer[offset] = (byte)(value >> 56);
+        buffer[offset + 1] = (byte)(value >> 48);
+        buffer[offset + 2] = (byte)(value >> 40);
+        buffer[offset + 3] = (byte)(value >> 32);
+        buffer[offset + 4] = (byte)(value >> 24);
+        buffer[offset + 5] = (byte)(value >> 16);
+        buffer[offset + 6] = (byte)(value >> 8);
+        buffer[offset + 7] = (byte)value;
+    }
+
+    /// <summary>
+    /// Computes the combined SHA-1 of a V4/V5 CHD: <c>SHA1(rawsha1 ‖ sorted hashes)</c> where
+    /// each hash is the big-endian 4-byte metadata tag followed by the SHA-1 of the entry payload
+    /// (checksummed entries only, sorted byte-wise) — MAME <c>compute_overall_sha1</c> parity.
+    /// </summary>
+    private static byte[] ComputeCombinedSha1(byte[] rawSha1, IReadOnlyList<ChdMetadataEntry> entries)
+    {
+        var hashes = new List<byte[]>();
+        foreach (var entry in entries)
+        {
+            if ((entry.Flags & MetadataChecksumFlag) == 0)
+                continue;
+
+            var payloadHash = SHA1.HashData(entry.Data);
+            var hash = new byte[24];
+            var tag = MetadataTagToUInt(entry.Tag);
+            hash[0] = (byte)(tag >> 24);
+            hash[1] = (byte)(tag >> 16);
+            hash[2] = (byte)(tag >> 8);
+            hash[3] = (byte)tag;
+            Array.Copy(payloadHash, 0, hash, 4, 20);
+            hashes.Add(hash);
+        }
+
+        hashes.Sort(Util.ByteArrCompare);
+
+        using var overall = IncrementalHash.CreateHash(HashAlgorithmName.SHA1);
+        overall.AppendData(rawSha1);
+        foreach (var hash in hashes)
+            overall.AppendData(hash);
+        return overall.GetHashAndReset();
+    }
     /// <summary>
     /// Reads the entire compressed CHD file into memory so that subsequent hunk
     /// reads are served from RAM instead of the underlying stream (libchdr
@@ -353,19 +712,39 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// The underlying stream's position is restored after precaching.
     /// </summary>
     /// <remarks>Like all <see cref="ChdFile"/> members, <c>Precache</c> must not be
-    /// called concurrently with other operations on the same instance.</remarks>
+    /// called concurrently with other operations on the same instance. For memory-mapped
+    /// instances (opened with <c>mmf: true</c>) this is a no-op — the mapping already
+    /// provides the same effect.</remarks>
     /// <returns><see cref="ChdError.Chderrnone"/> on success (or if already precached);
     /// <see cref="ChdError.Chderroutofmemory"/> if the file is larger than 2 GiB or cannot be allocated;
     /// <see cref="ChdError.Chderrreaderror"/> if the file could not be read.</returns>
     public ChdError Precache()
     {
+        return Precache(int.MaxValue);
+    }
+
+    /// <summary>
+    /// Reads the entire compressed CHD file into memory (see <see cref="Precache()"/>), refusing
+    /// files larger than <paramref name="maxBytes"/> with <see cref="ChdError.Chderroutofmemory"/>.
+    /// </summary>
+    /// <param name="maxBytes">The largest file size (in bytes) this call is willing to buffer;
+    /// larger files return <see cref="ChdError.Chderroutofmemory"/> without reading.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success (or if already precached);
+    /// <see cref="ChdError.Chderroutofmemory"/> if the file is larger than <paramref name="maxBytes"/> or cannot be allocated;
+    /// <see cref="ChdError.Chderrreaderror"/> if the file could not be read.</returns>
+    public ChdError Precache(long maxBytes)
+    {
         if (_precache != null)
+            return ChdError.Chderrnone;
+
+        // Memory-mapped instances already read straight from the OS page cache.
+        if (_mmfView != null)
             return ChdError.Chderrnone;
 
         try
         {
             var length = _stream.Length;
-            if (length > int.MaxValue)
+            if (length > maxBytes || length > int.MaxValue)
                 return ChdError.Chderroutofmemory;
 
             var buffer = new byte[(int)length];
@@ -392,6 +771,46 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             Log.LogWarning(ex, "Failed to precache CHD file into memory");
             return ChdError.Chderrreaderror;
         }
+    }
+
+    /// <summary>
+    /// Memory budget (in bytes) of the multi-hunk LRU cache: the cache retains up to
+    /// <c>CacheSize</c> decompressed hunks, i.e. roughly this many bytes. Setting it adjusts
+    /// <see cref="CacheSize"/> to the largest whole number of hunks that fits the budget
+    /// (at least one hunk). See <see cref="ConfigureCache(int)"/>.
+    /// </summary>
+    public long MemoryBudget
+    {
+        get => (long)_cacheSize * HunkBytes;
+        set
+        {
+            if (value < 0)
+                throw new ArgumentOutOfRangeException(nameof(value), value, "MemoryBudget must be >= 0");
+            var hunks = value / HunkBytes;
+            ConfigureCache(hunks > 0 ? (int)Math.Min(hunks, int.MaxValue) : 1);
+        }
+    }
+
+    /// <summary>
+    /// Copies <paramref name="buffer"/>'s full length from the data source at <paramref name="offset"/>,
+    /// preferring precache, then the memory-mapped view, then the underlying stream. Used by the
+    /// synchronous read paths; concurrent callers must serialize on <see cref="ReadHunkConcurrent"/>.</summary>
+    private void ReadDataAt(long offset, byte[] buffer)
+    {
+        if (_precache != null)
+        {
+            Array.Copy(_precache, (int)offset, buffer, 0, buffer.Length);
+            return;
+        }
+
+        if (_mmfView != null)
+        {
+            _mmfView.ReadArray(offset, buffer, 0, buffer.Length);
+            return;
+        }
+
+        _stream.Seek(offset, SeekOrigin.Begin);
+        _stream.ReadExactly(buffer, 0, buffer.Length);
     }
 
     /// <summary>
@@ -586,26 +1005,189 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         }, cancellationToken);
     }
 
-    /// <summary>Asynchronously decompresses a single hunk into <paramref name="buffer"/> (see <see cref="ReadHunk"/>).</summary>
+    /// <summary>Asynchronously decompresses a single hunk into <paramref name="buffer"/> (see <see cref="ReadHunk"/>).
+    /// The compressed data is read with real asynchronous I/O (<c>RandomAccess.ReadAsync</c> for
+    /// file-backed instances, <c>Stream.ReadExactlyAsync</c> otherwise); decompression itself is
+    /// CPU-bound and runs on the calling thread. Does not touch the shared per-hunk cache.</summary>
     /// <param name="hunknum">Zero-based hunk index (0 to <see cref="HunkCount"/> - 1).</param>
     /// <param name="buffer">Destination buffer of at least <see cref="HunkBytes"/> bytes.</param>
     /// <param name="cancellationToken">A token to cancel the read. <see cref="OperationCanceledException"/> is thrown if cancellation is requested.</param>
     /// <returns>A task producing the <see cref="ChdError"/> result.</returns>
-    public Task<ChdError> ReadHunkAsync(uint hunknum, byte[] buffer, CancellationToken cancellationToken = default)
+    public async Task<ChdError> ReadHunkAsync(uint hunknum, byte[] buffer, CancellationToken cancellationToken = default)
     {
-        return Task.Run(() => ReadHunk(hunknum, buffer, cancellationToken), cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        if (hunknum >= _chd.Totalblocks)
+            return ChdError.Chderrhunkoutofrange;
+        if (buffer.Length < _chd.Blocksize)
+            return ChdError.Chderrinvalidparameter;
+
+        var me = _chd.Map[hunknum];
+
+        if (me.Comptype == CompressionType.Compressionparent)
+            return await ReadParentHunkAsync(me, buffer, cancellationToken).ConfigureAwait(false);
+
+        MapEntry? dataEntry = me;
+        while (dataEntry is { Comptype: CompressionType.Compressionself })
+        {
+            dataEntry = dataEntry.SelfMapEntry;
+        }
+
+        if (dataEntry is null)
+            return ChdError.Chderrinvaliddata;
+
+        byte[]? compressed = null;
+        try
+        {
+            if (dataEntry.Length > 0)
+            {
+                if (dataEntry.Length > _chd.MaxCompressedBlockCap)
+                {
+                    Log.LogWarning("Hunk {HunkNumber} compressed length {Length} exceeds cap {Cap}", hunknum, dataEntry.Length, _chd.MaxCompressedBlockCap);
+                    return ChdError.Chderrinvaliddata;
+                }
+
+                compressed = new byte[dataEntry.Length];
+                await ReadDataAtAsync((long)dataEntry.Offset, compressed, cancellationToken).ConfigureAwait(false);
+            }
+
+            // Decompression is CPU-bound. A per-call codec state keeps the async path safe even
+            // when multiple awaited reads interleave (await continuations can resume on other
+            // threads, so a shared or thread-local state would race).
+            using var codec = new ChdCodecState();
+            return ChdBlockRead.ReadBlock(me, new ArrayPool(_chd.Blocksize), _chd.ChdReader, codec, buffer, (int)_chd.Blocksize, compressed);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Log.LogWarning(ex, "Failed to decompress hunk {HunkNumber} (async)", hunknum);
+            return ChdError.Chderrdecompressionerror;
+        }
     }
 
-    /// <summary>Asynchronously reads a byte range from the decompressed image (see <see cref="Read"/>).</summary>
+    /// <summary>Parent-hunk resolution for <see cref="ReadHunkAsync"/> (mirrors
+    /// <see cref="ReadParentHunk"/> with async I/O and a local stitch buffer).</summary>
+    private async Task<ChdError> ReadParentHunkAsync(MapEntry me, byte[] buffer, CancellationToken cancellationToken)
+    {
+        if (_parent == null)
+            return ChdError.Chderrrequiresparent;
+
+        var unitbytes = _chd.Unitbytes;
+        var hunkbytes = _chd.Blocksize;
+
+        var directIndex = Version < 5 || _chd.UncompressedMap;
+        if (directIndex || unitbytes == 0 || unitbytes == hunkbytes)
+        {
+            if (me.Offset >= _parent.HunkCount)
+                return ChdError.Chderrinvalidparent;
+
+            return await _parent.ReadHunkAsync((uint)me.Offset, buffer, cancellationToken).ConfigureAwait(false);
+        }
+
+        var unitsInHunk = hunkbytes / unitbytes;
+        var blockoffs = me.Offset;
+        var parentHunk = blockoffs / unitsInHunk;
+        var unitInHunk = (uint)(blockoffs % unitsInHunk);
+
+        if (unitInHunk == 0)
+        {
+            if (parentHunk >= _parent.HunkCount)
+                return ChdError.Chderrinvalidparent;
+
+            return await _parent.ReadHunkAsync((uint)parentHunk, buffer, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (parentHunk + 1 >= _parent.HunkCount)
+            return ChdError.Chderrinvalidparent;
+
+        var scratch = new byte[hunkbytes];
+        var e1 = await _parent.ReadHunkAsync((uint)parentHunk, scratch, cancellationToken).ConfigureAwait(false);
+        if (e1 != ChdError.Chderrnone)
+            return e1;
+
+        var firstBytes = (int)((unitsInHunk - unitInHunk) * unitbytes);
+        Array.Copy(scratch, (int)(unitInHunk * unitbytes), buffer, 0, firstBytes);
+
+        var e2 = await _parent.ReadHunkAsync((uint)parentHunk + 1, scratch, cancellationToken).ConfigureAwait(false);
+        if (e2 != ChdError.Chderrnone)
+            return e2;
+
+        var secondBytes = (int)(unitInHunk * unitbytes);
+        Array.Copy(scratch, 0, buffer, firstBytes, secondBytes);
+        return ChdError.Chderrnone;
+    }
+
+    /// <summary>Reads <paramref name="buffer"/>'s full length from the data source at
+    /// <paramref name="offset"/> with real async I/O (no thread-pool hopping for file-backed
+    /// instances).</summary>
+    private async ValueTask ReadDataAtAsync(long offset, byte[] buffer, CancellationToken cancellationToken)
+    {
+        if (_precache != null)
+        {
+            Array.Copy(_precache, (int)offset, buffer, 0, buffer.Length);
+            return;
+        }
+
+        if (_mmfView != null)
+        {
+            _mmfView.ReadArray(offset, buffer, 0, buffer.Length);
+            return;
+        }
+
+        if (_stream is FileStream fileStream)
+        {
+            var handle = fileStream.SafeFileHandle;
+            var position = offset;
+            var remaining = buffer.Length;
+            while (remaining > 0)
+            {
+                var read = await RandomAccess.ReadAsync(handle, buffer.AsMemory(buffer.Length - remaining), position, cancellationToken).ConfigureAwait(false);
+                if (read == 0)
+                    throw new EndOfStreamException($"Unexpected end of file at offset {position}");
+                position += read;
+                remaining -= read;
+            }
+
+            return;
+        }
+
+        _stream.Position = offset;
+        await _stream.ReadExactlyAsync(buffer, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Asynchronously reads a byte range from the decompressed image (see <see cref="Read"/>).
+    /// Uses genuine async I/O via <see cref="ReadHunkAsync"/>.</summary>
     /// <param name="byteOffset">Byte offset into the decompressed image (0 to <see cref="TotalBytes"/> - 1).</param>
     /// <param name="destination">Destination buffer.</param>
     /// <param name="destinationOffset">Offset in <paramref name="destination"/> at which to start writing.</param>
     /// <param name="count">Number of bytes to read.</param>
     /// <param name="cancellationToken">A token to cancel the read. <see cref="OperationCanceledException"/> is thrown if cancellation is requested.</param>
     /// <returns>A task producing the <see cref="ChdError"/> result.</returns>
-    public Task<ChdError> ReadAsync(ulong byteOffset, byte[] destination, int destinationOffset, int count, CancellationToken cancellationToken = default)
+    public async Task<ChdError> ReadAsync(ulong byteOffset, byte[] destination, int destinationOffset, int count, CancellationToken cancellationToken = default)
     {
-        return Task.Run(() => Read(byteOffset, destination, destinationOffset, count, cancellationToken), cancellationToken);
+        if (destinationOffset < 0 || count < 0 ||
+            count > destination.Length - destinationOffset ||
+            byteOffset > _chd.Totalbytes || (ulong)count > _chd.Totalbytes - byteOffset)
+            return ChdError.Chderrinvalidparameter;
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var hunkBuffer = new byte[_chd.Blocksize];
+        while (count > 0)
+        {
+            var hunk = (long)(byteOffset / _chd.Blocksize);
+            var within = (int)(byteOffset % _chd.Blocksize);
+            var chunk = Math.Min(count, (int)_chd.Blocksize - within);
+
+            var err = await ReadHunkAsync((uint)hunk, hunkBuffer, cancellationToken).ConfigureAwait(false);
+            if (err != ChdError.Chderrnone)
+                return err;
+
+            Array.Copy(hunkBuffer, within, destination, destinationOffset, chunk);
+            destinationOffset += chunk;
+            byteOffset += (ulong)chunk;
+            count -= chunk;
+        }
+
+        return ChdError.Chderrnone;
     }
 
     /// <summary>
@@ -694,6 +1276,101 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     public static ChdError Open(string filename, out ChdFile? chdFile, CancellationToken cancellationToken = default)
     {
         return Open(filename, (ChdFile?)null, out chdFile, cancellationToken);
+    }
+
+    /// <summary>
+    /// Opens a standalone CHD file from disk for random access with an optional memory-mapped
+    /// data region (see <see cref="Open(string, out ChdFile, CancellationToken)"/>).
+    /// </summary>
+    /// <param name="filename">Path to the CHD file to open.</param>
+    /// <param name="memoryMapped">When <c>true</c>, the compressed data region is memory-mapped:
+    /// hunk reads are served straight from mapped memory (no syscalls). Falls back to regular
+    /// stream reads when the mapping cannot be created (32-bit processes, huge files). For
+    /// memory-mapped instances <c>Precache</c> is a no-op.</param>
+    /// <param name="chdFile">When this method returns, contains the opened <see cref="ChdFile"/>, or <c>null</c> on error.</param>
+    /// <param name="cancellationToken">A token to cancel the open.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
+    public static ChdError Open(string filename, bool memoryMapped, out ChdFile? chdFile, CancellationToken cancellationToken = default)
+    {
+        return Open(filename, (ChdFile?)null, memoryMapped, out chdFile, cancellationToken);
+    }
+
+    /// <summary>
+    /// Opens a (possibly child) CHD from disk with an optional memory-mapped data region,
+    /// resolving parent references against the CHD at <paramref name="parentFilename"/>
+    /// (see <see cref="Open(string, string, out ChdFile, CancellationToken)"/> and
+    /// <see cref="Open(string, bool, out ChdFile, CancellationToken)"/>).
+    /// </summary>
+    public static ChdError Open(string filename, string? parentFilename, bool memoryMapped, out ChdFile? chdFile, CancellationToken cancellationToken = default)
+    {
+        chdFile = null;
+        cancellationToken.ThrowIfCancellationRequested();
+
+        ChdFile? parent = null;
+        if (!string.IsNullOrEmpty(parentFilename))
+        {
+            var perr = Open(parentFilename, (ChdFile?)null, memoryMapped, out parent, cancellationToken);
+            if (perr != ChdError.Chderrnone)
+                return perr;
+        }
+
+        var err = Open(filename, parent, memoryMapped, out chdFile, cancellationToken);
+        if (err != ChdError.Chderrnone)
+        {
+            parent?.Dispose();
+            return err;
+        }
+
+        // Transfer ownership of the internally-opened parent to the child.
+        if (parent != null)
+        {
+            chdFile!._ownsParent = true;
+        }
+
+        return ChdError.Chderrnone;
+    }
+
+    /// <summary>
+    /// Opens a (possibly child) CHD from disk with an optional memory-mapped data region,
+    /// resolving parent references against an already-open <paramref name="parent"/>
+    /// (see <see cref="Open(string, ChdFile, out ChdFile, CancellationToken)"/>).
+    /// </summary>
+    public static ChdError Open(string filename, ChdFile? parent, bool memoryMapped, out ChdFile? chdFile, CancellationToken cancellationToken = default)
+    {
+        var err = Open(filename, parent, out chdFile, cancellationToken);
+        if (err != ChdError.Chderrnone || chdFile == null)
+            return err;
+
+        if (memoryMapped)
+        {
+            chdFile.TryEnableMemoryMapping();
+        }
+
+        return ChdError.Chderrnone;
+    }
+
+    /// <summary>Creates a read-only memory-mapped view of the whole file for hunk data reads.
+    /// Failures (32-bit, huge files, platform limits) are swallowed — the stream fallback stays
+    /// in place and behaves identically.</summary>
+    private void TryEnableMemoryMapping()
+    {
+        try
+        {
+            // No 'using': the mapping is owned by this instance and disposed with it (the view
+            // accessor keeps the mapping alive independently).
+            var mmf = System.IO.MemoryMappedFiles.MemoryMappedFile.CreateFromFile(
+                (FileStream)_stream, null, 0, System.IO.MemoryMappedFiles.MemoryMappedFileAccess.Read,
+                System.IO.HandleInheritability.None, leaveOpen: true);
+            var view = mmf.CreateViewAccessor(0, _stream.Length, System.IO.MemoryMappedFiles.MemoryMappedFileAccess.Read);
+            _mmfView = view;
+            _mmf = mmf;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
+        {
+            Log.LogDebug("Memory-mapped open unavailable for this file: {Message}", ex.Message);
+            _mmfView?.Dispose();
+            _mmfView = null;
+        }
     }
 
     /// <summary>
@@ -856,6 +1533,13 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         if (valid != ChdError.Chderrnone)
             return valid;
 
+        // Harden the map against crafted offsets: no stored hunk may point past the end of
+        // the file (libchdr maxoffset check, chd-rs map.rs:420-422). Enforced at open — not
+        // lazily at read time — so a corrupt map cannot defer its failure.
+        valid = ChdHeaders.ValidateMapBounds(chd, (ulong)stream.Length);
+        if (valid != ChdError.Chderrnone)
+            return valid;
+
         var needsParent = !Util.IsAllZeroArray(chd.Parentmd5) || !Util.IsAllZeroArray(chd.Parentsha1);
         if (needsParent)
         {
@@ -986,15 +1670,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                     dataEntry.BuffIn = new byte[dataEntry.Length];
                 }
 
-                if (_precache != null)
-                {
-                    Array.Copy(_precache, (int)dataEntry.Offset, dataEntry.BuffIn, 0, (int)dataEntry.Length);
-                }
-                else
-                {
-                    _stream.Seek((long)dataEntry.Offset, SeekOrigin.Begin);
-                    _stream.ReadExactly(dataEntry.BuffIn, 0, (int)dataEntry.Length);
-                }
+                ReadDataAt((long)dataEntry.Offset, dataEntry.BuffIn);
 
                 loaded = true;
             }
@@ -1017,6 +1693,179 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             }
         }
     }
+
+    /// <summary>
+    /// Decompresses a single hunk into <paramref name="buffer"/> in a way that is safe for
+    /// concurrent use on the same <see cref="ChdFile"/> instance from multiple threads
+    /// (emulator-style parallel sector loaders). Unlike <see cref="ReadHunk"/>, this method:
+    /// never uses the shared per-hunk/compressed-buffer caches, gives each calling thread its
+    /// own codec state, and reads compressed data without sharing stream position
+    /// (<c>RandomAccess</c> for file-backed instances). The existing single-threaded API is
+    /// unchanged. For child CHDs, parent resolution serializes on the parent instance.
+    /// </summary>
+    /// <param name="hunknum">Zero-based hunk index (0 to <see cref="HunkCount"/> - 1).</param>
+    /// <param name="buffer">Destination buffer of at least <see cref="HunkBytes"/> bytes.</param>
+    /// <param name="cancellationToken">A token to cancel the decompression.</param>
+    /// <returns>The same result codes as <see cref="ReadHunk"/>.</returns>
+    public ChdError ReadHunkConcurrent(uint hunknum, byte[] buffer, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (hunknum >= _chd.Totalblocks)
+            return ChdError.Chderrhunkoutofrange;
+        if (buffer.Length < _chd.Blocksize)
+            return ChdError.Chderrinvalidparameter;
+
+        var me = _chd.Map[hunknum];
+
+        if (me.Comptype == CompressionType.Compressionparent)
+            return ReadParentHunkConcurrent(me, buffer);
+
+        // Resolve the entry that actually holds compressed data (follow SELF links).
+        MapEntry? dataEntry = me;
+        while (dataEntry is { Comptype: CompressionType.Compressionself })
+        {
+            dataEntry = dataEntry.SelfMapEntry;
+        }
+
+        if (dataEntry is null)
+            return ChdError.Chderrinvaliddata;
+
+        try
+        {
+            byte[]? compressed = null;
+            if (dataEntry.Length > 0)
+            {
+                if (dataEntry.Length > _chd.MaxCompressedBlockCap)
+                {
+                    Log.LogWarning("Hunk {HunkNumber} compressed length {Length} exceeds cap {Cap}", hunknum, dataEntry.Length, _chd.MaxCompressedBlockCap);
+                    return ChdError.Chderrinvaliddata;
+                }
+
+                // Local buffer: the map entry's shared BuffIn slot is not concurrency-safe.
+                compressed = new byte[dataEntry.Length];
+                ReadDataAtConcurrent((long)dataEntry.Offset, compressed);
+            }
+
+            using var codec = _concurrentCodec.Value;
+            ArgumentNullException.ThrowIfNull(codec);
+            return ChdBlockRead.ReadBlock(me, new ArrayPool(_chd.Blocksize), _chd.ChdReader, codec, buffer, (int)_chd.Blocksize, compressed);
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Failed to decompress hunk {HunkNumber} (concurrent)", hunknum);
+            return ChdError.Chderrdecompressionerror;
+        }
+    }
+
+    /// <summary>Per-thread codec state for <see cref="ReadHunkConcurrent"/>: each calling thread
+    /// decompresses with its own scratch buffers, so concurrent readers never share codec state.</summary>
+    private readonly ThreadLocal<ChdCodecState> _concurrentCodec = new(() => new ChdCodecState());
+
+    /// <summary>Reads <paramref name="buffer"/>'s full length at <paramref name="offset"/> without touching
+    /// the shared stream position: <c>RandomAccess</c> for file-backed instances, otherwise the
+    /// stream seek+read is serialized on a private lock.</summary>
+    private void ReadDataAtConcurrent(long offset, byte[] buffer)
+    {
+        if (_precache != null)
+        {
+            Array.Copy(_precache, (int)offset, buffer, 0, buffer.Length);
+            return;
+        }
+
+        if (_mmfView != null)
+        {
+            _mmfView.ReadArray(offset, buffer, 0, buffer.Length);
+            return;
+        }
+
+        if (_stream is FileStream fileStream)
+        {
+            // RandomAccess: no shared stream position, so concurrent readers never race.
+            var handle = fileStream.SafeFileHandle;
+            var position = offset;
+            var remaining = buffer.Length;
+            while (remaining > 0)
+            {
+                var read = RandomAccess.Read(handle, buffer.AsSpan(buffer.Length - remaining), position);
+                if (read == 0)
+                    throw new EndOfStreamException($"Unexpected end of file at offset {position}");
+                position += read;
+                remaining -= read;
+            }
+
+            return;
+        }
+
+        lock (_streamAccess)
+        {
+            _stream.Position = offset;
+            _stream.ReadExactly(buffer, 0, buffer.Length);
+        }
+    }
+
+    /// <summary>Parent-hunk resolution for <see cref="ReadHunkConcurrent"/>: serializes on the
+    /// parent instance (its own state is not concurrency-safe) and uses a local stitch buffer.</summary>
+    private ChdError ReadParentHunkConcurrent(MapEntry me, byte[] buffer)
+    {
+        if (_parent == null)
+            return ChdError.Chderrrequiresparent;
+
+        var unitbytes = _chd.Unitbytes;
+        var hunkbytes = _chd.Blocksize;
+
+        var directIndex = Version < 5 || _chd.UncompressedMap;
+        if (directIndex || unitbytes == 0 || unitbytes == hunkbytes)
+        {
+            if (me.Offset >= _parent.HunkCount)
+                return ChdError.Chderrinvalidparent;
+
+            lock (_parent)
+            {
+                return _parent.ReadHunkConcurrent((uint)me.Offset, buffer);
+            }
+        }
+
+        var unitsInHunk = hunkbytes / unitbytes;
+        var blockoffs = me.Offset;
+        var parentHunk = blockoffs / unitsInHunk;
+        var unitInHunk = (uint)(blockoffs % unitsInHunk);
+
+        lock (_parent)
+        {
+            if (unitInHunk == 0)
+            {
+                if (parentHunk >= _parent.HunkCount)
+                    return ChdError.Chderrinvalidparent;
+
+                return _parent.ReadHunkConcurrent((uint)parentHunk, buffer);
+            }
+
+            if (parentHunk + 1 >= _parent.HunkCount)
+                return ChdError.Chderrinvalidparent;
+
+            // Unaligned: stitch two adjacent parent hunks at the unit boundary (local scratch).
+            var scratch = new byte[hunkbytes];
+            var e1 = _parent.ReadHunkConcurrent((uint)parentHunk, scratch);
+            if (e1 != ChdError.Chderrnone)
+                return e1;
+
+            var firstBytes = (int)((unitsInHunk - unitInHunk) * unitbytes);
+            Array.Copy(scratch, (int)(unitInHunk * unitbytes), buffer, 0, firstBytes);
+
+            var e2 = _parent.ReadHunkConcurrent((uint)parentHunk + 1, scratch);
+            if (e2 != ChdError.Chderrnone)
+                return e2;
+
+            var secondBytes = (int)(unitInHunk * unitbytes);
+            Array.Copy(scratch, 0, buffer, firstBytes, secondBytes);
+            return ChdError.Chderrnone;
+        }
+    }
+
+    /// <summary>Serializes stream seek+read for non-file-backed concurrent reads.</summary>
+#pragma warning disable MA0158 // Use System.Threading.Lock — not available on net8.0
+    private readonly object _streamAccess = new();
+#pragma warning restore MA0158
 
     /// <summary>
     /// Reads the raw on-disk bytes of a hunk exactly as stored in the CHD file, without
@@ -1059,26 +1908,42 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             return null;
 
         var raw = new byte[dataEntry.Length];
-        if (_precache != null)
-        {
-            Array.Copy(_precache, (int)dataEntry.Offset, raw, 0, (int)dataEntry.Length);
-        }
-        else
-        {
-            _stream.Seek((long)dataEntry.Offset, SeekOrigin.Begin);
-            _stream.ReadExactly(raw, 0, raw.Length);
-        }
-
+        ReadDataAt((long)dataEntry.Offset, raw);
         return raw;
     }
 
-    /// <summary>Asynchronously reads the raw on-disk bytes of a hunk (see <see cref="ReadRawHunk"/>).</summary>
+    /// <summary>Asynchronously reads the raw on-disk bytes of a hunk (see <see cref="ReadRawHunk"/>).
+    /// Uses genuine async I/O.</summary>
     /// <param name="hunknum">Zero-based hunk index (0 to <see cref="HunkCount"/> - 1).</param>
     /// <param name="cancellationToken">A token to cancel the read. <see cref="OperationCanceledException"/> is thrown if cancellation is requested.</param>
     /// <returns>A task producing the raw stored bytes (<c>null</c> when the hunk has no on-disk data).</returns>
-    public Task<byte[]?> ReadRawHunkAsync(uint hunknum, CancellationToken cancellationToken = default)
+    public async Task<byte[]?> ReadRawHunkAsync(uint hunknum, CancellationToken cancellationToken = default)
     {
-        return Task.Run(() => ReadRawHunk(hunknum), cancellationToken);
+        if (hunknum >= _chd.Totalblocks)
+            throw new ArgumentOutOfRangeException(nameof(hunknum), $"Hunk {hunknum} is out of range (0..{_chd.Totalblocks - 1})");
+
+        MapEntry? dataEntry = _chd.Map[hunknum];
+        while (dataEntry is { Comptype: CompressionType.Compressionself })
+        {
+            dataEntry = dataEntry.SelfMapEntry;
+        }
+
+        if (dataEntry is null || dataEntry.Length == 0)
+            return null;
+
+        if (dataEntry.Comptype is CompressionType.Compressionparent
+            or CompressionType.Compressionmini
+            or CompressionType.Compressionzero
+            or CompressionType.Compressionerror)
+            return null;
+
+        var fileLength = (ulong)(_precache?.Length ?? _stream.Length);
+        if (dataEntry.Offset + dataEntry.Length > fileLength)
+            return null;
+
+        var raw = new byte[dataEntry.Length];
+        await ReadDataAtAsync((long)dataEntry.Offset, raw, cancellationToken).ConfigureAwait(false);
+        return raw;
     }
 
     /// <summary>
@@ -1245,6 +2110,9 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         _codec.Dispose();
+        _concurrentCodec.Dispose();
+        _mmfView?.Dispose();
+        _mmf?.Dispose();
         if (!_leaveOpen)
             await CastAndDispose(_stream).ConfigureAwait(false);
 
@@ -1266,6 +2134,9 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     public void Dispose()
     {
         _codec.Dispose();
+        _concurrentCodec.Dispose();
+        _mmfView?.Dispose();
+        _mmf?.Dispose();
         if (!_leaveOpen)
             _stream.Dispose();
         if (_ownsParent)
@@ -1278,6 +2149,18 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <param name="binFileName">The filename of the binary data file to reference in the CUE sheet.</param>
     /// <returns>A CUE sheet string.</returns>
     public string GenerateCueSheet(string binFileName)
+    {
+        return GenerateCueSheet(binFileName, CueStyle.Chdman);
+    }
+
+    /// <summary>
+    /// Generates a CUE sheet for this CD-ROM CHD in the requested <see cref="CueStyle"/>
+    /// (chdman single-bin format, optionally converted to Redump / Redump+CATALOG form).
+    /// </summary>
+    /// <param name="binFileName">The filename of the binary data file to reference in the CUE sheet.</param>
+    /// <param name="style">The output style (see <see cref="CueConverter.ConvertCue"/>).</param>
+    /// <returns>A CUE sheet string in the requested style.</returns>
+    public string GenerateCueSheet(string binFileName, CueStyle style)
     {
         EnsureTracksLoaded();
         if (_tracks == null || _tracks.Count == 0)
@@ -1329,7 +2212,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                 sb.AppendLine(CultureInfo.InvariantCulture, $"    POSTGAP {FramesToMsf(track.PostGap)}");
         }
 
-        return sb.ToString();
+        return style == CueStyle.Chdman ? sb.ToString() : CueConverter.ConvertCue(sb.ToString(), style);
     }
 
     /// <summary>

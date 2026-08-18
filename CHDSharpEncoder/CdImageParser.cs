@@ -28,6 +28,8 @@ public static class CdImageParser
                 return new GdiParser().Parse(descriptorPath);
             case ".cue":
                 return CueParser.Parse(descriptorPath);
+            case ".nrg":
+                return new NrgParser().Parse(descriptorPath);
             case ".iso":
             case ".cdr":
             case ".toast":

@@ -102,4 +102,19 @@ public sealed class ChdEncodeOptions
     /// Default: <c>null</c> (standalone source).
     /// </summary>
     public string? SourceParentPath { get; set; }
+
+    /// <summary>
+    /// Byte offset into the source stream where encoding starts (CHDlite
+    /// <c>input_start_byte</c> parity). The source bytes before this offset are skipped
+    /// (seek for seekable sources, drained for streaming sources) and are not part of the
+    /// image. Default: 0.
+    /// </summary>
+    public long InputStartBytes { get; set; }
+
+    /// <summary>
+    /// Number of source bytes to encode (CHDlite <c>input_bytes</c> parity). When <c>null</c>,
+    /// the whole source from <see cref="InputStartBytes"/> onward is encoded. Used for
+    /// split-disc create round-trips. Default: <c>null</c>.
+    /// </summary>
+    public long? InputLengthBytes { get; set; }
 }

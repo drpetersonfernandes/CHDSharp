@@ -73,6 +73,41 @@ internal static class ChdMetaData
         return ChdError.Chderrnone;
     }
 
+    /// <summary>
+    /// Computes the combined (overall) SHA-1 of a V4/V5 CHD: <c>SHA1(rawsha1 ‖ sorted hashes)</c>
+    /// where each hash is the big-endian 4-byte metadata tag followed by the SHA-1 of the entry
+    /// payload (checksummed entries only, sorted byte-wise) — MAME <c>compute_overall_sha1</c>
+    /// parity. Returns <c>null</c> when the header has no SHA-1 fields to anchor the computation
+    /// (V1/V2, or V3 whose "sha1" is the raw hash), or when the metadata chain cannot be read.
+    /// </summary>
+    internal static byte[]? ComputeOverallSha1(Stream file, ChdHeader chd, byte[] rawSha1)
+    {
+        if (rawSha1 is not { Length: 20 } || Util.IsAllZeroArray(rawSha1))
+            return null;
+
+        var metaHashes = new List<byte[]>();
+        var metaErr = ReadMetaDataInternal(file, chd, true, out var entries);
+        if (metaErr != ChdError.Chderrnone)
+            return null;
+
+        foreach (var entry in entries)
+        {
+            if (entry.Hash != null)
+                metaHashes.Add(entry.Hash);
+        }
+
+        metaHashes.Sort(Util.ByteArrCompare);
+
+        using var sha1Total = SHA1.Create();
+        sha1Total.TransformBlock(rawSha1, 0, rawSha1.Length, null, 0);
+        foreach (var t in metaHashes)
+            sha1Total.TransformBlock(t, 0, t.Length, null, 0);
+
+        var tmp = Array.Empty<byte>();
+        sha1Total.TransformFinalBlock(tmp, 0, 0);
+        return sha1Total.Hash;
+    }
+
     private static ChdError ReadMetaDataInternal(Stream file, ChdHeader chd,
         bool collectHashes, out List<InternalEntry> entries)
     {

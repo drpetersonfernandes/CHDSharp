@@ -250,8 +250,12 @@ internal static class ChdBlockRead
     /// <param name="codec">The codec-specific state and settings.</param>
     /// <param name="buffOut">The pre-allocated output buffer to receive decompressed data.</param>
     /// <param name="buffOutLength">The expected length of the decompressed data.</param>
+    /// <param name="buffInOverride">Optional caller-owned compressed input buffer; when non-null
+    /// it is used instead of <paramref name="mapEntry"/>'s shared <c>BuffIn</c> slot. This lets
+    /// concurrent readers (which load compressed data into private buffers) avoid racing on the
+    /// shared slot. <c>null</c> (default) keeps the shared-slot behavior of the sync path.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
-    internal static ChdError ReadBlock(MapEntry mapEntry, ArrayPool arrPool, ChdReader[] compression, ChdCodecState codec, byte[] buffOut, int buffOutLength)
+    internal static ChdError ReadBlock(MapEntry mapEntry, ArrayPool arrPool, ChdReader[] compression, ChdCodecState codec, byte[] buffOut, int buffOutLength, byte[]? buffInOverride = null)
     {
         var checkCrc = true;
 
@@ -266,7 +270,7 @@ internal static class ChdBlockRead
                 {
                     if (mapEntry.BuffOutCache == null)
                     {
-                        var buffIn = mapEntry.BuffIn;
+                        var buffIn = buffInOverride ?? mapEntry.BuffIn;
                         if (buffIn is null)
                             return ChdError.Chderrcodecerror;
 
@@ -305,7 +309,7 @@ internal static class ChdBlockRead
                 {
                     if (mapEntry.BuffOutCache == null)
                     {
-                        var buffIn = mapEntry.BuffIn;
+                        var buffIn = buffInOverride ?? mapEntry.BuffIn;
                         if (buffIn is null)
                             return ChdError.Chderrcodecerror;
 
@@ -363,7 +367,7 @@ internal static class ChdBlockRead
                 if (self is null)
                     return ChdError.Chderrinvaliddata;
 
-                var retcs = ReadBlock(self, arrPool, compression, codec, buffOut, buffOutLength);
+                var retcs = ReadBlock(self, arrPool, compression, codec, buffOut, buffOutLength, buffInOverride);
                 if (retcs != ChdError.Chderrnone)
                     return retcs;
                 // check CRC in the read_block_into_cache call
@@ -380,7 +384,7 @@ internal static class ChdBlockRead
                 {
                     if (mapEntry.BuffOutCache == null)
                     {
-                        var buffIn = mapEntry.BuffIn;
+                        var buffIn = buffInOverride ?? mapEntry.BuffIn;
                         if (buffIn is null)
                             return ChdError.Chderrcodecerror;
 

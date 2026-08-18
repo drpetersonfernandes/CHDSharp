@@ -46,9 +46,17 @@ internal static class Program
             serilogLogger.Information("  CHDSharpCli --toc <file.chd>                   Print table-of-contents for CD/GD-ROM CHD");
             serilogLogger.Information("  CHDSharpCli --cue <file.chd> [<binfile>]       Generate CUE sheet for CD CHD");
             serilogLogger.Information("  CHDSharpCli --classify <file.chd>              Classify CHD type (cd/dvd/hdd/gd-rom)");
-            serilogLogger.Information("  CHDSharpCli --create <in.bin> <out.chd>        Create CHD from raw binary [-c zlib,zstd,lzma,none] [-hs N] [-us N] [-t N] [-ip parent.chd] [-v]");
+            serilogLogger.Information("  CHDSharpCli --create <in.bin> <out.chd>        Create CHD from raw binary [-c zlib,zstd,lzma,none] [-hs N] [-us N] [-t N] [-ip parent.chd] [-d] [-v]");
             serilogLogger.Information("  CHDSharpCli --createcd <in.cue> <out.chd>      Create CD CHD from CUE/BIN [-c zlib,zstd,lzma,none] [-hs N] [-us N] [-t N] [-ip parent.chd] [-v]");
             serilogLogger.Information("  CHDSharpCli --copy <in.chd> <out.chd>          Re-compress a CHD [-c zlib,zstd,lzma,none] [-t N] [-ip parent.chd] [-op parent.chd] [-v]");
+            serilogLogger.Information("  CHDSharpCli --verify <file.chd> [--fix]        Verify a CHD; --fix repairs mismatched SHA-1 header fields");
+            serilogLogger.Information("  CHDSharpCli --info <file.chd>                  Print full header/map info (codecs, CRC-16, parent)");
+            serilogLogger.Information("  CHDSharpCli --detect <file>                    Detect game platform (.chd/.iso/.bin/.cue/.gdi/.nrg)");
+            serilogLogger.Information("  CHDSharpCli --dumpmeta <file.chd> [-t tag] [-ix N] [-o outfile]");
+            serilogLogger.Information("  CHDSharpCli --hash <file.chd> [--hashes sha1,sha256,crc32,xxh3] [--result text|json|sfv] [--tracks]");
+            serilogLogger.Information("  CHDSharpCli --batch <in-dir> <out-dir> --action extract|create [--codecs ...]");
+            serilogLogger.Information("  CHDSharpCli --addmeta <file.chd> -t TAG [-ix N] (-v text | -f file)");
+            serilogLogger.Information("  CHDSharpCli --delmeta <file.chd> -t TAG [-ix N]");
             return;
         }
 
@@ -115,6 +123,62 @@ internal static class Program
                 return;
             case "--copy":
                 CopyTest(args[1].Replace("\"", ""), args[2].Replace("\"", ""), args.Skip(3).ToArray());
+                serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
+            case "--verify" when args.Length < 2:
+                serilogLogger.Warning("--verify requires a .chd file path");
+                return;
+            case "--verify":
+                VerifyTest(args[1].Replace("\"", ""), args.Skip(2).ToArray());
+                serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
+            case "--info" when args.Length < 2:
+                serilogLogger.Warning("--info requires a .chd file path");
+                return;
+            case "--info":
+                InfoTest(args[1].Replace("\"", ""));
+                serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
+            case "--detect" when args.Length < 2:
+                serilogLogger.Warning("--detect requires a file path");
+                return;
+            case "--detect":
+                DetectTest(args[1].Replace("\"", ""));
+                serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
+            case "--dumpmeta" when args.Length < 2:
+                serilogLogger.Warning("--dumpmeta requires a .chd file path");
+                return;
+            case "--dumpmeta":
+                DumpMetaTest(args.Skip(1).ToArray());
+                serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
+            case "--hash" when args.Length < 2:
+                serilogLogger.Warning("--hash requires a .chd file path");
+                return;
+            case "--hash":
+                HashTest(args.Skip(1).ToArray());
+                serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
+            case "--batch" when args.Length < 3:
+                serilogLogger.Warning("--batch requires <input-dir> <output-dir>");
+                return;
+            case "--batch":
+                BatchTest(args[1].Replace("\"", ""), args[2].Replace("\"", ""), args.Skip(3).ToArray());
+                serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
+            case "--addmeta" when args.Length < 2:
+                serilogLogger.Warning("--addmeta requires a .chd file path");
+                return;
+            case "--addmeta":
+                AddMetaTest(args.Skip(1).ToArray());
+                serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
+            case "--delmeta" when args.Length < 2:
+                serilogLogger.Warning("--delmeta requires a .chd file path");
+                return;
+            case "--delmeta":
+                DeleteMetaTest(args.Skip(1).ToArray());
                 serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
                 return;
         }
@@ -560,9 +624,24 @@ internal static class Program
         string? codecs = null;
         string? parentPath = null;
         var verbose = false;
+        var dvd = false;
         int? taskCount = null;
-        if (!TryParseOptions(options, ref hunkBytes, ref unitBytes, ref codecs, ref parentPath, ref verbose, ref taskCount))
+        if (!TryParseOptions(options, ref hunkBytes, ref unitBytes, ref codecs, ref parentPath, ref verbose, ref taskCount, ref dvd))
             return;
+
+        // -c auto: detect the platform and pick the smart codec preset (CHDlite parity).
+        if (string.Equals(codecs, "auto", StringComparison.OrdinalIgnoreCase))
+        {
+            var detected = PlatformDetector.Detect(inputPath);
+            // 2048-byte-sector images (.iso / raw DVD) use the DVD presets; CD images use the CD presets.
+            var format = detected.Platform == DiscPlatform.DVD ||
+                         (detected.Platform == DiscPlatform.PS2 && inputPath.EndsWith(".iso", StringComparison.OrdinalIgnoreCase))
+                ? "dvd"
+                : "cd";
+            var preset = PlatformDetector.AutoCodecs(detected.Platform, format);
+            codecs = preset != null ? string.Join(",", preset.Select(CodecTags.ToString)) : "zlib";
+            log.Information("  Detected {Platform}; using codecs {Codecs}", detected, codecs);
+        }
 
         try
         {
@@ -574,7 +653,7 @@ internal static class Program
                 taskCount.HasValue ? $", {taskCount} tasks" : "");
             var logger = verbose ? new VerboseHunkLogger() : null;
             var encodeOptions = logger?.Options;
-            if (encodeOptions == null && (taskCount.HasValue || parentPath != null))
+            if (encodeOptions == null && (taskCount.HasValue || parentPath != null || dvd))
             {
                 encodeOptions = new ChdEncodeOptions();
             }
@@ -589,6 +668,13 @@ internal static class Program
                 if (parentPath != null)
                 {
                     encodeOptions.ParentPath = parentPath;
+                }
+
+                if (dvd)
+                {
+                    // --dvd (createdvd parity): force 'DVD ' metadata and a 2048-byte unit size.
+                    encodeOptions.Metadata = [MetadataWriter.BuildDvdMetadata()];
+                    unitBytes = 2048;
                 }
             }
 
@@ -624,9 +710,19 @@ internal static class Program
         string? codecs = null;
         string? parentPath = null;
         var verbose = false;
+        var dvd = false;
         int? taskCount = null;
-        if (!TryParseOptions(options, ref hunkSize, ref unitBytes, ref codecs, ref parentPath, ref verbose, ref taskCount))
+        if (!TryParseOptions(options, ref hunkSize, ref unitBytes, ref codecs, ref parentPath, ref verbose, ref taskCount, ref dvd))
             return;
+
+        // -c auto: detect the platform and pick the smart codec preset (CHDlite parity).
+        if (string.Equals(codecs, "auto", StringComparison.OrdinalIgnoreCase))
+        {
+            var detected = PlatformDetector.Detect(inputPath);
+            var preset = PlatformDetector.AutoCodecs(detected.Platform, "cd");
+            codecs = preset != null ? string.Join(",", preset.Select(CodecTags.ToString)) : "zlib";
+            log.Information("  Detected {Platform}; using codecs {Codecs}", detected, codecs);
+        }
 
         try
         {
@@ -667,9 +763,9 @@ internal static class Program
         }
     }
 
-    /// <summary>Parses optional <c>-c</c>/<c>-hs</c>/<c>-us</c>/<c>-t</c>/<c>-ip</c>/<c>-v</c> arguments from the CLI.</summary>
+    /// <summary>Parses optional <c>-c</c>/<c>-hs</c>/<c>-us</c>/<c>-t</c>/<c>-ip</c>/<c>-d</c>/<c>-v</c> arguments from the CLI.</summary>
     private static bool TryParseOptions(string[] options, ref uint hunkSize, ref uint unitSize, ref string? codecs,
-        ref string? parentPath, ref bool verbose, ref int? taskCount)
+        ref string? parentPath, ref bool verbose, ref int? taskCount, ref bool dvd)
     {
         for (int i = 0; i < options.Length; i++)
         {
@@ -707,6 +803,9 @@ internal static class Program
                     }
 
                     taskCount = t;
+                    break;
+                case "-d" or "--dvd":
+                    dvd = true;
                     break;
                 case "-v" or "--verbose":
                     verbose = true;
@@ -858,5 +957,550 @@ internal static class Program
             Log.Logger.Information("  Verified OK (V{Version}, sha1={Sha1})", result.Version, result.Sha1Hex);
         else
             Log.Logger.Warning("  Verified FAILED: {Error}", result.Error);
+    }
+
+    /// <summary>Detects the game platform of a disc image (CHD or raw/descriptor file) and prints
+    /// the platform, title, and manufacturer ID.</summary>
+    private static void DetectTest(string file)
+    {
+        var log = Log.Logger;
+        if (!File.Exists(file))
+        {
+            log.Warning("--detect: file not found: {Path}", file);
+            return;
+        }
+
+        try
+        {
+            DiscPlatformInfo result;
+            if (file.EndsWith(".chd", StringComparison.OrdinalIgnoreCase))
+            {
+                result = DiscDetector.DetectChd(file);
+            }
+            else
+            {
+                result = PlatformDetector.Detect(file);
+            }
+
+            log.Information("{File}: {Platform}", Path.GetFileName(file), result.ToString());
+            if (result.Platform != DiscPlatform.Unknown)
+            {
+                var preset = PlatformDetector.AutoCodecs(result.Platform, result.Platform == DiscPlatform.DVD ? "dvd" : "cd");
+                if (preset != null)
+                    log.Information("  Recommended codecs: {Codecs}", string.Join(",", preset.Select(CodecTags.ToString)));
+            }
+        }
+        catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException)
+        {
+            log.Warning("--detect failed: {Message}", ex.Message);
+        }
+    }
+
+    /// <summary>Verifies a CHD, optionally repairing mismatched SHA-1 header fields (<c>--fix</c>).</summary>
+    private static void VerifyTest(string file, string[] options)
+    {
+        var log = Log.Logger;
+        var fix = options.Contains("--fix", StringComparer.Ordinal) || options.Contains("-f", StringComparer.Ordinal);
+        var err = Chd.CheckFileAndRepair(file, out var repaired);
+        if (!err.IsSuccess)
+        {
+            log.Warning("Verify failed: {Error}", err);
+            return;
+        }
+
+        if (repaired)
+            log.Information("  Fixed mismatched SHA-1 field(s); re-verifying...");
+        var result = Chd.CheckFileWithParent(file, null);
+        if (result.IsSuccess)
+            log.Information("  Verified OK (V{Version}, sha1={Sha1})", result.Version, result.Sha1Hex);
+        else
+            log.Warning("  Verified FAILED: {Error}", result.Error);
+    }
+
+    /// <summary>Prints a full header/map dump (chdman <c>info</c> + CHDlite header-dump parity):
+    /// version, sizes, codecs per map slot, map CRC-16 status, parent linkage, and metadata list.</summary>
+    private static void InfoTest(string file)
+    {
+        var log = Log.Logger;
+        var err = Chd.ReadHeader(file, out var header);
+        if (err != ChdError.Chderrnone || header == null)
+        {
+            log.Warning("Info failed: {Error}", err);
+            return;
+        }
+
+        log.Information("CHD information for {File}", Path.GetFileName(file));
+        log.Information("  Version: {Version}", header.Version);
+        log.Information("  Header length: {Length}", header.Length);
+        log.Information("  Flags: 0x{Flags:X8}", header.Flags);
+        log.Information("  Logical size: {Bytes:N0} bytes", header.TotalBytes);
+        log.Information("  Hunk size: {Hunk:N0} bytes ({Hunks:N0} hunks)", header.HunkBytes, header.TotalHunks);
+        log.Information("  Unit size: {Unit:N0} bytes ({Units:N0} units)", header.UnitBytes, header.UnitCount);
+        log.Information("  Compression:");
+        var codecs = header.Compression.Where(c => c != ChdCodec.None).ToArray();
+        if (codecs.Length == 0)
+            log.Information("    (uncompressed)");
+        else
+            foreach (var c in codecs)
+                log.Information("    {Codec}", CodecTagName(c));
+        log.Information("  Meta offset: {MetaOffset}  Map offset: {MapOffset}", header.MetaOffset, header.MapOffset);
+        log.Information("  Raw SHA-1: {Hash}", ToHexOrNone(header.RawSha1));
+        log.Information("  Combined SHA-1: {Hash}", ToHexOrNone(header.Sha1));
+        log.Information("  Parent SHA-1: {Hash}  Parent MD5: {Hash2}", ToHexOrNone(header.ParentSha1), ToHexOrNone(header.ParentMd5));
+        log.Information("  MD5: {Hash}", ToHexOrNone(header.Md5));
+        log.Information("  Is child (requires parent): {IsChild}", !IsAllZero(header.ParentSha1) || !IsAllZero(header.ParentMd5));
+
+        if (header.MetaOffset == 0)
+            return;
+
+        var openErr = ChdFile.Open(file, out var chd);
+        if (openErr != ChdError.Chderrnone || chd == null)
+        {
+            log.Warning("  Cannot open for metadata listing: {Error}", openErr);
+            return;
+        }
+
+        using (chd)
+        {
+            log.Information("  Metadata: {Count} entries", chd.Metadata.Count);
+            foreach (var meta in chd.Metadata)
+                log.Information("    {Meta}", meta.ToString());
+            if (chd.IsCd || chd.IsGdRom)
+                log.Information("  Tracks: {Count}", chd.Tracks!.Count);
+            if (chd.IsDvd) log.Information("  Media type: DVD");
+            if (chd.IsHdd) log.Information("  Media type: HDD");
+        }
+    }
+
+    private static string CodecTagName(ChdCodec codec)
+    {
+        Span<char> chars = stackalloc char[4];
+        var value = (uint)codec;
+        chars[0] = (char)((value >> 24) & 0xFF);
+        chars[1] = (char)((value >> 16) & 0xFF);
+        chars[2] = (char)((value >> 8) & 0xFF);
+        chars[3] = (char)(value & 0xFF);
+        return new string(chars);
+    }
+
+    private static string ToHexOrNone(byte[]? hash)
+    {
+        return hash is null || IsAllZero(hash) ? "(none)" : ToHex(hash);
+    }
+
+    /// <summary>Dumps a metadata entry (chdman <c>dumpmeta</c> parity): prints text entries to the
+    /// console, writes the raw payload to <c>-o</c> when given.</summary>
+    private static void DumpMetaTest(string[] args)
+    {
+        var log = Log.Logger;
+        var file = args[0].Replace("\"", "");
+        string? tag = null;
+        uint index = 0;
+        string? outFile = null;
+        for (var i = 1; i < args.Length; i++)
+        {
+            switch (args[i])
+            {
+                case "-t" or "--tag" when i + 1 < args.Length:
+                    tag = args[++i];
+                    break;
+                case "-ix" or "--index" when i + 1 < args.Length:
+                    if (!uint.TryParse(args[++i], out index))
+                    {
+                        log.Warning("Invalid metadata index: {Value}", args[i]);
+                        return;
+                    }
+
+                    break;
+                case "-o" or "--output" when i + 1 < args.Length:
+                    outFile = args[++i];
+                    break;
+                default:
+                    log.Warning("Unknown option: {Option}", args[i]);
+                    return;
+            }
+        }
+
+        var err = ChdFile.Open(file, out var chd);
+        if (err != ChdError.Chderrnone || chd == null)
+        {
+            log.Warning("dumpmeta: open failed: {Error}", err);
+            return;
+        }
+
+        using (chd)
+        {
+            err = chd.GetMetadata(tag, index, out var entry);
+            if (err != ChdError.Chderrnone || entry == null)
+            {
+                log.Warning("dumpmeta: {Error}", err);
+                return;
+            }
+
+            log.Information("{Tag} flags=0x{Flags:X2} length={Length}", entry.Tag, entry.Flags, entry.Data.Length);
+            if (outFile != null)
+            {
+                File.WriteAllBytes(outFile, entry.Data);
+                log.Information("  Wrote {Length} bytes to {Path}", entry.Data.Length, outFile);
+            }
+            else if (entry.IsText)
+            {
+                log.Information("{Text}", entry.GetText());
+            }
+            else
+            {
+                log.Information("  (binary payload; use -o to write it to a file)");
+            }
+        }
+    }
+
+    /// <summary>Computes hashes over a CHD's content (CHDlite <c>hash_content</c> parity) with
+    /// text/JSON/SFV output, optionally per-track for CD images.</summary>
+    private static void HashTest(string[] args)
+    {
+        var log = Log.Logger;
+        var file = args[0].Replace("\"", "");
+        var hashes = ChdHashType.Sha1;
+        var format = "text";
+        var perTrack = false;
+        for (var i = 1; i < args.Length; i++)
+        {
+            switch (args[i])
+            {
+                case "--hashes" when i + 1 < args.Length:
+                {
+                    var types = ChdHashType.None;
+                    foreach (var name in args[++i].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                    {
+                        types |= name.ToLowerInvariant() switch
+                        {
+                            "sha1" => ChdHashType.Sha1,
+                            "sha256" => ChdHashType.Sha256,
+                            "crc32" => ChdHashType.Crc32,
+                            "xxh3" => ChdHashType.Xxh3,
+                            _ => throw new ArgumentException($"Unknown hash [{name}]")
+                        };
+                    }
+
+                    hashes = types;
+                    break;
+                }
+                case "--result" when i + 1 < args.Length:
+                    format = args[++i].ToLowerInvariant();
+                    if (format is not ("text" or "json" or "sfv"))
+                    {
+                        log.Warning("Invalid result format [{Format}] (text|json|sfv)", format);
+                        return;
+                    }
+
+                    break;
+                case "--tracks":
+                    perTrack = true;
+                    break;
+                default:
+                    log.Warning("Unknown option: {Option}", args[i]);
+                    return;
+            }
+        }
+
+        IReadOnlyList<ChdHashResult> results;
+        try
+        {
+            results = Chd.ComputeHashes(file, hashes, perTrack: perTrack);
+        }
+        catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException)
+        {
+            log.Warning("hash failed: {Message}", ex.Message);
+            return;
+        }
+
+        switch (format)
+        {
+            case "json":
+            {
+                var sb = new System.Text.StringBuilder();
+                sb.Append('[');
+                for (var i = 0; i < results.Count; i++)
+                {
+                    var r = results[i];
+                    if (i > 0) sb.Append(',');
+                    sb.Append("{ \"track\": ").Append(r.TrackNumber?.ToString() ?? "null");
+                    sb.Append(", \"offset\": ").Append(r.StartOffset);
+                    sb.Append(", \"length\": ").Append(r.Length);
+                    if (r.Sha1 != null) sb.Append(", \"sha1\": \"").Append(r.ToHex(ChdHashType.Sha1)).Append('"');
+                    if (r.Sha256 != null) sb.Append(", \"sha256\": \"").Append(r.ToHex(ChdHashType.Sha256)).Append('"');
+                    if (r.Crc32 != null) sb.Append(", \"crc32\": \"").Append(r.ToHex(ChdHashType.Crc32)).Append('"');
+                    if (r.Xxh3 != null) sb.Append(", \"xxh3\": \"").Append(r.ToHex(ChdHashType.Xxh3)).Append('"');
+                    sb.Append(" }");
+                }
+
+                sb.Append(']');
+                log.Information("{Json}", sb);
+                break;
+            }
+            case "sfv":
+                foreach (var r in results)
+                {
+                    var name = r.TrackNumber is { } tn ? $"track{tn:D2}.bin" : Path.GetFileName(file);
+                    if (r.Crc32 is { } crc)
+                        log.Information("{Name} {Crc:X8}", name, crc);
+                    else
+                        log.Warning("sfv output requires crc32; use --hashes crc32");
+                }
+
+                break;
+            default:
+                foreach (var r in results)
+                {
+                    var prefix = r.TrackNumber is { } trackNum ? $"track {trackNum:D2}" : "whole file";
+                    log.Information("{Prefix}:", prefix);
+                    if (r.Sha1 != null) log.Information("  SHA-1:   {Hash}", r.ToHex(ChdHashType.Sha1));
+                    if (r.Sha256 != null) log.Information("  SHA-256: {Hash}", r.ToHex(ChdHashType.Sha256));
+                    if (r.Crc32 != null) log.Information("  CRC-32:  {Hash}", r.ToHex(ChdHashType.Crc32));
+                    if (r.Xxh3 != null) log.Information("  XXH3:    {Hash}", r.ToHex(ChdHashType.Xxh3));
+                }
+
+                break;
+        }
+    }
+
+    /// <summary>Batch mode (CHDlite <c>cmd_auto_batch</c> parity): scans a directory for
+    /// .chd/.cue/.gdi/.iso inputs and extracts or creates CHDs with a bounded worker pool.</summary>
+    private static void BatchTest(string inputDir, string outputDir, string[] options)
+    {
+        var log = Log.Logger;
+        var action = "extract";
+        string? codecs = null;
+        for (var i = 0; i < options.Length; i++)
+        {
+            switch (options[i])
+            {
+                case "--action" when i + 1 < options.Length:
+                    action = options[++i].ToLowerInvariant();
+                    if (action is not ("extract" or "create"))
+                    {
+                        log.Warning("Invalid action [{Action}] (extract|create)", action);
+                        return;
+                    }
+
+                    break;
+                case "-c" or "--codecs" when i + 1 < options.Length:
+                    codecs = options[++i];
+                    break;
+                default:
+                    log.Warning("Unknown option: {Option}", options[i]);
+                    return;
+            }
+        }
+
+        if (!Directory.Exists(inputDir))
+        {
+            log.Warning("Input directory not found: {Path}", inputDir);
+            return;
+        }
+
+        Directory.CreateDirectory(outputDir);
+
+        var files = new List<string>();
+        foreach (var pattern in new[] { "*.chd", "*.cue", "*.gdi", "*.iso" })
+            files.AddRange(Directory.GetFiles(inputDir, pattern, SearchOption.TopDirectoryOnly));
+
+        if (files.Count == 0)
+        {
+            log.Warning("No .chd/.cue/.gdi/.iso files found in {Path}", inputDir);
+            return;
+        }
+
+        // concurrent = clamp(cores/4, 1..4), like CHDlite's auto-batch.
+        var workers = Math.Clamp(Environment.ProcessorCount / 4, 1, 4);
+        var queue = new System.Collections.Concurrent.ConcurrentQueue<string>(files);
+        var failures = new System.Collections.Concurrent.ConcurrentQueue<string>();
+        var processed = 0;
+        log.Information("Batch {Action}: {Count} files, {Workers} workers", action, files.Count, workers);
+
+        Parallel.For(0, workers, _ =>
+        {
+            while (queue.TryDequeue(out var input))
+            {
+                try
+                {
+                    var baseName = Path.GetFileNameWithoutExtension(input);
+                    if (string.Equals(action, "extract", StringComparison.Ordinal))
+                    {
+                        var err = ChdFile.Open(input, out var chd);
+                        if (err != ChdError.Chderrnone || chd == null)
+                            throw new InvalidDataException($"open failed: {err}");
+
+                        using (chd)
+                        {
+                            chd.ExtractToDirectory(outputDir, baseName);
+                        }
+                    }
+                    else
+                    {
+                        var codecTags = ChdCodecs.ParseCodecTags(codecs);
+                        if (input.EndsWith(".cue", StringComparison.OrdinalIgnoreCase) ||
+                            input.EndsWith(".gdi", StringComparison.OrdinalIgnoreCase) ||
+                            input.EndsWith(".iso", StringComparison.OrdinalIgnoreCase))
+                        {
+                            var outChd = Path.Combine(outputDir, baseName + ".chd");
+                            ChdEncoder.EncodeCd(input, outChd, codecTags: codecTags);
+                        }
+                        else
+                        {
+                            var outChd = Path.Combine(outputDir, baseName + ".chd");
+                            ChdEncoder.EncodeRaw(input, outChd, codecTags: codecTags);
+                        }
+                    }
+
+                    Interlocked.Increment(ref processed);
+                    log.Information("[{Done}/{Total}] {Action}: {Name}", processed, files.Count, action, Path.GetFileName(input));
+                }
+                catch (Exception ex) when (ex is InvalidDataException or IOException or ArgumentException or UnauthorizedAccessException)
+                {
+                    failures.Enqueue($"{Path.GetFileName(input)}: {ex.Message}");
+                    log.Warning("  FAIL: {Name}: {Message}", Path.GetFileName(input), ex.Message);
+                }
+            }
+        });
+
+        log.Information("Batch complete: {Done} processed, {Failures} failed", processed, failures.Count);
+        foreach (var f in failures)
+            log.Information("  FAIL: {Failure}", f);
+    }
+
+    /// <summary>Adds or replaces a metadata entry (chdman <c>addmeta</c> parity).</summary>
+    private static void AddMetaTest(string[] args)
+    {
+        var log = Log.Logger;
+        var file = args[0].Replace("\"", "");
+        string? tag = null;
+        string? text = null;
+        string? inputFile = null;
+        uint index = 0;
+        for (var i = 1; i < args.Length; i++)
+        {
+            switch (args[i])
+            {
+                case "-t" or "--tag" when i + 1 < args.Length:
+                    tag = args[++i];
+                    break;
+                case "-v" or "--value" when i + 1 < args.Length:
+                    text = args[++i];
+                    break;
+                case "-f" or "--file" when i + 1 < args.Length:
+                    inputFile = args[++i];
+                    break;
+                case "-ix" or "--index" when i + 1 < args.Length:
+                    if (!uint.TryParse(args[++i], out index))
+                    {
+                        log.Warning("Invalid metadata index: {Value}", args[i]);
+                        return;
+                    }
+
+                    break;
+                default:
+                    log.Warning("Unknown option: {Option}", args[i]);
+                    return;
+            }
+        }
+
+        if (tag is not { Length: 4 })
+        {
+            log.Warning("--addmeta requires a 4-character tag (-t)");
+            return;
+        }
+
+        byte[] data;
+        if (inputFile != null)
+        {
+            try
+            {
+                data = File.ReadAllBytes(inputFile);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                log.Warning("Cannot read metadata file {Path}: {Message}", inputFile, ex.Message);
+                return;
+            }
+        }
+        else
+        {
+            text ??= "";
+            data = System.Text.Encoding.ASCII.GetBytes(text + '\0');
+        }
+
+        var err = ChdFile.Open(file, out var chd);
+        if (err != ChdError.Chderrnone || chd == null)
+        {
+            log.Warning("addmeta: open failed: {Error}", err);
+            return;
+        }
+
+        using (chd)
+        {
+            err = chd.SetMetadata(tag, data, index);
+            if (err != ChdError.Chderrnone)
+            {
+                log.Warning("addmeta failed: {Error}", err);
+                return;
+            }
+
+            log.Information("  Added/replaced {Tag} (index {Index}, {Length} bytes)", tag, index, data.Length);
+        }
+    }
+
+    /// <summary>Deletes a metadata entry (chdman <c>delmeta</c> parity).</summary>
+    private static void DeleteMetaTest(string[] args)
+    {
+        var log = Log.Logger;
+        var file = args[0].Replace("\"", "");
+        string? tag = null;
+        uint index = 0;
+        for (var i = 1; i < args.Length; i++)
+        {
+            switch (args[i])
+            {
+                case "-t" or "--tag" when i + 1 < args.Length:
+                    tag = args[++i];
+                    break;
+                case "-ix" or "--index" when i + 1 < args.Length:
+                    if (!uint.TryParse(args[++i], out index))
+                    {
+                        log.Warning("Invalid metadata index: {Value}", args[i]);
+                        return;
+                    }
+
+                    break;
+                default:
+                    log.Warning("Unknown option: {Option}", args[i]);
+                    return;
+            }
+        }
+
+        if (tag is not { Length: 4 })
+        {
+            log.Warning("--delmeta requires a 4-character tag (-t)");
+            return;
+        }
+
+        var err = ChdFile.Open(file, out var chd);
+        if (err != ChdError.Chderrnone || chd == null)
+        {
+            log.Warning("delmeta: open failed: {Error}", err);
+            return;
+        }
+
+        using (chd)
+        {
+            err = chd.DeleteMetadata(tag, index);
+            if (err != ChdError.Chderrnone)
+            {
+                log.Warning("delmeta failed: {Error}", err);
+                return;
+            }
+
+            log.Information("  Deleted {Tag} (index {Index})", tag, index);
+        }
     }
 }

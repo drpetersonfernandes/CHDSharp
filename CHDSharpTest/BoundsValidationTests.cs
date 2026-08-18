@@ -222,8 +222,10 @@ public class BoundsValidationTests
                     (byte)MapEntryFlag.Mapentrytypeselfhunk);
             });
 
+        // Entry 0 spans [256, 768); pad the stream so the open-time map bounds check
+        // accepts the stored block (this exercises the SELF-link path, not the bounds path).
         ms.Seek(0, SeekOrigin.End);
-        ms.WriteByte(0);
+        ms.SetLength(256L + 0x200);
         ms.Position = 0;
 
         var err = ChdFile.Open(ms, true, out var chd);
@@ -254,13 +256,19 @@ public class BoundsValidationTests
                 (byte)((length >> 16) & 0xFF),
                 flags));
 
-        // Append the compressed payload at offset 256.
+        // Append the compressed payload at offset 256, and pad the stream to at least
+        // offset + claimed length so the open-time map bounds check accepts the file
+        // (the per-hunk cap check then decides at ReadHunk time).
         ms.Seek(0, SeekOrigin.End);
         var data = writeData(ms);
-        // Re-seek to absolute 256 if needed (if header shrank padding).
         ms.SetLength(256);
         ms.Position = 256;
         ms.Write(data, 0, data.Length);
+        if (ms.Length < 256L + length)
+        {
+            ms.SetLength(256L + length);
+        }
+
         ms.Position = 0;
         return ms;
     }

@@ -23,7 +23,14 @@ public class ChdCodecChdmanValidationTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_testDataDir, recursive: true); } catch { }
+        try
+        {
+            Directory.Delete(_testDataDir, recursive: true);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     [Fact]
@@ -108,14 +115,14 @@ public class ChdCodecChdmanValidationTests : IDisposable
     {
         if (ChdmanPath == null) return;
 
-        string cue = """
-            FILE "game.bin" BINARY
-              TRACK 01 MODE1/2352
-                INDEX 01 00:00:00
-              TRACK 02 AUDIO
-                INDEX 00 00:00:40
-                INDEX 01 00:00:42
-            """;
+        const string cue = """
+                           FILE "game.bin" BINARY
+                             TRACK 01 MODE1/2352
+                               INDEX 01 00:00:00
+                             TRACK 02 AUDIO
+                               INDEX 00 00:00:40
+                               INDEX 01 00:00:42
+                           """;
         string cuePath = Path.Combine(_testDataDir, "cd.cue");
         string binPath = Path.Combine(_testDataDir, "game.bin");
         string chdPath = Path.Combine(_testDataDir, "cd.chd");
@@ -153,6 +160,7 @@ public class ChdCodecChdmanValidationTests : IDisposable
                 source[h * 4096 + i] = (byte)(h + i);
             }
         }
+
         return source;
     }
 

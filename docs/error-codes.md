@@ -19,7 +19,7 @@ Every public API returns (or reports) a `ChdError` value instead of throwing. Th
 | `Chderrinvalidparent` | "Invalid or incompatible parent CHD" | Supplied parent's hashes do not match the child's stored parent hashes. |
 | `Chderrhunkoutofrange` | "Hunk index out of range" | `ReadHunk` with `hunknum >= HunkCount`. |
 | `Chderrdecompressionerror` | "Decompression failed" | CRC mismatch after decompression, codec failure, or unexpected exception inside hunk decoding. |
-| `Chderrcompressionerror` | "Compression failed" | (reserved; this library is read-only) |
+| `Chderrcompressionerror` | "Compression failed" | (reader-side: decompression failure in `ReadBlock`; the encoder throws instead) |
 | `Chderrcantcreatefile` | "Cannot create file" | (reserved) |
 | `Chderrcantverify` | "Cannot verify CHD" | (reserved) |
 | `Chderrnotsupported` | "Feature not supported" | (reserved) |

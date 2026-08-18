@@ -23,7 +23,14 @@ public class CdCodecTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch { }
+        try
+        {
+            Directory.Delete(_dir, recursive: true);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     [Theory]
@@ -33,14 +40,14 @@ public class CdCodecTests : IDisposable
     public void EncodeCd_RoundTrips_ThroughChdSharpLib(uint tag)
     {
         string codecName = CodecTags.ToString(tag);
-        WriteCue($"""
-            FILE "game.bin" BINARY
-              TRACK 01 MODE1/2352
-                INDEX 01 00:00:00
-              TRACK 02 AUDIO
-                INDEX 00 00:00:20
-                INDEX 01 00:00:22
-            """);
+        WriteCue("""
+                 FILE "game.bin" BINARY
+                   TRACK 01 MODE1/2352
+                     INDEX 01 00:00:00
+                   TRACK 02 AUDIO
+                     INDEX 00 00:00:20
+                     INDEX 01 00:00:22
+                 """);
         byte[] bin = BuildBin(40);
         File.WriteAllBytes(Path.Combine(_dir, "game.bin"), bin);
 
@@ -73,11 +80,11 @@ public class CdCodecTests : IDisposable
     {
         // hunk size >= 65536 -> the base compressed length uses 3 bytes (MAME parity)
         string codecName = CodecTags.ToString(tag);
-        WriteCue($"""
-            FILE "game.bin" BINARY
-              TRACK 01 MODE1/2352
-                INDEX 01 00:00:00
-            """);
+        WriteCue("""
+                 FILE "game.bin" BINARY
+                   TRACK 01 MODE1/2352
+                     INDEX 01 00:00:00
+                 """);
         byte[] bin = BuildBin(72);
         File.WriteAllBytes(Path.Combine(_dir, "game.bin"), bin);
 
@@ -96,10 +103,10 @@ public class CdCodecTests : IDisposable
             {
                 // per frame: [2352 data][96 subcode zeros]
                 Assert.True(actual.AsSpan(f * CdConstants.FrameSize, CdConstants.MaxSectorData)
-                    .SequenceEqual(bin.AsSpan(f * CdConstants.MaxSectorData, CdConstants.MaxSectorData)),
+                        .SequenceEqual(bin.AsSpan(f * CdConstants.MaxSectorData, CdConstants.MaxSectorData)),
                     $"frame {f} content mismatch");
                 Assert.True(actual.AsSpan(f * CdConstants.FrameSize + CdConstants.MaxSectorData, CdConstants.MaxSubcodeData)
-                    .SequenceEqual(new byte[CdConstants.MaxSubcodeData]), $"frame {f} subcode not zero");
+                        .SequenceEqual(new byte[CdConstants.MaxSubcodeData]), $"frame {f} subcode not zero");
             }
         }
     }
@@ -123,11 +130,11 @@ public class CdCodecTests : IDisposable
         // sync + ECC and sets the bitmap bit, and the decoder must regenerate them
         // byte-identically. This exercises the full ECC-clear/regenerate path.
         string codecName = CodecTags.ToString(tag);
-        WriteCue($"""
-            FILE "game.bin" BINARY
-              TRACK 01 MODE1/2352
-                INDEX 01 00:00:00
-            """);
+        WriteCue("""
+                 FILE "game.bin" BINARY
+                   TRACK 01 MODE1/2352
+                     INDEX 01 00:00:00
+                 """);
         byte[] bin = new byte[16 * CdConstants.MaxSectorData];
         for (int f = 0; f < 16; f++)
         {
@@ -141,6 +148,7 @@ public class CdCodecTests : IDisposable
             bin[offset + 0x0F] = 0x01;
             // ECC P/Q areas stay zero = valid ECC for this sector
         }
+
         File.WriteAllBytes(Path.Combine(_dir, "game.bin"), bin);
 
         string chdPath = Path.Combine(_dir, $"{codecName}_ecc.chd");
@@ -188,6 +196,7 @@ public class CdCodecTests : IDisposable
                 }
             }
         }
+
         return result;
     }
 

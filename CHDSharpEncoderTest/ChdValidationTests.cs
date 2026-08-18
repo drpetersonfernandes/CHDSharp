@@ -17,7 +17,14 @@ public class ChdValidationTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_testDataDir, recursive: true); } catch { }
+        try
+        {
+            Directory.Delete(_testDataDir, recursive: true);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     [Fact]
@@ -43,8 +50,11 @@ public class ChdValidationTests : IDisposable
                 Assert.True(chdFile.HunkCount >= 1);
             }
         }
-        finally { SafeDelete(srcPath);
-            SafeDelete(chdPath); }
+        finally
+        {
+            SafeDelete(srcPath);
+            SafeDelete(chdPath);
+        }
     }
 
     [Fact]
@@ -78,8 +88,11 @@ public class ChdValidationTests : IDisposable
                 }
             }
         }
-        finally { SafeDelete(srcPath);
-            SafeDelete(chdPath); }
+        finally
+        {
+            SafeDelete(srcPath);
+            SafeDelete(chdPath);
+        }
     }
 
     [Fact]
@@ -115,8 +128,11 @@ public class ChdValidationTests : IDisposable
                 Assert.True(hunk.AsSpan(0, len).SequenceEqual(source.AsSpan(srcOff, len)));
             }
         }
-        finally { SafeDelete(srcPath);
-            SafeDelete(chdPath); }
+        finally
+        {
+            SafeDelete(srcPath);
+            SafeDelete(chdPath);
+        }
     }
 
     [Fact]
@@ -140,8 +156,11 @@ public class ChdValidationTests : IDisposable
                 Assert.True(chdFile.HunkCount >= 1);
             }
         }
-        finally { SafeDelete(srcPath);
-            SafeDelete(chdPath); }
+        finally
+        {
+            SafeDelete(srcPath);
+            SafeDelete(chdPath);
+        }
     }
 
     [Fact]
@@ -168,8 +187,11 @@ public class ChdValidationTests : IDisposable
                 Assert.Equal(source, hunk);
             }
         }
-        finally { SafeDelete(srcPath);
-            SafeDelete(chdPath); }
+        finally
+        {
+            SafeDelete(srcPath);
+            SafeDelete(chdPath);
+        }
     }
 
     [Fact]
@@ -198,8 +220,11 @@ public class ChdValidationTests : IDisposable
                 Assert.Equal(source.AsSpan(4096, 4096).ToArray(), hunk);
             }
         }
-        finally { SafeDelete(srcPath);
-            SafeDelete(chdPath); }
+        finally
+        {
+            SafeDelete(srcPath);
+            SafeDelete(chdPath);
+        }
     }
 
     [Fact]
@@ -229,8 +254,11 @@ public class ChdValidationTests : IDisposable
                 }
             }
         }
-        finally { SafeDelete(srcPath);
-            SafeDelete(chdPath); }
+        finally
+        {
+            SafeDelete(srcPath);
+            SafeDelete(chdPath);
+        }
     }
 
     [Fact]
@@ -254,8 +282,11 @@ public class ChdValidationTests : IDisposable
                 Assert.Equal(source[i], chd[124 + i]);
             }
         }
-        finally { SafeDelete(srcPath);
-            SafeDelete(chdPath); }
+        finally
+        {
+            SafeDelete(srcPath);
+            SafeDelete(chdPath);
+        }
     }
 
     private static byte[] CreateTestFile(int size, int seed)
@@ -268,7 +299,10 @@ public class ChdValidationTests : IDisposable
 
     private static void SafeDelete(string path)
     {
-        try { File.Delete(path); }
+        try
+        {
+            File.Delete(path);
+        }
         catch
         {
             // ignored

@@ -15,7 +15,14 @@ public class CueParserTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch { }
+        try
+        {
+            Directory.Delete(_dir, recursive: true);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     [Fact]
@@ -394,13 +401,13 @@ public class CueParserTests : IDisposable
         w.Write(36 + dataLength); // RIFF chunk size
         WriteFourCc("WAVE");
         WriteFourCc("fmt ");
-        w.Write(16u);       // fmt chunk size
+        w.Write(16u); // fmt chunk size
         w.Write((ushort)1); // PCM
         w.Write((ushort)2); // stereo
-        w.Write(44100u);    // sample rate
-        w.Write(176400u);   // byte rate
+        w.Write(44100u); // sample rate
+        w.Write(176400u); // byte rate
         w.Write((ushort)4); // block align
-        w.Write((ushort)16);// bits per sample
+        w.Write((ushort)16); // bits per sample
         WriteFourCc("data");
         w.Write(dataLength);
 

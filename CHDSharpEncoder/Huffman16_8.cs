@@ -194,6 +194,7 @@ public class Huffman168
                     depth++;
                     current = nodes[current].Parent;
                 }
+
                 NumBits[i] = depth == 0 ? 1 : depth;
                 if (NumBits[i] > maxBits)
                 {

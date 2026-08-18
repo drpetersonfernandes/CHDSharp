@@ -19,7 +19,14 @@ public class ChdCodecTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch { }
+        try
+        {
+            Directory.Delete(_dir, recursive: true);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     [Fact]
@@ -34,7 +41,7 @@ public class ChdCodecTests : IDisposable
 
         byte[] chd = File.ReadAllBytes(chdPath);
         Assert.Equal(CodecTags.Zstd, ReadU32Be(chd, 16)); // compressors[0] = zstd
-        Assert.Equal(0u, ReadU32Be(chd, 20));             // compressors[1] = none
+        Assert.Equal(0u, ReadU32Be(chd, 20)); // compressors[1] = none
 
         var openErr = ChdFile.Open(chdPath, out var file);
         Assert.Equal(ChdError.Chderrnone, openErr);
@@ -197,11 +204,11 @@ public class ChdCodecTests : IDisposable
     }
 
     [Fact]
-    public void CreateAll_None_Throws()
+    public void CreateAll_None_ReturnsEmptyCodecList()
     {
-        // uncompressed CHD (-c none) is not supported yet; it must fail loudly instead
-        // of silently producing a file whose map format contradicts the header
-        Assert.Throws<NotSupportedException>(() => ChdCodecs.CreateAll([CodecTags.None], 4096));
+        // uncompressed CHD (-c none): no codec instances; hunks are stored raw and the
+        // encoder writes the V5 raw map (ChdEncoder.EncodeUncompressed)
+        Assert.Empty(ChdCodecs.CreateAll([CodecTags.None], 4096));
     }
 
     [Fact]
@@ -265,7 +272,7 @@ public class ChdCodecTests : IDisposable
         byte[] source = new byte[4096 * 8];
         for (int i = 0; i < source.Length; i += 4)
         {
-            source[i] = 0x34;         // left sample (LE bytes)
+            source[i] = 0x34; // left sample (LE bytes)
             source[i + 1] = 0x12;
             source[i + 2] = (byte)(i & 0xFF); // right sample ramp
             source[i + 3] = (byte)((i >> 8) & 0xFF);
@@ -352,6 +359,7 @@ public class ChdCodecTests : IDisposable
                 source[h * 4096 + i] = (byte)(h + i);
             }
         }
+
         return source;
     }
 

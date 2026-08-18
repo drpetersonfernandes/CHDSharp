@@ -82,4 +82,24 @@ public sealed class ChdEncodeOptions
     /// verification also tunes parallel encoding. Must be between 1 and 64.
     /// </summary>
     public int? TaskCount { get; set; }
+
+    /// <summary>
+    /// Path of a parent CHD used to create a differential (delta) child: hunks whose data
+    /// already exists in the parent are stored as <c>COMPRESSION_PARENT</c> references instead
+    /// of compressed blocks (MAME chdman's <c>-op</c> behavior). The parent is walked once
+    /// before encoding: every unit-sized window of its decompressed data is hashed, and each
+    /// child hunk whose full-hunk hash matches a window is emitted as a parent reference
+    /// (SELF references take priority, like chdman). The parent's hunk size and unit size must
+    /// match the encoder's; the parent's SHA-1 is stored in the child header's parent-SHA-1
+    /// field. Default: <c>null</c> (standalone CHD).
+    /// </summary>
+    public string? ParentPath { get; set; }
+
+    /// <summary>
+    /// Path of the parent CHD of a <b>child source</b> read by <see cref="ChdEncoder.Copy"/>:
+    /// when the source CHD is a differential child, its parent must be supplied here so the
+    /// source's hunks can be resolved. Ignored by the <c>EncodeRaw</c>/<c>EncodeCd</c> methods.
+    /// Default: <c>null</c> (standalone source).
+    /// </summary>
+    public string? SourceParentPath { get; set; }
 }

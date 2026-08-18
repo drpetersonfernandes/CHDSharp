@@ -23,7 +23,14 @@ public class EncodeCdChdmanValidationTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_testDataDir, recursive: true); } catch { }
+        try
+        {
+            Directory.Delete(_testDataDir, recursive: true);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     [Fact]
@@ -32,16 +39,16 @@ public class EncodeCdChdmanValidationTests : IDisposable
         if (ChdmanPath == null) return;
 
         // data track + 2 audio tracks with pregaps, single BIN (10 + 12 + 8 = 30 sectors)
-        string cue = """
-            FILE "game.bin" BINARY
-              TRACK 01 MODE1/2352
-                INDEX 01 00:00:00
-              TRACK 02 AUDIO
-                INDEX 00 00:00:10
-                INDEX 01 00:00:12
-              TRACK 03 AUDIO
-                INDEX 01 00:00:22
-            """;
+        const string cue = """
+                           FILE "game.bin" BINARY
+                             TRACK 01 MODE1/2352
+                               INDEX 01 00:00:00
+                             TRACK 02 AUDIO
+                               INDEX 00 00:00:10
+                               INDEX 01 00:00:12
+                             TRACK 03 AUDIO
+                               INDEX 01 00:00:22
+                           """;
         byte[] bin = BuildBin(30);
         string cuePath = WriteCue("game.cue", cue);
         File.WriteAllBytes(Path.Combine(_testDataDir, "game.bin"), bin);
@@ -69,16 +76,16 @@ public class EncodeCdChdmanValidationTests : IDisposable
     {
         if (ChdmanPath == null) return;
 
-        string cue = """
-            FILE "game.bin" BINARY
-              TRACK 01 MODE1/2352
-                INDEX 01 00:00:00
-              TRACK 02 AUDIO
-                INDEX 00 00:00:08
-                INDEX 01 00:00:10
-              TRACK 03 AUDIO
-                INDEX 01 00:00:20
-            """;
+        const string cue = """
+                           FILE "game.bin" BINARY
+                             TRACK 01 MODE1/2352
+                               INDEX 01 00:00:00
+                             TRACK 02 AUDIO
+                               INDEX 00 00:00:08
+                               INDEX 01 00:00:10
+                             TRACK 03 AUDIO
+                               INDEX 01 00:00:20
+                           """;
         string cuePath = WriteCue("verify.cue", cue);
         File.WriteAllBytes(Path.Combine(_testDataDir, "game.bin"), BuildBin(30));
         string chdPath = Path.Combine(_testDataDir, "verify.chd");
@@ -94,13 +101,13 @@ public class EncodeCdChdmanValidationTests : IDisposable
     {
         if (ChdmanPath == null) return;
 
-        string cue = """
-            FILE "game.bin" BINARY
-              TRACK 01 MODE1/2352
-                INDEX 01 00:00:00
-              TRACK 02 AUDIO
-                INDEX 01 01:00:00
-            """;
+        const string cue = """
+                           FILE "game.bin" BINARY
+                             TRACK 01 MODE1/2352
+                               INDEX 01 00:00:00
+                             TRACK 02 AUDIO
+                               INDEX 01 01:00:00
+                           """;
         string cuePath = WriteCue("info.cue", cue);
         File.WriteAllBytes(Path.Combine(_testDataDir, "game.bin"), BuildBin(60 * 75 + 100));
         string chdPath = Path.Combine(_testDataDir, "info.chd");
@@ -169,6 +176,7 @@ public class EncodeCdChdmanValidationTests : IDisposable
             chdStart += 76;
             binOffsetBytes += audioFrames * CdConstants.MaxSectorData;
         }
+
         PlaceBinFrames(expected, chdStart, bin, lastTrackFrames, binOffsetBytes, swap: true);
 
         var actual = File.ReadAllBytes(extractPath);
@@ -185,6 +193,7 @@ public class EncodeCdChdmanValidationTests : IDisposable
                 }
             }
         }
+
         Assert.Equal(expected, actual);
     }
 
@@ -232,6 +241,7 @@ public class EncodeCdChdmanValidationTests : IDisposable
                 }
             }
         }
+
         return bin;
     }
 

@@ -858,6 +858,7 @@ public static class Chd
                                     (long)chd.Totalbytes,
                                     sw!.Elapsed));
                             }
+
                             if (proc == chd.Totalblocks)
                                 return;
                         }
@@ -925,6 +926,7 @@ public static class Chd
             {
                 // Expected: tasks were cancelled via ts.Cancel()
             }
+
             ts.Dispose();
             blocksToDecompress.Dispose();
             blocksToHash.Dispose();

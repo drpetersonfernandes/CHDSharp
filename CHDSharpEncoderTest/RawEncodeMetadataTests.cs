@@ -1,4 +1,3 @@
-using System.Text;
 using CHDSharp;
 using CHDSharp.Models;
 using CHDSharpEncoder;
@@ -24,7 +23,14 @@ public class RawEncodeMetadataTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch { }
+        try
+        {
+            Directory.Delete(_dir, recursive: true);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     [Fact]

@@ -18,7 +18,14 @@ public class CdflCodecTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch { }
+        try
+        {
+            Directory.Delete(_dir, recursive: true);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     [Fact]
@@ -71,14 +78,14 @@ public class CdflCodecTests : IDisposable
     public void EncodeCd_WithCdfl_RoundTripsThroughChdSharpLib()
     {
         // data track with pattern + audio track with sine samples
-        string cue = """
-            FILE "game.bin" BINARY
-              TRACK 01 MODE1/2352
-                INDEX 01 00:00:00
-              TRACK 02 AUDIO
-                INDEX 00 00:00:12
-                INDEX 01 00:00:14
-            """;
+        const string cue = """
+                           FILE "game.bin" BINARY
+                             TRACK 01 MODE1/2352
+                               INDEX 01 00:00:00
+                             TRACK 02 AUDIO
+                               INDEX 00 00:00:12
+                               INDEX 01 00:00:14
+                           """;
         string cuePath = Path.Combine(_dir, "test.cue");
         File.WriteAllText(cuePath, cue);
 
@@ -91,6 +98,7 @@ public class CdflCodecTests : IDisposable
                 bin[offset + i] = (byte)(i & 0xFF); // MODE1 pattern
             }
         }
+
         for (int f = 12; f < 24; f++)
         {
             int offset = f * CdConstants.MaxSectorData;
@@ -104,6 +112,7 @@ public class CdflCodecTests : IDisposable
                 bin[offset + s * 4 + 3] = (byte)(sample >> 8);
             }
         }
+
         File.WriteAllBytes(Path.Combine(_dir, "game.bin"), bin);
 
         string chdPath = Path.Combine(_dir, "test.chd");

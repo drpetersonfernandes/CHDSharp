@@ -46,9 +46,9 @@ public class BitStreamTests
     public void ComplexSequence()
     {
         var bs = new BitStreamOut(32);
-        bs.Write(1, 1);   // 1
-        bs.Write(2, 2);   // 10
-        bs.Write(3, 3);   // 011
+        bs.Write(1, 1); // 1
+        bs.Write(2, 2); // 10
+        bs.Write(3, 3); // 011
         bs.Write(0xFF, 8); // 11111111
         bs.Flush();
         // Total 14 bits: 1_10_011_11111111
@@ -79,9 +79,9 @@ public class BitStreamTests
     public void WriteAcrossByteBoundaries()
     {
         var bs = new BitStreamOut(16);
-        bs.Write(0xFF, 4);  // 1111
-        bs.Write(0xFF, 4);  // 1111
-        bs.Write(0xFF, 4);  // 1111
+        bs.Write(0xFF, 4); // 1111
+        bs.Write(0xFF, 4); // 1111
+        bs.Write(0xFF, 4); // 1111
         bs.Flush();
         // 1111 1111 1111 0000 = 0xFF, 0xF0
         Assert.Equal([0xFF, 0xF0], bs.ToArray());

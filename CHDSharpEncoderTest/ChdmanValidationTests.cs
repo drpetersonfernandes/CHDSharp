@@ -18,7 +18,14 @@ public class ChdmanValidationTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_testDataDir, recursive: true); } catch { }
+        try
+        {
+            Directory.Delete(_testDataDir, recursive: true);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     [Fact]

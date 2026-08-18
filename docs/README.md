@@ -122,7 +122,7 @@ CHDSharp is a **pure C# read-only CHD (Compressed Hunks of Data) reader** — th
 |---------|---------|
 | `CHDSharpLib` | The library itself (this wiki documents it). |
 | `CHDSharpCli` | Command-line verification/classification tool. |
-| `CHDSharpEncoder` | Companion *encoder* library — creates V5 CHDs from raw binaries and CD images (CUE/GDI/ISO/TOC), with `chdman`-matched output. See [Encoder](encoder.md). |
+| `CHDSharpEncoder` | Companion *encoder* library — creates V5 CHDs from raw binaries and CD images (CUE/GDI/ISO/TOC), re-compresses existing CHDs (`Copy`), creates delta children (`-ip parent`), and writes uncompressed CHDs (`-c none`), with `chdman`-matched output. See [Encoder](encoder.md). |
 | `CHDSharpTest` | xUnit unit + corpus test suite (30 deterministic CHD files). |
 | `CHDSharpTestGen` | Deterministic corpus generator (drives vintage `chdman` binaries). |
 | `CHDSharpTester` | WPF interactive batch verifier cross-checked against `chdman`. |

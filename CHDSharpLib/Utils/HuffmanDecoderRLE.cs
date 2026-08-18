@@ -17,6 +17,7 @@ internal class HuffmanDecoderRle : HuffmanDecoder
         _rlecount = 0;
         _prevdata = 0;
     }
+
     /// <summary>Flushes any pending RLE repeat count, resetting the run to zero.</summary>
     public void FlushRle()
     {

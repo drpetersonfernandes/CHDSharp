@@ -125,6 +125,7 @@ internal class AudioSamples
             smp += n8;
             res += n8;
         }
+
         if ((((IntPtr)smp).ToInt64() & 3) == (((IntPtr)res).ToInt64() & 3) && n > 16)
         {
             var delta = (int)((4 - (((IntPtr)smp).ToInt64() & 3)) & 3);
@@ -141,6 +142,7 @@ internal class AudioSamples
             smp += n4;
             res += n4;
         }
+
         for (var i = n; i > 0; i--)
         {
             *res++ = *smp++;
@@ -181,6 +183,7 @@ internal class AudioSamples
             n -= n8;
             res += n8;
         }
+
         if ((((IntPtr)res).ToInt64() & 3) == 0 && smp == 0 && n > 4)
         {
             MemSet((int*)res, 0, n >> 2);
@@ -188,6 +191,7 @@ internal class AudioSamples
             n -= n4;
             res += n4;
         }
+
         for (var i = n; i > 0; i--)
         {
             *res++ = smp;

@@ -18,7 +18,7 @@ public class BigEndianTests
     {
         var w = new BigEndianWriter();
         w.WriteU16(0);
-        Assert.Equal([0x00, 0x00], w.ToArray());
+        Assert.Equal("\0\0"u8.ToArray(), w.ToArray());
     }
 
     [Fact]
@@ -60,7 +60,7 @@ public class BigEndianTests
     {
         var w = new BigEndianWriter();
         w.WriteU32(0x7A6C6962); // 'zlib' as big-endian uint32
-        Assert.Equal([0x7A, 0x6C, 0x69, 0x62], w.ToArray());
+        Assert.Equal("zlib"u8.ToArray(), w.ToArray());
     }
 
     [Fact]
@@ -122,7 +122,7 @@ public class BigEndianTests
         var w = new BigEndianWriter();
         w.WriteZeroes(5);
         Assert.Equal(5, w.Position);
-        Assert.Equal([0x00, 0x00, 0x00, 0x00, 0x00], w.ToArray());
+        Assert.Equal("\0\0\0\0\0"u8.ToArray(), w.ToArray());
     }
 
     [Fact]

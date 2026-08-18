@@ -83,6 +83,7 @@ internal interface IAudioTitle
     /// Gets the language of this title.
     /// </summary>
     string Language { get; }
+
     /// <summary>
     /// Gets the stream identifier for this title.
     /// </summary>

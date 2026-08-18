@@ -3,20 +3,23 @@ namespace CHDSharp.Flac.FlacDeps;
 /// <summary>
 /// Provides static methods for Linear Predictive Coding (LPC) analysis and residual decoding used in FLAC encoding and decoding.
 /// </summary>
-internal class Lpc
+internal static class Lpc
 {
     /// <summary>
     /// Maximum LPC order.
     /// </summary>
     internal const int Maxlpcorder = 32;
+
     /// <summary>
     /// Maximum number of LPC windows.
     /// </summary>
     internal const int Maxlpcwindows = 16;
+
     /// <summary>
     /// Maximum number of LPC precisions.
     /// </summary>
     internal const int Maxlpcprecisions = 4;
+
     /// <summary>
     /// Maximum number of LPC sections.
     /// </summary>
@@ -58,6 +61,7 @@ internal class Lpc
                 temp += pdata[i] * *pdata++;
                 temp2 += pdata[i] * *pdata++;
             }
+
             if (pdata <= finish)
             {
                 temp += pdata[i] * *pdata;
@@ -89,6 +93,7 @@ internal class Lpc
                 temp += (long)pdata[i] * *pdata++;
                 temp2 += (long)pdata[i] * *pdata++;
             }
+
             if (pdata <= finish)
             {
                 temp += (long)pdata[i] * *pdata;
@@ -120,6 +125,7 @@ internal class Lpc
                 temp += (long)pdata[i] * *pdata++;
                 temp2 += (long)pdata[i] * *pdata++;
             }
+
             if (pdata <= finish)
             {
                 temp += (long)pdata[i] * *pdata;
@@ -265,6 +271,7 @@ internal class Lpc
                 gen1[j] = gen1[j + 1] + reff[i - 1] * gen0[j];
                 gen0[j] = gen1[j + 1] * reff[i - 1] + gen0[j];
             }
+
             reff[i] = -gen1[0] / error;
             error += gen1[0] * reff[i];
             err[i] = error;
@@ -301,6 +308,7 @@ internal class Lpc
                     var pred = c0 * *s++;
                     *s = *r++ + (pred >> shift);
                 }
+
                 break;
             case 2:
                 for (var i = n - order; i > 0; i--)
@@ -308,6 +316,7 @@ internal class Lpc
                     var pred = c1 * *s++ + c0 * *s++;
                     *s-- = *r++ + (pred >> shift);
                 }
+
                 break;
             case 3:
                 for (var i = n - order; i > 0; i--)
@@ -319,6 +328,7 @@ internal class Lpc
                     *s = *r++ + (pred >> shift);
                     s -= 2;
                 }
+
                 break;
             case 4:
                 for (var i = n - order; i > 0; i--)
@@ -330,6 +340,7 @@ internal class Lpc
                     *s = *r++ + (pred >> shift);
                     s -= 3;
                 }
+
                 break;
             case 5:
                 for (var i = n - order; i > 0; i--)
@@ -342,6 +353,7 @@ internal class Lpc
                     *s = *r++ + (pred >> shift);
                     s -= 4;
                 }
+
                 break;
             case 6:
                 for (var i = n - order; i > 0; i--)
@@ -354,6 +366,7 @@ internal class Lpc
                     *s = *r++ + (pred >> shift);
                     s -= 5;
                 }
+
                 break;
             case 7:
                 for (var i = n - order; i > 0; i--)
@@ -367,6 +380,7 @@ internal class Lpc
                     *s = *r++ + (pred >> shift);
                     s -= 6;
                 }
+
                 break;
             case 8:
                 for (var i = n - order; i > 0; i--)
@@ -380,6 +394,7 @@ internal class Lpc
                     *s = *r++ + (pred >> shift);
                     s -= 7;
                 }
+
                 break;
             case 9:
                 for (var i = n - order; i > 0; i--)
@@ -394,6 +409,7 @@ internal class Lpc
                     *s = *r++ + (pred >> shift);
                     s -= 8;
                 }
+
                 break;
             case 10:
                 for (var i = n - order; i > 0; i--)
@@ -408,6 +424,7 @@ internal class Lpc
                     *s = *r++ + (pred >> shift);
                     s -= 9;
                 }
+
                 break;
             case 11:
                 for (var i = n - order; i > 0; i--)
@@ -423,6 +440,7 @@ internal class Lpc
                     *s = *r++ + (pred >> shift);
                     s -= 10;
                 }
+
                 break;
             case 12:
                 for (var i = n - order; i > 0; i--)
@@ -438,6 +456,7 @@ internal class Lpc
                     *s = *r++ + (pred >> shift);
                     s -= 11;
                 }
+
                 break;
             default:
                 for (var i = order; i < n; i++)
@@ -461,9 +480,11 @@ internal class Lpc
                     pred += c0 * *s++;
                     *s = *r++ + (pred >> shift);
                 }
+
                 break;
         }
     }
+
     /// <summary>
     /// Decodes an LPC residual into audio samples using 64-bit intermediate prediction values to avoid overflow. Operates on raw pointers.
     /// </summary>
@@ -494,6 +515,7 @@ internal class Lpc
                     var pred = c0 * (long)*s++;
                     *s = *r++ + (int)(pred >> shift);
                 }
+
                 break;
             case 2:
                 for (var i = n - order; i > 0; i--)
@@ -502,6 +524,7 @@ internal class Lpc
                     pred += c0 * (long)*s++;
                     *s-- = *r++ + (int)(pred >> shift);
                 }
+
                 break;
             case 3:
                 for (var i = n - order; i > 0; i--)
@@ -512,6 +535,7 @@ internal class Lpc
                     *s = *r++ + (int)(pred >> shift);
                     s -= 2;
                 }
+
                 break;
             case 4:
                 for (var i = n - order; i > 0; i--)
@@ -523,6 +547,7 @@ internal class Lpc
                     *s = *r++ + (int)(pred >> shift);
                     s -= 3;
                 }
+
                 break;
             case 5:
                 for (var i = n - order; i > 0; i--)
@@ -535,6 +560,7 @@ internal class Lpc
                     *s = *r++ + (int)(pred >> shift);
                     s -= 4;
                 }
+
                 break;
             case 6:
                 for (var i = n - order; i > 0; i--)
@@ -548,6 +574,7 @@ internal class Lpc
                     *s = *r++ + (int)(pred >> shift);
                     s -= 5;
                 }
+
                 break;
             case 7:
                 for (var i = n - order; i > 0; i--)
@@ -562,6 +589,7 @@ internal class Lpc
                     *s = *r++ + (int)(pred >> shift);
                     s -= 6;
                 }
+
                 break;
             case 8:
                 for (var i = n - order; i > 0; i--)
@@ -577,6 +605,7 @@ internal class Lpc
                     *s = *r++ + (int)(pred >> shift);
                     s -= 7;
                 }
+
                 break;
             default:
                 for (var i = order; i < n; i++)
@@ -600,6 +629,7 @@ internal class Lpc
                     pred += c0 * (long)*s++;
                     *s = *r++ + (int)(pred >> shift);
                 }
+
                 break;
         }
     }

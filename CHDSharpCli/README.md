@@ -30,10 +30,13 @@ CHDSharpCli --cue game.chd [optional .bin filename]
 CHDSharpCli --classify game.chd
 
 # Create a CHD from a raw binary
-CHDSharpCli --create in.bin out.chd [-c zlib,zstd,lzma] [-hs 65536] [-us 4096] [-v]
+CHDSharpCli --create in.bin out.chd [-c zlib,zstd,lzma,none] [-hs 65536] [-us 4096] [-t 8] [-ip parent.chd] [-v]
 
 # Create a CD CHD from a CUE/BIN (also GDI/ISO/TOC) image
-CHDSharpCli --createcd in.cue out.chd [-c zlib,zstd,lzma] [-hs N] [-us N] [-v]
+CHDSharpCli --createcd in.cue out.chd [-c zlib,zstd,lzma,none] [-hs N] [-us N] [-t 8] [-ip parent.chd] [-v]
+
+# Re-compress an existing CHD (V1-V5, child sources via -ip)
+CHDSharpCli --copy in.chd out.chd [-c zlib,zstd,lzma,none] [-t 8] [-ip parent.chd] [-op parent.chd] [-v]
 ```
 
 ### Commands
@@ -47,8 +50,9 @@ CHDSharpCli --createcd in.cue out.chd [-c zlib,zstd,lzma] [-hs N] [-us N] [-v]
 | `--toc <file.chd>` | Parses and prints the table of contents for CD-ROM and GD-ROM CHD files, showing track numbers, types, sector sizes, and frame counts. |
 | `--cue <file.chd> [binfile]` | Generates a CUE sheet for CD-ROM CHDs. Optionally specify a custom .bin filename (defaults to the CHD filename with .bin extension). |
 | `--classify <file.chd>` | Detects and prints the CHD media type: CD-ROM, DVD-ROM, HDD, GD-ROM, or unknown/raw. |
-| `--create <in.bin> <out.chd>` | Creates a CHD v5 from a raw binary via `CHDSharpEncoder`. Options: `-c <codecs>` (comma-separated `zlib,zstd,lzma,cdfl,none`), `-hs <bytes>`, `-us <bytes>`, `-v` (per-hunk ratio logging). Deep-verifies the result before exiting. |
+| `--create <in.bin> <out.chd>` | Creates a CHD v5 from a raw binary via `CHDSharpEncoder`. Options: `-c <codecs>` (comma-separated `zlib,zstd,lzma,cdfl,none`), `-hs <bytes>`, `-us <bytes>`, `-t <n>` (parallel workers), `-ip <parent.chd>` (output delta child), `-v` (per-hunk ratio logging). Deep-verifies the result before exiting. |
 | `--createcd <in.cue> <out.chd>` | Creates a CD CHD from a CUE/GDI/ISO/TOC image via `CHDSharpEncoder` (CHT2 metadata, audio byte-swap, 4-frame track padding). Same options as `--create`. |
+| `--copy <in.chd> <out.chd>` | Re-compresses an existing CHD via `ChdEncoder.Copy`: every hunk is re-encoded with the target codecs and all source metadata is cloned. `-ip <parent.chd>` resolves a child source; `-op <parent.chd>` makes the output a delta child of a different parent. Deep-verifies the result before exiting. |
 
 ---
 

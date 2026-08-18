@@ -5,8 +5,10 @@ internal struct BitDecoder
 {
     /// <summary>Number of bits in the bit-model total.</summary>
     private const int KNumBitModelTotalBits = 11;
+
     /// <summary>Total probability range (2048).</summary>
     private const uint KBitModelTotal = (1 << KNumBitModelTotalBits);
+
     private const int KNumMoveBits = 5;
 
     private uint _prob;

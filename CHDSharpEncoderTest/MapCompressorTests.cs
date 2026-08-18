@@ -97,7 +97,7 @@ public class MapCompressorTests
             entries[i] = new MapEntry { Compression = MapEntry.CompressionType0, CompLength = 50, Offset = (ulong)(124 + i * 60), Crc16 = 0 };
         }
 
-        byte[] compressed = MapCompressor.Compress(entries, (uint)count, 4096, 512);
+        byte[] compressed = MapCompressor.Compress(entries, count, 4096, 512);
 
         // The compressed map should be much smaller than 100 × 12 = 1200 bytes
         Assert.True(compressed.Length < 1200);

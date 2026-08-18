@@ -23,7 +23,14 @@ public class ChdImageChdmanValidationTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_testDataDir, recursive: true); } catch { }
+        try
+        {
+            Directory.Delete(_testDataDir, recursive: true);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     [Fact]
@@ -33,7 +40,7 @@ public class ChdImageChdmanValidationTests : IDisposable
 
         byte[] iso = new byte[2048 * 120];
         for (int s = 0; s < 120; s++)
-            for (int i = 0; i < 2048; i++)
+        for (int i = 0; i < 2048; i++)
         {
             iso[s * 2048 + i] = (byte)((s * 13 + i) & 0xFF);
         }
@@ -187,6 +194,7 @@ public class ChdImageChdmanValidationTests : IDisposable
                 bin[offset + s * 4 + 3] = (byte)(sample >> 8);
             }
         }
+
         return bin;
     }
 

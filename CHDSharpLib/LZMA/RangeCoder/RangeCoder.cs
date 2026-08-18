@@ -5,6 +5,7 @@ internal class Decoder
 {
     /// <summary>Top value used for range normalisation.</summary>
     internal const uint KTopValue = (1 << 24);
+
     /// <summary>Current range value.</summary>
     internal uint Range;
 
@@ -13,6 +14,7 @@ internal class Decoder
 
     /// <summary>Input stream providing compressed data; <c>null</c> before <see cref="Init"/> or after <see cref="ReleaseStream"/>.</summary>
     internal Stream? Stream;
+
     /// <summary>Total number of bytes consumed from the stream.</summary>
     internal long Total;
 

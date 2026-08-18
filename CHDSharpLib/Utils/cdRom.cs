@@ -282,6 +282,7 @@ internal static class CdRom
             val2 ^= ecc_source_byte(data, sectorOffset, row[component]);
             val1 = Ecclow[val1];
         }
+
         val1 = Ecchigh[Ecclow[val1] ^ val2];
         val2 ^= val1;
         return (val1, val2);

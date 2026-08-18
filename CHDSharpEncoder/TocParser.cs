@@ -150,10 +150,6 @@ public class TocParser
                     tracks[trackIndex] = track;
                     break;
                 }
-                default:
-                    // CD_TEXT, SILENCE, ZERO, FIFO, CATALOG, ISRC and other lines are ignored,
-                    // matching MAME's "Unimplemented" list
-                    break;
             }
         }
 

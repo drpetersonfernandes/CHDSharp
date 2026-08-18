@@ -135,7 +135,7 @@ public class LargeFileTests
         using (chd)
         {
             // Read a hunk well past 4 GiB that is NOT the stored one → must be all zeros.
-            var logicalOffset = 9UL * 1024 * 1024 * 1024;
+            const ulong logicalOffset = 9UL * 1024 * 1024 * 1024;
             var buf = new byte[512];
             var rErr = chd!.Read(logicalOffset, buf, 0, buf.Length);
             Assert.Equal(ChdError.Chderrnone, rErr);

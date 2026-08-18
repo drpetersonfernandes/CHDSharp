@@ -177,6 +177,7 @@ internal unsafe class BitReader
             _haveBitsM = 0;
             Fill();
         }
+
         _cacheM <<= bits;
         _haveBitsM -= bits;
     }
@@ -296,6 +297,7 @@ internal unsafe class BitReader
             _crc16M = (ushort)((_crc16M << 8) ^ Crc16.Table[(_crc16M >> 8) ^ b]);
             result = _cacheM >> 56;
         }
+
         val += ByteToUnaryTable[result];
         Skipbits((int)(val & 7) + 1);
         return val;
@@ -393,6 +395,7 @@ internal unsafe class BitReader
         {
             throw new InvalidDataException("invalid utf8 encoding");
         }
+
         for (; i > 0; i--)
         {
             x = Readbits(8);
@@ -402,6 +405,7 @@ internal unsafe class BitReader
             v <<= 6;
             v |= (x & 0x3F);
         }
+
         return v;
     }
 
@@ -441,6 +445,7 @@ internal unsafe class BitReader
                     cache |= (ulong)b << (64 - haveBits);
                     crc = (ushort)((crc << 8) ^ t[(crc >> 8) ^ b]);
                 }
+
                 var msbs = bits + ((uint)(bptr - origBptr) << 3);
                 // assumes k <= 41 (have_bits < 41 + 7 + 1 + 8 == 57, so we don't loose bits here)
                 while (haveBits < 56)
@@ -458,6 +463,7 @@ internal unsafe class BitReader
                 haveBits -= btsk;
                 *(r++) = (int)((uval >> 1) ^ -(int)(uval & 1));
             }
+
             _haveBitsM = haveBits;
             _cacheM = cache;
             _bptrM = bptr;

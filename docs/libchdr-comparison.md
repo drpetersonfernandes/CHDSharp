@@ -42,7 +42,7 @@ This page compares CHDSharp against the C reference library [libchdr 0.3.0](http
 | Classification (cd/dvd/hdd/gd-rom) | ❌ | ✅ |
 | Custom IO (callbacks vs `Stream`) | ✅ core_file callbacks | ✅ `Stream` overloads |
 | Thread-safe logging | ❌ | ✅ `ILoggerFactory` |
-| CHD creation | ❌ (commented out) | ❌ (read-only; see `CHDSharpEncoder`) |
+| CHD creation | ❌ (commented out) | ✅ [`CHDSharpEncoder`](../CHDSharpEncoder/README.md) |
 | Native dependencies | zlib, lzma, flac, zstd | **none** |
 
 ---

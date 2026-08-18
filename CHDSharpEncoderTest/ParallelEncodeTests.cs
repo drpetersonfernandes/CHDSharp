@@ -74,7 +74,7 @@ public class ParallelEncodeTests : IDisposable
         foreach (var path in new[] { single, parallel })
         {
             using var fs = File.OpenRead(path);
-            Assert.Equal(ChdError.Chderrnone, Chd.CheckFile(fs, path, true, out var _, out _, out _));
+            Assert.Equal(ChdError.Chderrnone, Chd.CheckFile(fs, path, true, out _, out _, out _));
         }
     }
 
@@ -104,7 +104,7 @@ public class ParallelEncodeTests : IDisposable
         Assert.Equal(File.ReadAllBytes(single), File.ReadAllBytes(parallel));
 
         using var fs = File.OpenRead(parallel);
-        Assert.Equal(ChdError.Chderrnone, Chd.CheckFile(fs, parallel, true, out var _, out _, out _));
+        Assert.Equal(ChdError.Chderrnone, Chd.CheckFile(fs, parallel, true, out _, out _, out _));
     }
 
     [Fact]
@@ -145,7 +145,7 @@ public class ParallelEncodeTests : IDisposable
         foreach (var path in new[] { single, parallel })
         {
             using var fs = File.OpenRead(path);
-            Assert.Equal(ChdError.Chderrnone, Chd.CheckFile(fs, path, true, out var _, out _, out _));
+            Assert.Equal(ChdError.Chderrnone, Chd.CheckFile(fs, path, true, out _, out _, out _));
         }
     }
 
@@ -306,7 +306,7 @@ public class ParallelEncodeTests : IDisposable
         ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, options: new ChdEncodeOptions { TaskCount = 64 });
 
         using var fs = File.OpenRead(chdPath);
-        Assert.Equal(ChdError.Chderrnone, Chd.CheckFile(fs, chdPath, true, out var _, out _, out _));
+        Assert.Equal(ChdError.Chderrnone, Chd.CheckFile(fs, chdPath, true, out _, out _, out _));
     }
 
     [Fact]

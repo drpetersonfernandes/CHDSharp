@@ -163,33 +163,34 @@ public sealed class LzmaCodec : IChdCodec
 public static class ChdCodecs
 {
     /// <summary>Comma-separated list of codec names the encoder can actually compress with.</summary>
-    public const string SupportedCodecNames = "zlib, zstd, lzma, huff, flac, cdzl, cdlz, cdzs, cdfl";
+    public const string SupportedCodecNames = "zlib, zstd, lzma, huff, flac, cdzl, cdlz, cdzs, cdfl, none";
 
     /// <summary>
     /// Creates one codec instance per tag, in order (up to 4, per the CHD header).
-    /// Throws instead of silently degrading: a requested codec that the encoder does not
-    /// implement would otherwise store every hunk uncompressed while the header claims the
-    /// codec is in use.
+    /// The single tag <see cref="CodecTags.None"/> produces an empty codec list (uncompressed
+    /// CHD: hunks are stored raw and the encoder writes the V5 raw map instead of the
+    /// Huffman-compressed one). Any other request that the encoder does not implement throws
+    /// instead of silently degrading: a requested codec that the encoder cannot write would
+    /// otherwise store every hunk uncompressed while the header claims the codec is in use.
     /// </summary>
     /// <param name="codecTags">The codec tags to instantiate.</param>
     /// <param name="hunkBytes">The hunk size in bytes (codec configuration).</param>
     /// <returns>An array of codec instances (empty when the single tag is <see cref="CodecTags.None"/>).</returns>
     /// <exception cref="ArgumentException">A tag is unknown, not implemented by the encoder, combined
     /// with other codecs, or (<see cref="CodecTags.Cdfl"/>) used on non-CD-sized hunks.</exception>
-    /// <exception cref="NotSupportedException">The only tag is <see cref="CodecTags.None"/> (uncompressed CHD).</exception>
     public static IChdCodec[] CreateAll(IReadOnlyList<uint> codecTags, uint hunkBytes)
     {
         ArgumentNullException.ThrowIfNull(codecTags);
         switch (codecTags.Count)
         {
             case 0:
-                throw new ArgumentException("At least one codec is required; use 'zlib', 'zstd', 'lzma' or 'cdfl'", nameof(codecTags));
+                throw new ArgumentException("At least one codec is required; use 'zlib', 'zstd', 'lzma', 'cdfl' or 'none'", nameof(codecTags));
             case > 4:
                 throw new ArgumentException($"At most 4 codecs are supported, got {codecTags.Count}", nameof(codecTags));
         }
 
         if (codecTags is [CodecTags.None])
-            throw new NotSupportedException("Codec 'none' (uncompressed CHD) is not supported by the encoder yet; use one of: " + SupportedCodecNames);
+            return [];
 
         var result = new List<IChdCodec>(codecTags.Count);
         foreach (var tag in codecTags)

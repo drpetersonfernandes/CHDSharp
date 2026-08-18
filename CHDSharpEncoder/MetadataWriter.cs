@@ -29,6 +29,19 @@ public static class MetadataWriter
     /// <summary>CHD_MDFLAGS_CHECKSUM: the entry is covered by the combined SHA-1 verification.</summary>
     public const byte ChdMdflagsChecksum = 0x01;
 
+    /// <summary>Converts a four-character metadata tag string ("CHT2", "GDDD", ...) to its
+    /// big-endian <see cref="MetadataEntry.Tag"/> value.</summary>
+    /// <param name="tag">The four-character tag.</param>
+    /// <exception cref="ArgumentException"><paramref name="tag"/> is not exactly 4 characters.</exception>
+    public static uint TagFromString(string tag)
+    {
+        ArgumentNullException.ThrowIfNull(tag);
+        if (tag.Length != 4)
+            throw new ArgumentException($"Metadata tag must be 4 characters, got '{tag}'", nameof(tag));
+
+        return ((uint)tag[0] << 24) | ((uint)tag[1] << 16) | ((uint)tag[2] << 8) | tag[3];
+    }
+
     /// <summary>
     /// Builds the 'GDDD' hard-disk geometry metadata entry, matching MAME's
     /// <c>HARD_DISK_METADATA_FORMAT</c> (<c>"CYLS:%d,HEADS:%d,SECS:%d,BPS:%d"</c>, written by

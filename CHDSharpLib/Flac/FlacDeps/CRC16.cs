@@ -70,6 +70,7 @@ internal static class Crc16
                     crc <<= 1;
                 }
             }
+
             Table[i] = (ushort)(crc & ((1 << Gf2Dim) - 1));
         }
 

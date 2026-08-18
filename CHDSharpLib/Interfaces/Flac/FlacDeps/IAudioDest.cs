@@ -11,6 +11,7 @@ internal interface IAudioDest
     /// Gets the file path of the output destination.
     /// </summary>
     string Path { get; }
+
     /// <summary>
     /// Sets the final sample count after encoding is complete.
     /// </summary>
@@ -21,10 +22,12 @@ internal interface IAudioDest
     /// </summary>
     /// <param name="buffer">The audio buffer to write.</param>
     void Write(AudioBuffer buffer);
+
     /// <summary>
     /// Finalizes and closes the output destination.
     /// </summary>
     void Close();
+
     /// <summary>
     /// Deletes the output destination file.
     /// </summary>

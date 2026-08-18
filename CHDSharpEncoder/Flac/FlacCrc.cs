@@ -14,6 +14,7 @@ internal static class FlacCrc
         {
             crc = Table8[crc ^ b];
         }
+
         return crc;
     }
 
@@ -25,6 +26,7 @@ internal static class FlacCrc
         {
             crc = (ushort)((crc << 8) ^ Table16[((crc >> 8) ^ b) & 0xFF]);
         }
+
         return crc;
     }
 
@@ -38,8 +40,10 @@ internal static class FlacCrc
             {
                 crc = (crc & 0x80) != 0 ? (byte)((crc << 1) ^ 0x07) : (byte)(crc << 1);
             }
+
             table[i] = crc;
         }
+
         return table;
     }
 
@@ -53,8 +57,10 @@ internal static class FlacCrc
             {
                 crc = (crc & 0x8000) != 0 ? (ushort)((crc << 1) ^ 0x8005) : (ushort)(crc << 1);
             }
+
             table[i] = crc;
         }
+
         return table;
     }
 }

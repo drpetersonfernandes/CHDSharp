@@ -25,7 +25,14 @@ public class CueParserChdmanValidationTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_testDataDir, recursive: true); } catch { }
+        try
+        {
+            Directory.Delete(_testDataDir, recursive: true);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     [Fact]
@@ -35,22 +42,22 @@ public class CueParserChdmanValidationTests : IDisposable
 
         // Saturn-style layout: MODE1/2352 data track + AUDIO tracks with 2s pregaps,
         // single BIN file (INDEX lengths for the first 4 tracks, file-size for the last)
-        string cue = """
-            FILE "game.bin" BINARY
-              TRACK 01 MODE1/2352
-                INDEX 01 00:00:00
-              TRACK 02 AUDIO
-                INDEX 00 03:00:00
-                INDEX 01 03:02:00
-              TRACK 03 AUDIO
-                INDEX 00 06:00:00
-                INDEX 01 06:02:00
-              TRACK 04 AUDIO
-                INDEX 00 09:00:00
-                INDEX 01 09:02:00
-              TRACK 05 AUDIO
-                INDEX 01 12:02:00
-            """;
+        const string cue = """
+                           FILE "game.bin" BINARY
+                             TRACK 01 MODE1/2352
+                               INDEX 01 00:00:00
+                             TRACK 02 AUDIO
+                               INDEX 00 03:00:00
+                               INDEX 01 03:02:00
+                             TRACK 03 AUDIO
+                               INDEX 00 06:00:00
+                               INDEX 01 06:02:00
+                             TRACK 04 AUDIO
+                               INDEX 00 09:00:00
+                               INDEX 01 09:02:00
+                             TRACK 05 AUDIO
+                               INDEX 01 12:02:00
+                           """;
         string cuePath = Path.Combine(_testDataDir, "saturn.cue");
         string binPath = Path.Combine(_testDataDir, "game.bin");
         string chdPath = Path.Combine(_testDataDir, "saturn.chd");
@@ -88,15 +95,15 @@ public class CueParserChdmanValidationTests : IDisposable
     {
         if (ChdmanPath == null) return;
 
-        string cue = """
-            FILE "data.bin" BINARY
-              TRACK 01 MODE1/2352
-                INDEX 01 00:00:00
-            FILE "audio.bin" BINARY
-              TRACK 02 AUDIO
-                INDEX 00 00:02:00
-                INDEX 01 00:04:00
-            """;
+        const string cue = """
+                           FILE "data.bin" BINARY
+                             TRACK 01 MODE1/2352
+                               INDEX 01 00:00:00
+                           FILE "audio.bin" BINARY
+                             TRACK 02 AUDIO
+                               INDEX 00 00:02:00
+                               INDEX 01 00:04:00
+                           """;
         string cuePath = Path.Combine(_testDataDir, "twofile.cue");
         string chdPath = Path.Combine(_testDataDir, "twofile.chd");
         File.WriteAllText(cuePath, cue);

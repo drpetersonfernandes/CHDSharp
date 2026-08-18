@@ -69,6 +69,7 @@ internal class ChdHeader
 
     /// <summary>Obsolete hard-disk geometry fields, only populated for V1/V2 headers. Used to synthesize GDDD metadata (libchdr parity).</summary>
     internal uint ObsoleteCylinders;
+
     internal uint ObsoleteHeads;
     internal uint ObsoleteSectors;
 

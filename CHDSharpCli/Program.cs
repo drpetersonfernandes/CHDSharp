@@ -46,8 +46,9 @@ internal static class Program
             serilogLogger.Information("  CHDSharpCli --toc <file.chd>                   Print table-of-contents for CD/GD-ROM CHD");
             serilogLogger.Information("  CHDSharpCli --cue <file.chd> [<binfile>]       Generate CUE sheet for CD CHD");
             serilogLogger.Information("  CHDSharpCli --classify <file.chd>              Classify CHD type (cd/dvd/hdd/gd-rom)");
-            serilogLogger.Information("  CHDSharpCli --create <in.bin> <out.chd>        Create CHD from raw binary [-c zlib,zstd,lzma] [-hs N] [-us N] [-t N] [-v]");
-            serilogLogger.Information("  CHDSharpCli --createcd <in.cue> <out.chd>      Create CD CHD from CUE/BIN [-c zlib,zstd,lzma] [-hs N] [-us N] [-t N] [-v]");
+            serilogLogger.Information("  CHDSharpCli --create <in.bin> <out.chd>        Create CHD from raw binary [-c zlib,zstd,lzma,none] [-hs N] [-us N] [-t N] [-ip parent.chd] [-v]");
+            serilogLogger.Information("  CHDSharpCli --createcd <in.cue> <out.chd>      Create CD CHD from CUE/BIN [-c zlib,zstd,lzma,none] [-hs N] [-us N] [-t N] [-ip parent.chd] [-v]");
+            serilogLogger.Information("  CHDSharpCli --copy <in.chd> <out.chd>          Re-compress a CHD [-c zlib,zstd,lzma,none] [-t N] [-ip parent.chd] [-op parent.chd] [-v]");
             return;
         }
 
@@ -107,6 +108,13 @@ internal static class Program
                 return;
             case "--createcd":
                 CreateCdTest(args[1].Replace("\"", ""), args[2].Replace("\"", ""), args.Skip(3).ToArray());
+                serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
+            case "--copy" when args.Length < 3:
+                serilogLogger.Warning("--copy requires <input.chd> <output.chd>");
+                return;
+            case "--copy":
+                CopyTest(args[1].Replace("\"", ""), args[2].Replace("\"", ""), args.Skip(3).ToArray());
                 serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
                 return;
         }
@@ -550,34 +558,44 @@ internal static class Program
         var hunkBytes = 4096u;
         var unitBytes = 512u;
         string? codecs = null;
+        string? parentPath = null;
         var verbose = false;
         int? taskCount = null;
-        if (!TryParseOptions(options, ref hunkBytes, ref unitBytes, ref codecs, ref verbose, ref taskCount))
+        if (!TryParseOptions(options, ref hunkBytes, ref unitBytes, ref codecs, ref parentPath, ref verbose, ref taskCount))
             return;
 
         try
         {
             var codecTags = ChdCodecs.ParseCodecTags(codecs);
-            log.Information("Creating CHD: {Input} -> {Output}  (hunk {Hunk}B, unit {Unit}B, codecs {Codecs}{Tasks})",
+            log.Information("Creating CHD: {Input} -> {Output}  (hunk {Hunk}B, unit {Unit}B, codecs {Codecs}{Parent}{Tasks})",
                 Path.GetFileName(inputPath), outputPath, hunkBytes, unitBytes,
                 string.Join(",", codecTags.Select(CodecTags.ToString)),
+                parentPath != null ? $", parent {Path.GetFileName(parentPath)}" : "",
                 taskCount.HasValue ? $", {taskCount} tasks" : "");
             var logger = verbose ? new VerboseHunkLogger() : null;
             var encodeOptions = logger?.Options;
-            if (encodeOptions == null && taskCount.HasValue)
+            if (encodeOptions == null && (taskCount.HasValue || parentPath != null))
             {
                 encodeOptions = new ChdEncodeOptions();
             }
 
-            if (encodeOptions != null && taskCount.HasValue)
+            if (encodeOptions != null)
             {
-                encodeOptions.TaskCount = taskCount;
+                if (taskCount.HasValue)
+                {
+                    encodeOptions.TaskCount = taskCount;
+                }
+
+                if (parentPath != null)
+                {
+                    encodeOptions.ParentPath = parentPath;
+                }
             }
 
             ChdEncoder.EncodeRaw(inputPath, outputPath, hunkBytes, unitBytes, codecTags, encodeOptions);
             logger?.LogSummary();
             log.Information("  Created {Size:N0} bytes", new FileInfo(outputPath).Length);
-            VerifyResultChd(outputPath);
+            VerifyResultChd(outputPath, parentPath);
         }
         catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
         {
@@ -604,34 +622,44 @@ internal static class Program
         uint hunkSize = CdConstants.FramesPerHunk * CdConstants.FrameSize;
         uint unitBytes = CdConstants.FrameSize;
         string? codecs = null;
+        string? parentPath = null;
         var verbose = false;
         int? taskCount = null;
-        if (!TryParseOptions(options, ref hunkSize, ref unitBytes, ref codecs, ref verbose, ref taskCount))
+        if (!TryParseOptions(options, ref hunkSize, ref unitBytes, ref codecs, ref parentPath, ref verbose, ref taskCount))
             return;
 
         try
         {
             var codecTags = ChdCodecs.ParseCodecTags(codecs);
-            log.Information("Creating CD CHD: {Input} -> {Output}  (hunk {Hunk}B, unit {Unit}B, codecs {Codecs}{Tasks})",
+            log.Information("Creating CD CHD: {Input} -> {Output}  (hunk {Hunk}B, unit {Unit}B, codecs {Codecs}{Parent}{Tasks})",
                 Path.GetFileName(inputPath), outputPath, hunkSize, unitBytes,
                 string.Join(",", codecTags.Select(CodecTags.ToString)),
+                parentPath != null ? $", parent {Path.GetFileName(parentPath)}" : "",
                 taskCount.HasValue ? $", {taskCount} tasks" : "");
             var logger = verbose ? new VerboseHunkLogger() : null;
             var encodeOptions = logger?.Options;
-            if (encodeOptions == null && taskCount.HasValue)
+            if (encodeOptions == null && (taskCount.HasValue || parentPath != null))
             {
                 encodeOptions = new ChdEncodeOptions();
             }
 
-            if (encodeOptions != null && taskCount.HasValue)
+            if (encodeOptions != null)
             {
-                encodeOptions.TaskCount = taskCount;
+                if (taskCount.HasValue)
+                {
+                    encodeOptions.TaskCount = taskCount;
+                }
+
+                if (parentPath != null)
+                {
+                    encodeOptions.ParentPath = parentPath;
+                }
             }
 
             ChdEncoder.EncodeCd(inputPath, outputPath, hunkSize, unitBytes, codecTags, encodeOptions);
             logger?.LogSummary();
             log.Information("  Created ({File:N0} bytes)", new FileInfo(outputPath).Length);
-            VerifyResultChd(outputPath);
+            VerifyResultChd(outputPath, parentPath);
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidDataException or IOException or UnauthorizedAccessException or FileNotFoundException)
         {
@@ -639,8 +667,9 @@ internal static class Program
         }
     }
 
-    /// <summary>Parses optional <c>-c</c>/<c>-hs</c>/<c>-us</c>/<c>-t</c>/<c>-v</c> arguments from the CLI.</summary>
-    private static bool TryParseOptions(string[] options, ref uint hunkSize, ref uint unitSize, ref string? codecs, ref bool verbose, ref int? taskCount)
+    /// <summary>Parses optional <c>-c</c>/<c>-hs</c>/<c>-us</c>/<c>-t</c>/<c>-ip</c>/<c>-v</c> arguments from the CLI.</summary>
+    private static bool TryParseOptions(string[] options, ref uint hunkSize, ref uint unitSize, ref string? codecs,
+        ref string? parentPath, ref bool verbose, ref int? taskCount)
     {
         for (int i = 0; i < options.Length; i++)
         {
@@ -648,6 +677,9 @@ internal static class Program
             {
                 case "-c" or "--codecs" when i + 1 < options.Length:
                     codecs = options[++i];
+                    break;
+                case "-ip" or "--input-parent" when i + 1 < options.Length:
+                    parentPath = options[++i];
                     break;
                 case "-hs" or "--hunk-size" when i + 1 < options.Length:
                     if (!uint.TryParse(options[++i], out var hs) || hs == 0)
@@ -689,6 +721,89 @@ internal static class Program
     }
 
     /// <summary>
+    /// Re-compresses a CHD file into a new CHD with the target codecs (<c>--copy</c>),
+    /// cloning the source's metadata, then verifies the result with a deep CHDSharpLib check.
+    /// </summary>
+    /// <param name="inputPath">Path of the source CHD file.</param>
+    /// <param name="outputPath">Path of the output .chd file.</param>
+    /// <param name="options">Optional <c>-c</c> codec list, <c>-t</c> task count, <c>-ip</c> source
+    /// parent, <c>-op</c> output parent, and <c>-v</c> verbose arguments.</param>
+    private static void CopyTest(string inputPath, string outputPath, string[] options)
+    {
+        var log = Log.Logger;
+        if (!File.Exists(inputPath))
+        {
+            log.Warning("--copy: input file not found: {Path}", inputPath);
+            return;
+        }
+
+        string? codecs = null;
+        string? sourceParentPath = null;
+        string? outputParentPath = null;
+        var verbose = false;
+        int? taskCount = null;
+        for (int i = 0; i < options.Length; i++)
+        {
+            switch (options[i])
+            {
+                case "-c" or "--codecs" when i + 1 < options.Length:
+                    codecs = options[++i];
+                    break;
+                case "-ip" or "--input-parent" when i + 1 < options.Length:
+                    sourceParentPath = options[++i];
+                    break;
+                case "-op" or "--output-parent" when i + 1 < options.Length:
+                    outputParentPath = options[++i];
+                    break;
+                case "-t" or "--tasks" when i + 1 < options.Length:
+                    if (!int.TryParse(options[++i], out var t) || t < 1 || t > 64)
+                    {
+                        log.Warning("Invalid task count (1-64): {Value}", options[i]);
+                        return;
+                    }
+
+                    taskCount = t;
+                    break;
+                case "-v" or "--verbose":
+                    verbose = true;
+                    break;
+                default:
+                    log.Warning("Unknown option: {Option}", options[i]);
+                    return;
+            }
+        }
+
+        try
+        {
+            var codecTags = ChdCodecs.ParseCodecTags(codecs);
+            log.Information("Copying CHD: {Input} -> {Output}  (codecs {Codecs}{SourceParent}{OutputParent}{Tasks})",
+                Path.GetFileName(inputPath), outputPath,
+                string.Join(",", codecTags.Select(CodecTags.ToString)),
+                sourceParentPath != null ? $", source parent {Path.GetFileName(sourceParentPath)}" : "",
+                outputParentPath != null ? $", output parent {Path.GetFileName(outputParentPath)}" : "",
+                taskCount.HasValue ? $", {taskCount} tasks" : "");
+
+            var encodeOptions = new ChdEncodeOptions
+            {
+                SourceParentPath = sourceParentPath,
+                ParentPath = outputParentPath,
+                TaskCount = taskCount
+            };
+            var logger = verbose ? new VerboseHunkLogger() : null;
+            encodeOptions.HunkCompleted = logger?.Options.HunkCompleted;
+
+            ChdEncoder.Copy(inputPath, outputPath, codecTags, encodeOptions);
+            logger?.LogSummary();
+            log.Information("  Created {Size:N0} bytes", new FileInfo(outputPath).Length);
+            VerifyResultChd(outputPath, outputParentPath);
+        }
+        catch (Exception ex) when (ex is ArgumentException or IOException or InvalidDataException or UnauthorizedAccessException or FileNotFoundException)
+        {
+            log.Warning("--copy failed: {Message}", ex.Message);
+        }
+    }
+
+    /// <summary>
     /// Logs one line per hunk (codec, sizes, compression ratio) while encoding, then a
     /// summary of the stored bytes and per-codec hunk counts.
     /// </summary>
@@ -722,9 +837,21 @@ internal static class Program
         }
     }
 
-    /// <summary>Runs a deep CHDSharpLib check on a created CHD file (raw + combined SHA1).</summary>
-    private static void VerifyResultChd(string path)
+    /// <summary>Runs a deep CHDSharpLib check on a created CHD file (raw + combined SHA1);
+/// for differential children the parent CHD is supplied so parent references resolve.</summary>
+    private static void VerifyResultChd(string path, string? parentPath = null)
     {
+        if (parentPath != null)
+        {
+            var parentResult = Chd.CheckFileWithParent(path, parentPath);
+            if (parentResult.IsSuccess)
+                Log.Logger.Information("  Verified OK (V{Version}, sha1={Sha1}, parent={Parent})",
+                    parentResult.Version, parentResult.Sha1Hex, Path.GetFileName(parentPath));
+            else
+                Log.Logger.Warning("  Verified FAILED: {Error}", parentResult.Error);
+            return;
+        }
+
         using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
         var result = Chd.CheckFile(fs, Path.GetFileName(path), deepCheck: true);
         if (result.IsSuccess)

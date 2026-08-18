@@ -17,7 +17,14 @@ public class EncodeCdTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch { }
+        try
+        {
+            Directory.Delete(_dir, recursive: true);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     [Fact]
@@ -248,6 +255,7 @@ public class EncodeCdTests : IDisposable
                 }
             }
         }
+
         return result;
     }
 

@@ -39,6 +39,7 @@ public enum ChdCodec
     /// <summary>Error / unknown codec.</summary>
     Error = 0x0eeeeeee
 }
+
 /// <summary>Flags describing the type and properties of a hunk map entry.</summary>
 public enum MapEntryFlag
 {

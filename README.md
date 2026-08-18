@@ -110,6 +110,11 @@ CHDSharpCli --cue game.chd
 
 # Classify CHD media type
 CHDSharpCli --classify game.chd
+
+# Create CHDs (raw, CD, or re-compress an existing CHD; -c none for uncompressed)
+CHDSharpCli --create in.bin out.chd [-c zlib,zstd,lzma,none] [-hs 65536] [-us 4096] [-t 8] [-ip parent.chd] [-v]
+CHDSharpCli --createcd in.cue out.chd [-c zlib,zstd,lzma,none] [-t 8] [-ip parent.chd] [-v]
+CHDSharpCli --copy in.chd out.chd [-c zlib,zstd,lzma,none] [-t 8] [-ip parent.chd] [-op parent.chd] [-v]
 ```
 
 ---
@@ -124,8 +129,8 @@ CHDSharpCli --classify game.chd
 - **Parent/child chaining** — transparent differential CHD support with wrong-parent detection
 - **Track info** — parse CD/GD-ROM table of contents (track types, sector sizes, pregap/postgap, frame offsets)
 - **Metadata** — expose game name, disc labels, and other CHD header metadata
-- **CHD creation** — companion [`CHDSharpEncoder`](CHDSharpEncoder/README.md) writes V5 CHDs from raw binaries and CD images (CUE/GDI/ISO/TOC) with `chdman`-matched output
-- **100% chdman match** — cross-checked against `chdman info`, `verify`, and `extractraw` (MAME 0.288)
+- **CHD creation** — companion [`CHDSharpEncoder`](CHDSharpEncoder/README.md) writes V5 CHDs from raw binaries and CD images (CUE/GDI/ISO/TOC) with `chdman`-matched output; re-compresses existing CHDs (`Copy`), creates delta children (`-ip parent`), and writes uncompressed CHDs (`-c none`)
+- **100% chdman match** — cross-checked against `chdman info`, `verify`, `copy`, and `extractraw` (MAME 0.288)
 - **Pluggable logging** — `Microsoft.Extensions.Logging` integration; silent by default
 
 ---

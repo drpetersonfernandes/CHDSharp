@@ -16,7 +16,14 @@ public class CdImageParserTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch { }
+        try
+        {
+            Directory.Delete(_dir, recursive: true);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     // ----- ISO -----
@@ -83,7 +90,7 @@ public class CdImageParserTests : IDisposable
         Assert.True((toc.Flags & CdTocFlags.GdRom) != 0);
         Assert.Equal(2, toc.Tracks.Count);
         Assert.Equal(CdTrackType.Mode1Raw, toc.Tracks[0].TrackType);
-        Assert.Equal(200, toc.Tracks[0].Frames);     // 100 data + 100 pad
+        Assert.Equal(200, toc.Tracks[0].Frames); // 100 data + 100 pad
         Assert.Equal(100, toc.Tracks[0].PadFrames);
         Assert.Equal(CdTrackType.Audio, toc.Tracks[1].TrackType);
         Assert.Equal(50, toc.Tracks[1].Frames);
@@ -176,7 +183,7 @@ public class CdImageParserTests : IDisposable
 
     // ----- TOC -----
 
-[Fact]
+    [Fact]
     public void Toc_DataTrack_WithMsfLength()
     {
         WriteFile("data.bin", new byte[2048 * 120]);
@@ -299,7 +306,7 @@ public class CdImageParserTests : IDisposable
         Assert.Equal(20, toc.Tracks[0].Frames);
     }
 
-[Fact]
+    [Fact]
     public void Dispatcher_Toc_RoutesToTocParser()
     {
         WriteFile("data.bin", new byte[2048 * 20]);

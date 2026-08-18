@@ -187,6 +187,7 @@ internal static partial class ChdTocParser
                 result.TryAdd(key, value);
             }
         }
+
         return result;
     }
 

@@ -527,7 +527,7 @@ dotnet pack CHDSharpLib/CHDSharpLib.csproj -c Release
 
 ## Limits
 
-- **Read-only** — This library cannot create, modify, or repack CHD files. For *creation* (raw and CD images, `chdman`-matched output), use the companion [`CHDSharpEncoder`](../CHDSharpEncoder/README.md).
+- **Read-only** — This library cannot create, modify, or repack CHD files. For *creation* (raw and CD images, re-compression via `Copy`, delta children, uncompressed `-c none` — all `chdman`-matched), use the companion [`CHDSharpEncoder`](../CHDSharpEncoder/README.md).
 - **Not thread-safe** — `ChdFile` instances must be used from a single thread
 - **No lossy video** — Lossy AVHuff video variants are not supported
 - **Stream must be seekable** — for `ChdFile.Open` stream overloads

@@ -47,6 +47,7 @@ public static class RawDeflate
 
             offset += read;
         }
+
         return result;
     }
 

@@ -109,8 +109,7 @@ public class HunkProcessorTests
         var processor = new HunkProcessor(18816);
         var (entry, data) = processor.ProcessHunk(hunk, 124);
 
-        Assert.True(entry.Compression == MapEntry.CompressionType0 ||
-                    entry.Compression == MapEntry.CompressionNone);
+        Assert.True(entry.Compression is MapEntry.CompressionType0 or MapEntry.CompressionNone);
 
         if (entry.Compression == MapEntry.CompressionType0)
         {

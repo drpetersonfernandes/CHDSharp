@@ -23,7 +23,14 @@ public class CdflChdmanValidationTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_testDataDir, recursive: true); } catch { }
+        try
+        {
+            Directory.Delete(_testDataDir, recursive: true);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     [Fact]
@@ -32,14 +39,14 @@ public class CdflChdmanValidationTests : IDisposable
         if (ChdmanPath == null) return;
 
         // data track with pattern + audio track with sine samples
-        string cue = """
-            FILE "game.bin" BINARY
-              TRACK 01 MODE1/2352
-                INDEX 01 00:00:00
-              TRACK 02 AUDIO
-                INDEX 00 00:00:20
-                INDEX 01 00:00:22
-            """;
+        const string cue = """
+                           FILE "game.bin" BINARY
+                             TRACK 01 MODE1/2352
+                               INDEX 01 00:00:00
+                             TRACK 02 AUDIO
+                               INDEX 00 00:00:20
+                               INDEX 01 00:00:22
+                           """;
         string cuePath = Path.Combine(_testDataDir, "test.cue");
         File.WriteAllText(cuePath, cue);
 
@@ -52,6 +59,7 @@ public class CdflChdmanValidationTests : IDisposable
                 bin[offset + i] = (byte)(i & 0xFF); // MODE1 pattern
             }
         }
+
         for (int f = 20; f < 40; f++)
         {
             int offset = f * CdConstants.MaxSectorData;
@@ -65,6 +73,7 @@ public class CdflChdmanValidationTests : IDisposable
                 bin[offset + s * 4 + 3] = (byte)(sample >> 8);
             }
         }
+
         File.WriteAllBytes(Path.Combine(_testDataDir, "game.bin"), bin);
 
         string chdPath = Path.Combine(_testDataDir, "test.chd");

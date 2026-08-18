@@ -27,7 +27,14 @@ public class LargeFileValidationTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch { }
+        try
+        {
+            Directory.Delete(_dir, recursive: true);
+        }
+        catch
+        {
+            // ignored
+        }
     }
 
     [Fact]
@@ -159,6 +166,7 @@ public class LargeFileValidationTests : IDisposable
                 sector[j * 2] = (byte)sample;
                 sector[j * 2 + 1] = (byte)(sample >> 8);
             }
+
             fs.Write(sector);
         }
     }
@@ -192,8 +200,10 @@ public class LargeFileValidationTests : IDisposable
                     frame[j * 2 + 1] = (byte)sample;
                 }
             }
+
             sha.TransformBlock(frame, 0, frame.Length, null, 0);
         }
+
         sha.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
         return Convert.ToHexString(sha.Hash ?? []).ToLowerInvariant();
     }

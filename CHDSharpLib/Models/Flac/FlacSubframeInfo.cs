@@ -14,7 +14,7 @@ internal unsafe class FlacSubframeInfo
     /// </summary>
     public FlacSubframeInfo()
     {
-        Best = new FlacSubframe();
+        Best = new FlacSubframe(0);
         Sf = new LpcSubframeInfo();
         BestFixed = new ulong[5];
         LpcCtx = new LpcContext[Lpc.Maxlpcwindows];
@@ -83,10 +83,12 @@ internal unsafe class FlacSubframeInfo
     /// Estimated sizes for each fixed prediction order.
     /// </summary>
     public readonly ulong[] BestFixed;
+
     /// <summary>
     /// LPC analysis contexts, one per window.
     /// </summary>
     public readonly LpcContext[] LpcCtx;
+
     /// <summary>
     /// LPC subframe information for the current encoding pass.
     /// </summary>

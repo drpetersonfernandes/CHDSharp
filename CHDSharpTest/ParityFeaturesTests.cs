@@ -392,7 +392,7 @@ public class ParityFeaturesTests
         }
     }
 
-    /// <summary>Wraps a seekable stream that allows only the first <paramref name="budget"/> bytes to be read; later reads throw.</summary>
+    /// <summary>Wraps a seekable stream that allows only the first budget bytes to be read; later reads throw.</summary>
     private sealed class PartialReadFailingStream : Stream
     {
         private readonly Stream _inner;

@@ -142,9 +142,15 @@ public class CancellationTokenTests
         // while the rest of the pipeline is still in flight). The linked token must stop the
         // pipeline and CheckFile must throw OCE instead of reporting a bogus hash mismatch.
         using var cts = new CancellationTokenSource();
+        AssertCancelledMidRun(DataPath("v5_zlib.chd"), cts);
+    }
+
+    /// <summary>Runs a deep check whose progress handler cancels <paramref name="cts"/> mid-run.</summary>
+    private static void AssertCancelledMidRun(string path, CancellationTokenSource cts)
+    {
         var progress = new Progress<ChdProgress>(_ => cts.Cancel());
 
-        using var fs = File.OpenRead(DataPath("v5_zlib.chd"));
+        using var fs = File.OpenRead(path);
         Assert.Throws<OperationCanceledException>(() =>
             Chd.CheckFile(fs, "v5_zlib.chd", true, progress, cts.Token));
     }

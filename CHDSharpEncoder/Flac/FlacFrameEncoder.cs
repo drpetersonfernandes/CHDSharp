@@ -54,7 +54,6 @@ internal static class FlacFrameEncoder
         {
             int blockStart = frameIndex * blockSize;
             int samplesInBlock = Math.Min(blockSize, totalSamples - blockStart);
-            int bytesInBlock = samplesInBlock * bytesPerSample * channels;
 
             for (int c = 0; c < channels; c++)
             {

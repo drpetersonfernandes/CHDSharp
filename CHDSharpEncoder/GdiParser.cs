@@ -52,7 +52,7 @@ public class GdiParser
                 throw new InvalidDataException($"GDI track entry should have 6 parameters, found {tokens.Count}");
 
             int trknum = trackNumber - 1;
-            if (tracks[trknum] is { } existing)
+            if (tracks[trknum] != null)
             {
                 throw new InvalidDataException($"Track {trackNumber} defined multiple times");
             }

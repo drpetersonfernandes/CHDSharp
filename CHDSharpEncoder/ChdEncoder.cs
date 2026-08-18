@@ -244,9 +244,20 @@ public static class ChdEncoder
                 metadataEntries.AddRange(userMetadata);
 
             EncodeCore(chdPath, hunkBytes, unitBytes, codecTags, options, logicalBytes, metadataEntries,
-                (hunkIndex, buffer) => ReadSourceHunk(source, hunkIndex, buffer, logicalBytes, hunkBytes),
+                CreateSourceReader(source, logicalBytes, hunkBytes),
                 cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// Wraps <see cref="ReadSourceHunk"/> for the compression pipeline. The delegate captures
+    /// <paramref name="source"/> only as this method's parameter (never disposed here), so it
+    /// stays valid for the synchronous pipeline run that the caller performs inside its
+    /// <c>using (source)</c> block.
+    /// </summary>
+    private static Func<uint, byte[], int> CreateSourceReader(ChdFile source, ulong logicalBytes, uint hunkBytes)
+    {
+        return (hunkIndex, buffer) => ReadSourceHunk(source, hunkIndex, buffer, logicalBytes, hunkBytes);
     }
 
     /// <summary>
@@ -303,16 +314,8 @@ public static class ChdEncoder
 
         header.WriteToStream(fs);
 
-        // the compressed blocks are appended to the file in hunk order by the pipeline's
-        // single consumer; offsets and the dedup map advance in the same order, so the
-        // output is byte-identical to the sequential path
-        long currentOffset = ChdHeaderV5.Length;
-        processor.CompressAll(
-            hunkCount,
-            readHunk,
-            sha1,
-            result => ConsumeHunk(result, entries, selfMap, fs, ref currentOffset, codecs, options, hunkCount, hunkBytes, parentMap),
-            cancellationToken);
+        long currentOffset = RunCompressionPipeline(processor, hunkCount, readHunk, sha1, entries, selfMap, fs,
+            codecs, options, hunkBytes, parentMap, cancellationToken);
 
         var rawSha1 = sha1.Finish();
 
@@ -535,6 +538,30 @@ public static class ChdEncoder
         }
 
         return buffer.Length;
+    }
+
+    /// <summary>
+    /// Runs the compression pipeline for one encode. The consumer callback appends compressed
+    /// blocks to <paramref name="fs"/> in hunk order; offsets and the dedup map advance in the
+    /// same order, so the output is byte-identical to the sequential path.
+    /// </summary>
+    /// <returns>The byte offset just past the last compressed block (the map's base offset).</returns>
+    /// <remarks><paramref name="fs"/> and <paramref name="parentMap"/> are owned by the caller and
+    /// disposed only after this method returns (<see cref="HunkProcessor.CompressAll"/> is
+    /// synchronous), so the consumer closure never outlives them.</remarks>
+    private static long RunCompressionPipeline(HunkProcessor processor, uint hunkCount,
+        Func<uint, byte[], int> readHunk, Sha1 sha1, MapEntry[] entries, Dictionary<string, uint> selfMap,
+        Stream fs, IReadOnlyList<IChdCodec> codecs, ChdEncodeOptions? options, uint hunkBytes,
+        ParentMap? parentMap, CancellationToken cancellationToken)
+    {
+        long currentOffset = ChdHeaderV5.Length;
+        processor.CompressAll(
+            hunkCount,
+            readHunk,
+            sha1,
+            result => ConsumeHunk(result, entries, selfMap, fs, ref currentOffset, codecs, options, hunkCount, hunkBytes, parentMap),
+            cancellationToken);
+        return currentOffset;
     }
 
     /// <summary>

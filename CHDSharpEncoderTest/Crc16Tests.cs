@@ -49,13 +49,11 @@ public class Crc16Tests
     [Fact]
     public void ChunkedMatchesBatch()
     {
-        byte[] chunk1 = { 0x01, 0x02, 0x03 };
-        byte[] chunk2 = { 0x04, 0x05, 0x06 };
         byte[] combined = { 0x01, 0x02, 0x03, 0x04, 0x05, 0x06 };
 
         ushort batchResult = Crc16.Compute(combined);
-        // verify consistency: same input, same output
-        Assert.Equal(batchResult, Crc16.Compute(combined));
+        ushort chunkedResult = Crc16.Compute(combined, 0, combined.Length);
+        Assert.Equal(batchResult, chunkedResult);
     }
 
     [Fact]

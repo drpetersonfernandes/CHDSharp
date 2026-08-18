@@ -11,19 +11,19 @@ namespace CHDSharpEncoder;
 /// to its consumer callback **in hunk order**. The <see cref="Data"/> array is rented from a
 /// buffer pool and is only valid for the duration of the callback invocation.
 /// </summary>
+/// <param name="HunkIndex">The zero-based hunk index.</param>
+/// <param name="Compression">The winning compression type: a codec index (0-3) or <see cref="MapEntry.CompressionNone"/>.</param>
+/// <param name="CompLength">The number of bytes to write from <see cref="Data"/> (the hunk size for <see cref="MapEntry.CompressionNone"/>).</param>
+/// <param name="Crc16">CRC-16 of the uncompressed hunk data.</param>
+/// <param name="Sha1">SHA-1 of the uncompressed hunk (20 bytes), for SELF-dedup lookups.</param>
+/// <param name="Data">The data to append to the output file, or <c>null</c> when the consumer decides
+/// this hunk is a SELF reference (nothing is stored on disk).</param>
 public readonly record struct HunkResult(
-    /// <summary>The zero-based hunk index.</summary>
     uint HunkIndex,
-    /// <summary>The winning compression type: a codec index (0-3) or <see cref="MapEntry.COMPRESSION_NONE"/>.</summary>
     byte Compression,
-    /// <summary>The number of bytes to write from <see cref="Data"/> (the hunk size for <see cref="MapEntry.COMPRESSION_NONE"/>).</summary>
     uint CompLength,
-    /// <summary>CRC-16 of the uncompressed hunk data.</summary>
     ushort Crc16,
-    /// <summary>SHA-1 of the uncompressed hunk (20 bytes), for SELF-dedup lookups.</summary>
     byte[] Sha1,
-    /// <summary>The data to append to the output file, or <c>null</c> when the consumer decides
-    /// this hunk is a SELF reference (nothing is stored on disk).</summary>
     byte[]? Data);
 
 /// <summary>Processes raw hunk data for CHD v5 encoding, handling compression and map entry generation.</summary>
@@ -136,7 +136,7 @@ public class HunkProcessor
 
     /// <summary>
     /// Compresses all hunks of an image with a producer→worker→consumer pipeline (the same
-    /// shape as CHDSharpLib's <see cref="CHDSharp.Chd.CheckFile"/>): a single producer reads the
+    /// shape as CHDSharpLib's <see cref="M:CHDSharp.Chd.CheckFile(System.IO.Stream,System.String,System.Boolean,System.IProgress{CHDSharp.ChdProgress},System.Threading.CancellationToken)"/>): a single producer reads the
     /// raw hunks in order and maintains the running raw SHA-1; <see cref="_taskCount"/> workers
     /// hash (SELF-dedup SHA-1 + CRC-16) and compress each hunk with their own persistent codec
     /// instances; a single consumer delivers the results to <paramref name="onHunkConsumed"/> in
@@ -169,87 +169,225 @@ public class HunkProcessor
             throw new InvalidOperationException(
                 "Parallel compression requires the codec-tag constructor; codec instances are not thread-safe to share.");
 
-        var queueCapacity = _taskCount * 8;
-        using var toCompress = new BlockingCollection<int>(queueCapacity);
-        using var toWrite = new BlockingCollection<int>(queueCapacity);
-        var items = new HunkItem[hunkCount];
-        for (int i = 0; i < hunkCount; i++)
-        {
-            items[i] = new HunkItem();
-        }
+        using var pipeline = new CompressionPipeline(this, _taskCount, hunkCount, readHunk, rawSha1,
+            onHunkConsumed, cancellationToken);
+        pipeline.Run();
+    }
 
-        var ts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        var tasks = new List<Task>(_taskCount + 1);
-        Exception? error = null;
+    /// <summary>
+    /// Owns the queues, cancellation, and tasks of one <see cref="CompressAll"/> run. The worker
+    /// closures capture this container's fields rather than local variables that are disposed in
+    /// the enclosing scope; <see cref="Dispose"/> is invoked by the caller's <c>using</c> only
+    /// after <see cref="Run"/> has returned and all tasks are known to have completed.
+    /// </summary>
+    private sealed class CompressionPipeline : IDisposable
+    {
+        private readonly HunkProcessor _owner;
+        private readonly int _taskCount;
+        private readonly uint _hunkCount;
+        private readonly Func<uint, byte[], int> _readHunk;
+        private readonly Sha1 _rawSha1;
+        private readonly Action<HunkResult> _onHunkConsumed;
+        private readonly CancellationToken _cancellationToken;
+        private readonly BlockingCollection<int> _toCompress;
+        private readonly BlockingCollection<int> _toWrite;
+        private readonly HunkItem[] _items;
+        private readonly CancellationTokenSource _ts;
+        private readonly List<Task> _tasks;
+        private Exception? _error;
 #pragma warning disable MA0158 // Use System.Threading.Lock — not available on net8.0
-        var errorLock = new object();
+        private readonly object _errorLock = new();
 #pragma warning restore MA0158
 
-        tasks.Add(Task.Factory.StartNew(
-            () => ProducerLoop(hunkCount, readHunk, rawSha1, toCompress, items, ts, RecordError),
-            CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default));
-
-        for (int t = 0; t < _taskCount; t++)
+        public CompressionPipeline(HunkProcessor owner, int taskCount, uint hunkCount,
+            Func<uint, byte[], int> readHunk, Sha1 rawSha1, Action<HunkResult> onHunkConsumed,
+            CancellationToken cancellationToken)
         {
-            int workerIndex = t;
-            tasks.Add(Task.Factory.StartNew(
-                () => WorkerLoop(workerIndex, toCompress, toWrite, items, ts, RecordError),
-                CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default));
-        }
-
-        try
-        {
-            // single consumer: results may arrive out of order, but are emitted in hunk order
-            // so map offsets, dedup state, and block writes stay strictly sequential
-            int next = 0;
-            while (next < hunkCount)
+            _owner = owner;
+            _taskCount = taskCount;
+            _hunkCount = hunkCount;
+            _readHunk = readHunk;
+            _rawSha1 = rawSha1;
+            _onHunkConsumed = onHunkConsumed;
+            _cancellationToken = cancellationToken;
+            _toCompress = new BlockingCollection<int>(taskCount * 8);
+            _toWrite = new BlockingCollection<int>(taskCount * 8);
+            _items = new HunkItem[hunkCount];
+            for (int i = 0; i < hunkCount; i++)
             {
-                var h = toWrite.Take(ts.Token);
-                items[h].Done = true;
-                while (next < hunkCount && items[next].Done)
-                {
-                    var item = items[next];
-                    onHunkConsumed(new HunkResult(
-                        (uint)next, item.Compression, item.CompLength, item.Crc16, item.Sha1, item.Data));
-                    Reclaim(item);
-                    next++;
-                }
+                _items[i] = new HunkItem();
             }
+
+            _ts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            _tasks = new List<Task>(taskCount + 1);
         }
-        catch (OperationCanceledException)
+
+        public void Run()
         {
-            if (cancellationToken.IsCancellationRequested)
-                throw;
-            // internal cancellation: an error was recorded and is rethrown below
-        }
-        finally
-        {
-            ts.Cancel();
+            _tasks.Add(Task.Factory.StartNew(
+                () => ProducerLoop(),
+                CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default));
+
+            for (int t = 0; t < _taskCount; t++)
+            {
+                int workerIndex = t;
+                _tasks.Add(Task.Factory.StartNew(
+                    () => WorkerLoop(workerIndex),
+                    CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default));
+            }
+
             try
             {
-                Task.WaitAll(tasks.ToArray());
+                // single consumer: results may arrive out of order, but are emitted in hunk order
+                // so map offsets, dedup state, and block writes stay strictly sequential
+                int next = 0;
+                while (next < _hunkCount)
+                {
+                    var h = _toWrite.Take(_ts.Token);
+                    _items[h].Done = true;
+                    while (next < _hunkCount && _items[next].Done)
+                    {
+                        var item = _items[next];
+                        _onHunkConsumed(new HunkResult(
+                            (uint)next, item.Compression, item.CompLength, item.Crc16, item.Sha1, item.Data));
+                        _owner.Reclaim(item);
+                        next++;
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                if (_cancellationToken.IsCancellationRequested)
+                    throw;
+                // internal cancellation: an error was recorded and is rethrown below
+            }
+
+            if (_error != null)
+                ExceptionDispatchInfo.Capture(_error).Throw();
+            _cancellationToken.ThrowIfCancellationRequested();
+        }
+
+        public void Dispose()
+        {
+            _ts.Cancel();
+            try
+            {
+                Task.WaitAll(_tasks.ToArray());
             }
             catch (Exception)
             {
                 // tasks swallow their exceptions; nothing to rethrow here
             }
 
-            ts.Dispose();
+            _ts.Dispose();
+            _toCompress.Dispose();
+            _toWrite.Dispose();
         }
 
-        if (error != null)
-            ExceptionDispatchInfo.Capture(error).Throw();
-        cancellationToken.ThrowIfCancellationRequested();
-        return;
-
-        void RecordError(Exception ex)
+        private void ProducerLoop()
         {
-            lock (errorLock)
+            try
             {
-                error ??= ex;
+                for (uint h = 0; h < _hunkCount; h++)
+                {
+                    var buffer = _owner._rawPool.Rent();
+                    Array.Clear(buffer, 0, buffer.Length);
+                    int hashBytes = _readHunk(h, buffer);
+
+                    // the running raw SHA-1 is appended in hunk order on the producer thread
+                    // (one serial pass; per-hunk hashing for dedup runs on the workers)
+                    _rawSha1.Append(buffer, 0, hashBytes);
+
+                    _items[h].Raw = buffer;
+                    _toCompress.Add((int)h, _ts.Token);
+                }
+
+                // sentinels tell every worker to stop and return
+                for (int i = 0; i < _taskCount; i++)
+                    _toCompress.Add(-1, _ts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                RecordError(ex);
+            }
+        }
+
+        private void WorkerLoop(int workerIndex)
+        {
+            var codecs = _owner._workerCodecSets![workerIndex];
+            try
+            {
+                while (true)
+                {
+                    var h = _toCompress.Take(_ts.Token);
+                    if (h == -1)
+                        return;
+
+                    var item = _items[h];
+                    var raw = item.Raw!;
+
+                    // per-hunk hashing runs on the workers (parallel), not the producer
+                    item.Sha1 = Sha1.Compute(raw);
+                    item.Crc16 = Crc16.Compute(raw);
+
+                    // try every codec and keep the smallest result that saves space
+                    int bestCodec = -1;
+                    int bestLen = int.MaxValue;
+                    byte[]? bestData = null;
+                    for (int i = 0; i < codecs.Length; i++)
+                    {
+                        var candidate = codecs[i].Compress(raw);
+                        if (candidate != null && candidate.Length < bestLen)
+                        {
+                            bestLen = candidate.Length;
+                            bestCodec = i;
+                            bestData = candidate;
+                        }
+                    }
+
+                    if (bestCodec >= 0)
+                    {
+                        item.Compression = (byte)bestCodec;
+                        item.CompLength = (uint)bestLen;
+                        item.Data = ArrayPool<byte>.Shared.Rent(bestLen);
+                        Array.Copy(bestData!, 0, item.Data, 0, bestLen);
+                        item.DataIsRaw = false;
+                        item.Raw = null;
+                        _owner._rawPool.Return(raw);
+                    }
+                    else
+                    {
+                        // nothing compresses: hand the raw hunk buffer over as the stored block
+                        item.Compression = MapEntry.CompressionNone;
+                        item.CompLength = _owner._hunkBytes;
+                        item.Data = raw;
+                        item.DataIsRaw = true;
+                        item.Raw = null;
+                    }
+
+                    _toWrite.Add(h, _ts.Token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                RecordError(ex);
+            }
+        }
+
+        private void RecordError(Exception ex)
+        {
+            lock (_errorLock)
+            {
+                _error ??= ex;
             }
 
-            ts.Cancel();
+            _ts.Cancel();
         }
     }
 
@@ -279,104 +417,6 @@ public class HunkProcessor
 
         /// <summary>Set by the consumer when the result has been taken from the results queue.</summary>
         public bool Done;
-    }
-
-    private void ProducerLoop(uint hunkCount, Func<uint, byte[], int> readHunk, Sha1 rawSha1,
-        BlockingCollection<int> toCompress, HunkItem[] items, CancellationTokenSource ts, Action<Exception> recordError)
-    {
-        try
-        {
-            for (uint h = 0; h < hunkCount; h++)
-            {
-                var buffer = _rawPool.Rent();
-                Array.Clear(buffer, 0, buffer.Length);
-                int hashBytes = readHunk(h, buffer);
-
-                // the running raw SHA-1 is appended in hunk order on the producer thread
-                // (one serial pass; per-hunk hashing for dedup runs on the workers)
-                rawSha1.Append(buffer, 0, hashBytes);
-
-                items[h].Raw = buffer;
-                toCompress.Add((int)h, ts.Token);
-            }
-
-            // sentinels tell every worker to stop and return
-            for (int i = 0; i < _taskCount; i++)
-                toCompress.Add(-1, ts.Token);
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        catch (Exception ex)
-        {
-            recordError(ex);
-        }
-    }
-
-    private void WorkerLoop(int workerIndex, BlockingCollection<int> toCompress, BlockingCollection<int> toWrite,
-        HunkItem[] items, CancellationTokenSource ts, Action<Exception> recordError)
-    {
-        var codecs = _workerCodecSets![workerIndex];
-        try
-        {
-            while (true)
-            {
-                var h = toCompress.Take(ts.Token);
-                if (h == -1)
-                    return;
-
-                var item = items[h];
-                var raw = item.Raw!;
-
-                // per-hunk hashing runs on the workers (parallel), not the producer
-                item.Sha1 = Sha1.Compute(raw);
-                item.Crc16 = Crc16.Compute(raw);
-
-                // try every codec and keep the smallest result that saves space
-                int bestCodec = -1;
-                int bestLen = int.MaxValue;
-                byte[]? bestData = null;
-                for (int i = 0; i < codecs.Length; i++)
-                {
-                    var candidate = codecs[i].Compress(raw);
-                    if (candidate != null && candidate.Length < bestLen)
-                    {
-                        bestLen = candidate.Length;
-                        bestCodec = i;
-                        bestData = candidate;
-                    }
-                }
-
-                if (bestCodec >= 0)
-                {
-                    item.Compression = (byte)bestCodec;
-                    item.CompLength = (uint)bestLen;
-                    item.Data = ArrayPool<byte>.Shared.Rent(bestLen);
-                    Array.Copy(bestData!, 0, item.Data, 0, bestLen);
-                    item.DataIsRaw = false;
-                    item.Raw = null;
-                    _rawPool.Return(raw);
-                }
-                else
-                {
-                    // nothing compresses: hand the raw hunk buffer over as the stored block
-                    item.Compression = MapEntry.CompressionNone;
-                    item.CompLength = _hunkBytes;
-                    item.Data = raw;
-                    item.DataIsRaw = true;
-                    item.Raw = null;
-                }
-
-                toWrite.Add(h, ts.Token);
-            }
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        catch (Exception ex)
-        {
-            recordError(ex);
-        }
     }
 
     /// <summary>Returns the buffers of a consumed hunk to their pools (called after the consumer callback returns).</summary>

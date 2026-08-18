@@ -350,12 +350,12 @@ public abstract class CueParser
         long fileSize = fs.Length;
         long offset = 0;
 
-        if (!string.Equals(ReadFourCc(fs, offset, out _), "RIFF", StringComparison.Ordinal))
+        if (!string.Equals(ReadFourCc(fs, offset), "RIFF", StringComparison.Ordinal))
             throw new InvalidDataException($"Could not find RIFF header ({fileName})");
 
         offset += 4;
         ReadU32Le(fs, ref offset);
-        if (!string.Equals(ReadFourCc(fs, offset, out _), "WAVE", StringComparison.Ordinal))
+        if (!string.Equals(ReadFourCc(fs, offset), "WAVE", StringComparison.Ordinal))
             throw new InvalidDataException($"Could not find WAVE header ({fileName})");
 
         offset += 4;
@@ -364,7 +364,7 @@ public abstract class CueParser
         long length;
         while (true)
         {
-            string tag = ReadFourCc(fs, offset, out _);
+            string tag = ReadFourCc(fs, offset);
             offset += 4;
             length = ReadU32Le(fs, ref offset);
             if (string.Equals(tag, "fmt ", StringComparison.Ordinal))
@@ -395,7 +395,7 @@ public abstract class CueParser
         // seek until we find a data tag
         while (true)
         {
-            string tag = ReadFourCc(fs, offset, out _);
+            string tag = ReadFourCc(fs, offset);
             offset += 4;
             length = ReadU32Le(fs, ref offset);
             if (string.Equals(tag, "data", StringComparison.Ordinal))
@@ -409,14 +409,13 @@ public abstract class CueParser
         return (length, offset);
     }
 
-    private static string ReadFourCc(Stream stream, long position, out long nextPosition)
+    private static string ReadFourCc(Stream stream, long position)
     {
         stream.Position = position;
         byte[] buffer = new byte[4];
         if (stream.Read(buffer, 0, 4) != 4)
             throw new InvalidDataException("Unexpected end of WAV file");
 
-        nextPosition = position + 4;
         return Encoding.ASCII.GetString(buffer);
     }
 

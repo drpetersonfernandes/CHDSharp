@@ -125,9 +125,8 @@ public class UncompressedEncodeTests : IDisposable
             ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.None]);
         }
 
-        // 124 header + 16*4 map + 8 stored hunks at hunk-aligned offsets
-        long expected = 124 + 16 * 4;
-        expected = (expected + 4095) / 4096 * 4096 + 8 * 4096;
+        // 124 header + 16*4 map fit in the first 4096-aligned slot, then 8 stored hunks
+        const long expected = 4096 + 8 * 4096;
         Assert.Equal(expected, new FileInfo(chdPath).Length);
 
         var openErr = ChdFile.Open(chdPath, out var chd);

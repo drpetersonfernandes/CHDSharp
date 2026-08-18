@@ -136,7 +136,7 @@ public class HunkProcessor
 
     /// <summary>
     /// Compresses all hunks of an image with a producer→worker→consumer pipeline (the same
-    /// shape as CHDSharpLib's <see cref="M:CHDSharp.Chd.CheckFile(System.IO.Stream,System.String,System.Boolean,System.IProgress{CHDSharp.ChdProgress},System.Threading.CancellationToken)"/>): a single producer reads the
+    /// shape as CHDSharpLib's <see cref="CHDSharp.Chd.CheckFile(Stream,string,bool,IProgress{CHDSharp.Models.ChdProgress}?,System.Threading.CancellationToken)"/>): a single producer reads the
     /// raw hunks in order and maintains the running raw SHA-1; <see cref="_taskCount"/> workers
     /// hash (SELF-dedup SHA-1 + CRC-16) and compress each hunk with their own persistent codec
     /// instances; a single consumer delivers the results to <paramref name="onHunkConsumed"/> in

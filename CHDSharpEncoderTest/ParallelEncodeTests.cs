@@ -331,6 +331,12 @@ public class ParallelEncodeTests : IDisposable
         new Random(11).NextBytes(source);
 
         using var cts = new CancellationTokenSource();
+        AssertMidRunCancellation(source, cts);
+    }
+
+    /// <summary>Encodes <paramref name="source"/> with 8 workers whose progress handler cancels <paramref name="cts"/> mid-run.</summary>
+    private void AssertMidRunCancellation(byte[] source, CancellationTokenSource cts)
+    {
         var seen = 0;
         string chdPath = Path.Combine(_dir, "mid_cancel.chd");
         using var ms = new MemoryStream(source);

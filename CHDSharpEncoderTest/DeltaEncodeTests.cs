@@ -10,7 +10,7 @@ namespace CHDSharpEncoderTest;
 /// Verifies Phase 3: differential (delta) CHD creation via <see cref="ChdEncodeOptions.ParentPath"/>.
 /// Children reference parent hunks with COMPRESSION_PARENT map entries; the read side
 /// (CHDSharpLib) resolves them, so round trips must return the exact source data and
-/// <see cref="M:CHDSharp.Chd.CheckFileWithParent(System.String,System.String,System.IProgress{CHDSharp.ChdProgress},System.Threading.CancellationToken)"/> must pass. The parent map, RLE parent promotion
+/// <see cref="CHDSharp.Chd.CheckFileWithParent(string,string?,IProgress{CHDSharp.Models.ChdProgress}?,System.Threading.CancellationToken)"/> must pass. The parent map, RLE parent promotion
 /// (PARENT_SELF/PARENT_0/PARENT_1) and the unit-split read path are all exercised.
 /// </summary>
 public class DeltaEncodeTests : IDisposable

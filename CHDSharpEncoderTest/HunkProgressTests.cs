@@ -39,11 +39,11 @@ public class HunkProgressTests : IDisposable
 
         Assert.Equal(3, reports.Count);
         Assert.Equal(new uint[] { 0, 1, 2 }, reports.Select(r => r.HunkIndex).ToArray());
-        Assert.All(reports, r =>
+        foreach (var r in reports)
         {
             Assert.Equal(3u, r.HunkCount);
             Assert.Equal(4096, r.RawBytes);
-        });
+        }
     }
 
     [Fact]
@@ -74,13 +74,13 @@ public class HunkProgressTests : IDisposable
         using var ms = new MemoryStream(source);
         ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, options: new ChdEncodeOptions { HunkCompleted = reports.Add });
 
-        Assert.All(reports, r =>
+        foreach (var r in reports)
         {
             Assert.Equal(MapEntry.CompressionNone, r.CompressionType);
             Assert.Equal("none", r.CodecName);
             Assert.Equal(4096, r.StoredBytes);
             Assert.Equal(1.0, r.Ratio);
-        });
+        }
     }
 
     [Fact]
@@ -140,10 +140,10 @@ public class HunkProgressTests : IDisposable
         Assert.Equal(4u, (uint)reports.Count);
         for (int i = 0; i < reports.Count; i++)
             Assert.Equal((uint)i, reports[i].HunkIndex);
-        Assert.All(reports, r =>
+        foreach (var r in reports)
         {
             Assert.Equal(framesPerHunk * CdConstants.FrameSize, r.RawBytes);
             Assert.Equal((uint)reports.Count, r.HunkCount);
-        });
+        }
     }
 }

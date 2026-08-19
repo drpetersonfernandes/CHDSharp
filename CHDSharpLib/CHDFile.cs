@@ -562,6 +562,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                     var read = _stream.Read(copyBuf, 0, copyBuf.Length);
                     if (read == 0)
                         break;
+
                     temp.Write(copyBuf, 0, read);
                 }
 
@@ -704,6 +705,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             overall.AppendData(hash);
         return overall.GetHashAndReset();
     }
+
     /// <summary>
     /// Reads the entire compressed CHD file into memory so that subsequent hunk
     /// reads are served from RAM instead of the underlying stream (libchdr
@@ -781,11 +783,12 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// </summary>
     public long MemoryBudget
     {
-        get => (long)_cacheSize * HunkBytes;
+        get => _cacheSize * HunkBytes;
         set
         {
             if (value < 0)
                 throw new ArgumentOutOfRangeException(nameof(value), value, "MemoryBudget must be >= 0");
+
             var hunks = value / HunkBytes;
             ConfigureCache(hunks > 0 ? (int)Math.Min(hunks, int.MaxValue) : 1);
         }
@@ -1142,6 +1145,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                 var read = await RandomAccess.ReadAsync(handle, buffer.AsMemory(buffer.Length - remaining), position, cancellationToken).ConfigureAwait(false);
                 if (read == 0)
                     throw new EndOfStreamException($"Unexpected end of file at offset {position}");
+
                 position += read;
                 remaining -= read;
             }
@@ -1360,7 +1364,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             // accessor keeps the mapping alive independently).
             var mmf = System.IO.MemoryMappedFiles.MemoryMappedFile.CreateFromFile(
                 (FileStream)_stream, null, 0, System.IO.MemoryMappedFiles.MemoryMappedFileAccess.Read,
-                System.IO.HandleInheritability.None, leaveOpen: true);
+                HandleInheritability.None, leaveOpen: true);
             var view = mmf.CreateViewAccessor(0, _stream.Length, System.IO.MemoryMappedFiles.MemoryMappedFileAccess.Read);
             _mmfView = view;
             _mmf = mmf;
@@ -1592,6 +1596,21 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                 if (me.Offset >= (ulong)chd.Map.Length)
                     return ChdError.Chderrinvaliddata;
 
+                // Phase 6.1 hardening: reject SELF chains that cycle. ReadBlock resolves
+                // SELF references recursively, so a crafted map whose SELF entries point
+                // at themselves (or form a ring) would recurse forever. A valid chain is
+                // strictly acyclic and at most Map.Length hops long — walking it with a
+                // hop cap of Map.Length detects any cycle without extra memory.
+                var cursor = chd.Map[me.Offset];
+                var hops = 1;
+                while (cursor.Comptype == CompressionType.Compressionself)
+                {
+                    if (cursor.Offset >= (ulong)chd.Map.Length || ++hops > chd.Map.Length)
+                        return ChdError.Chderrinvaliddata;
+
+                    cursor = chd.Map[cursor.Offset];
+                }
+
                 var self = chd.Map[me.Offset];
                 me.SelfMapEntry = self;
                 if (self.Comptype == CompressionType.Compressiontype2Nd)
@@ -1789,6 +1808,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                 var read = RandomAccess.Read(handle, buffer.AsSpan(buffer.Length - remaining), position);
                 if (read == 0)
                     throw new EndOfStreamException($"Unexpected end of file at offset {position}");
+
                 position += read;
                 remaining -= read;
             }

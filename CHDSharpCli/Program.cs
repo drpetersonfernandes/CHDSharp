@@ -634,8 +634,8 @@ internal static class Program
         {
             var detected = PlatformDetector.Detect(inputPath);
             // 2048-byte-sector images (.iso / raw DVD) use the DVD presets; CD images use the CD presets.
-            var format = detected.Platform == DiscPlatform.DVD ||
-                         (detected.Platform == DiscPlatform.PS2 && inputPath.EndsWith(".iso", StringComparison.OrdinalIgnoreCase))
+            var format = detected.Platform == DiscPlatform.Dvd ||
+                         (detected.Platform == DiscPlatform.Ps2 && inputPath.EndsWith(".iso", StringComparison.OrdinalIgnoreCase))
                 ? "dvd"
                 : "cd";
             var preset = PlatformDetector.AutoCodecs(detected.Platform, format);
@@ -985,7 +985,7 @@ internal static class Program
             log.Information("{File}: {Platform}", Path.GetFileName(file), result.ToString());
             if (result.Platform != DiscPlatform.Unknown)
             {
-                var preset = PlatformDetector.AutoCodecs(result.Platform, result.Platform == DiscPlatform.DVD ? "dvd" : "cd");
+                var preset = PlatformDetector.AutoCodecs(result.Platform, result.Platform == DiscPlatform.Dvd ? "dvd" : "cd");
                 if (preset != null)
                     log.Information("  Recommended codecs: {Codecs}", string.Join(",", preset.Select(CodecTags.ToString)));
             }

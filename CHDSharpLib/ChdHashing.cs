@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
 using CHDSharp.Models;
-using CHDSharp.Utils;
 using System.IO.Hashing;
 
 namespace CHDSharp;
@@ -91,7 +90,7 @@ public static partial class Chd
                 foreach (var track in chd.Tracks)
                 {
                     var start = track.StartFrame * unitBytes;
-                    var length = (long)(track.Frames + track.ExtraFrames) * unitBytes;
+                    var length = (track.Frames + track.ExtraFrames) * unitBytes;
                     regions.Add((track.TrackNumber, start, length));
                 }
             }

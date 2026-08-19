@@ -50,21 +50,21 @@ public static class PlatformDetector
     {
         switch (platform)
         {
-            case DiscPlatform.PS2 when string.Equals(format, "dvd", StringComparison.Ordinal):
+            case DiscPlatform.Ps2 when string.Equals(format, "dvd", StringComparison.Ordinal):
                 return [CodecTags.Zlib];
-            case DiscPlatform.PS2:
+            case DiscPlatform.Ps2:
                 return [CodecTags.Cdzl, CodecTags.Cdfl];
-            case DiscPlatform.DVD:
+            case DiscPlatform.Dvd:
                 return [CodecTags.Zstd];
-            case DiscPlatform.GenericCD:
-            case DiscPlatform.ThreeDO:
-            case DiscPlatform.MegaCD:
+            case DiscPlatform.GenericCd:
+            case DiscPlatform.ThreeDo:
+            case DiscPlatform.MegaCd:
             case DiscPlatform.Saturn:
             case DiscPlatform.Dreamcast:
-            case DiscPlatform.PS1:
-            case DiscPlatform.PSP:
-            case DiscPlatform.NeoGeoCD:
-            case DiscPlatform.PCEngine:
+            case DiscPlatform.Ps1:
+            case DiscPlatform.Psp:
+            case DiscPlatform.NeoGeoCd:
+            case DiscPlatform.PcEngine:
                 return [CodecTags.Cdzs, CodecTags.Cdfl];
             default:
                 return null;
@@ -88,9 +88,12 @@ public static class PlatformDetector
             if (frameSize <= 0)
                 return new DiscPlatformInfo(DiscPlatform.Unknown, null, null, "zero sector size");
 
+            var isGdRom = (toc.Flags & CdTocFlags.GdRom) != 0;
+            return DetectCore(ReadSector, isGdRom ? "gd" : "cd", "descriptor");
+
             byte[]? ReadSector(uint lba)
             {
-                var offset = firstDataTrack.FileOffset + (long)lba * frameSize;
+                var offset = firstDataTrack.FileOffset + lba * frameSize;
                 var fileLength = new FileInfo(file).Length;
                 if (offset + Math.Min(frameSize, 2352) > fileLength)
                     return null;
@@ -103,9 +106,6 @@ public static class PlatformDetector
 
                 return ExtractCooked(raw, (uint)frameSize);
             }
-
-            var isGdRom = (toc.Flags & CdTocFlags.GdRom) != 0;
-            return DetectCore(ReadSector, isGdRom ? "gd" : "cd", "descriptor");
         }
         catch (Exception ex) when (ex is InvalidDataException or IOException or FileNotFoundException)
         {
@@ -121,6 +121,8 @@ public static class PlatformDetector
             var length = fs.Length;
             uint frameSize = DetectSectorSize(fs, length);
 
+            return DetectCore(ReadSector, frameSize == 2048 ? "dvd" : "cd", "raw file");
+
             byte[]? ReadSector(uint lba)
             {
                 var offset = (long)lba * frameSize;
@@ -134,8 +136,6 @@ public static class PlatformDetector
 
                 return ExtractCooked(raw, frameSize);
             }
-
-            return DetectCore(ReadSector, frameSize == 2048 ? "dvd" : "cd", "raw file");
         }
         catch (IOException ex)
         {
@@ -179,6 +179,7 @@ public static class PlatformDetector
         if (length % 2048 == 0) return 2048;
         if (length % 2336 == 0) return 2336;
         if (length % 2352 == 0) return 2352;
+
         return 2048; // fallback
     }
 

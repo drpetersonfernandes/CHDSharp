@@ -63,7 +63,7 @@ public sealed class NrgParser
                 byte startTrack = (byte)file.ReadByte();
                 byte endTrack = (byte)file.ReadByte();
                 int numTracks = endTrack - startTrack + 1;
-                if (numTracks <= 0 || numTracks > CdConstants.MaxTracks)
+                if (numTracks is <= 0 or > CdConstants.MaxTracks)
                     throw new InvalidDataException($"Invalid NRG track range {startTrack}-{endTrack}");
 
                 tracks = new List<CdTrack>(numTracks);

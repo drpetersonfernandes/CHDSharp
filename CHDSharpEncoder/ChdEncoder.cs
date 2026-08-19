@@ -99,6 +99,7 @@ public static class ChdEncoder
             var length = sourceStream.Length;
             if (startBytes > length)
                 throw new ArgumentException($"InputStartBytes ({startBytes}) exceeds the source length ({length})");
+
             total = (ulong)(length - startBytes);
         }
         else
@@ -113,6 +114,7 @@ public static class ChdEncoder
         {
             if (lengthBytes < 0)
                 throw new ArgumentOutOfRangeException(nameof(sourceStream), "InputLengthBytes must be >= 0");
+
             total = Math.Min(total, (ulong)lengthBytes);
         }
 
@@ -175,6 +177,7 @@ public static class ChdEncoder
                     var read = _source.Read(skipBuf, 0, (int)Math.Min(skip, skipBuf.Length));
                     if (read == 0)
                         throw new EndOfStreamException("Non-seekable source ended before InputStartBytes");
+
                     skip -= read;
                 }
             }
@@ -185,6 +188,7 @@ public static class ChdEncoder
                 var read = _source.Read(buffer, total, count - total);
                 if (read == 0)
                     break;
+
                 total += read;
             }
 

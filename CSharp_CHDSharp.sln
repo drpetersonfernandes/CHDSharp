@@ -14,6 +14,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CHDSharpEncoder", "CHDSharp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CHDSharpEncoderTest", "CHDSharpEncoderTest\CHDSharpEncoderTest.csproj", "{D20F2BA0-FCA4-488C-ADC6-83B74F718FD4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CHDSharpBench", "CHDSharpBench\CHDSharpBench.csproj", "{A7E5F40C-9B31-4A2C-BE77-5D1E2F3A4B5C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -108,6 +110,18 @@ Global
 		{D20F2BA0-FCA4-488C-ADC6-83B74F718FD4}.Release|x64.Build.0 = Release|Any CPU
 		{D20F2BA0-FCA4-488C-ADC6-83B74F718FD4}.Release|x86.ActiveCfg = Release|Any CPU
 		{D20F2BA0-FCA4-488C-ADC6-83B74F718FD4}.Release|x86.Build.0 = Release|Any CPU
+		{A7E5F40C-9B31-4A2C-BE77-5D1E2F3A4B5C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A7E5F40C-9B31-4A2C-BE77-5D1E2F3A4B5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A7E5F40C-9B31-4A2C-BE77-5D1E2F3A4B5C}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A7E5F40C-9B31-4A2C-BE77-5D1E2F3A4B5C}.Debug|x64.Build.0 = Debug|Any CPU
+		{A7E5F40C-9B31-4A2C-BE77-5D1E2F3A4B5C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{A7E5F40C-9B31-4A2C-BE77-5D1E2F3A4B5C}.Debug|x86.Build.0 = Debug|Any CPU
+		{A7E5F40C-9B31-4A2C-BE77-5D1E2F3A4B5C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A7E5F40C-9B31-4A2C-BE77-5D1E2F3A4B5C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A7E5F40C-9B31-4A2C-BE77-5D1E2F3A4B5C}.Release|x64.ActiveCfg = Release|Any CPU
+		{A7E5F40C-9B31-4A2C-BE77-5D1E2F3A4B5C}.Release|x64.Build.0 = Release|Any CPU
+		{A7E5F40C-9B31-4A2C-BE77-5D1E2F3A4B5C}.Release|x86.ActiveCfg = Release|Any CPU
+		{A7E5F40C-9B31-4A2C-BE77-5D1E2F3A4B5C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

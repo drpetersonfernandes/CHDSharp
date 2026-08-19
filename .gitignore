@@ -4,6 +4,7 @@
 
 [Bb]in/
 [Oo]bj/
+BenchmarkDotNet.Artifacts/
 /.vs
 CHDSharpEncoder/CHDInfo.md
 CHDSharpEncoder/EncoderPlan.md

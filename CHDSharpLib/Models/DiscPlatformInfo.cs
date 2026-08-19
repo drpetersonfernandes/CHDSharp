@@ -8,13 +8,13 @@ public enum DiscPlatform
     Unknown = 0,
 
     /// <summary>A CD-ROM with no recognizable platform marker.</summary>
-    GenericCD = 1,
+    GenericCd = 1,
 
     /// <summary>Panasonic 3DO (Opera filesystem, sector 0 magic).</summary>
-    ThreeDO = 2,
+    ThreeDo = 2,
 
     /// <summary>Sega Mega CD / Sega CD (sector 0 "SEGADISC..." magic).</summary>
-    MegaCD = 3,
+    MegaCd = 3,
 
     /// <summary>Sega Saturn (sector 0 "SEGA SEGASATURN " magic).</summary>
     Saturn = 4,
@@ -23,22 +23,22 @@ public enum DiscPlatform
     Dreamcast = 5,
 
     /// <summary>Sony PlayStation (SYSTEM.CNF with BOOT).</summary>
-    PS1 = 6,
+    Ps1 = 6,
 
     /// <summary>Sony PlayStation 2 (SYSTEM.CNF with BOOT2, or DVD Video marked PS2).</summary>
-    PS2 = 7,
+    Ps2 = 7,
 
     /// <summary>Sony PlayStation Portable (PSP_GAME/PARAM.SFO).</summary>
-    PSP = 8,
+    Psp = 8,
 
     /// <summary>SNK Neo Geo CD (IPL.TXT).</summary>
-    NeoGeoCD = 9,
+    NeoGeoCd = 9,
 
     /// <summary>NEC PC Engine / TurboGrafx-16 CD (IPL header heuristic).</summary>
-    PCEngine = 10,
+    PcEngine = 10,
 
     /// <summary>DVD-Video (VIDEO_TS/VIDEO_TS.IFO) or a generic DVD.</summary>
-    DVD = 11
+    Dvd = 11
 }
 
 /// <summary>The result of <see cref="CHDSharp.DiscDetector"/>: detected platform plus optional
@@ -55,17 +55,17 @@ public sealed record DiscPlatformInfo(DiscPlatform Platform, string? Title, stri
     /// or "unknown".</summary>
     public string Name => Platform switch
     {
-        DiscPlatform.GenericCD => "cd",
-        DiscPlatform.ThreeDO => "3do",
-        DiscPlatform.MegaCD => "megacd",
+        DiscPlatform.GenericCd => "cd",
+        DiscPlatform.ThreeDo => "3do",
+        DiscPlatform.MegaCd => "megacd",
         DiscPlatform.Saturn => "saturn",
         DiscPlatform.Dreamcast => "dreamcast",
-        DiscPlatform.PS1 => "ps1",
-        DiscPlatform.PS2 => "ps2",
-        DiscPlatform.PSP => "psp",
-        DiscPlatform.NeoGeoCD => "neogeocd",
-        DiscPlatform.PCEngine => "pcengine",
-        DiscPlatform.DVD => "dvd",
+        DiscPlatform.Ps1 => "ps1",
+        DiscPlatform.Ps2 => "ps2",
+        DiscPlatform.Psp => "psp",
+        DiscPlatform.NeoGeoCd => "neogeocd",
+        DiscPlatform.PcEngine => "pcengine",
+        DiscPlatform.Dvd => "dvd",
         _ => "unknown"
     };
 
@@ -74,9 +74,15 @@ public sealed record DiscPlatformInfo(DiscPlatform Platform, string? Title, stri
     {
         var result = Name;
         if (Title is { Length: > 0 })
+        {
             result += $" \"{Title}\"";
+        }
+
         if (ManufacturerId is { Length: > 0 })
+        {
             result += $" [{ManufacturerId}]";
+        }
+
         return result;
     }
 }

@@ -82,8 +82,7 @@ internal static class ChdHeaders
                     // already skipped above (and their indexes are validated by LinkSelfBlocks).
                     if (me.Offset + me.Length > fileLength)
                         return ChdError.Chderrinvaliddata;
-                    break;
-                default:
+
                     break;
             }
         }
@@ -126,6 +125,7 @@ internal static class ChdHeaders
         chd.Flags = br.ReadUInt32Be(); // flags
         if (ValidateLegacyFlags(chd.Flags) != ChdError.Chderrnone)
             return ChdError.Chderrinvaliddata;
+
         br.ReadUInt32Be(); // compression
         chd.ObsoleteHunksize = br.ReadUInt32Be(); // number of 512-byte sectors per hunk
         chd.Totalblocks = br.ReadUInt32Be();
@@ -141,6 +141,12 @@ internal static class ChdHeaders
         chd.Unitbytes = chd.Blocksize;
 
         if (chd.Blocksize == 0 || chd.Blocksize > MaxHunkBytes || (ulong)chd.Totalblocks * chd.Blocksize > MaxLogicalBytes)
+            return ChdError.Chderrinvaliddata;
+
+        // The raw map is stored inline and must physically fit in the file: a corrupted
+        // Totalblocks (up to 2^32-1) would otherwise allocate a multi-GB array and loop
+        // for minutes (Phase 6.1 hardening; same attack as the V5 compressed map).
+        if ((ulong)chd.Totalblocks * 8 > (ulong)(file.Length - file.Position))
             return ChdError.Chderrinvaliddata;
 
         chd.Map = new MapEntry[chd.Totalblocks];
@@ -187,6 +193,7 @@ internal static class ChdHeaders
         chd.Flags = br.ReadUInt32Be(); // flags
         if (ValidateLegacyFlags(chd.Flags) != ChdError.Chderrnone)
             return ChdError.Chderrinvaliddata;
+
         br.ReadUInt32Be(); // compression
         chd.ObsoleteHunksize = br.ReadUInt32Be(); // number of seclen-byte sectors per hunk
         chd.Totalblocks = br.ReadUInt32Be();
@@ -202,6 +209,12 @@ internal static class ChdHeaders
         chd.Unitbytes = chd.Blocksize;
 
         if (chd.Blocksize == 0 || chd.Blocksize > MaxHunkBytes || (ulong)chd.Totalblocks * chd.Blocksize > MaxLogicalBytes)
+            return ChdError.Chderrinvaliddata;
+
+        // The raw map is stored inline and must physically fit in the file: a corrupted
+        // Totalblocks (up to 2^32-1) would otherwise allocate a multi-GB array and loop
+        // for minutes (Phase 6.1 hardening; same attack as the V5 compressed map).
+        if ((ulong)chd.Totalblocks * 8 > (ulong)(file.Length - file.Position))
             return ChdError.Chderrinvaliddata;
 
         chd.Map = new MapEntry[chd.Totalblocks];
@@ -264,6 +277,12 @@ internal static class ChdHeaders
         chd.Rawsha1 = br.ReadBytes(20);
         chd.Parentsha1 = br.ReadBytes(20);
 
+        // The raw map is stored inline (16 bytes per entry) and must physically fit in
+        // the file; a corrupted Totalblocks would otherwise allocate a multi-GB array
+        // and loop for minutes (Phase 6.1 hardening).
+        if ((ulong)chd.Totalblocks * 16 > (ulong)(file.Length - file.Position))
+            return ChdError.Chderrinvaliddata;
+
         chd.Map = new MapEntry[chd.Totalblocks];
 
         for (var i = 0; i < chd.Totalblocks; i++)
@@ -313,6 +332,12 @@ internal static class ChdHeaders
         chd.Sha1 = br.ReadBytes(20);
         chd.Parentsha1 = br.ReadBytes(20);
         chd.Rawsha1 = br.ReadBytes(20);
+
+        // The raw map is stored inline (16 bytes per entry) and must physically fit in
+        // the file; a corrupted Totalblocks would otherwise allocate a multi-GB array
+        // and loop for minutes (Phase 6.1 hardening).
+        if ((ulong)chd.Totalblocks * 16 > (ulong)(file.Length - file.Position))
+            return ChdError.Chderrinvaliddata;
 
         chd.Map = new MapEntry[chd.Totalblocks];
 
@@ -429,7 +454,7 @@ internal static class ChdHeaders
     {
         var streamLen = (ulong)br.BaseStream.Length;
 
-        map = new MapEntry[totalBlocks];
+        map = [];
 
         br.BaseStream.Seek((long)mapoffset, SeekOrigin.Begin);
         var mapbytes = br.ReadUInt32Be();
@@ -443,8 +468,27 @@ internal static class ChdHeaders
         if (mapoffset + 16 + mapbytes < mapoffset || mapoffset + 16 + mapbytes > streamLen)
             return ChdError.Chderrinvaliddata;
 
+        // File-corruption guard (Phase 6.1): a corrupted 'totalbytes'/'blocksize' pair in the
+        // header can make totalBlocks arbitrarily large (up to ~2^32), which would turn the
+        // decode loops below into a multi-billion-iteration hang with a multi-GB map array.
+        // Bound it against what the map can actually encode: every entry is either a direct
+        // huffman symbol (>= 1 bit) or part of an RLE run, and the widest run is
+        // COMPRESSION_RLE_LARGE: 3 huffman symbols for up to 2+16+255... 273 entries, i.e. at
+        // most 91 entries per bit (728 per byte). Any valid map must satisfy this; anything
+        // above it is provably corrupt, so reject before allocating or looping.
+        const ulong maxEntriesPerBit = 91; // 273 entries per 3 huffman symbols (1 bit each)
+        if (totalBlocks > (ulong)mapbytes * 8 * maxEntriesPerBit + 1024)
+            return ChdError.Chderrinvaliddata;
+
+        // The raw (decompressed) map is reconstructed below as one 12-byte entry per hunk;
+        // beyond int.MaxValue entries the raw map cannot be indexed at all.
+        if ((ulong)totalBlocks * 12 > int.MaxValue)
+            return ChdError.Chderrinvaliddata;
+
         var compressedArr = new byte[mapbytes];
         br.BaseStream.ReadExactly(compressedArr, 0, (int)mapbytes);
+
+        map = new MapEntry[totalBlocks];
 
         var bitbuf = new BitStream(compressedArr, 0, (int)mapbytes);
 

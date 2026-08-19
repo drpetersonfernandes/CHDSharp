@@ -47,13 +47,17 @@ public static class CueConverter
         var lines = NormalizeLines(cueText);
         var start = 0;
         if (lines.Count > 0 && lines[0].StartsWith("CATALOG", StringComparison.Ordinal))
+        {
             start = 1;
+        }
 
         var fileCount = 0;
         for (var i = start; i < lines.Count; i++)
         {
             if (lines[i].StartsWith("FILE ", StringComparison.Ordinal))
+            {
                 fileCount++;
+            }
         }
 
         var singleTrack = fileCount == 1;
@@ -139,21 +143,26 @@ public static class CueConverter
         for (var i = 0; i < text.Length; i++)
         {
             var c = text[i];
-            if (c == '\r')
+            switch (c)
             {
-                if (i + 1 < text.Length && text[i + 1] == '\n')
-                    i++;
-                lines.Add(sb.ToString());
-                sb.Clear();
-            }
-            else if (c == '\n')
-            {
-                lines.Add(sb.ToString());
-                sb.Clear();
-            }
-            else
-            {
-                sb.Append(c);
+                case '\r':
+                {
+                    if (i + 1 < text.Length && text[i + 1] == '\n')
+                    {
+                        i++;
+                    }
+
+                    lines.Add(sb.ToString());
+                    sb.Clear();
+                    break;
+                }
+                case '\n':
+                    lines.Add(sb.ToString());
+                    sb.Clear();
+                    break;
+                default:
+                    sb.Append(c);
+                    break;
             }
         }
 

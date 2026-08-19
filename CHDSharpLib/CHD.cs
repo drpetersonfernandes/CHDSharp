@@ -213,8 +213,10 @@ public static partial class Chd
             return new ChdResult(ChdError.Chderrreaderror, ver, headerSha1, headerMd5);
         }
 
-        if (storedRaw != null && Util.ByteArrEquals(storedRaw, computedRawSha1))
+        if (Util.ByteArrEquals(storedRaw, computedRawSha1))
+        {
             needRaw = false;
+        }
 
         byte[]? combined = null;
         if (needCombined)
@@ -225,7 +227,9 @@ public static partial class Chd
                 fs.Position = 16;
                 var hErr = ChdHeaders.ReadHeaderByVersion(fs, version, out var header);
                 if (hErr == ChdError.Chderrnone)
+                {
                     combined = ChdMetaData.ComputeOverallSha1(fs, header, computedRawSha1);
+                }
             }
             catch (Exception)
             {
@@ -233,7 +237,9 @@ public static partial class Chd
             }
 
             if (combined != null && storedCombined != null && Util.ByteArrEquals(combined, storedCombined))
+            {
                 needCombined = false;
+            }
         }
 
         if (!needRaw && !needCombined)
@@ -391,7 +397,7 @@ public static partial class Chd
             valid = ChdMetaData.ReadMetaData(s, chd);
         }
 
-if (valid != ChdError.Chderrnone)
+        if (valid != ChdError.Chderrnone)
         {
             LogHeaderReadFailed(Log, valid, null);
             return valid;

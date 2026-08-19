@@ -73,7 +73,10 @@ public class MutationTests
                 // random byte flips (1-8 flips)
                 var flips = rng.Next(1, 9);
                 for (var i = 0; i < flips; i++)
+                {
                     bytes[rng.Next(bytes.Length)] ^= (byte)(1 << rng.Next(8));
+                }
+
                 break;
             case 1:
                 // truncation at a random point
@@ -84,7 +87,10 @@ public class MutationTests
                 var start = rng.Next(8, Math.Min(bytes.Length, 124));
                 var length = Math.Min(rng.Next(1, 20), bytes.Length - start);
                 for (var i = 0; i < length; i++)
+                {
                     bytes[start + i] = (byte)rng.Next(256);
+                }
+
                 break;
             case 3:
                 // append garbage
@@ -138,7 +144,7 @@ public class MutationTests
                 if (err2 != ChdError.Chderrnone || chd2 == null)
                     return err2;
 
-                using (chd2)
+                await using (chd2)
                 {
                     var b = new byte[chd2.HunkBytes];
                     for (uint h = 0; h < chd2.HunkCount; h++)

@@ -162,17 +162,23 @@ CHDSharpCli --copy in.chd out.chd [-c zlib,zstd,lzma,none] [-t 8] [-ip parent.ch
 | Feature | libchdr 0.3.0 (C) | CHDSharp (C#) |
 |---------|:---:|:---:|
 | V1–V5 headers | ✅ | ✅ |
-| zlib, lzma, huffman, flac | ✅ | ✅ |
-| Zstd (zstd, cdzs) | ✗ | ✅ |
-| AVHuff | ✗ | ✅ |
+| 9 of 10 codecs (zlib, lzma, huff, flac, zstd, cdzl, cdlz, cdfl, cdzs) | ✅ | ✅ |
+| AVHuff (`avhu`) | ❌ | ✅ |
 | Parent/child chains | ✅ | ✅ |
-| Random access | ✅ | ✅ |
-| Async API | ✗ | ✅ |
-| Metadata reading | ✗ | ✅ |
-| Parallel verification | ✗ | ✅ |
-| Pluggable logging | ✗ | ✅ |
-| CHD creation | ✗ | ✗ |
-| Native dependencies | zlib, lzma, flac | **none** |
+| Random access (`chd_read` / `ReadHunk`) | ✅ | ✅ |
+| Byte-range reads | ❌ (hunk-only) | ✅ `Read(offset, ...)` |
+| LBA/MSF sector reads | ❌ | ✅ `ReadSector`/`ReadSectorMsf`/`ReadFrame` + `CdRomAddress` |
+| Full-image verification | ❌ | ✅ parallel |
+| Metadata reading | ✅ `chd_get_metadata` | ✅ `GetMetadata` + `Metadata` |
+| Metadata writing | ❌ | ✅ `SetMetadata`/`DeleteMetadata` |
+| Extraction (CUE/BIN, GDI, ISO) | ❌ | ✅ |
+| Async API | ❌ | ✅ |
+| Parallel verification | ❌ | ✅ |
+| Pluggable logging | ❌ | ✅ |
+| CHD creation | ❌ (commented out) | ✅ `CHDSharpEncoder` |
+| Native dependencies | zlib (miniz), LZMA SDK, zstd, dr_flac | **none** |
+
+See [docs/libchdr-comparison.md](docs/libchdr-comparison.md) for the full parity analysis.
 
 ---
 

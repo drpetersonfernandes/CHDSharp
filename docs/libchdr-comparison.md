@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Comparison with libchdr
 
 This page compares CHDSharp against the C reference library [libchdr 0.3.0](https://github.com/rtissera/libchdr) (kept in [`References/libchdr-0.3.0`](../References/libchdr-0.3.0)), which CHDSharp uses as a parity baseline.

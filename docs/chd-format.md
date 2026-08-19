@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # CHD Format Reference
 
 This page documents the **CHD (Compressed Hunks of Data)** on-disk format as implemented by CHDSharp. It is based on the MAME 0.288 sources and the reference notes in [`References/CHDInfo.md`](../References/CHDInfo.md).

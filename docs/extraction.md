@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Extraction & Track Information
 
 CHDSharp can parse the CD/GD-ROM track layout stored in the metadata and extract the decompressed image to standard files.

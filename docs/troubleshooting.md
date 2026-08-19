@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Troubleshooting & FAQ
 
 Common problems, their causes, and known limitations.

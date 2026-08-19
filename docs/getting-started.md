@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Getting Started
 
 This page walks through installing CHDSharp, writing your first program, and using the bundled command-line tool.

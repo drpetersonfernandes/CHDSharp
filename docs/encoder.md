@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # CHD creation (CHDSharpEncoder)
 
 `CHDSharpEncoder` is the encoder companion to the CHDSharp reader. It writes **CHD v5**

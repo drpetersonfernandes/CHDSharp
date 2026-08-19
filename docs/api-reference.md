@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # API Reference
 
 Complete reference for the public API of the `CHDSharp` package. All types live in the `CHDSharp` namespace (models in `CHDSharp.Models`, address helpers in `CHDSharp.Utils`).

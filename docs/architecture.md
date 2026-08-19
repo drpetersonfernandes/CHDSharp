@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Architecture
 
 This page describes the solution layout and the internal design of the library.

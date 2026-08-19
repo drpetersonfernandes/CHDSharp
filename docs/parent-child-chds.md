@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Parent/Child CHDs
 
 CHD supports **delta (incremental) images**: a *child* CHD stores only the hunks that differ from its *parent*; identical hunks become parent references. This is how MAME ships multi-disc or regional variants without duplicating identical data.

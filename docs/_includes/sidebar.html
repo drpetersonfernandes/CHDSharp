@@ -1,0 +1,46 @@
+<div class="brand">
+  <a href="{{ '/' | relative_url }}" class="brand-name">CHDSharp</a>
+  <span class="tagline">Documentation</span>
+</div>
+
+<p class="nav-heading">Getting started</p>
+<ul class="nav-list">
+  <li><a href="{{ '/' | relative_url }}"{% if page.path == 'README.md' %} class="active"{% endif %}>Home</a></li>
+  <li><a href="{{ 'getting-started.html' | relative_url }}"{% if page.path == 'getting-started.md' %} class="active"{% endif %}>Getting Started</a></li>
+  <li><a href="{{ 'building.html' | relative_url }}"{% if page.path == 'building.md' %} class="active"{% endif %}>Building</a></li>
+</ul>
+
+<p class="nav-heading">Format &amp; internals</p>
+<ul class="nav-list">
+  <li><a href="{{ 'chd-format.html' | relative_url }}"{% if page.path == 'chd-format.md' %} class="active"{% endif %}>CHD Format Reference</a></li>
+  <li><a href="{{ 'codecs.html' | relative_url }}"{% if page.path == 'codecs.md' %} class="active"{% endif %}>Codecs</a></li>
+  <li><a href="{{ 'architecture.html' | relative_url }}"{% if page.path == 'architecture.md' %} class="active"{% endif %}>Architecture</a></li>
+</ul>
+
+<p class="nav-heading">API &amp; usage</p>
+<ul class="nav-list">
+  <li><a href="{{ 'api-reference.html' | relative_url }}"{% if page.path == 'api-reference.md' %} class="active"{% endif %}>API Reference</a></li>
+  <li><a href="{{ 'metadata.html' | relative_url }}"{% if page.path == 'metadata.md' %} class="active"{% endif %}>Metadata</a></li>
+  <li><a href="{{ 'verification.html' | relative_url }}"{% if page.path == 'verification.md' %} class="active"{% endif %}>Verification</a></li>
+  <li><a href="{{ 'extraction.html' | relative_url }}"{% if page.path == 'extraction.md' %} class="active"{% endif %}>Extraction</a></li>
+  <li><a href="{{ 'parent-child-chds.html' | relative_url }}"{% if page.path == 'parent-child-chds.md' %} class="active"{% endif %}>Parent/Child CHDs</a></li>
+</ul>
+
+<p class="nav-heading">Operations</p>
+<ul class="nav-list">
+  <li><a href="{{ 'performance.html' | relative_url }}"{% if page.path == 'performance.md' %} class="active"{% endif %}>Performance</a></li>
+  <li><a href="{{ 'logging.html' | relative_url }}"{% if page.path == 'logging.md' %} class="active"{% endif %}>Logging</a></li>
+  <li><a href="{{ 'error-codes.html' | relative_url }}"{% if page.path == 'error-codes.md' %} class="active"{% endif %}>Error Codes</a></li>
+  <li><a href="{{ 'testing.html' | relative_url }}"{% if page.path == 'testing.md' %} class="active"{% endif %}>Testing</a></li>
+</ul>
+
+<p class="nav-heading">Writing CHDs</p>
+<ul class="nav-list">
+  <li><a href="{{ 'encoder.html' | relative_url }}"{% if page.path == 'encoder.md' %} class="active"{% endif %}>Encoder (CHD creation)</a></li>
+</ul>
+
+<p class="nav-heading">Reference</p>
+<ul class="nav-list">
+  <li><a href="{{ 'libchdr-comparison.html' | relative_url }}"{% if page.path == 'libchdr-comparison.md' %} class="active"{% endif %}>Comparison with libchdr</a></li>
+  <li><a href="{{ 'troubleshooting.html' | relative_url }}"{% if page.path == 'troubleshooting.md' %} class="active"{% endif %}>Troubleshooting &amp; FAQ</a></li>
+</ul>

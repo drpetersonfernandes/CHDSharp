@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Logging
 
 CHDSharp is **silent by default**. It integrates with `Microsoft.Extensions.Logging` so you can route internal diagnostics to any compatible provider.

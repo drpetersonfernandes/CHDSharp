@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Metadata
 
 CHD files carry an extensible **metadata chain**: a linked list of tagged binary blobs that describes the image (hard-disk geometry, CD track layout, DVD marker, laserdisc A/V parameters, and arbitrary application data such as game names).

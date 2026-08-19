@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Codecs
 
 CHDSharp implements **all ten decompression codecs** used by the CHD format. Every codec is a delegate with the signature

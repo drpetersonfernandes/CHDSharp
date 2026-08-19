@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Testing
 
 CHDSharp ships a **558-test** xUnit suite plus a deterministic 30-file corpus covering every format version, codec, map type, and parent/child combination. Tests run on `net8.0`, `net9.0`, and `net10.0`.

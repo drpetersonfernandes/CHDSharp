@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Performance
 
 CHDSharp is designed for both **batch verification throughput** (parallel) and **low-latency random access** (single-threaded, cached). This page documents the knobs and what to expect.

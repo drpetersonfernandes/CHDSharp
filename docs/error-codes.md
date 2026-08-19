@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Error Codes
 
 Every public API returns (or reports) a `ChdError` value instead of throwing. This page lists all values, their meaning, and where they are produced.

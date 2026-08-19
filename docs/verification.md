@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Verification
 
 CHDSharp offers four levels of integrity checking: a fast header sniff, a full header DTO read, a header-only check, and a **full deep verification** that decompresses every hunk and validates every checksum the format defines.

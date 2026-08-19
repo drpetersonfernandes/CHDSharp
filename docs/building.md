@@ -1,3 +1,7 @@
+---
+layout: default
+---
+
 # Building
 
 How to build, test, pack, and publish every component of the repository.

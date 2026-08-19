@@ -26,6 +26,8 @@ CHDSharp ships a **558-test** xUnit suite plus a deterministic 30-file corpus co
 | `ProgressReportingTests` | `IProgress<ChdProgress>` on `CheckFile`, `CheckFileWithParent`, `ReadAllBytes`, `EnumerateHunks`, `ExtractToDirectory`: per-hunk report counts, monotonicity, final totals, ordered parallel reports, backward-compatible defaults |
 | `CancellationTokenTests` | `CancellationToken` on all public APIs: pre-cancelled throws for `Open`/`Read`/`ReadHunk`/`ReadAllBytes`/`ExtractToDirectory`/`CheckFile`/`CheckFileWithParent`, cancelled-task async twins, mid-run cancellation of the parallel pipeline, OCE never swallowed by extraction |
 | `ChecksumTests` | CRC-32 / CRC-16 test vectors |
+| `CdRomAddressTests` | `CdRomAddress` MSF↔LBA conversion: BCD vectors, lead-in boundaries, 99-minute BCD limit, invalid-BCD throws, round trips |
+| `ReadSectorTests` | `ReadSector`/`ReadSectorMsf`/`ReadFrame` against the CD corpus (V3/V4/V5, cdlz/cdfl): sector/frame reads match the decompressed image, all-frames concatenation equals the whole image, MSF↔LBA equivalence, buffer/range error paths, non-CD rejection |
 | `TrackInfoTests` / `TrackInfoEdgeCaseTests` | TOC parsing across `CHTR`, `CHT2`, `CHCD`, `CHGD`, `CHGT`; GD-ROM pad frames; binary track parsing |
 | `CorpusTests` | Deep verification + open/read on all 30 fixtures |
 | `SecondCompressedTests` | V3/V4 `ZLIB_PLUS` secondary-codec hunks |

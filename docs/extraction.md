@@ -59,6 +59,26 @@ The TOC parser (`ChdTocParser`) supports every metadata format, in priority orde
 
 Tracks are padded to 4-frame alignment (`ExtraFrames`). GD-ROM images carry `PadFrames`.
 
+### Sector reads by LBA / MSF
+
+Instead of raw byte offsets, CD/GD-ROM sectors can be read directly by logical block address (or BCD MSF):
+
+```csharp
+using CHDSharp.Utils;
+
+var sector = new byte[2352];                    // 2352-byte sector data
+chd.ReadSector(0, sector);                      // LBA 0 = first track's INDEX 01
+chd.ReadSectorMsf(0x00, 0x02, 0x00, sector);    // same sector, BCD MSF 00:02:00
+
+var frame = new byte[chd.UnitBytes];            // full 2448-byte frame (data + subcode)
+chd.ReadFrame(0, frame);
+
+int lba = CdRomAddress.MsfToLba(0x02, 0x00, 0x00);   // 8850
+var (m, s, f) = CdRomAddress.LbaToMsf(lba);           // (0x02, 0x00, 0x00)
+```
+
+LBA 0 maps to the first data track's INDEX 01: `PreGap` frames into the decompressed image when the pregap is stored physically (metadata `PGTYPE:V...`, e.g. CUE sheets with `INDEX 00`), and at image frame 0 otherwise (Redump-style CUEs, `PREGAP`-keyword CUEs, NRG, TOC, GDI). Non-CD/GD-ROM images return `Chderrinvaliddata`; out-of-range addresses or undersized buffers return `Chderrinvalidparameter`.
+
 ### Legacy GD-ROM little-endian CDDA (`CHGT` / `CD_FLAG_GDROMLE`)
 
 Legacy GD-ROMs detected via the `CHGT` tag store their CDDA audio tracks in **little-endian byte order** (Sega CD / PCEngine CD). `ChdFile.IsLittleEndianAudio` is `true` for these. To match MAME's playback behavior, `ExtractToDirectory` byte-swaps the 2352-byte sector-data portion of each 2448-byte frame **only for `AUDIO` tracks** when writing the per-track `.bin` files (subcode is left untouched). Raw `Read()` and hash/verification output are unchanged.

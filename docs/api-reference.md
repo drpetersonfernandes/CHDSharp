@@ -1,6 +1,6 @@
 # API Reference
 
-Complete reference for the public API of the `CHDSharp` package. All types live in the `CHDSharp` namespace (models in `CHDSharp.Models`).
+Complete reference for the public API of the `CHDSharp` package. All types live in the `CHDSharp` namespace (models in `CHDSharp.Models`, address helpers in `CHDSharp.Utils`).
 
 ---
 
@@ -50,6 +50,9 @@ All overloads seek from the start. Failure codes: `Chderrfilenotfound`, `Chderrc
 |--------|-----------|-------------|
 | `ReadHunk` | `ChdError ReadHunk(uint hunknum, byte[] buffer, CancellationToken ct = default)` | Decompress one hunk into `buffer` (≥ `HunkBytes`). Serves cached hunks when `CacheSize > 1`. Throws `OperationCanceledException` when cancelled. |
 | `Read` | `ChdError Read(ulong byteOffset, byte[] destination, int destinationOffset, int count, CancellationToken ct = default)` | Read an arbitrary byte range, crossing hunk boundaries. Caches the last hunk. Throws `OperationCanceledException` when cancelled. |
+| `ReadSector` | `ChdError ReadSector(uint lba, byte[] buffer, CancellationToken ct = default)` | Read the **2352-byte sector data** at an LBA (CD/GD-ROM only). LBA 0 = the first track's INDEX 01 (MSF 00:02:00), mapped through the track table: `PreGap` frames into the image when the pregap is stored physically (metadata `PGTYPE:V...`), image frame 0 otherwise. Sub-2352 data sizes are zero-padded as stored. `Chderrinvaliddata` for non-disc images, `Chderrinvalidparameter` for too-small buffers or out-of-range addresses. |
+| `ReadSectorMsf` | `ChdError ReadSectorMsf(byte m, byte s, byte f, byte[] buffer, CancellationToken ct = default)` | Read the 2352-byte sector at a **BCD MSF** address (`(0x00, 0x02, 0x00)` = LBA 0). Addresses before 00:02:00 are rejected with `Chderrinvalidparameter`. |
+| `ReadFrame` | `ChdError ReadFrame(uint lba, byte[] buffer, CancellationToken ct = default)` | Read the **full 2448-byte frame** (2352-byte sector data + 96-byte subcode, zero-filled when unstored) at an LBA. Buffer ≥ `UnitBytes`. Same mapping and error codes as `ReadSector`. |
 | `ReadAllBytes` | `ChdError ReadAllBytes(out byte[] data, IProgress<ChdProgress>? progress = null, CancellationToken ct = default)` | Decompress the whole image into one array. Reports per hunk when `progress` is supplied. `Chderroutofmemory` if the image exceeds 2 GiB. Throws `OperationCanceledException` when cancelled. |
 | `ConfigureCache` | `void ConfigureCache(int maxHunks)` | Set the multi-hunk LRU cache size (decompressed hunks retained). `<= 1` disables it (single-slot behaviour). See `CacheSize`. |
 | `Precache` | `ChdError Precache()` | Read the **entire compressed file** into memory; subsequent hunk reads are served from RAM. Idempotent; restores stream position; `Chderroutofmemory` for files > 2 GiB, `Chderrreaderror` on IO failure. |
@@ -204,6 +207,30 @@ Equality is based on `Tag` + `Data` only (the `Flags` byte is excluded).
 | `StartFrame` | `ulong` | CHD frame offset where the track starts. |
 | `GetTypeString()` | `string` | e.g. `"MODE1/2048"`, `"AUDIO"`. |
 | `GetSubTypeString()` | `string` | e.g. `"RW"`, `"RW_RAW"`, `"NONE"`. |
+
+---
+
+## `CdRomAddress` — MSF ↔ LBA conversion (static)
+
+`CHDSharp.Utils` namespace. Pure math, no dependencies. MSF values are **BCD-encoded** as found in CD sector headers and drive addressing: `0x02` = 2 minutes, `0x10` = 10 minutes. Per the Red Book, LBA 0 corresponds to MSF 00:02:00 (the 2-second lead-in offset); the `Alt` variants omit that offset for systems (Sega CD, PC Engine) that address frames relative to the start of the disc data.
+
+| Member | Signature | Description |
+|--------|-----------|-------------|
+| `MsfToLba` | `int MsfToLba(byte m, byte s, byte f)` | BCD MSF → LBA, `(m*60 + s)*75 + f - 150`. Negative for lead-in positions before 00:02:00. |
+| `MsfToLbaAlt` | `int MsfToLbaAlt(byte m, byte s, byte f)` | BCD MSF → absolute frame count (no `-150`). |
+| `LbaToMsf` | `(byte m, byte s, byte f) LbaToMsf(int lba)` | LBA → BCD MSF (`lba + 150`, decompose, pack BCD). |
+| `LbaToMsfAlt` | `(byte m, byte s, byte f) LbaToMsfAlt(int lba)` | Frame count → BCD MSF (no `+150`). |
+| `FramesPerSecond` / `SecondsPerMinute` / `PregapFrames` | `const int` | `75` / `60` / `150`. |
+
+Throws `ArgumentOutOfRangeException` when a byte is not valid BCD (a nibble above 9), when the resulting MSF position would be negative, or when the minute field would exceed 99 (the BCD limit).
+
+```csharp
+using CHDSharp.Utils;
+
+int lba = CdRomAddress.MsfToLba(0x00, 0x02, 0x00);      // 0
+var (m, s, f) = CdRomAddress.LbaToMsf(8850);            // (0x02, 0x00, 0x00)
+var (altM, altS, altF) = CdRomAddress.LbaToMsfAlt(150); // (0x00, 0x02, 0x00)
+```
 
 ---
 

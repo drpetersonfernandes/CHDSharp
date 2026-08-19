@@ -13,6 +13,7 @@
 ## What's New in v1.2.0
 
 - **CD/GD-ROM track (TOC) parsing** — Full track layout via `Tracks` property backed by `ChdTocParser`, exposing `ChdTrackInfo` with track type, sector sizes, pregap/postgap, and GD-ROM support. Legacy GD-ROMs (`CHGT` / `CD_FLAG_GDROMLE`) are detected via `IsLittleEndianAudio` and their AUDIO tracks byte-swapped during extraction. Includes `GenerateCueSheet()`, `GenerateGdiDescriptor()`, `ExportToc()`, `ExtractToDirectory()`.
+- **LBA/MSF sector reads** — `ChdFile.ReadSector(lba)`, `ReadSectorMsf(m, s, f)`, and `ReadFrame(lba)` read CD/GD-ROM sectors or full 2448-byte frames by logical block address, mapped through the track table (pregap-aware). `CdRomAddress` converts between BCD MSF and LBA (with and without the 150-frame lead-in offset).
 - **`UnitBytes` property** — Derives sector size from metadata for all CHD versions: V5 reads from header, V1-V4 detects HDD (512B) or CD (2448B) from metadata tags
 - **New enums** — `ChdTrackType` (matches MAME `cdrom.h`: Mode1, Mode2, Audio, etc.) and `ChdSubType` (None, Normal, Raw)
 - **Deterministic reproducible builds** — Byte-for-byte reproducible via `<Deterministic>true</Deterministic>` with embedded SourceLink and debug symbols
@@ -141,6 +142,33 @@ using (chd)
     }
 }
 ```
+
+### Read sectors by LBA / MSF (CD/GD-ROM)
+
+```csharp
+using CHDSharp.Utils;
+
+ChdFile.Open("game.chd", out var chd);
+using (chd)
+{
+    // 2352-byte sector at LBA 0 (MSF 00:02:00 — the first track's INDEX 01)
+    byte[] sector = new byte[2352];
+    chd.ReadSector(0, sector);
+
+    // Same sector, addressed by BCD MSF (0x02 minutes = "02")
+    chd.ReadSectorMsf(0x00, 0x02, 0x00, sector);
+
+    // Full 2448-byte frame (2352 data + 96 subcode)
+    byte[] frame = new byte[chd.UnitBytes];
+    chd.ReadFrame(0, frame);
+
+    // Convert between BCD MSF and LBA (with or without the 150-frame lead-in)
+    int lba = CdRomAddress.MsfToLba(0x02, 0x00, 0x00);        // 8850
+    (byte m, byte s, byte f) = CdRomAddress.LbaToMsf(lba);     // (0x02, 0x00, 0x00)
+}
+```
+
+LBA 0 maps to the first data track's INDEX 01: `PreGap` frames into the image when the pregap is stored physically (metadata `PGTYPE:V...`), and at image frame 0 otherwise (Redump-style CUEs, NRG, TOC, GDI). Non-CD images return `Chderrinvaliddata`.
 
 ### Iterate hunks one at a time
 
@@ -278,6 +306,9 @@ All `Open` overloads seek from the start. The reader is **not thread-safe** — 
 |--------|-----------|-------------|
 | **ReadHunk** | `ChdError ReadHunk(uint, byte[], CancellationToken = default)` | Decompress a single hunk. Serves cached hunks when `CacheSize > 1`. |
 | **Read** | `ChdError Read(ulong, byte[], int, int, CancellationToken = default)` | Read byte range. Caches last hunk. |
+| **ReadSector** | `ChdError ReadSector(uint lba, byte[], CancellationToken = default)` | Read the 2352-byte sector data at an LBA (CD/GD-ROM only; pregap-aware mapping). |
+| **ReadSectorMsf** | `ChdError ReadSectorMsf(byte m, byte s, byte f, byte[], CancellationToken = default)` | Read the 2352-byte sector at a BCD MSF address (e.g. `(0x00, 0x02, 0x00)` = LBA 0). |
+| **ReadFrame** | `ChdError ReadFrame(uint lba, byte[], CancellationToken = default)` | Read the full 2448-byte frame (data + subcode) at an LBA. |
 | **ReadAllBytes** | `ChdError ReadAllBytes(out byte[], IProgress<ChdProgress>? = null, CancellationToken = default)` | Decompress entire image to a `byte[]`. Reports progress per hunk. |
 | **ConfigureCache** | `void ConfigureCache(int)` | Set the multi-hunk LRU cache size. `<= 1` disables it (single-slot behaviour). |
 | **Precache** | `ChdError Precache()` | Load the entire compressed file into memory for fast random access (libchdr `chd_precache` parity). Idempotent. |
@@ -347,6 +378,20 @@ All `Open` overloads seek from the start. The reader is **not thread-safe** — 
 | `StartFrame` | `ulong` | CHD frame offset where this track starts. |
 | `GetTypeString()` | `string` | e.g. "MODE1/2048", "AUDIO". |
 | `GetSubTypeString()` | `string` | e.g. "RW", "RW_RAW", "NONE". |
+
+### `CdRomAddress` — MSF ↔ LBA conversion (static)
+
+`CHDSharp.Utils` namespace. MSF values are **BCD-encoded** (as found in CD sector headers): `0x02` = 2 minutes, `0x10` = 10 minutes. LBA 0 = MSF 00:02:00; `LbaToMsfAlt`/`MsfToLbaAlt` omit the 150-frame lead-in (Sega CD / PC Engine addressing).
+
+| Member | Signature | Description |
+|--------|-----------|-------------|
+| `MsfToLba` | `int MsfToLba(byte m, byte s, byte f)` | BCD MSF → LBA (`(m*60 + s)*75 + f - 150`). Negative for addresses before 00:02:00. |
+| `MsfToLbaAlt` | `int MsfToLbaAlt(byte m, byte s, byte f)` | BCD MSF → absolute frame count (no lead-in offset). |
+| `LbaToMsf` | `(byte m, byte s, byte f) LbaToMsf(int lba)` | LBA → BCD MSF (adds the 150-frame lead-in). |
+| `LbaToMsfAlt` | `(byte m, byte s, byte f) LbaToMsfAlt(int lba)` | Frame count → BCD MSF (no lead-in offset). |
+| `FramesPerSecond` / `SecondsPerMinute` / `PregapFrames` | `const int` | 75 / 60 / 150. |
+
+Invalid BCD nibbles and positions past the 99-minute BCD limit throw `ArgumentOutOfRangeException`.
 
 ### `ChdError.GetMessage()` — Extension method
 

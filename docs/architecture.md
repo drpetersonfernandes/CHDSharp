@@ -26,9 +26,10 @@ All projects share versioning and analyzer settings via `Directory.Build.props`.
 ┌────────────────────────────────────────────────────────────┐
 │                      Public API                             │
 │   Chd (static)              ChdFile (instance)             │
-│   CheckFile · CheckHeader   Open · ReadHunk · Read ·       │
-│   CheckFileWithParent ·     Precache · GetMetadata ·       │
-│   IsChdFile · Classify      Metadata · Tracks · Extract    │
+│   CheckFile · CheckHeader   Open · ReadHunk · Read ·         │
+│   CheckFileWithParent ·     ReadSector · ReadFrame ·        │
+│   IsChdFile · Classify      Precache · GetMetadata ·        │
+│                             Metadata · Tracks · Extract     │
 ├────────────────────────────────────────────────────────────┤
 │  CHDHeaders        Parse V1–V5 headers + all map formats    │
 │  CHDBlockRead      Dispatch a map entry → codec delegate    │
@@ -39,7 +40,8 @@ All projects share versioning and analyzer settings via `Directory.Build.props`.
 │  ChdTocParser      CD/GD-ROM track (TOC) parsing            │
 ├────────────────────────────────────────────────────────────┤
 │  Utils/  CRC · CRC16 · BitStream · HuffmanDecoder ·         │
-│          HuffmanDecoderRLE · BigEndian · ArrayPool · cdRom  │
+│          HuffmanDecoderRLE · BigEndian · ArrayPool ·        │
+│          cdRom · CdRomAddress (MSF↔LBA)                     │
 │  LZMA/   LzmaStream · LzmaDecoder · RangeCoder · LzOutWindow│
 │  Flac/   AudioDecoder · FlacFrame · BitReader · LPC · ...   │
 │  Models/ ChdCodecState · ChdHeader · MapEntry · records     │

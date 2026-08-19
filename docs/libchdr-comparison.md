@@ -10,6 +10,56 @@ This page compares CHDSharp against the C reference library [libchdr 0.3.0](http
 
 ---
 
+## Five-way comparison: CHDSharp vs chd-rs vs CHDlite vs chdman vs libchdr
+
+CHDSharp vs the two other independent CHD implementations ([chd-rs 0.3.4](../References/chd-rs-master) and [CHDlite 0.2.1](../References/CHDlite-main), compared against their checked-in sources), MAME's reference `chdman` (0.288), and libchdr 0.3.0. The CHDSharp column covers the whole repo (reader + `CHDSharpEncoder` + CLI). ✅ = supported, 🟡 = partial, ❌ = not supported, — = not applicable (CLI).
+
+| Capability | CHDSharp (this repo) | [chd-rs](../References/chd-rs-master) 0.3.4 (Rust) | [CHDlite](../References/CHDlite-main) 0.2.1 (C++) | `chdman` (MAME 0.288) | [libchdr](../References/libchdr-0.3.0) 0.3.0 (C) |
+|---|:---:|:---:|:---:|:---:|:---:|
+| **Reading** | | | | | |
+| Read V1–V5 | ✅ | ✅ | 🟡 V3–V5 only (rejects V1/V2) | ✅ | ✅ |
+| All 10 codecs (decode) | ✅ | ✅ | ✅ | ✅ (reference) | 🟡 9 of 10 (no AVHuff) |
+| Parent/child chains (read) | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Per-hunk CRC16/CRC32 verification | ✅ always | 🟡 opt-in feature, off by default | ✅ always | ✅ always | 🟡 V5 CRC16 build option (on by default); V3/V4 CRC32 never checked |
+| Full-image verify (rawsha1 + combined SHA1) | ✅ parallel | 🟡 raw SHA1 only | ✅ sequential | ✅ sequential | ❌ no verify function |
+| `verify --fix` (repair header hashes) | ✅ | ❌ | ✅ | ✅ | ❌ |
+| Track/TOC parsing (CD/GD-ROM) | ✅ `Tracks`/`ChdTrackInfo` | 🟡 tags recognized, no track model | ✅ | ✅ | ❌ |
+| Metadata read | ✅ | ✅ | ✅ | ✅ | ✅ `chd_get_metadata` |
+| **Writing** | | | | | |
+| Write V5 | ✅ (encoder) | ❌ read-only | ✅ | ✅ (reference) | ❌ read-only |
+| All 10 codecs (encode) | ✅ | ❌ | ✅ | ✅ | ❌ |
+| Uncompressed CHD (`-c none`) | ✅ byte-exact with chdman | 🟡 decode only | 🟡 core supports, CLI rejects | ✅ | 🟡 decode only |
+| Delta/parent CHD creation (`-ip`) | ✅ | ❌ | ✅ | ✅ | ❌ |
+| CHD→CHD copy / re-compress | ✅ | ❌ | ✅ | ✅ | ❌ |
+| Metadata write (addmeta/delmeta) | ✅ | ❌ | ✅ | ✅ | ❌ |
+| **Input formats** | | | | | |
+| CUE / GDI / ISO / TOC / NRG parsing | ✅ all five | — | ✅ all five | ✅ all five | ❌ |
+| CUE style conversion / Redump match | ✅ | ❌ | ✅ | ✅ `convertcue` | ❌ |
+| **API & reads** | | | | | |
+| Byte-range reads | ✅ `Read(offset, ...)` | ✅ `Read + Seek` | ✅ `read_bytes` | — | ❌ hunk-only `chd_read` |
+| LBA/MSF sector-addressed reads | ✅ `ReadSector`/`ReadSectorMsf`/`ReadFrame` + `CdRomAddress` | ❌ | ✅ `read_sector` + `msf_to_lba`/`lba_to_msf` | — | ❌ |
+| Thread-safe random access | ✅ `ReadHunkConcurrent` | ❌ | ❌ | — | ❌ |
+| Async I/O API | ✅ | ❌ | 🟡 async *compress* pump only | — | ❌ |
+| Cancellation + progress reporting | ✅ on all long-running APIs | ❌ | 🟡 cancel + callbacks via C API | — | ❌ |
+| Precache / multi-hunk LRU cache | ✅ both | ❌ | 🟡 single-hunk cache | — | 🟡 `chd_precache`, no hunk cache |
+| Header-only DTO read | ✅ `Chd.ReadHeader` (libchdr parity) | 🟡 `Header` struct exposed | 🟡 via `ChdReader` | ✅ `info` | ✅ `chd_read_header` |
+| **Performance & tooling** | | | | | |
+| Parallel verification | ✅ (default 8 workers) | ❌ | ❌ | ❌ | ❌ |
+| Parallel encoding | ✅ (1–64 workers) | ❌ | ✅ (≤ 16, per-codec weighted queues) | ✅ (≤ 16 work-queue threads) | ❌ |
+| Benchmarks | ✅ BenchmarkDotNet + chdman comparer | ✅ `benches/` | ✅ `benchmark_chd.cpp` | — | 🟡 `tests/benchmark.c` (minimal timing harness) |
+| Fuzzing / mutation testing | ✅ 3500-seed deterministic suite | ✅ cargo-fuzz target | ❌ | ❌ | 🟡 `tests/fuzz.c` (libFuzzer harness) |
+| **Extras** | | | | | |
+| Extraction (CUE/BIN, GDI, ISO) | ✅ | 🟡 raw dump only | ✅ | ✅ | ❌ |
+| Platform/game detection | ✅ 11 systems (CHDlite parity) | ❌ | ✅ 11 systems | ❌ | ❌ |
+| Multi-hash output (SHA-256/CRC32/XXH3) | ✅ SHA1/SHA256/CRC32/XXH3 | ❌ | ✅ SHA1/MD5/CRC32/SHA256/XXH3 | 🟡 SHA1/MD5 only | ❌ |
+| Batch mode (folder scan) | ✅ | ❌ | ✅ | ❌ | ❌ |
+| Native dependencies | **none** (pure C#) | none (pure-Rust crates) | zlib-ng / zstd / lzma / flac | zlib / lzma / flac | zlib (miniz) / LZMA SDK / zstd / dr_flac |
+| Language | C# (.NET 8/9/10) | Rust | C++ | C++ (MAME) | C |
+
+The same table is also in the [repository README](../README.md#library-comparison-chdsharp-vs-chd-rs-vs-chdlite-vs-chdman-vs-libchdr).
+
+---
+
 ## Feature matrix
 
 | Feature | libchdr 0.3.0 (C) | CHDSharp (C#) |
@@ -36,6 +86,7 @@ This page compares CHDSharp against the C reference library [libchdr 0.3.0](http
 | `chd_precache` (whole file in RAM) | ✅ | ✅ `Precache()` |
 | Random access (`chd_read` / `ReadHunk`, `Read`) | ✅ | ✅ |
 | Byte-range reads | ❌ (hunk-only) | ✅ `Read(offset, ...)` |
+| Sector-addressed reads (LBA/MSF) | ❌ *requested (#155)* | ✅ `ReadSector`/`ReadSectorMsf`/`ReadFrame` + `CdRomAddress` |
 | Async API | ❌ | ✅ |
 | Extraction (CUE/GDI/ISO/IMG/RAW) | ❌ | ✅ |
 | TOC / track parsing | ❌ | ✅ `Tracks`/`ChdTrackInfo` |

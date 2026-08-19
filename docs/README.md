@@ -68,7 +68,7 @@ CHDSharp is a **pure C# read-only CHD (Compressed Hunks of Data) reader** — th
 
 | Page | Description |
 |------|-------------|
-| [Comparison with libchdr](libchdr-comparison.md) | Feature parity analysis against the C reference library. |
+| [Comparison with libchdr](libchdr-comparison.md) | Feature parity vs the C reference library, plus the five-way table (CHDSharp vs chd-rs vs CHDlite vs chdman vs libchdr). |
 | [Troubleshooting & FAQ](troubleshooting.md) | Common errors, known limitations, and fixes. |
 
 ---
@@ -79,6 +79,7 @@ CHDSharp is a **pure C# read-only CHD (Compressed Hunks of Data) reader** — th
 - **Header DTO without opening** — `Chd.ReadHeader()` returns the full parsed header (`ChdHeaderInfo`) without keeping the file open (libchdr `chd_read_header` parity); `CheckHeader`/`IsChdFile` remain for magic/version sniffing.
 - **All 10 codecs** — zlib, lzma, huffman, flac, zstd, AVHuff, plus the four CD-aware variants (`cdzl`, `cdlz`, `cdfl`, `cdzs`) with ECC/sync regeneration.
 - **Random access** — `ReadHunk()`, `Read()` (byte ranges across hunk boundaries), `EnumerateHunks()`, `ReadAllBytes()`.
+- **LBA/MSF sector reads** — `ReadSector()`, `ReadSectorMsf()`, and `ReadFrame()` address CD/GD-ROM sectors or full 2448-byte frames by logical block address (pregap-aware mapping through the track table); `CdRomAddress` converts between BCD MSF and LBA.
 - **Async API** — `OpenAsync`, `ReadHunkAsync`, `ReadAsync`, `IAsyncDisposable`.
 - **Progress reporting** — optional `IProgress<ChdProgress>` on `CheckFile`, `CheckFileWithParent`, `ReadAllBytes`, `EnumerateHunks`, and `ExtractToDirectory`, reported after every decompressed hunk.
 - **Cancellation** — optional `CancellationToken` on every long-running API (`Open`/`OpenAsync`, `Read`/`ReadAsync`, `ReadHunk`/`ReadHunkAsync`, `ReadAllBytes`, `CheckFile`, `CheckFileWithParent`, `ExtractToDirectory`), linked into the parallel verification pipeline; throws `OperationCanceledException`.

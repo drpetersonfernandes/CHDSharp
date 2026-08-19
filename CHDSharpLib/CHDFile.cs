@@ -707,26 +707,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
-    /// Reads the entire compressed CHD file into memory so that subsequent hunk
-    /// reads are served from RAM instead of the underlying stream (libchdr
-    /// <c>chd_precache</c> parity). Useful for random-access workloads over
-    /// slow or remote streams. Idempotent: calling it again is a no-op.
-    /// The underlying stream's position is restored after precaching.
-    /// </summary>
-    /// <remarks>Like all <see cref="ChdFile"/> members, <c>Precache</c> must not be
-    /// called concurrently with other operations on the same instance. For memory-mapped
-    /// instances (opened with <c>mmf: true</c>) this is a no-op — the mapping already
-    /// provides the same effect.</remarks>
-    /// <returns><see cref="ChdError.Chderrnone"/> on success (or if already precached);
-    /// <see cref="ChdError.Chderroutofmemory"/> if the file is larger than 2 GiB or cannot be allocated;
-    /// <see cref="ChdError.Chderrreaderror"/> if the file could not be read.</returns>
-    public ChdError Precache()
-    {
-        return Precache(int.MaxValue);
-    }
-
-    /// <summary>
-    /// Reads the entire compressed CHD file into memory (see <see cref="Precache()"/>), refusing
+    /// Reads the entire compressed CHD file into memory (see <see cref="Precache(long)"/>), refusing
     /// files larger than <paramref name="maxBytes"/> with <see cref="ChdError.Chderroutofmemory"/>.
     /// </summary>
     /// <param name="maxBytes">The largest file size (in bytes) this call is willing to buffer;
@@ -734,7 +715,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <returns><see cref="ChdError.Chderrnone"/> on success (or if already precached);
     /// <see cref="ChdError.Chderroutofmemory"/> if the file is larger than <paramref name="maxBytes"/> or cannot be allocated;
     /// <see cref="ChdError.Chderrreaderror"/> if the file could not be read.</returns>
-    public ChdError Precache(long maxBytes)
+    public ChdError Precache(long maxBytes = int.MaxValue)
     {
         if (_precache != null)
             return ChdError.Chderrnone;
@@ -2124,6 +2105,84 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         }
 
         return ChdError.Chderrnone;
+    }
+
+    /// <summary>
+    /// Reads the 2352-byte sector data for the given LBA from a CD/GD-ROM CHD. The address is
+    /// mapped through the track table: LBA 0 is the first data track's INDEX 01 position, which
+    /// sits <c>PREGAP</c> frames into the decompressed image when the pregap is stored physically
+    /// (metadata <c>PGTYPE:V...</c>), and at image frame 0 otherwise. The returned data is the
+    /// first 2352 bytes of the 2448-byte frame (tracks with a smaller data size are zero-padded
+    /// as stored in the image).
+    /// </summary>
+    /// <param name="lba">The logical block address (LBA 0 = MSF 00:02:00).</param>
+    /// <param name="buffer">Destination buffer of at least 2352 bytes; receives the sector data.</param>
+    /// <param name="cancellationToken">A token to cancel the read.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success;
+    /// <see cref="ChdError.Chderrinvaliddata"/> if this CHD has no CD/GD-ROM track metadata;
+    /// <see cref="ChdError.Chderrinvalidparameter"/> if <paramref name="buffer"/> is too small or
+    /// <paramref name="lba"/> falls outside the decompressed image.</returns>
+    public ChdError ReadSector(uint lba, byte[] buffer, CancellationToken cancellationToken = default)
+    {
+        return ReadSectorCore(lba, ChdReaders.CdMaxSectorData, buffer, cancellationToken);
+    }
+
+    /// <summary>
+    /// Reads the 2352-byte sector data at the given BCD MSF address
+    /// (e.g. 00:02:00 = <c>(0x00, 0x02, 0x00)</c>, which is LBA 0). See <see cref="ReadSector"/>
+    /// for the image mapping and error codes.
+    /// </summary>
+    /// <param name="m">Minutes, BCD-encoded.</param>
+    /// <param name="s">Seconds, BCD-encoded.</param>
+    /// <param name="f">Frames, BCD-encoded.</param>
+    /// <param name="buffer">Destination buffer of at least 2352 bytes; receives the sector data.</param>
+    /// <param name="cancellationToken">A token to cancel the read.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success;
+    /// <see cref="ChdError.Chderrinvaliddata"/> if this CHD has no CD/GD-ROM track metadata;
+    /// <see cref="ChdError.Chderrinvalidparameter"/> if <paramref name="buffer"/> is too small, the
+    /// MSF address precedes 00:02:00 (negative LBA), or the address falls outside the decompressed image.</returns>
+    public ChdError ReadSectorMsf(byte m, byte s, byte f, byte[] buffer, CancellationToken cancellationToken = default)
+    {
+        var lba = CdRomAddress.MsfToLba(m, s, f);
+        if (lba < 0)
+            return ChdError.Chderrinvalidparameter;
+
+        return ReadSectorCore((uint)lba, ChdReaders.CdMaxSectorData, buffer, cancellationToken);
+    }
+
+    /// <summary>
+    /// Reads the full CD frame (2448 bytes: 2352-byte sector data plus 96-byte subcode; the
+    /// subcode is zero-filled for tracks without stored subcode) for the given LBA from a
+    /// CD/GD-ROM CHD. See <see cref="ReadSector"/> for the image mapping.
+    /// </summary>
+    /// <param name="lba">The logical block address (LBA 0 = MSF 00:02:00).</param>
+    /// <param name="buffer">Destination buffer of at least <see cref="UnitBytes"/> bytes; receives the frame data.</param>
+    /// <param name="cancellationToken">A token to cancel the read.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success;
+    /// <see cref="ChdError.Chderrinvaliddata"/> if this CHD has no CD/GD-ROM track metadata;
+    /// <see cref="ChdError.Chderrinvalidparameter"/> if <paramref name="buffer"/> is too small or
+    /// <paramref name="lba"/> falls outside the decompressed image.</returns>
+    public ChdError ReadFrame(uint lba, byte[] buffer, CancellationToken cancellationToken = default)
+    {
+        return ReadSectorCore(lba, UnitBytes, buffer, cancellationToken);
+    }
+
+    private ChdError ReadSectorCore(uint lba, ulong bytesToRead, byte[] buffer, CancellationToken cancellationToken)
+    {
+        EnsureTracksLoaded();
+        if (_tracks is not { Count: > 0 })
+            return ChdError.Chderrinvaliddata;
+        if (buffer.Length < (int)bytesToRead || bytesToRead > UnitBytes)
+            return ChdError.Chderrinvalidparameter;
+
+        // LBA 0 is the first track's INDEX 01. When the pregap is stored physically in the image
+        // (metadata PGTYPE has the 'V' data prefix, i.e. PreGapDataSize > 0) the INDEX 01 position
+        // sits PreGap frames into the image; otherwise the image begins at the INDEX 01 position.
+        var firstTrack = _tracks[0];
+        var baseFrame = firstTrack.PreGapDataSize > 0 ? (ulong)firstTrack.PreGap : 0UL;
+
+        var byteOffset = (lba + baseFrame) * UnitBytes;
+        return Read(byteOffset, buffer, 0, (int)bytesToRead, cancellationToken);
     }
 
     /// <summary>Asynchronously releases the underlying stream (unless opened with <c>leaveOpen: true</c>) and any internally-owned parent instance.</summary>

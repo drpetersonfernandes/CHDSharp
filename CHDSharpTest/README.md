@@ -13,6 +13,8 @@
 | `ProgressReportingTests` | Unit | `IProgress<ChdProgress>` reporting on `CheckFile`, `CheckFileWithParent`, `ReadAllBytes`, `EnumerateHunks`, `ExtractToDirectory` |
 | `CancellationTokenTests` | Unit | `CancellationToken` support on all public APIs (pre-cancelled throws, cancelled async tasks, mid-run pipeline cancellation) |
 | `ChecksumTests` | Unit | CRC-32 and CRC-16 test vectors |
+| `CdRomAddressTests` | Unit | `CdRomAddress` MSF ↔ LBA conversion: BCD vectors, lead-in boundaries, 99-minute BCD limit, invalid-BCD throws, round trips |
+| `ReadSectorTests` | Corpus | `ReadSector`/`ReadSectorMsf`/`ReadFrame` on the CD corpus files (V3/V4/V5, cdlz/cdfl): sector/frame data matches the decompressed image, MSF↔LBA equivalence, error paths, non-CD rejection |
 | `TrackInfoTests` | Unit | CD/GD-ROM TOC parsing across all metadata formats (CHTR, CHT2, CHCD, CHGD, CHGT) |
 | `TrackInfoEdgeCaseTests` | Unit | Edge cases: missing/invalid metadata, GD-ROM pad frames, binary track parsing |
 | `CliIntegrationTests` | Integration | End-to-end CLI tool tests (directory scan, --random, --list, --parent) |

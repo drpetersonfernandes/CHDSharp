@@ -1,7 +1,3 @@
----
-layout: default
----
-
 # CHDSharp Wiki
 
 Welcome to the **CHDSharp** documentation wiki.

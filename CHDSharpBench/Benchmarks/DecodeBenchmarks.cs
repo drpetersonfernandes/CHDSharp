@@ -20,7 +20,7 @@ public class DecodeBenchmarks
     public void Setup()
     {
         var list = new List<string>();
-        foreach (var (name, codec, _) in CodecMap.All)
+        foreach (var (_, codec, _) in CodecMap.All)
         {
             var path = Corpus.FindChdForCodec((uint)codec);
             if (path != null)

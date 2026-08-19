@@ -7,7 +7,7 @@ namespace CHDSharpBench.Benchmarks;
 /// <summary>
 /// Encode throughput per codec: a deterministic 64 MiB synthetic image (roughly 50% random,
 /// 50% compressible patterns — zlib lands around 2.5:1, so every codec gets real work) is
-/// encoded with each codec in turn through <see cref="ChdEncoder.EncodeRaw"/> into a temp CHD.
+/// encoded with each codec in turn through <see cref="ChdEncoder"/> into a temp CHD.
 /// 1 vs 8 workers shows the parallel pipeline win. Bytes processed per operation = 64 MiB;
 /// MB/s = value ÷ Mean; Allocated reports the per-op managed peak. CD codecs (cdzl/cdlz/cdzs/
 /// cdfl) run on CD-sized hunks (8 frames); the flac path additionally benefits from

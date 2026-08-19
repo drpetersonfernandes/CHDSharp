@@ -117,9 +117,9 @@ public static class PlatformDetector
     {
         try
         {
-            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var length = fs.Length;
-            uint frameSize = DetectSectorSize(fs, length);
+            using var probe = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var length = probe.Length;
+            uint frameSize = DetectSectorSize(probe, length);
 
             return DetectCore(ReadSector, frameSize == 2048 ? "dvd" : "cd", "raw file");
 
@@ -129,6 +129,7 @@ public static class PlatformDetector
                 if (offset + Math.Min(frameSize, 2352) > length)
                     return null;
 
+                using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
                 fs.Position = offset;
                 var raw = new byte[Math.Min(frameSize, 2352)];
                 if (fs.Read(raw, 0, raw.Length) != raw.Length)
@@ -170,7 +171,8 @@ public static class PlatformDetector
                 fs.Position = 2352;
                 Span<byte> sync2 = stackalloc byte[12];
                 if (fs.Read(sync2) == 12 && sync2.SequenceEqual(CdSync))
-                    return 2352;
+                {
+                }
             }
 
             return 2352;

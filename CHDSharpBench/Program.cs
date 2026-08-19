@@ -42,6 +42,7 @@ public static class Program
                         }
                         else
                             runnerArgs.Add(args[i]);
+
                         break;
                 }
             }

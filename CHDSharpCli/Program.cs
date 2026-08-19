@@ -1001,15 +1001,19 @@ internal static class Program
     {
         var log = Log.Logger;
         var fix = options.Contains("--fix", StringComparer.Ordinal) || options.Contains("-f", StringComparer.Ordinal);
-        var err = Chd.CheckFileAndRepair(file, out var repaired);
-        if (!err.IsSuccess)
+        if (fix)
         {
-            log.Warning("Verify failed: {Error}", err);
-            return;
+            var err = Chd.CheckFileAndRepair(file, out var repaired);
+            if (!err.IsSuccess)
+            {
+                log.Warning("Verify failed: {Error}", err);
+                return;
+            }
+
+            if (repaired)
+                log.Information("  Fixed mismatched SHA-1 field(s); re-verifying...");
         }
 
-        if (repaired)
-            log.Information("  Fixed mismatched SHA-1 field(s); re-verifying...");
         var result = Chd.CheckFileWithParent(file, null);
         if (result.IsSuccess)
             log.Information("  Verified OK (V{Version}, sha1={Sha1})", result.Version, result.Sha1Hex);

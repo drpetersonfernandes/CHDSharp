@@ -308,11 +308,11 @@ public class UncompressedEncodeTests : IDisposable
             new ChdEncodeOptions { HunkCompleted = reports.Add });
 
         Assert.Equal(4, reports.Count);
-        Assert.All(reports, r =>
+        foreach (var r in reports)
         {
             Assert.Equal("none", r.CodecName);
             Assert.Equal(4096, r.StoredBytes);
-        });
+        }
     }
 
     [Fact]

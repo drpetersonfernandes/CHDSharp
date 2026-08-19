@@ -61,7 +61,7 @@ public class MutationTests
     /// <param name="seed">The mutation seed (deterministic per corpus + seed).</param>
     [Theory]
     [MemberData(nameof(MutationSeeds))]
-    public void Mutated_file_fails_gracefully(string sourcePath, int seed)
+    public async Task Mutated_file_fails_gracefully(string sourcePath, int seed)
     {
         var bytes = File.ReadAllBytes(sourcePath);
         var rng = new Random(seed);
@@ -114,7 +114,7 @@ public class MutationTests
             if (err != ChdError.Chderrnone || chd == null)
                 return; // rejected at open: graceful.
 
-            using (chd)
+            await using (chd)
             {
                 // Read every hunk (and a raw read) — may fail at any hunk, must not throw.
                 var buffer = new byte[chd.HunkBytes];
@@ -138,26 +138,33 @@ public class MutationTests
             }
 
             // Also exercise the async path.
-            var asyncErr = Task.Run(async () =>
+            try
             {
-                var err2 = ChdFile.Open(mutatedPath, out var chd2, cts.Token);
-                if (err2 != ChdError.Chderrnone || chd2 == null)
-                    return err2;
-
-                await using (chd2)
+                var token = cts.Token;
+                await Task.Run(async () =>
                 {
-                    var b = new byte[chd2.HunkBytes];
-                    for (uint h = 0; h < chd2.HunkCount; h++)
-                    {
-                        var e = await chd2.ReadHunkAsync(h, b, cts.Token);
-                        if (e is not (ChdError.Chderrnone or ChdError.Chderrdecompressionerror or ChdError.Chderrinvaliddata))
-                            return e;
-                    }
-                }
+                    var err2 = ChdFile.Open(mutatedPath, out var chd2, token);
+                    if (err2 != ChdError.Chderrnone || chd2 == null)
+                        return err2;
 
-                return ChdError.Chderrnone;
-            }, cts.Token).Wait(TimeSpan.FromSeconds(60));
-            Assert.True(asyncErr, $"Async read hung on seed {seed}");
+                    await using (chd2)
+                    {
+                        var b = new byte[chd2.HunkBytes];
+                        for (uint h = 0; h < chd2.HunkCount; h++)
+                        {
+                            var e = await chd2.ReadHunkAsync(h, b, token);
+                            if (e is not (ChdError.Chderrnone or ChdError.Chderrdecompressionerror or ChdError.Chderrinvaliddata))
+                                return e;
+                        }
+                    }
+
+                    return ChdError.Chderrnone;
+                }, token).WaitAsync(TimeSpan.FromSeconds(60));
+            }
+            catch (TimeoutException)
+            {
+                Assert.Fail($"Async read hung on seed {seed}");
+            }
         }
         catch (OutOfMemoryException)
         {
@@ -195,7 +202,8 @@ public class MutationTests
     {
         foreach (var file in CorpusFiles())
         {
-            var parent = Path.GetFileName(file) == "v5_child.chd"
+            var parent = string.Equals(Path.GetFileName(file), "v5_child.chd"
+                , StringComparison.Ordinal)
                 ? Path.Combine(TestDataDir, "v5_parent.chd")
                 : null;
             var err = ChdFile.Open(file, parent, out var chd);

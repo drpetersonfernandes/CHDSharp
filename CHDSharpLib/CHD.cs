@@ -57,9 +57,6 @@ public static partial class Chd
     private static readonly Action<ILogger, ChdError, Exception?> LogDecompressFailed =
         LoggerMessage.Define<ChdError>(LogLevel.Error, new EventId(6), "Data Decompress Failed: {Error}");
 
-    private static readonly Action<ILogger, ChdError, Exception?> LogMetaDataFailed =
-        LoggerMessage.Define<ChdError>(LogLevel.Error, new EventId(7), "Meta Data Failed: {Error}");
-
     private static readonly Action<ILogger, Exception?> LogValid =
         LoggerMessage.Define(LogLevel.Information, new EventId(8), "Valid");
 
@@ -153,101 +150,109 @@ public static partial class Chd
         if (string.IsNullOrEmpty(filename) || !File.Exists(filename))
             return new ChdResult(ChdError.Chderrfilenotfound, null, null, null);
 
-        using var fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 4096);
-        if (!CheckHeader(fs, out _, out var version))
-            return new ChdResult(ChdError.Chderrinvalidfile, null, null, null);
-
-        // V1/V2 predate SHA-1: there is nothing to repair (chdman reports "no verification to be done").
-        if (version < 3)
-            return new ChdResult(ChdError.Chderrnone, version, null, null);
-
-        var err = VerifyDeep(fs, version, Path.GetFileName(filename), progress, cancellationToken,
-            out var ver, out var headerSha1, out var headerMd5, out var computedRawSha1, out var decompressionOk);
-        if (err != ChdError.Chderrnone)
-            return new ChdResult(err, ver, headerSha1, headerMd5);
-
-        // No raw hash stored in the header (e.g. -c none uncompressed CHDs): nothing to repair.
-        if (computedRawSha1 == null || Util.IsAllZeroArray(computedRawSha1))
-            return new ChdResult(ChdError.Chderrnone, ver, headerSha1, headerMd5);
-
-        // A data corruption deeper than the hash fields is not repairable.
-        if (!decompressionOk)
-            return new ChdResult(ChdError.Chderrdecompressionerror, ver, headerSha1, headerMd5);
-
-        uint rawSha1Offset;
-        uint? combinedSha1Offset;
-        switch (version)
-        {
-            case 3:
-                rawSha1Offset = 80; // V3: sha1 field = raw data hash
-                combinedSha1Offset = null;
-                break;
-            case 4:
-                rawSha1Offset = 88; // V4 rawsha1
-                combinedSha1Offset = 48; // V4 sha1 (combined)
-                break;
-            default:
-                rawSha1Offset = 64; // V5 rawsha1
-                combinedSha1Offset = 84; // V5 sha1 (combined)
-                break;
-        }
-
-        var needRaw = true;
-        var needCombined = combinedSha1Offset.HasValue;
-        byte[]? storedRaw = null;
-        byte[]? storedCombined = null;
-        try
-        {
-            fs.Position = rawSha1Offset;
-            storedRaw = new byte[20];
-            fs.ReadExactly(storedRaw, 0, 20);
-            if (combinedSha1Offset.HasValue)
-            {
-                fs.Position = combinedSha1Offset.Value;
-                storedCombined = new byte[20];
-                fs.ReadExactly(storedCombined, 0, 20);
-            }
-        }
-        catch (Exception ex) when (ex is IOException or EndOfStreamException)
-        {
-            return new ChdResult(ChdError.Chderrreaderror, ver, headerSha1, headerMd5);
-        }
-
-        if (Util.ByteArrEquals(storedRaw, computedRawSha1))
-        {
-            needRaw = false;
-        }
-
+        uint? ver = null;
+        byte[]? headerSha1 = null;
+        byte[]? headerMd5 = null;
+        byte[]? computedRawSha1 = null;
+        bool needRaw = false;
+        bool needCombined = false;
         byte[]? combined = null;
-        if (needCombined)
+        uint rawSha1Offset = 0;
+        uint? combinedSha1Offset = null;
+
+        using (var fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 4096))
         {
+            if (!CheckHeader(fs, out _, out var version))
+                return new ChdResult(ChdError.Chderrinvalidfile, null, null, null);
+
+            // V1/V2 predate SHA-1: there is nothing to repair (chdman reports "no verification to be done").
+            if (version < 3)
+                return new ChdResult(ChdError.Chderrnone, version, null, null);
+
+            var err = VerifyDeep(fs, version, progress, cancellationToken,
+                out ver, out headerSha1, out headerMd5, out computedRawSha1, out var decompressionOk);
+            if (err != ChdError.Chderrnone)
+                return new ChdResult(err, ver, headerSha1, headerMd5);
+
+            // No raw hash stored in the header (e.g. -c none uncompressed CHDs): nothing to repair.
+            if (computedRawSha1 == null || Util.IsAllZeroArray(computedRawSha1))
+                return new ChdResult(ChdError.Chderrnone, ver, headerSha1, headerMd5);
+
+            // A data corruption deeper than the hash fields is not repairable.
+            if (!decompressionOk)
+                return new ChdResult(ChdError.Chderrdecompressionerror, ver, headerSha1, headerMd5);
+
+            switch (version)
+            {
+                case 3:
+                    rawSha1Offset = 80; // V3: sha1 field = raw data hash
+                    combinedSha1Offset = null;
+                    break;
+                case 4:
+                    rawSha1Offset = 88; // V4 rawsha1
+                    combinedSha1Offset = 48; // V4 sha1 (combined)
+                    break;
+                default:
+                    rawSha1Offset = 64; // V5 rawsha1
+                    combinedSha1Offset = 84; // V5 sha1 (combined)
+                    break;
+            }
+
+            needRaw = true;
+            needCombined = combinedSha1Offset.HasValue;
+            byte[]? storedRaw = null;
+            byte[]? storedCombined = null;
             try
             {
-                // ReadHeaderByVersion expects the stream right after the 16-byte preamble.
-                fs.Position = 16;
-                var hErr = ChdHeaders.ReadHeaderByVersion(fs, version, out var header);
-                if (hErr == ChdError.Chderrnone)
+                fs.Position = rawSha1Offset;
+                storedRaw = new byte[20];
+                fs.ReadExactly(storedRaw, 0, 20);
+                if (combinedSha1Offset.HasValue)
                 {
-                    combined = ChdMetaData.ComputeOverallSha1(fs, header, computedRawSha1);
+                    fs.Position = combinedSha1Offset.Value;
+                    storedCombined = new byte[20];
+                    fs.ReadExactly(storedCombined, 0, 20);
                 }
             }
-            catch (Exception)
+            catch (Exception ex) when (ex is IOException or EndOfStreamException)
             {
-                combined = null;
+                return new ChdResult(ChdError.Chderrreaderror, ver, headerSha1, headerMd5);
             }
 
-            if (combined != null && storedCombined != null && Util.ByteArrEquals(combined, storedCombined))
+            if (Util.ByteArrEquals(storedRaw, computedRawSha1))
             {
-                needCombined = false;
+                needRaw = false;
             }
+
+            if (needCombined)
+            {
+                try
+                {
+                    // ReadHeaderByVersion expects the stream right after the 16-byte preamble.
+                    fs.Position = 16;
+                    var hErr = ChdHeaders.ReadHeaderByVersion(fs, version, out var header);
+                    if (hErr == ChdError.Chderrnone)
+                    {
+                        combined = ChdMetaData.ComputeOverallSha1(fs, header, computedRawSha1);
+                    }
+                }
+                catch (Exception)
+                {
+                    combined = null;
+                }
+
+                if (combined != null && storedCombined != null && Util.ByteArrEquals(combined, storedCombined))
+                {
+                    needCombined = false;
+                }
+            }
+
+            if (!needRaw && !needCombined)
+                return new ChdResult(ChdError.Chderrnone, ver, storedCombined ?? computedRawSha1, headerMd5);
         }
 
-        if (!needRaw && !needCombined)
-            return new ChdResult(ChdError.Chderrnone, ver, storedCombined ?? computedRawSha1, headerMd5);
-
-        // Release the read handle first: the patch opens the file read-write, and the read
-        // stream was opened with FileShare.Read, which forbids a second write handle.
-        fs.Dispose();
+        // The read handle is closed above (using scope); the patch opens the file read-write,
+        // and the read stream was opened with FileShare.Read, which forbids a second write handle.
 
         // Patch the header in place. Only the 20-byte hash fields are rewritten; the data and
         // map are untouched, so a crash mid-write leaves either the old or the new hash (both
@@ -386,7 +391,7 @@ public static partial class Chd
             var blocksToKeep = (1024 * 1024 * 512) / (int)chd.Blocksize;
             ChdBlockRead.KeepMostRepeatedBlocks(chd, blocksToKeep);
 
-            valid = DecompressDataParallel(s, chd, out _, out _, progress, cancellationToken);
+            valid = DecompressDataParallel(s, chd, out _, progress, cancellationToken);
 
             if (valid != ChdError.Chderrnone)
             {
@@ -414,7 +419,7 @@ public static partial class Chd
     /// combined metadata SHA-1 — used by <see cref="CheckFileAndRepair"/> so that a corrupt
     /// header hash field is reported as repairable instead of as a verification failure.
     /// </summary>
-    private static ChdError VerifyDeep(Stream s, uint version, string filename,
+    private static ChdError VerifyDeep(Stream s, uint version,
         IProgress<ChdProgress>? progress, CancellationToken cancellationToken,
         out uint? chdVersion, out byte[]? chdSha1, out byte[]? chdMd5,
         out byte[]? computedRawSha1, out bool decompressionOk)
@@ -454,7 +459,7 @@ public static partial class Chd
         var blocksToKeep = (1024 * 1024 * 512) / (int)chd.Blocksize;
         ChdBlockRead.KeepMostRepeatedBlocks(chd, blocksToKeep);
 
-        var err = DecompressDataParallel(s, chd, out computedRawSha1, out var computedMd5, progress, cancellationToken, verifyHashes: false);
+        var err = DecompressDataParallel(s, chd, out computedRawSha1, progress, cancellationToken, verifyHashes: false);
         if (err != ChdError.Chderrnone)
             return err;
 
@@ -889,14 +894,11 @@ public static partial class Chd
     /// (used by <see cref="CheckFileAndRepair"/> so a corrupt header hash can be repaired).</param>
     /// <param name="computedRawSha1">The SHA-1 of the decompressed raw data (20 bytes), or
     /// <c>null</c> if the pipeline was cancelled or failed before hashing completed.</param>
-    /// <param name="computedMd5">The MD5 of the decompressed raw data (16 bytes), or <c>null</c>
-    /// if the pipeline was cancelled or failed before hashing completed.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
     [SuppressMessage("ReSharper", "AccessToDisposedClosure")]
-    private static ChdError DecompressDataParallel(Stream file, ChdHeader chd, out byte[]? computedRawSha1, out byte[]? computedMd5, IProgress<ChdProgress>? progress = null, CancellationToken cancellationToken = default, bool verifyHashes = true)
+    private static ChdError DecompressDataParallel(Stream file, ChdHeader chd, out byte[]? computedRawSha1, IProgress<ChdProgress>? progress = null, CancellationToken cancellationToken = default, bool verifyHashes = true)
     {
         computedRawSha1 = null;
-        computedMd5 = null;
         var taskCount = TaskCount; // snapshot so a concurrent change cannot desync sentinels vs workers
         var md5Check = MD5.Create();
         var sha1Check = SHA1.Create();
@@ -1123,7 +1125,7 @@ public static partial class Chd
             md5Check.TransformFinalBlock(tmp, 0, 0);
             sha1Check.TransformFinalBlock(tmp, 0, 0);
 
-            computedMd5 = md5Check.Hash;
+            var computedMd5 = md5Check.Hash;
             computedRawSha1 = sha1Check.Hash;
 
             if (!verifyHashes)

@@ -49,7 +49,7 @@ public static class DiscDetector
         if (chd.IsGdRom)
         {
             const DiscPlatform platform = DiscPlatform.Dreamcast;
-            return new DiscPlatformInfo(platform, ExtractTitle(ReadCooked, platform, null, 0), ExtractManufacturerId(ReadCooked, platform, null, 0), "GD-ROM metadata");
+            return new DiscPlatformInfo(platform, ExtractTitle(ReadCooked, platform, null, 0), ExtractManufacturerId(ReadCooked, platform, null), "GD-ROM metadata");
         }
 
         if (chd.IsDvd)
@@ -77,7 +77,7 @@ public static class DiscDetector
             {
                 return new DiscPlatformInfo(platform,
                     ExtractTitle(readSector, platform, pvd.Value, 0),
-                    ExtractManufacturerId(readSector, platform, pvd.Value, 0),
+                    ExtractManufacturerId(readSector, platform, pvd.Value),
                     source + ", ISO-9660 filesystem");
             }
         }
@@ -106,7 +106,7 @@ public static class DiscDetector
             {
                 return new DiscPlatformInfo(platform,
                     ExtractTitle(readSector, platform, null, 0),
-                    ExtractManufacturerId(readSector, platform, null, 0),
+                    ExtractManufacturerId(readSector, platform, null),
                     source + ", sector 0 magic");
             }
         }
@@ -118,7 +118,7 @@ public static class DiscDetector
             {
                 return new DiscPlatformInfo(isoPlatform,
                     ExtractTitle(readSector, isoPlatform, pvd.Value, 0),
-                    ExtractManufacturerId(readSector, isoPlatform, pvd.Value, 0),
+                    ExtractManufacturerId(readSector, isoPlatform, pvd.Value),
                     source + ", ISO-9660 filesystem");
             }
         }
@@ -129,13 +129,13 @@ public static class DiscDetector
         {
             return new DiscPlatformInfo(DiscPlatform.PcEngine,
                 ExtractTitle(readSector, DiscPlatform.PcEngine, pvd, 1),
-                ExtractManufacturerId(readSector, DiscPlatform.PcEngine, pvd, 1),
+                ExtractManufacturerId(readSector, DiscPlatform.PcEngine, pvd),
                 source + ", " + pceSource);
         }
 
         return new DiscPlatformInfo(DiscPlatform.GenericCd,
             ExtractTitle(readSector, DiscPlatform.GenericCd, pvd, 0),
-            ExtractManufacturerId(readSector, DiscPlatform.GenericCd, pvd, 0),
+            ExtractManufacturerId(readSector, DiscPlatform.GenericCd, pvd),
             source + ", no platform markers found");
     }
 
@@ -237,7 +237,7 @@ public static class DiscDetector
 
     // ── ISO-9660 filesystem checks ──
 
-    private readonly record struct Pvd(byte[] SystemId, byte[] VolumeId, uint RootExtent, uint RootLength);
+    private readonly record struct Pvd(byte[] VolumeId, uint RootExtent, uint RootLength);
 
     private static Pvd? ReadPvd(SectorReader readSector, uint baseLba)
     {
@@ -251,7 +251,6 @@ public static class DiscDetector
 
         var root = sector.AsSpan(156);
         return new Pvd(
-            sector.AsSpan(8, 32).ToArray(),
             sector.AsSpan(40, 32).ToArray(),
             ReadLe32(root[2..]),
             ReadLe32(root[10..]));
@@ -513,7 +512,7 @@ public static class DiscDetector
         return null;
     }
 
-    private static string? ExtractManufacturerId(SectorReader readSector, DiscPlatform platform, Pvd? pvd, uint dataLba)
+    private static string? ExtractManufacturerId(SectorReader readSector, DiscPlatform platform, Pvd? pvd)
     {
         switch (platform)
         {

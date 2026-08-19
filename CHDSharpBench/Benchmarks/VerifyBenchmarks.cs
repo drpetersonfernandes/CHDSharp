@@ -5,7 +5,7 @@ using CHDSharp.Models;
 namespace CHDSharpBench.Benchmarks;
 
 /// <summary>
-/// Full-image verification times: <see cref="Chd.CheckFile"/> with deep verification (every
+/// Full-image verification times: <see cref="Chd"/> with deep verification (every
 /// hunk decompressed + SHA-1), run over all single-codec corpus files. "Cold" opens a fresh
 /// stream per operation (first-touch of the on-disk file; OS page cache still holds a bit),
 /// "Warm" precaches the file into a memory stream once and re-verifies from RAM. Bytes per
@@ -28,7 +28,8 @@ public class VerifyBenchmarks
         [
             .. Corpus.ChdFiles()
                 .Where(Corpus.IsExpectedOk)
-                .Where(f => !Path.GetFileName(f).Contains("_child", StringComparison.Ordinal) || Corpus.ParentFor(f) != null)];
+                .Where(f => !Path.GetFileName(f).Contains("_child", StringComparison.Ordinal) || Corpus.ParentFor(f) != null)
+        ];
 
         _parents.Clear();
         foreach (var file in _files)

@@ -74,7 +74,7 @@ public sealed class NrgParser
                     // sector size (2), mode (2), unused (2), index0 (8), index1 (8), track_end (8).
                     file.Position += 12;
                     file.ReadExactly(buffer[..30]);
-                    uint size = BinaryPrimitives.ReadUInt16BigEndian(buffer[0..]);
+                    uint size = BinaryPrimitives.ReadUInt16BigEndian(buffer[..]);
                     ushort mode = BinaryPrimitives.ReadUInt16BigEndian(buffer[2..]);
                     ulong index0 = BinaryPrimitives.ReadUInt64BigEndian(buffer[6..14]);
                     ulong index1 = BinaryPrimitives.ReadUInt64BigEndian(buffer[14..22]);

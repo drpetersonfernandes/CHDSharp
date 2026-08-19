@@ -33,6 +33,7 @@ public class IsoParser
             Index01 = 0,
             SubType = CdSubType.None,
             SubSize = 0,
+            PgSub = CdSubType.None,
             Swap = false
         };
 

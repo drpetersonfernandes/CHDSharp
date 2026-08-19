@@ -39,7 +39,10 @@ public static class MapCompressor
         uint maxCompLen = 0;
         for (uint i = 0; i < hunkCount; i++)
         {
-            if (entries[i].Compression <= MapEntry.CompressionType3)
+            // MAME tracks the maximum length over every entry that is not a SELF or PARENT
+            // reference (compress_v5_map's else branch): COMPRESSION_NONE entries carry the
+            // hunk size, compressed entries their stored length, promoted pseudo-types zero.
+            if (entries[i].Compression is not (MapEntry.CompressionSelf or MapEntry.CompressionParent))
             {
                 maxCompLen = Math.Max(maxCompLen, entries[i].CompLength);
             }

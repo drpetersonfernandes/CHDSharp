@@ -429,6 +429,15 @@ public static class ChdEncoder
 
         header.WriteToStream(fs);
 
+        // Metadata lives right after the header, before the compressed hunk data — chdman
+        // appends metadata via file_append() before compressing any hunks, so byte parity
+        // requires this order (the header's metaoffset is patched below).
+        long? metaOffset = null;
+        if (metadataEntries.Count > 0)
+        {
+            metaOffset = MetadataWriter.WriteCdMetadata(fs, metadataEntries);
+        }
+
         long currentOffset = RunCompressionPipeline(processor, hunkCount, readHunk, sha1, entries, selfMap, fs,
             codecs, options, hunkBytes, parentMap, cancellationToken);
 
@@ -436,15 +445,6 @@ public static class ChdEncoder
 
         var compressedMap = MapCompressor.Compress(entries, hunkCount, hunkBytes, unitBytes);
         var mapOffset = (ulong)currentOffset;
-
-        // Metadata lives between the compressed blocks and the map; the header's metaoffset
-        // field is patched below (0 when no metadata is present, as chdman leaves it).
-        long? metaOffset = null;
-        if (metadataEntries.Count > 0)
-        {
-            metaOffset = MetadataWriter.WriteCdMetadata(fs, metadataEntries);
-            mapOffset = (ulong)fs.Position;
-        }
 
         fs.Write(compressedMap, 0, compressedMap.Length);
 
@@ -672,7 +672,7 @@ public static class ChdEncoder
         Stream fs, IReadOnlyList<IChdCodec> codecs, ChdEncodeOptions? options, uint hunkBytes,
         ParentMap? parentMap, CancellationToken cancellationToken)
     {
-        long currentOffset = ChdHeaderV5.Length;
+        long currentOffset = fs.Position;
         processor.CompressAll(
             hunkCount,
             readHunk,

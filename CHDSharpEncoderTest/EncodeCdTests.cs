@@ -55,8 +55,11 @@ public class EncodeCdTests : IDisposable
 
         ulong metaOffset = ReadU64Be(chd, 48);
         ulong mapOffset = ReadU64Be(chd, 40);
-        Assert.True(metaOffset > ChdHeaderV5.Length, "metaoffset should follow the hunk data");
-        Assert.True(mapOffset > metaOffset, "map should follow the metadata");
+        // metadata is written immediately after the header, before the hunk data,
+        // matching chdman's byte layout (chd_file::create appends metadata first)
+        Assert.Equal((ulong)ChdHeaderV5.Length, metaOffset);
+        // the map is written at the end, after the metadata chain and all hunk data
+        Assert.True(mapOffset > metaOffset, "map should follow the metadata and hunk data");
 
         Assert.False(chd.Skip(64).Take(20).All(b => b == 0), "rawsha1 should be filled");
         Assert.False(chd.Skip(84).Take(20).All(b => b == 0), "combined sha1 should be filled");

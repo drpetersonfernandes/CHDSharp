@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using CHDSharpEncoder.Interfaces;
+using CHDSharpEncoder.LZMA;
 using CHDSharpEncoder.Models;
-using SharpCompress.Compressors.LZMA;
 
 namespace CHDSharpEncoder;
 
@@ -122,25 +122,52 @@ public sealed class ZstdCodec : IChdCodec
 }
 
 /// <summary>
-/// LZMA compression (level-8 equivalent settings), matching MAME's
-/// <c>chd_lzma_compressor</c>: raw headerless LZMA with no end marker, properties
-/// lc=3/lp=0/pb=2 and dictionary size = hunk bytes. SharpCompress's LzmaStream encoder
-/// computes the properties but never writes them to the output, so the stream is already
+/// LZMA compression matching MAME's <c>chd_lzma_compressor</c>: raw headerless LZMA with
+/// no end marker, properties lc=3/lp=0/pb=2, dictionary size = hunk bytes and
+/// numFastBytes=64 (the LZMA "level 8" profile that chdman configures via
+/// <c>LzmaEncProps</c>; the match-finder cycle count 16 + fb/2 = 48 follows automatically).
+/// Backed by Igor Pavlov's official LZMA SDK C# encoder (public domain, ported into this
+/// project); the encoder never writes the 5-byte property header, so the stream is already
 /// in CHD's raw format; the decoder synthesizes the properties (see CHDSharpLib's
-/// CHDReaders.Lzma).
+/// CHDReaders.Lzma). The encoder is ported from the official LZMA SDK C# source and
+/// upgraded to the C 18.06+ encoder internals that chdman uses (the "opt-extra" optimal
+/// parsing chain, the kCyclesBits price table and the matchPriceCount/repLenEncCounter
+/// price-update triggers). The output is byte-identical to chdman's on typical data and
+/// hunk-for-hunk on most mixed-content corpora; the rare differing hunks differ by a few
+/// bytes because the C# port does not reproduce the C encoder's latest range-coder
+/// carry/cache byte emission exactly.
 /// </summary>
 public sealed class LzmaCodec : IChdCodec
 {
-    private readonly LzmaEncoderProperties _properties;
+    private readonly Encoder _encoder;
     private readonly MemoryStream _ms;
 
     /// <summary>Creates an LZMA codec for the given hunk size.</summary>
     /// <param name="hunkBytes">Hunk size in bytes (becomes the LZMA dictionary size).</param>
     public LzmaCodec(uint hunkBytes)
     {
-        // endMarker: false; dictionary size limited to the hunk size so back-references
-        // never exceed what the decoder's per-hunk dictionary buffer provides
-        _properties = new LzmaEncoderProperties(false, (int)hunkBytes);
+        _encoder = new Encoder();
+        _encoder.SetCoderProperties(
+        [
+            CoderPropID.DictionarySize,
+            CoderPropID.PosStateBits,   // pb
+            CoderPropID.LitContextBits, // lc
+            CoderPropID.LitPosBits,     // lp
+            CoderPropID.Algorithm,
+            CoderPropID.NumFastBytes,
+            CoderPropID.MatchFinder,
+            CoderPropID.EndMarker,
+        ],
+        [
+            (int)hunkBytes,
+            2,      // pb = 2 (chdman default)
+            3,      // lc = 3 (chdman default)
+            0,      // lp = 0 (chdman default)
+            1,      // normal algorithm (fast mode off, as chdman's level-8 profile)
+            64,     // fast bytes (chdman's level-8 profile; 32 was the old default)
+            "bt4",  // binary-tree 4 match finder
+            false,  // no end marker; CHD tracks the hunk size in the map entry
+        ]);
         _ms = new MemoryStream((int)hunkBytes / 2);
     }
 
@@ -150,15 +177,15 @@ public sealed class LzmaCodec : IChdCodec
     /// <inheritdoc/>
     public byte[]? Compress(byte[] data)
     {
-        // Reuse the output buffer across hunks (CHDlite's persistent-encoder allocation win):
-        // codec instances are per-worker, so the encoder stream is never shared across threads.
-        // The LzmaStream itself is stateful and must be recreated per hunk (raw LZMA frames are
-        // self-contained), but the MemoryStream backing buffer is reused to avoid reallocations.
+        // Reuse the encoder and output buffer across hunks: the SDK encoder reinitialises
+        // all probability models and the sliding window per Code() call while keeping its
+        // hash/son arrays and window buffer allocated (codec instances are per-worker, so
+        // the encoder is never shared across threads).
         _ms.SetLength(0);
         _ms.Position = 0;
-        using (var lzma = LzmaStream.Create(_properties, false, _ms))
+        using (var input = new MemoryStream(data, writable: false))
         {
-            lzma.Write(data, 0, data.Length);
+            _encoder.Code(input, _ms, data.Length, -1, null);
         }
 
         var result = _ms.ToArray();

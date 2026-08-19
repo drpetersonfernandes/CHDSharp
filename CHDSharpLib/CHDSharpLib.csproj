@@ -48,6 +48,7 @@
     <ItemGroup>
       <InternalsVisibleTo Include="CHDSharpTest" />
       <InternalsVisibleTo Include="CHDSharpTestGen" />
+      <InternalsVisibleTo Include="CHDSharpEncoder" />
     </ItemGroup>
 
     <ItemGroup>

@@ -2,6 +2,7 @@ using CHDSharp;
 using CHDSharp.Models;
 using CHDSharpEncoder.Interfaces;
 using CHDSharpEncoder.Models;
+using MapEntry = CHDSharpEncoder.Models.MapEntry;
 
 namespace CHDSharpEncoder;
 

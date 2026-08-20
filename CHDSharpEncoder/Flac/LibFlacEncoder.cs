@@ -13,8 +13,22 @@ internal sealed class LibFlacEncoder
     private readonly int blockSize;
     private const int BitsPerSample = 16;
     private const uint MaxLpcOrd = 12;
-    private const uint QlpCoeffPrec = 12;
+    // qlp_coeff_precision is 0 (auto) at libFLAC level 8; the encoder derives the real
+    // precision from bits-per-sample and blocksize (see stream_encoder.c around line 764).
+    private readonly uint QlpCoeffPrec;
     private const uint MaxPartOrder = 6;
+
+    /// <summary>libFLAC's auto qlp_coeff_precision for bits-per-sample=16 (chdman level 8).</summary>
+    private static uint ComputeQlpPrecision(int blockSize)
+    {
+        if (blockSize <= 192) return 7;
+        if (blockSize <= 384) return 8;
+        if (blockSize <= 576) return 9;
+        if (blockSize <= 1152) return 10;
+        if (blockSize <= 2304) return 11;
+        if (blockSize <= 4608) return 12;
+        return 13;
+    }
 
     private readonly int[] signal0, signal1, mid, side;
     private readonly float[] window, windowed;
@@ -27,6 +41,7 @@ internal sealed class LibFlacEncoder
     public LibFlacEncoder(int blockSize)
     {
         this.blockSize = blockSize;
+        QlpCoeffPrec = ComputeQlpPrecision(blockSize);
         int maxSamples = blockSize;
         signal0 = new int[maxSamples + 4];
         signal1 = new int[maxSamples + 4];
@@ -244,6 +259,7 @@ internal sealed class LibFlacEncoder
     {
         sf.Type = SubframeType.Verbatim;
         sf.WastedBits = wasted;
+        for (int i = 0; i < blockSize; i++) sf.Samples[i] = sig[4 + i];
         return (uint)(8 + wasted + blockSize * bps);
     }
 

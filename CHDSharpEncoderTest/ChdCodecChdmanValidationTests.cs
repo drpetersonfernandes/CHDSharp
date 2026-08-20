@@ -1,4 +1,6 @@
 using System.Diagnostics;
+using CHDSharp;
+using CHDSharp.Models;
 using CHDSharpEncoder;
 using CHDSharpEncoder.Models;
 
@@ -150,6 +152,47 @@ public class ChdCodecChdmanValidationTests : IDisposable
         Assert.True(createExit == 0, $"chdman createraw failed (exit={createExit})\n{cOut}{cErr}");
 
         Assert.Equal(File.ReadAllBytes(refPath), File.ReadAllBytes(oursPath));
+    }
+
+    [Fact]
+    public void CdflChd_RandomData_PassesChdmanVerifyAndDeepCheck()
+    {
+        if (ChdmanPath == null) return;
+
+        // Random CD data forces VERBATIM subframes in the FLAC encoding; the encoder must
+        // store the actual samples (a stale zeroed sample buffer corrupts every hunk).
+        const string cue = """
+                           FILE "cdfl.bin" BINARY
+                             TRACK 01 MODE1/2352
+                               INDEX 01 00:00:00
+                             TRACK 02 AUDIO
+                               INDEX 01 00:00:10
+                           """;
+        string cuePath = Path.Combine(_testDataDir, "cdfl.cue");
+        string binPath = Path.Combine(_testDataDir, "cdfl.bin");
+        string chdPath = Path.Combine(_testDataDir, "cdfl.chd");
+        File.WriteAllText(cuePath, cue);
+
+        var bin = new byte[(10 + 40) * CdConstants.MaxSectorData];
+        new Random(1234).NextBytes(bin);
+        File.WriteAllBytes(binPath, bin);
+
+        ChdEncoder.EncodeCd(cuePath, chdPath, hunkBytes: CdConstants.FramesPerHunk * CdConstants.FrameSize,
+            unitBytes: CdConstants.FrameSize, codecTags: [CodecTags.Cdfl]);
+
+        var (verifyExit, vOut, vErr) = RunChdman("verify", "-i", chdPath);
+        Assert.True(verifyExit == 0, $"chdman verify failed (exit={verifyExit})\n{vOut}{vErr}");
+
+        using var fs = File.OpenRead(chdPath);
+        var check = Chd.CheckFile(fs, chdPath, deepCheck: true);
+        Assert.Equal(ChdError.Chderrnone, check.Error);
+
+        // chdman extractcd must reproduce the source BIN exactly
+        string extractPath = Path.Combine(_testDataDir, "cdfl.extract.bin");
+        string extractCue = Path.Combine(_testDataDir, "cdfl.extract.cue");
+        var (exExit, eOut, eErr) = RunChdman("extractcd", "-i", chdPath, "-o", extractCue, "-ob", extractPath, "-f");
+        Assert.True(exExit == 0, $"extractcd failed (exit={exExit})\n{eOut}{eErr}");
+        Assert.Equal(bin, File.ReadAllBytes(extractPath));
     }
 
     [Fact]

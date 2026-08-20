@@ -166,7 +166,7 @@ internal class BinTree : InWindow, IMatchFinder
         uint offset = 0;
         var matchMinPos = Pos > _cyclicBufferSize ? Pos - _cyclicBufferSize : 0;
         var cur = BufferOffset + Pos;
-        var maxLen = KStartMaxLen;
+        var maxLen = _hashArray ? 3u : KStartMaxLen;
         uint hashValue, hash2Value = 0, hash3Value = 0;
 
         if (_hashArray)
@@ -185,42 +185,87 @@ internal class BinTree : InWindow, IMatchFinder
         var curMatch = _hash[_fixHashSize + hashValue];
         if (_hashArray)
         {
-            var curMatch2 = _hash[hash2Value];
-            var curMatch3 = _hash[KHash3Offset + hash3Value];
+            var d2 = Pos - _hash[hash2Value];
+            var d3 = Pos - _hash[KHash3Offset + hash3Value];
             _hash[hash2Value] = Pos;
             _hash[KHash3Offset + hash3Value] = Pos;
-            if (curMatch2 > matchMinPos)
-            {
-                if (BufferBase[BufferOffset + curMatch2] == BufferBase[cur])
-                {
-                    distances[offset++] = maxLen = 2;
-                    distances[offset++] = Pos - curMatch2 - 1;
-                }
-            }
+            _hash[_fixHashSize + hashValue] = Pos;
 
-            if (curMatch3 > matchMinPos)
+            var mmm = Pos < _cyclicBufferSize ? Pos : _cyclicBufferSize;
+
+            if (d2 < mmm && BufferBase[cur - (int)d2] == BufferBase[cur])
             {
-                if (BufferBase[BufferOffset + curMatch3] == BufferBase[cur])
+                distances[offset++] = 2;
+                distances[offset++] = d2 - 1;
+                var update = true;
+                if (BufferBase[cur - (int)d2 + 2] == BufferBase[cur + 2])
                 {
-                    if (curMatch3 == curMatch2)
+                }
+                else if (d3 < mmm && BufferBase[cur - (int)d3] == BufferBase[cur])
+                {
+                    d2 = d3;
+                    distances[offset++] = 0;
+                    distances[offset++] = d3 - 1;
+                }
+                else
+                {
+                    update = false;
+                }
+
+                if (update)
+                {
+                    var cIdx = cur + (int)maxLen;
+                    var limIdx = cur + (int)lenLimit;
+                    while (cIdx != limIdx)
                     {
-                        offset -= 2;
+                        if (BufferBase[cIdx - (int)d2] != BufferBase[cIdx])
+                        {
+                            break;
+                        }
+
+                        cIdx++;
                     }
 
-                    distances[offset++] = maxLen = 3;
-                    distances[offset++] = Pos - curMatch3 - 1;
-                    curMatch2 = curMatch3;
+                    maxLen = (uint)(cIdx - cur);
+                    distances[offset - 2] = maxLen;
+                    if (maxLen == lenLimit)
+                    {
+                        Skip(1);
+                        return offset;
+                    }
                 }
             }
-
-            if (offset != 0 && curMatch2 == curMatch)
+            else if (d3 < mmm && BufferBase[cur - (int)d3] == BufferBase[cur])
             {
-                offset -= 2;
-                maxLen = KStartMaxLen;
+                d2 = d3;
+                distances[offset++] = 0;
+                distances[offset++] = d3 - 1;
+
+                var cIdx = cur + (int)maxLen;
+                var limIdx = cur + (int)lenLimit;
+                while (cIdx != limIdx)
+                {
+                    if (BufferBase[cIdx - (int)d2] != BufferBase[cIdx])
+                    {
+                        break;
+                    }
+
+                    cIdx++;
+                }
+
+                maxLen = (uint)(cIdx - cur);
+                distances[offset - 2] = maxLen;
+                if (maxLen == lenLimit)
+                {
+                    Skip(1);
+                    return offset;
+                }
             }
         }
-
-        _hash[_fixHashSize + hashValue] = Pos;
+        else
+        {
+            _hash[hashValue] = Pos;
+        }
 
         var ptr0 = (_cyclicBufferPos << 1) + 1;
         var ptr1 = _cyclicBufferPos << 1;

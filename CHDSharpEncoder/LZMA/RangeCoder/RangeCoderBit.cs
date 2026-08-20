@@ -6,8 +6,8 @@ internal struct BitEncoder
     private const int KNumBitModelTotalBits = 11;
     private const uint KBitModelTotal = 1 << KNumBitModelTotalBits;
     private const int KNumMoveBits = 5;
-    private const int KNumMoveReducingBits = 2;
-    internal const int KNumBitPriceShiftBits = 6;
+    private const int KNumMoveReducingBits = 4;
+    internal const int KNumBitPriceShiftBits = 4;
 
     private uint _prob;
 
@@ -43,8 +43,8 @@ internal struct BitEncoder
     private static uint[] BuildProbPrices()
     {
         const int kNumBitModelTotalBits = 11;
-        const int kNumMoveReducingBits = 2;
-        const int kNumBitPriceShiftBits = 6;
+        const int kNumMoveReducingBits = 4;
+        const int kNumBitPriceShiftBits = 4;
         var prices = new uint[1 << (kNumBitModelTotalBits - kNumMoveReducingBits)];
         for (var i = 0; i < prices.Length; i++)
         {

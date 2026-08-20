@@ -116,13 +116,12 @@ public sealed class ZstdCodec : IChdCodec
 /// Backed by Igor Pavlov's official LZMA SDK C# encoder (public domain, ported into this
 /// project); the encoder never writes the 5-byte property header, so the stream is already
 /// in CHD's raw format; the decoder synthesizes the properties (see CHDSharpLib's
-/// CHDReaders.Lzma). The encoder is ported from the official LZMA SDK C# source and
-/// upgraded to the C 18.06+ encoder internals that chdman uses (the "opt-extra" optimal
-/// parsing chain, the kCyclesBits price table and the matchPriceCount/repLenEncCounter
-/// price-update triggers). The output is byte-identical to chdman's on typical data and
-/// hunk-for-hunk on most mixed-content corpora; the rare differing hunks differ by a few
-/// bytes because the C# port does not reproduce the C encoder's latest range-coder
-/// carry/cache byte emission exactly.
+/// CHDReaders.Lzma). The port matches the C encoder's byte emission: the price table uses
+/// the C's kNumMoveReducingBits/kNumBitPriceShiftBits = 4/4 (the SDK C# line still uses
+/// 2/6, which flips near-tie optimal-parser decisions) and the BT4 match finder walks the
+/// btree with maxLen = 3 like MAME's <c>Bt4_MatchFinder_GetMatches</c>. Output is
+/// byte-identical to chdman on the battle-test corpus (verified per-hunk on 1,664 raw
+/// hunks and the cdlz CD hunks).
 /// </summary>
 public sealed class LzmaCodec : IChdCodec
 {

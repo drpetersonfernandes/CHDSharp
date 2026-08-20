@@ -88,6 +88,43 @@ public class ChdCodecChdmanValidationTests : IDisposable
     }
 
     [Fact]
+    public void LzmaChd_ByteIdenticalToChdmanOnTextCorpus()
+    {
+        if (ChdmanPath == null) return;
+
+        // Deterministic pseudo-English text (seed 1337, the battle-test corpus that exposed
+        // the LZMA parse divergence: 4-byte-hash collisions + near-tie price decisions).
+        var rng = new Random(1337);
+        const string common = "etaoinshrdlucmfwypvbgkjqxz";
+        const string all = "etaoinshrdlucmfwypvbgkjqxz ETAOINSHRDLUCMFWYPVBGKJQXZ0123456789.,!?;:'\"()-";
+        const int size = 4096 * 128;
+        var source = new byte[size];
+        for (int i = 0; i < size; i++)
+        {
+            var r = rng.NextDouble();
+            source[i] = r switch
+            {
+                < 0.45 => (byte)common[rng.Next(common.Length)],
+                < 0.90 => (byte)all[rng.Next(all.Length)],
+                < 0.94 => (byte)' ',
+                _ => (byte)'\n'
+            };
+        }
+
+        string srcPath = Path.Combine(_testDataDir, "lzma-text.bin");
+        string oursPath = Path.Combine(_testDataDir, "lzma-text.ours.chd");
+        string refPath = Path.Combine(_testDataDir, "lzma-text.ref.chd");
+        File.WriteAllBytes(srcPath, source);
+
+        ChdEncoder.EncodeRaw(srcPath, oursPath, 4096, 512, [CodecTags.Lzma]);
+
+        var (createExit, cOut, cErr) = RunChdman("createraw", "-i", srcPath, "-o", refPath, "-c", "lzma", "-hs", "4096", "-us", "512", "-f");
+        Assert.True(createExit == 0, $"chdman createraw failed (exit={createExit})\n{cOut}{cErr}");
+
+        Assert.Equal(File.ReadAllBytes(refPath), File.ReadAllBytes(oursPath));
+    }
+
+    [Fact]
     public void MultiCodecChd_PassesChdmanVerify()
     {
         if (ChdmanPath == null) return;

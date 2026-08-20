@@ -125,6 +125,34 @@ public class ChdCodecChdmanValidationTests : IDisposable
     }
 
     [Fact]
+    public void FlacChd_ByteIdenticalToChdmanOnPcm16Corpus()
+    {
+        if (ChdmanPath == null) return;
+
+        // Deterministic sine-wave PCM (compressible, exercises LPC subframe selection).
+        const int size = 4096 * 8;
+        var source = new byte[size];
+        for (int i = 0; i < size / 2; i++)
+        {
+            short v = (short)(30000 * Math.Sin(i * 0.01) + 5000 * Math.Sin(i * 0.001));
+            source[2 * i] = (byte)(v & 0xFF);
+            source[2 * i + 1] = (byte)((v >> 8) & 0xFF);
+        }
+
+        string srcPath = Path.Combine(_testDataDir, "flac-pcm16.bin");
+        string oursPath = Path.Combine(_testDataDir, "flac-pcm16.ours.chd");
+        string refPath = Path.Combine(_testDataDir, "flac-pcm16.ref.chd");
+        File.WriteAllBytes(srcPath, source);
+
+        ChdEncoder.EncodeRaw(srcPath, oursPath, 4096, 512, [CodecTags.Flac]);
+
+        var (createExit, cOut, cErr) = RunChdman("createraw", "-i", srcPath, "-o", refPath, "-c", "flac", "-hs", "4096", "-us", "512", "-f");
+        Assert.True(createExit == 0, $"chdman createraw failed (exit={createExit})\n{cOut}{cErr}");
+
+        Assert.Equal(File.ReadAllBytes(refPath), File.ReadAllBytes(oursPath));
+    }
+
+    [Fact]
     public void MultiCodecChd_PassesChdmanVerify()
     {
         if (ChdmanPath == null) return;

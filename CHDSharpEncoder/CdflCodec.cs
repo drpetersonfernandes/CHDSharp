@@ -17,6 +17,7 @@ public sealed class CdflCodec : IChdCodec
     private readonly int _framesPerHunk;
     private readonly int _dataBytes;
     private readonly int _subcodeBytes;
+    private readonly int _blockSize;
     private readonly byte[] _leBuffer;
     private readonly byte[] _flacBuffer;
 
@@ -30,6 +31,9 @@ public sealed class CdflCodec : IChdCodec
         _framesPerHunk = (int)(hunkBytes / CdConstants.FrameSize);
         _dataBytes = _framesPerHunk * CdConstants.MaxSectorData;
         _subcodeBytes = _framesPerHunk * CdConstants.MaxSubcodeData;
+        _blockSize = _dataBytes / 4;
+        while (_blockSize > CdConstants.MaxSectorData)
+            _blockSize /= 2;
         _leBuffer = new byte[_dataBytes];
         // worst case: verbatim subframes; add room for frame headers
         _flacBuffer = new byte[_dataBytes + _framesPerHunk * 64];
@@ -58,7 +62,7 @@ public sealed class CdflCodec : IChdCodec
             (_leBuffer[i], _leBuffer[i + 1]) = (_leBuffer[i + 1], _leBuffer[i]);
         }
 
-        int flacLen = FlacFrameEncoder.Encode(_flacBuffer, _leBuffer);
+        int flacLen = new LibFlacEncoder(_blockSize).Encode(_flacBuffer, _leBuffer);
 
         var compressedSubcode = RawDeflate.Compress(subcode);
         if (compressedSubcode == null)

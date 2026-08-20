@@ -40,15 +40,17 @@ public sealed class FlacCodec : IChdCodec
     public byte[]? Compress(byte[] data)
     {
         // worst case: verbatim subframes + frame headers
-        var leOut = new byte[data.Length + 512];
-        var beOut = new byte[data.Length + 512];
+        var leOut = new byte[data.Length * 2];
+        var beOut = new byte[data.Length * 2];
+
+        var encoder = new LibFlacEncoder(_blockSize);
 
         // little-endian pass: samples read as little-endian (bytes as-is)
-        int leLen = FlacFrameEncoder.Encode(leOut, data, blockSize: _blockSize);
+        int leLen = encoder.Encode(leOut, data);
 
         // big-endian pass: samples read as big-endian (each 16-bit pair swapped)
         SwapPairs(data, _swappedBuffer);
-        int beLen = FlacFrameEncoder.Encode(beOut, _swappedBuffer, blockSize: _blockSize);
+        int beLen = encoder.Encode(beOut, _swappedBuffer);
 
         if (leLen + 1 >= data.Length && beLen + 1 >= data.Length)
             return null;

@@ -97,15 +97,15 @@ internal static class SourceData
 
         for (var i = 0; i < samples; i++)
         {
-            var freqL = 220 + (i % 44100) / 100.0;
-            var freqR = 330 + (i % 22050) / 50.0;
+            var freqL = 220 + i % 44100 / 100.0;
+            var freqR = 330 + i % 22050 / 50.0;
             phaseL += 2 * Math.PI * freqL / 44100;
             phaseR += 2 * Math.PI * freqR / 44100;
 
             var l = (short)(Math.Sin(phaseL) * 12000);
             var r = (short)(Math.Sin(phaseR) * 12000);
 
-            if ((i / 4410) % 5 == 4) // periodic noise bursts
+            if (i / 4410 % 5 == 4) // periodic noise bursts
             {
                 l = (short)(rng.NextU64() & 0xFFFF);
                 r = (short)(rng.NextU64() & 0xFFFF);

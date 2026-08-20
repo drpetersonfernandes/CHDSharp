@@ -84,10 +84,10 @@ internal class AudioDecoder : IAudioSource
         _framereader = new BitReader();
 
         //max_frame_size = 16 + ((Flake.MAX_BLOCKSIZE * PCM.BitsPerSample * PCM.ChannelCount + 1) + 7) >> 3);
-        if ((((int)_maxFrameSize * Pcm.BitsPerSample * Pcm.ChannelCount * 2) >> 3) > _framesBuffer.Length)
+        if (((int)_maxFrameSize * Pcm.BitsPerSample * Pcm.ChannelCount * 2) >> 3 > _framesBuffer.Length)
         {
             var temp = _framesBuffer;
-            _framesBuffer = new byte[(((int)_maxFrameSize * Pcm.BitsPerSample * Pcm.ChannelCount * 2) >> 3)];
+            _framesBuffer = new byte[((int)_maxFrameSize * Pcm.BitsPerSample * Pcm.ChannelCount * 2) >> 3];
             if (_framesBufferLength > 0)
                 Array.Copy(temp, _framesBufferOffset, _framesBuffer, 0, _framesBufferLength);
             _framesBufferOffset = 0;
@@ -239,7 +239,7 @@ internal class AudioDecoder : IAudioSource
                     var psrc = src;
                     for (var i = 0; i < count; i++)
                     {
-                        res[i * Pcm.ChannelCount] = *(psrc++);
+                        res[i * Pcm.ChannelCount] = *psrc++;
                     }
                 }
         }
@@ -422,7 +422,7 @@ internal class AudioDecoder : IAudioSource
         // residual
         var j = frame.Subframes[ch].Best.Order;
         var r = frame.Subframes[ch].Best.Residual + j;
-        for (var p = 0; p < (1 << frame.Subframes[ch].Best.Rc.Porder); p++)
+        for (var p = 0; p < 1 << frame.Subframes[ch].Best.Rc.Porder; p++)
         {
             if (p == 1)
             {
@@ -437,7 +437,7 @@ internal class AudioDecoder : IAudioSource
                 k = frame.Subframes[ch].Best.Rc.EscBps[p] = (int)bitreader.Readbits(5);
                 for (var i = n; i > 0; i--)
                 {
-                    *(r++) = bitreader.ReadbitsSigned(k);
+                    *r++ = bitreader.ReadbitsSigned(k);
                 }
             }
             else
@@ -521,12 +521,12 @@ internal class AudioDecoder : IAudioSource
 
                 if ((typeCode & (uint)SubframeType.Lpc) != 0)
                 {
-                    frame.Subframes[ch].Best.Order = (typeCode - (int)SubframeType.Lpc) + 1;
+                    frame.Subframes[ch].Best.Order = typeCode - (int)SubframeType.Lpc + 1;
                     frame.Subframes[ch].Best.Type = SubframeType.Lpc;
                 }
                 else if ((typeCode & (uint)SubframeType.Fixed) != 0)
                 {
-                    frame.Subframes[ch].Best.Order = (typeCode - (int)SubframeType.Fixed);
+                    frame.Subframes[ch].Best.Order = typeCode - (int)SubframeType.Fixed;
                     frame.Subframes[ch].Best.Type = SubframeType.Fixed;
                 }
 
@@ -573,8 +573,8 @@ internal class AudioDecoder : IAudioSource
                 s1 = data[-1];
                 for (var i = dataLen; i > 0; i--)
                 {
-                    s1 += *(residual++);
-                    *(data++) = s1;
+                    s1 += *residual++;
+                    *data++ = s1;
                 }
 
                 //data[i] = residual[i] + data[i - 1];
@@ -584,8 +584,8 @@ internal class AudioDecoder : IAudioSource
                 s1 = data[-1];
                 for (var i = dataLen; i > 0; i--)
                 {
-                    var s0 = *(residual++) + (s1 << 1) - s2;
-                    *(data++) = s0;
+                    var s0 = *residual++ + (s1 << 1) - s2;
+                    *data++ = s0;
                     s2 = s1;
                     s1 = s0;
                 }
@@ -595,7 +595,7 @@ internal class AudioDecoder : IAudioSource
             case 3:
                 for (var i = 0; i < dataLen; i++)
                 {
-                    data[i] = residual[i] + (((data[i - 1] - data[i - 2]) << 1) + (data[i - 1] - data[i - 2])) + data[i - 3];
+                    data[i] = residual[i] + ((data[i - 1] - data[i - 2]) << 1) + (data[i - 1] - data[i - 2]) + data[i - 3];
                 }
 
                 break;
@@ -620,7 +620,7 @@ internal class AudioDecoder : IAudioSource
                 csum += (ulong)Math.Abs(coefs[i - 1]);
             }
 
-            if ((csum << sub.Obits) >= 1UL << 32)
+            if (csum << sub.Obits >= 1UL << 32)
                 Lpc.DecodeResidualLong(sub.Best.Residual, sub.Samples, frame.Blocksize, sub.Best.Order, coefs, sub.Best.Shift);
             else
                 Lpc.DecodeResidual(sub.Best.Residual, sub.Samples, frame.Blocksize, sub.Best.Order, coefs, sub.Best.Shift);
@@ -653,7 +653,7 @@ internal class AudioDecoder : IAudioSource
                 var x = frame.Subframes[ch].Wbits;
                 for (var i = frame.Blocksize; i > 0; i--)
                 {
-                    *(s++) <<= x;
+                    *s++ <<= x;
                 }
             }
         }
@@ -672,24 +672,24 @@ internal class AudioDecoder : IAudioSource
                         var mid = *l;
                         var side = *r;
                         mid <<= 1;
-                        mid |= (side & 1); /* i.e. if 'side' is odd... */
-                        *(l++) = (mid + side) >> 1;
-                        *(r++) = (mid - side) >> 1;
+                        mid |= side & 1; /* i.e. if 'side' is odd... */
+                        *l++ = (mid + side) >> 1;
+                        *r++ = (mid - side) >> 1;
                     }
 
                     break;
                 case ChannelMode.LeftSide:
                     for (var i = frame.Blocksize; i > 0; i--)
                     {
-                        int left = *(l++), right = *r;
-                        *(r++) = left - right;
+                        int left = *l++, right = *r;
+                        *r++ = left - right;
                     }
 
                     break;
                 case ChannelMode.RightSide:
                     for (var i = frame.Blocksize; i > 0; i--)
                     {
-                        *(l++) += *(r++);
+                        *l++ += *r++;
                     }
 
                     break;
@@ -770,7 +770,7 @@ internal class AudioDecoder : IAudioSource
                             throw new InvalidDataException("FLAC stream not found");
 
                         skip <<= 7;
-                        skip |= (_framesBuffer[0] & 0x7f);
+                        skip |= _framesBuffer[0] & 0x7f;
                     }
 
                     if (!skip_bytes(skip))

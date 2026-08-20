@@ -81,7 +81,7 @@ public class RawDeflateTests
 
         bool isZlibWrapped = compressed.Length >= 2 &&
                              (compressed[0] & 0x0F) == 8 &&
-                             ((compressed[0] * 256 + compressed[1]) % 31 == 0);
+                             (compressed[0] * 256 + compressed[1]) % 31 == 0;
         Assert.False(isZlibWrapped);
     }
 

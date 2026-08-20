@@ -134,7 +134,7 @@ public class ChdCodecTests : IDisposable
         byte[] data = new byte[4096];
         for (int i = 0; i < data.Length; i++)
         {
-            data[i] = (byte)((i % 37 == 0) ? 0xFF : 0);
+            data[i] = (byte)(i % 37 == 0 ? 0xFF : 0);
         }
 
         var processor = new HunkProcessor(4096, [new ZlibCodec(), new ZstdCodec()]);

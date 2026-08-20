@@ -618,7 +618,9 @@ public static class ChdEncoder
 
     /// <summary>Reads hunk <paramref name="hunkIndex"/> of a CD image: track-aware reads from the
     /// BIN/WAV file(s), zero-filled padding frames, and little-endian→big-endian audio swapping.
-    /// CD hunks are always fully hashed (including zero padding), like the sequential path.</summary>
+    /// The full padded buffer is what gets compressed and CRC-16'd; only the valid frames (all
+    /// of them except the last hunk's excess zero padding past <paramref name="totalFrames"/>)
+    /// are folded into the raw SHA-1, matching chdman.</summary>
     private static int ReadCdHunk(uint hunkIndex, byte[] buffer, CdToc toc, int framesPerHunk, ulong totalFrames,
         Dictionary<string, FileStream> files)
     {
@@ -656,7 +658,20 @@ public static class ChdEncoder
                 SwapPairs(buffer, f * CdConstants.FrameSize, track.DataSize);
         }
 
-        return buffer.Length;
+        // hash only the valid frames; the last hunk's excess zero padding is stored (and
+        // CRC-16'd) but must not be folded into the raw SHA-1, exactly like ReadSourceHunk
+        long validFrames = (long)totalFrames - hunkStartFrame;
+        if (validFrames > framesPerHunk)
+        {
+            validFrames = framesPerHunk;
+        }
+
+        if (validFrames < 0)
+        {
+            validFrames = 0;
+        }
+
+        return (int)(validFrames * CdConstants.FrameSize);
     }
 
     /// <summary>

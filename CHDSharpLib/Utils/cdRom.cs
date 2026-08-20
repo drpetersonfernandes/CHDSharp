@@ -26,7 +26,7 @@ internal static class CdRom
     private const int EccPComp = 24;
 
     /** @brief  The ECC q offset. */
-    private const int EccQOffset = (EccPOffset + 2 * EccPNumBytes);
+    private const int EccQOffset = EccPOffset + 2 * EccPNumBytes;
 
     /** @brief  2 lots of 52. */
     private const int EccQNumBytes = 52;
@@ -248,7 +248,7 @@ internal static class CdRom
     private static byte ecc_source_byte(byte[] data, int sectorOffset, int offset)
     {
         /* in mode 2 always treat these as 0 bytes */
-        return (data[sectorOffset + ModeOffset] == 2 && offset < 4) ? (byte)0x00 : data[sectorOffset + SyncOffset + SyncNumBytes + offset];
+        return data[sectorOffset + ModeOffset] == 2 && offset < 4 ? (byte)0x00 : data[sectorOffset + SyncOffset + SyncNumBytes + offset];
     }
 
     /**

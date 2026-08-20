@@ -54,32 +54,31 @@ public class Huffman168
 
         Array.Clear(NumBits);
 
+        // binary search the scaled weight so every code fits in MaxBits, mirroring MAME's
+        // huffman_context_base::compute_tree_from_histo exactly: the tree built by the last
+        // successful iteration is kept (no re-build), and the loop only exits from the
+        // success branch
         var lower = 0;
         var upper = totalData * 2;
-        var bestWeight = totalData;
-
-        for (var iter = 0; iter < 32; iter++)
+        while (true)
         {
             var curWeight = (lower + upper) / 2;
             var maxbits = BuildWeightedTree(curWeight, totalData);
 
             if (maxbits <= MaxBits)
             {
-                bestWeight = curWeight;
                 lower = curWeight;
+                if (curWeight == totalData || upper - lower <= 1)
+                {
+                    break;
+                }
             }
             else
             {
                 upper = curWeight;
             }
-
-            if (curWeight == totalData && maxbits <= MaxBits)
-                break;
-            if (upper - lower <= 1)
-                break;
         }
 
-        BuildWeightedTree(bestWeight, totalData);
         AssignCanonicalCodes();
     }
 
@@ -208,7 +207,14 @@ public class Huffman168
 
     private static void SortByWeight(TreeNode[] nodes, List<int> indices)
     {
-        indices.Sort((a, b) => nodes[b].Weight.CompareTo(nodes[a].Weight));
+        // descending by weight, ascending by symbol index — the same tie-break MAME uses in
+        // huffman_context_base::tree_node_compare (its secondary key is the symbol code), so
+        // equal-weight symbols build an identical tree
+        indices.Sort((a, b) =>
+        {
+            var byWeight = nodes[b].Weight.CompareTo(nodes[a].Weight);
+            return byWeight != 0 ? byWeight : a.CompareTo(b);
+        });
     }
 
     private void AssignCanonicalCodes()

@@ -150,7 +150,7 @@ internal static partial class ChdReaders
     {
         var endianType = buffIn[0];
         //CHD adds a leading char to indicate endian. Not part of the flac format.
-        var swapEndian = (endianType == 'B'); //'L'ittle / 'B'ig
+        var swapEndian = endianType == 'B'; //'L'ittle / 'B'ig
         return Flac(buffIn, 1, buffInLength, buffOut, buffOutLength, swapEndian, codec, out _);
     }
 
@@ -222,7 +222,7 @@ internal static partial class ChdReaders
     {
         /* determine header bytes */
         var frames = buffOutLength / CdFrameSize;
-        var complenBytes = (buffOutLength < 65536) ? 2 : 3;
+        var complenBytes = buffOutLength < 65536 ? 2 : 3;
         var eccBytes = (frames + 7) / 8;
         var headerBytes = eccBytes + complenBytes;
         if (buffInLength < headerBytes)
@@ -272,14 +272,14 @@ internal static partial class ChdReaders
     {
         /* determine header bytes */
         var frames = buffOutLength / CdFrameSize;
-        var complenBytes = (buffOutLength < 65536) ? 2 : 3;
+        var complenBytes = buffOutLength < 65536 ? 2 : 3;
         var eccBytes = (frames + 7) / 8;
         var headerBytes = eccBytes + complenBytes;
         if (buffInLength < headerBytes)
             return ChdError.Chderrinvaliddata;
 
         /* extract compressed length of base */
-        var complenBase = ((buffIn[eccBytes + 0] << 8) | buffIn[eccBytes + 1]);
+        var complenBase = (buffIn[eccBytes + 0] << 8) | buffIn[eccBytes + 1];
         if (complenBytes > 2)
         {
             complenBase = (complenBase << 8) | buffIn[eccBytes + 2];
@@ -349,7 +349,7 @@ internal static partial class ChdReaders
     {
         /* determine header bytes */
         var frames = buffOutLength / CdFrameSize;
-        var complenBytes = (buffOutLength < 65536) ? 2 : 3;
+        var complenBytes = buffOutLength < 65536 ? 2 : 3;
         var eccBytes = (frames + 7) / 8;
         var headerBytes = eccBytes + complenBytes;
         if (buffInLength < headerBytes)

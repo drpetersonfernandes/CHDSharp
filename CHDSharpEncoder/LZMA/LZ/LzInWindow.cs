@@ -44,7 +44,7 @@ internal class InWindow
 
         while (true)
         {
-            var size = (int)((0 - BufferOffset) + BlockSize - StreamPos);
+            var size = (int)(0 - BufferOffset + BlockSize - StreamPos);
             if (size == 0)
             {
                 return;
@@ -135,7 +135,7 @@ internal class InWindow
     {
         if (_streamEndWasReached)
         {
-            if ((Pos + index) + limit > StreamPos)
+            if (Pos + index + limit > StreamPos)
             {
                 limit = StreamPos - (uint)(Pos + index);
             }

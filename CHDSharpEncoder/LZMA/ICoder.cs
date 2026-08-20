@@ -17,7 +17,7 @@ internal interface ICoder
 }
 
 /// <summary>Provides the fields that represent property identifiers for compressing.</summary>
-internal enum CoderPropID
+internal enum CoderPropId
 {
     /// <summary>Specifies default property.</summary>
     DefaultProp = 0,
@@ -62,14 +62,14 @@ internal enum CoderPropID
     NumThreads,
 
     /// <summary>Specifies mode with end marker.</summary>
-    EndMarker,
+    EndMarker
 }
 
 /// <summary>Coder property configuration interface, ported from the LZMA SDK (public domain).</summary>
 internal interface ISetCoderProperties
 {
     /// <summary>Sets coder properties.</summary>
-    void SetCoderProperties(CoderPropID[] propIDs, object[] properties);
+    void SetCoderProperties(CoderPropId[] propIDs, object[] properties);
 }
 
 /// <summary>Coder property writer interface, ported from the LZMA SDK (public domain).</summary>

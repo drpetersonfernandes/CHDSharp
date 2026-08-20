@@ -105,7 +105,7 @@ public sealed class ParentMap : IDisposable
 
             // the last hunk (or an uncompressed map) only hashes unit 0: windows past the
             // end of the parent's data cannot be referenced, exactly like MAME
-            var units = (h == HunkCount - 1) ? 1u : UnitsPerHunk;
+            var units = h == HunkCount - 1 ? 1u : UnitsPerHunk;
             for (uint u = 0; u < units; u++)
             {
                 var windowOffset = (int)(u * UnitBytes);

@@ -57,7 +57,7 @@ public class EncodeCdTests : IDisposable
         ulong mapOffset = ReadU64Be(chd, 40);
         // metadata is written immediately after the header, before the hunk data,
         // matching chdman's byte layout (chd_file::create appends metadata first)
-        Assert.Equal((ulong)ChdHeaderV5.Length, metaOffset);
+        Assert.Equal(ChdHeaderV5.Length, metaOffset);
         // the map is written at the end, after the metadata chain and all hunk data
         Assert.True(mapOffset > metaOffset, "map should follow the metadata and hunk data");
 
@@ -97,6 +97,41 @@ public class EncodeCdTests : IDisposable
             var readErr = chd!.ReadAllBytes(out byte[] actual);
             Assert.Equal(ChdError.Chderrnone, readErr);
             Assert.Equal(expected, actual);
+        }
+    }
+
+    [Fact]
+    public void EncodeCd_PartialLastHunk_RawSha1_HashesOnlyValidFrames()
+    {
+        // track 1: 5 data frames (pads to 8), track 2: 3 audio frames (pads to 4)
+        // => 12 logical frames; with 8-frame hunks the last hunk holds 4 valid + 4 zero
+        // padding frames. Regression for the battle-test bug: the header raw SHA-1 must be
+        // computed over only the 12 valid logical frames, not the padded full hunk.
+        WriteCue("""
+            FILE "game.bin" BINARY
+              TRACK 01 MODE1/2352
+                INDEX 01 00:00:00
+              TRACK 02 AUDIO
+                INDEX 00 00:00:05
+                INDEX 01 00:00:07
+            """);
+        byte[] bin = BuildBinFrames(5, dataFrames: true)
+            .Concat(BuildBinFrames(3, dataFrames: false))
+            .ToArray();
+        File.WriteAllBytes(Path.Combine(_dir, "game.bin"), bin);
+        string chdPath = Path.Combine(_dir, "test.chd");
+
+        ChdEncoder.EncodeCd(Path.Combine(_dir, "test.cue"), chdPath);
+
+        var openErr = ChdFile.Open(chdPath, out var chd);
+        Assert.Equal(ChdError.Chderrnone, openErr);
+        using (chd)
+        {
+            var readErr = chd!.ReadAllBytes(out byte[] logicalImage);
+            Assert.Equal(ChdError.Chderrnone, readErr);
+            // the logical image is exactly what chdman hashes; the header must match it
+            byte[] storedRawSha1 = File.ReadAllBytes(chdPath).AsSpan(64, 20).ToArray();
+            Assert.Equal(Sha1.Compute(logicalImage), storedRawSha1);
         }
     }
 

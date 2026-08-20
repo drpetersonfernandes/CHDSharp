@@ -92,7 +92,7 @@ public class LargeFileValidationTests : IDisposable
               TRACK 01 MODE1/2352
                 INDEX 01 00:00:00
               TRACK 02 AUDIO
-                INDEX 01 {dataFrames / (60 * 75):D2}:{(dataFrames / 75) % 60:D2}:{dataFrames % 75:D2}
+                INDEX 01 {dataFrames / (60 * 75):D2}:{dataFrames / 75 % 60:D2}:{dataFrames % 75:D2}
             """);
 
         ChdEncoder.EncodeCd(cuePath, chdPath);
@@ -133,7 +133,7 @@ public class LargeFileValidationTests : IDisposable
         {
             int n = (int)Math.Min(blockBytes, size - offset);
             // every third block is incompressible; the rest are a repeating pattern
-            byte[] block = (offset / blockBytes) % 3 == 0 ? randomBlock : pattern;
+            byte[] block = offset / blockBytes % 3 == 0 ? randomBlock : pattern;
             if (ReferenceEquals(block, randomBlock))
                 rng.NextBytes(randomBlock.AsSpan(0, n));
             fs.Write(block, 0, n);

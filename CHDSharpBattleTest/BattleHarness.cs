@@ -13,13 +13,17 @@ public sealed record CheckResult(string Suite, string Name, string Detail, bool 
 /// <summary>Thrown by <see cref="BattleHarness.Assert"/> to record a failed check without unwinding the whole run.</summary>
 public sealed class CheckFailedException : Exception
 {
-    public CheckFailedException(string message) : base(message) { }
+    public CheckFailedException(string message) : base(message)
+    {
+    }
 }
 
 /// <summary>Thrown to skip a check (e.g. chdman rejects a configuration).</summary>
 public sealed class CheckSkippedException : Exception
 {
-    public CheckSkippedException(string message) : base(message) { }
+    public CheckSkippedException(string message) : base(message)
+    {
+    }
 }
 
 /// <summary>A CHD produced during the run, decoded exhaustively by the decode suite.</summary>
@@ -41,7 +45,6 @@ public sealed class Asset
 public sealed class BattleHarness
 {
     private readonly ChdmanRunner _chdman;
-    private readonly string _outDir;
     private readonly string _workDir;
     private readonly int _seed;
     private readonly bool _quick;
@@ -58,18 +61,21 @@ public sealed class BattleHarness
         _seed = seed;
         _quick = quick;
         outDir ??= FindRepoRoot();
-        _outDir = Path.Combine(outDir, "battle", $"battle-{DateTime.Now:yyyyMMdd-HHmmss}");
-        _workDir = Path.Combine(_outDir, "artifacts");
+        OutDir = Path.Combine(outDir, "battle", $"battle-{DateTime.Now:yyyyMMdd-HHmmss}");
+        _workDir = Path.Combine(OutDir, "artifacts");
         Directory.CreateDirectory(_workDir);
     }
 
-    public string OutDir => _outDir;
+    public string OutDir { get; }
 
     private static string FindRepoRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
         while (dir != null && !Directory.Exists(Path.Combine(dir.FullName, "TestResults")))
+        {
             dir = dir.Parent;
+        }
+
         return dir?.FullName ?? AppContext.BaseDirectory;
     }
 
@@ -114,6 +120,7 @@ public sealed class BattleHarness
     {
         if (expected.Length != actual.Length)
             throw new CheckFailedException($"{what}: length {actual.Length} != expected {expected.Length}");
+
         for (int i = 0; i < expected.Length; i++)
         {
             if (expected[i] != actual[i])
@@ -121,14 +128,17 @@ public sealed class BattleHarness
         }
     }
 
-    private static string Sha1Hex(byte[] data) => Convert.ToHexString(SHA1.HashData(data)).ToLowerInvariant();
+    private static string Sha1Hex(byte[] data)
+    {
+        return Convert.ToHexString(SHA1.HashData(data)).ToLowerInvariant();
+    }
 
     // ----- entry point -----
 
     public int Run()
     {
         Console.WriteLine($"== CHDSharp battle test vs {_chdman.VersionBanner()}");
-        Console.WriteLine($"== seed={_seed} quick={_quick} out={_outDir}");
+        Console.WriteLine($"== seed={_seed} quick={_quick} out={OutDir}");
         Console.WriteLine();
 
         RunRawEncodeSuite();
@@ -139,21 +149,24 @@ public sealed class BattleHarness
         RunInfoSuite();
 
         WriteReport();
-        return _checks.Count(c => !c.Passed && !c.Skipped);
+        return _checks.Count(c => c is { Passed: false, Skipped: false });
     }
 
     private void WriteReport()
     {
-        var path = Path.Combine(_outDir, "report.txt");
+        var path = Path.Combine(OutDir, "report.txt");
         var sb = new System.Text.StringBuilder();
         sb.AppendLine($"CHDSharp battle test report  ({_chdman.VersionBanner()})");
         sb.AppendLine($"seed={_seed} quick={_quick}  {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         sb.AppendLine();
         var failed = 0;
-        foreach (var c in _checks.OrderBy(c => c.Suite).ThenBy(c => c.Name))
+        foreach (var c in _checks.OrderBy(c => c.Suite, StringComparer.Ordinal).ThenBy(c => c.Name, StringComparer.Ordinal))
         {
             if (!c.Passed)
+            {
                 failed++;
+            }
+
             var status = c.Skipped ? "SKIP" : c.Passed ? "PASS" : "FAIL";
             sb.AppendLine($"[{status}] {c.Suite} | {c.Name} | {c.Detail} | {c.Seconds:N1}s");
         }
@@ -174,17 +187,17 @@ public sealed class BattleHarness
     private string SummaryText()
     {
         var sb = new System.Text.StringBuilder();
-        foreach (var group in _checks.GroupBy(c => c.Suite).OrderBy(g => g.Key))
+        foreach (var group in _checks.GroupBy(c => c.Suite, StringComparer.Ordinal).OrderBy(g => g.Key, StringComparer.Ordinal))
         {
             var pass = group.Count(c => c.Passed);
-            var fail = group.Count(c => !c.Passed && !c.Skipped);
+            var fail = group.Count(c => c is { Passed: false, Skipped: false });
             var skip = group.Count(c => c.Skipped);
             sb.AppendLine($"{group.Key,-28} {pass,4} passed  {fail,4} failed  {skip,4} skipped");
         }
 
         sb.AppendLine(new string('-', 56));
         sb.AppendLine($"TOTAL {(string.IsNullOrEmpty(_checks[0].Suite) ? 0 : _checks.Count),4} checks: " +
-                      $"{_checks.Count(c => c.Passed)} passed, {_checks.Count(c => !c.Passed && !c.Skipped)} failed, {_checks.Count(c => c.Skipped)} skipped");
+                      $"{_checks.Count(c => c.Passed)} passed, {_checks.Count(c => c is { Passed: false, Skipped: false })} failed, {_checks.Count(c => c.Skipped)} skipped");
         return sb.ToString();
     }
 
@@ -192,7 +205,7 @@ public sealed class BattleHarness
     {
         try
         {
-            Directory.Delete(_outDir, recursive: true);
+            Directory.Delete(OutDir, recursive: true);
         }
         catch
         {
@@ -209,25 +222,25 @@ public sealed class BattleHarness
 
     private void RunRawEncodeSuite()
     {
-        var m = 1024 * 1024;
+        const int m = 1024 * 1024;
         var full = new[]
         {
             new RawConfig("zlib", 4096, 512), new RawConfig("zstd", 4096, 512), new RawConfig("lzma", 4096, 512),
             new RawConfig("huff", 4096, 512), new RawConfig("flac", 4096, 512), new RawConfig("zlib,zstd,lzma", 4096, 512),
-            new RawConfig("none", 4096, 512), new RawConfig("zlib", 65536, 512), new RawConfig("zlib", 4096, 4096),
+            new RawConfig("none", 4096, 512), new RawConfig("zlib", 65536, 512), new RawConfig("zlib", 4096, 4096)
         };
         var core = new[]
         {
             new RawConfig("zlib", 4096, 512), new RawConfig("zstd", 4096, 512), new RawConfig("lzma", 4096, 512),
-            new RawConfig("zlib,zstd,lzma", 4096, 512), new RawConfig("none", 4096, 512), new RawConfig("zlib", 65536, 512),
+            new RawConfig("zlib,zstd,lzma", 4096, 512), new RawConfig("none", 4096, 512), new RawConfig("zlib", 65536, 512)
         };
         var aligned512 = new[]
         {
-            new RawConfig("zlib", 4096, 512), new RawConfig("none", 4096, 512), new RawConfig("zlib", 65536, 512),
+            new RawConfig("zlib", 4096, 512), new RawConfig("none", 4096, 512), new RawConfig("zlib", 65536, 512)
         };
         var oursOnly = new[]
         {
-            new RawConfig("zlib", 4096, 512), new RawConfig("none", 4096, 512), new RawConfig("zlib", 4096, 4096),
+            new RawConfig("zlib", 4096, 512), new RawConfig("none", 4096, 512), new RawConfig("zlib", 4096, 4096)
         };
 
         List<(string Name, byte[] Data, RawConfig[] Configs)> inputs;
@@ -239,7 +252,7 @@ public sealed class BattleHarness
                 ("random", TestDataGenerator.Random(128 * 1024, _seed), [new RawConfig("zlib", 4096, 512), new RawConfig("zstd", 4096, 512), new RawConfig("zlib", 65536, 512)]),
                 ("mixed", TestDataGenerator.Mixed(256 * 1024, _seed), [new RawConfig("zlib", 4096, 512), new RawConfig("zstd", 4096, 512), new RawConfig("lzma", 4096, 512), new RawConfig("none", 4096, 512)]),
                 ("pcm16", TestDataGenerator.Pcm16(64 * 1024, _seed), [new RawConfig("flac", 4096, 512)]),
-                ("tiny100", TestDataGenerator.Random(100, _seed), [new RawConfig("zlib", 4096, 512)]),
+                ("tiny100", TestDataGenerator.Random(100, _seed), [new RawConfig("zlib", 4096, 512)])
             ];
         }
         else
@@ -255,13 +268,13 @@ public sealed class BattleHarness
                 ("pcm16", TestDataGenerator.Pcm16(512 * 1024, _seed), full),
                 ("unaligned", TestDataGenerator.Random(1_000_448, _seed), aligned512),
                 ("tiny1", TestDataGenerator.Random(1, _seed), oursOnly),
-                ("tiny100", TestDataGenerator.Random(100, _seed), oursOnly),
+                ("tiny100", TestDataGenerator.Random(100, _seed), oursOnly)
             ];
         }
 
         foreach (var (name, data, configs) in inputs)
-            foreach (var cfg in configs)
-                RawEncodeCase(name, data, cfg);
+        foreach (var cfg in configs)
+            RawEncodeCase(name, data, cfg);
     }
 
     private void RawEncodeCase(string inputName, byte[] data, RawConfig cfg)
@@ -275,8 +288,10 @@ public sealed class BattleHarness
         File.WriteAllBytes(src, data);
 
         var slug = cfg.Codecs.Replace(',', '-');
-        var ourChd = Path.Combine(dir, $"{slug}-{cfg.HunkBytes}.ours.chd");
-        var refChd = Path.Combine(dir, $"{slug}-{cfg.HunkBytes}.ref.chd");
+        // include the unit size so zlib(4096/512) and zlib(4096/4096) don't collide on
+        // the same {slug}-{hunk} filename (the later case used to overwrite the earlier one)
+        var ourChd = Path.Combine(dir, $"{slug}-{cfg.HunkBytes}-{cfg.UnitBytes}.ours.chd");
+        var refChd = Path.Combine(dir, $"{slug}-{cfg.HunkBytes}-{cfg.UnitBytes}.ref.chd");
 
         Check(suite, "encode (ours)", () =>
         {
@@ -293,6 +308,7 @@ public sealed class BattleHarness
                     "-hs", cfg.HunkBytes.ToString(), "-us", cfg.UnitBytes.ToString(), "-f");
                 if (r.ExitCode != 0)
                     throw new CheckSkippedException($"chdman rejected config: {r.Combined.Trim()}");
+
                 refCreated = true;
             });
         }
@@ -352,7 +368,7 @@ public sealed class BattleHarness
             ChdPath = ourChd,
             Expected = data,
             IsCd = false,
-            CodecLabel = cfg.Codecs,
+            CodecLabel = cfg.Codecs
         });
         if (refCreated)
         {
@@ -363,7 +379,7 @@ public sealed class BattleHarness
                 ChdPath = refChd,
                 Expected = data,
                 IsCd = false,
-                CodecLabel = cfg.Codecs,
+                CodecLabel = cfg.Codecs
             });
         }
     }
@@ -387,8 +403,8 @@ public sealed class BattleHarness
                 .ToArray();
 
         foreach (var (label, input) in new[] { ("cd-mixed", mixedCue), ("cd-audio", audioCue), ("disc-iso", isoPath) })
-            foreach (var cfg in configs)
-                CdEncodeCase(label, input, cfg);
+        foreach (var cfg in configs)
+            CdEncodeCase(label, input, cfg);
     }
 
     private void CdEncodeCase(string inputName, string inputPath, RawConfig cfg)
@@ -399,8 +415,9 @@ public sealed class BattleHarness
         Directory.CreateDirectory(dir);
 
         var slug = cfg.Codecs.Replace(',', '-');
-        var ourChd = Path.Combine(dir, $"{slug}-{cfg.HunkBytes}.ours.chd");
-        var refChd = Path.Combine(dir, $"{slug}-{cfg.HunkBytes}.ref.chd");
+        // include the unit size (keeps CD filenames unambiguous across hunk sizes)
+        var ourChd = Path.Combine(dir, $"{slug}-{cfg.HunkBytes}-{cfg.UnitBytes}.ours.chd");
+        var refChd = Path.Combine(dir, $"{slug}-{cfg.HunkBytes}-{cfg.UnitBytes}.ref.chd");
 
         Check(suite, "encode (ours)", () =>
         {
@@ -415,6 +432,7 @@ public sealed class BattleHarness
                 "-hs", cfg.HunkBytes.ToString(), "-f");
             if (r.ExitCode != 0)
                 throw new CheckSkippedException($"chdman rejected config: {r.Combined.Trim()}");
+
             refCreated = true;
         });
 
@@ -469,7 +487,7 @@ public sealed class BattleHarness
                 ChdPath = ourChd,
                 Expected = refExtract,
                 IsCd = true,
-                CodecLabel = cfg.Codecs,
+                CodecLabel = cfg.Codecs
             });
             AddAsset(new Asset
             {
@@ -478,7 +496,7 @@ public sealed class BattleHarness
                 ChdPath = refChd,
                 Expected = refExtract,
                 IsCd = true,
-                CodecLabel = cfg.Codecs,
+                CodecLabel = cfg.Codecs
             });
         }
         else
@@ -492,12 +510,12 @@ public sealed class BattleHarness
 
     private void RunDeltaSuite()
     {
-        var suite = "delta";
+        const string suite = "delta";
         var dir = Path.Combine(_workDir, "delta");
         Directory.CreateDirectory(dir);
 
-        var parentRef = _assets.FirstOrDefault(a => a.Key == "mixed|zlib(4096/512)|ref");
-        var parentOurs = _assets.FirstOrDefault(a => a.Key == "mixed|zlib(4096/512)|ours");
+        var parentRef = _assets.FirstOrDefault(a => string.Equals(a.Key, "mixed|zlib(4096/512)|ref", StringComparison.Ordinal));
+        var parentOurs = _assets.FirstOrDefault(a => string.Equals(a.Key, "mixed|zlib(4096/512)|ours", StringComparison.Ordinal));
         var mixedSrc = parentRef?.Expected ?? parentOurs?.Expected;
         if (parentRef == null || parentOurs == null || mixedSrc == null)
         {
@@ -509,13 +527,27 @@ public sealed class BattleHarness
         if (!File.Exists(src))
             File.WriteAllBytes(src, mixedSrc);
 
+        // the child must match the parent's stored hunk/unit sizes (both chdman and our
+        // ParentMap reject a mismatch), so read them from the actual parent CHD rather than
+        // hardcoding them
+        uint hunkBytes = 4096, unitBytes = 512;
+        var parentOpen = ChdFile.Open(parentRef.ChdPath, out var parentChd);
+        if (parentOpen == ChdError.Chderrnone && parentChd != null)
+        {
+            using (parentChd)
+            {
+                hunkBytes = parentChd.HunkBytes;
+                unitBytes = parentChd.UnitBytes;
+            }
+        }
+
         // --- child of chdman parent: byte-compare ours vs chdman ---
         var childOurs = Path.Combine(dir, "child-of-chdman.ours.chd");
         var childRef = Path.Combine(dir, "child-of-chdman.ref.chd");
 
         Check(suite, "child encode (ours, parent=chdman)", () =>
         {
-            ChdEncoder.EncodeRaw(src, childOurs, 4096, 512, [CodecTags.Zlib],
+            ChdEncoder.EncodeRaw(src, childOurs, hunkBytes, unitBytes, [CodecTags.Zlib],
                 new ChdEncodeOptions { ParentPath = parentRef.ChdPath });
             Assert(File.Exists(childOurs), "output file missing");
         });
@@ -523,10 +555,12 @@ public sealed class BattleHarness
         var refCreated = false;
         Check(suite, "chdman createraw -op", () =>
         {
-            var r = _chdman.Run("createraw", "-i", src, "-o", childRef, "-c", "zlib", "-hs", "4096", "-us", "512",
+            var r = _chdman.Run("createraw", "-i", src, "-o", childRef, "-c", "zlib",
+                "-hs", hunkBytes.ToString(), "-us", unitBytes.ToString(),
                 "-op", parentRef.ChdPath, "-f");
             if (r.ExitCode != 0)
                 throw new CheckSkippedException($"chdman rejected config: {r.Combined.Trim()}");
+
             refCreated = true;
         });
 
@@ -574,8 +608,8 @@ public sealed class BattleHarness
             });
 
         // a parent with different content must be rejected
-        var wrongParent = _assets.FirstOrDefault(a => a.Key == "random x zlib(4096/512)|ref")
-                          ?? _assets.FirstOrDefault(a => a.Key == "pattern x zlib(4096/512)|ref");
+        var wrongParent = _assets.FirstOrDefault(a => string.Equals(a.Key, "random x zlib(4096/512)|ref", StringComparison.Ordinal))
+                          ?? _assets.FirstOrDefault(a => string.Equals(a.Key, "pattern x zlib(4096/512)|ref", StringComparison.Ordinal));
         if (wrongParent != null)
         {
             Check(suite, "wrong parent rejected (ours)", () =>
@@ -598,17 +632,19 @@ public sealed class BattleHarness
         var refCreated2 = false;
         Check(suite, "chdman createraw -op (parent=ours)", () =>
         {
-            var r = _chdman.Run("createraw", "-i", src, "-o", child2, "-c", "zlib", "-hs", "4096", "-us", "512",
+            var r = _chdman.Run("createraw", "-i", src, "-o", child2, "-c", "zlib",
+                "-hs", hunkBytes.ToString(), "-us", unitBytes.ToString(),
                 "-op", parentOurs.ChdPath, "-f");
             if (r.ExitCode != 0)
                 throw new CheckSkippedException($"chdman rejected config: {r.Combined.Trim()}");
+
             refCreated2 = true;
         });
 
         var child3 = Path.Combine(dir, "child-of-ours.ours.chd");
         Check(suite, "child encode (ours, parent=ours)", () =>
         {
-            ChdEncoder.EncodeRaw(src, child3, 4096, 512, [CodecTags.Zlib],
+            ChdEncoder.EncodeRaw(src, child3, hunkBytes, unitBytes, [CodecTags.Zlib],
                 new ChdEncodeOptions { ParentPath = parentOurs.ChdPath });
         });
 
@@ -643,7 +679,7 @@ public sealed class BattleHarness
             ParentPath = parentRef.ChdPath,
             Expected = mixedSrc,
             IsCd = false,
-            CodecLabel = "zlib",
+            CodecLabel = "zlib"
         });
         if (refCreated)
         {
@@ -655,7 +691,7 @@ public sealed class BattleHarness
                 ParentPath = parentRef.ChdPath,
                 Expected = mixedSrc,
                 IsCd = false,
-                CodecLabel = "zlib",
+                CodecLabel = "zlib"
             });
         }
 
@@ -667,7 +703,7 @@ public sealed class BattleHarness
             ParentPath = parentOurs.ChdPath,
             Expected = mixedSrc,
             IsCd = false,
-            CodecLabel = "zlib",
+            CodecLabel = "zlib"
         });
         if (refCreated2)
         {
@@ -679,7 +715,7 @@ public sealed class BattleHarness
                 ParentPath = parentOurs.ChdPath,
                 Expected = mixedSrc,
                 IsCd = false,
-                CodecLabel = "zlib",
+                CodecLabel = "zlib"
             });
         }
     }
@@ -688,11 +724,11 @@ public sealed class BattleHarness
 
     private void RunCopySuite()
     {
-        var suite = "copy";
+        const string suite = "copy";
         var dir = Path.Combine(_workDir, "copy");
         Directory.CreateDirectory(dir);
 
-        var srcAsset = _assets.FirstOrDefault(a => a.Key == "mixed x zlib(4096/512)|ours");
+        var srcAsset = _assets.FirstOrDefault(a => string.Equals(a.Key, "mixed x zlib(4096/512)|ours", StringComparison.Ordinal));
         if (srcAsset == null)
         {
             Console.WriteLine($"[SKIP] {suite} — 'mixed x zlib(4096/512)' asset missing, skipping copy suite");
@@ -731,6 +767,7 @@ public sealed class BattleHarness
                 var r = _chdman.Run("copy", "-i", srcAsset.ChdPath, "-o", refCopy, "-c", target, "-f");
                 if (r.ExitCode != 0)
                     throw new CheckSkippedException($"chdman rejected config: {r.Combined.Trim()}");
+
                 refCreated = true;
             });
             if (refCreated)
@@ -751,7 +788,7 @@ public sealed class BattleHarness
                 ChdPath = ourCopy,
                 Expected = srcAsset.Expected,
                 IsCd = false,
-                CodecLabel = target,
+                CodecLabel = target
             });
             if (refCreated)
             {
@@ -762,16 +799,16 @@ public sealed class BattleHarness
                     ChdPath = refCopy,
                     Expected = srcAsset.Expected,
                     IsCd = false,
-                    CodecLabel = target,
+                    CodecLabel = target
                 });
             }
         }
 
         // CD copy: cdzl -> cdfl
-        var cdSrc = _assets.FirstOrDefault(a => a.Key == "cd-mixed x cdzl(19584/2448)|ours");
+        var cdSrc = _assets.FirstOrDefault(a => string.Equals(a.Key, "cd-mixed x cdzl(19584/2448)|ours", StringComparison.Ordinal));
         if (cdSrc != null && !_quick)
         {
-            var suite2 = $"{suite} cd cdzl -> cdfl";
+            const string suite2 = $"{suite} cd cdzl -> cdfl";
             var ourCdCopy = Path.Combine(dir, "cd-cdfl.ours.chd");
             var refCdCopy = Path.Combine(dir, "cd-cdfl.ref.chd");
 
@@ -792,6 +829,7 @@ public sealed class BattleHarness
                 var r = _chdman.Run("copy", "-i", cdSrc.ChdPath, "-o", refCdCopy, "-c", "cdfl", "-f");
                 if (r.ExitCode != 0)
                     throw new CheckSkippedException($"chdman rejected config: {r.Combined.Trim()}");
+
                 refCreated = true;
             });
             if (refCreated)
@@ -811,15 +849,15 @@ public sealed class BattleHarness
                 ChdPath = ourCdCopy,
                 Expected = cdSrc.Expected,
                 IsCd = true,
-                CodecLabel = "cdfl",
+                CodecLabel = "cdfl"
             });
         }
 
         // child copy: delta child -> zlib standalone, then a copy of the child
-        var child = _assets.FirstOrDefault(a => a.Key == "delta|child-of-chdman|ours");
-        if (child != null && child.ParentPath != null)
+        var child = _assets.FirstOrDefault(a => string.Equals(a.Key, "delta|child-of-chdman|ours", StringComparison.Ordinal));
+        if (child is { ParentPath: not null })
         {
-            var suite2 = $"{suite} child";
+            const string suite2 = $"{suite} child";
             var childCopy = Path.Combine(dir, "child-copy.ours.chd");
             Check(suite2, "copy child (ours, SourceParentPath)", () =>
             {
@@ -840,7 +878,7 @@ public sealed class BattleHarness
                 ChdPath = childCopy,
                 Expected = child.Expected,
                 IsCd = false,
-                CodecLabel = "zlib",
+                CodecLabel = "zlib"
             });
         }
     }
@@ -890,7 +928,7 @@ public sealed class BattleHarness
                 var hunk = (ulong)chd.HunkBytes;
                 var offsets = new List<ulong>
                 {
-                    0, 1, hunk - 1, hunk, hunk + 1, hunk * 2 + 137, len / 2, len - 100, len - 1,
+                    0, 1, hunk - 1, hunk, hunk + 1, hunk * 2 + 137, len / 2, len - 100, len - 1
                 };
                 foreach (var o in offsets.Where(o => o < len).Distinct())
                 {
@@ -978,7 +1016,7 @@ public sealed class BattleHarness
         return File.ReadAllBytes(outPath);
     }
 
-    private byte[] ReadAllBytes(string chdPath, string? parentPath = null)
+    private static byte[] ReadAllBytes(string chdPath, string? parentPath = null)
     {
         var err = ChdFile.Open(chdPath, parentPath, out var chd);
         Assert(err == ChdError.Chderrnone && chd != null, $"Open: {err}");
@@ -1003,7 +1041,7 @@ public sealed class BattleHarness
         var info = _chdman.Info(refChd);
         Assert(info != null, "chdman info failed");
 
-        Assert(header.Version == (uint)info.Version, $"version {header.Version} != chdman {info.Version}");
+        Assert(info != null && header.Version == (uint)info.Version, $"version {header.Version} != chdman {info.Version}");
         Assert(header.TotalBytes == info.LogicalBytes, $"logical size {header.TotalBytes} != chdman {info.LogicalBytes}");
         Assert(header.HunkBytes == info.HunkBytes, $"hunk size {header.HunkBytes} != chdman {info.HunkBytes}");
         Assert(header.TotalHunks == info.TotalHunks, $"hunks {header.TotalHunks} != chdman {info.TotalHunks}");
@@ -1011,48 +1049,52 @@ public sealed class BattleHarness
         Assert(header.UnitCount == info.TotalUnits, $"units {header.UnitCount} != chdman {info.TotalUnits}");
 
         var expectedCompression = ChdmanCodecLabel(header.Compression);
-        Assert(NormalizeChdmanCodec(info.Compression) == expectedCompression,
+        Assert(string.Equals(NormalizeChdmanCodec(info.Compression), expectedCompression, StringComparison.Ordinal),
             $"compression '{info.Compression}' (normalized '{NormalizeChdmanCodec(info.Compression)}') != ours '{expectedCompression}'");
 
         if (info.Sha1 != null)
         {
             var sha1 = header.Sha1 != null && !IsAllZero(header.Sha1) ? ToHex(header.Sha1) : null;
-            Assert(sha1 != null && sha1 == info.Sha1, $"combined SHA1 {sha1 ?? "(none)"} != chdman {info.Sha1}");
+            Assert(sha1 != null && string.Equals(sha1, info.Sha1, StringComparison.Ordinal), $"combined SHA1 {sha1 ?? "(none)"} != chdman {info.Sha1}");
         }
 
         if (info.DataSha1 != null)
         {
             var rawSha1 = header.RawSha1 != null && !IsAllZero(header.RawSha1) ? ToHex(header.RawSha1) : null;
-            Assert(rawSha1 != null && rawSha1 == info.DataSha1, $"raw SHA1 {rawSha1 ?? "(none)"} != chdman {info.DataSha1}");
+            Assert(rawSha1 != null && string.Equals(rawSha1, info.DataSha1, StringComparison.Ordinal), $"raw SHA1 {rawSha1 ?? "(none)"} != chdman {info.DataSha1}");
         }
 
         if (info.ParentSha1 != null)
         {
             var parentSha1 = header.ParentSha1 != null && !IsAllZero(header.ParentSha1) ? ToHex(header.ParentSha1) : null;
-            Assert(parentSha1 != null && parentSha1 == info.ParentSha1, $"parent SHA1 {parentSha1 ?? "(none)"} != chdman {info.ParentSha1}");
+            Assert(parentSha1 != null && string.Equals(parentSha1, info.ParentSha1, StringComparison.Ordinal), $"parent SHA1 {parentSha1 ?? "(none)"} != chdman {info.ParentSha1}");
         }
     }
 
-    private static string ToHex(byte[] a) => Convert.ToHexString(a).ToLowerInvariant();
+    private static string ToHex(byte[] a)
+    {
+        return Convert.ToHexString(a).ToLowerInvariant();
+    }
 
     private static bool IsAllZero(byte[] a)
     {
         foreach (var b in a)
             if (b != 0)
                 return false;
+
         return true;
     }
 
     /// <summary>Maps our codec tag names to chdman's info names: chdman prints the tag itself
-/// ("cdzl (CD Deflate)"), except 'huff' which it spells 'Huffman'. An all-zero slot list
-/// (uncompressed CHD) is "none".</summary>
+    /// ("cdzl (CD Deflate)", "huff (Huffman)"), so the tag string ("cdzl", "huff") is the
+    /// normalized short name. An all-zero slot list (uncompressed CHD) is "none".</summary>
     public static string ChdmanCodecLabel(IReadOnlyList<ChdCodec> tags)
     {
         var names = tags.Where(t => (uint)t != 0).Select(t => CodecTags.ToString((uint)t)).ToList();
         if (names.Count == 0)
             return "none";
 
-        return string.Join(",", names.Select(t => t == "huff" ? "huffman" : t));
+        return string.Join(",", names);
     }
 
     /// <summary>Normalizes chdman's info compression text ("zlib (Deflate), zstd (Zstandard)" → "zlib,zstd").</summary>

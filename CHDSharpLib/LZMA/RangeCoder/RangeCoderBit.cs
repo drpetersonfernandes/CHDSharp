@@ -7,7 +7,7 @@ internal struct BitDecoder
     private const int KNumBitModelTotalBits = 11;
 
     /// <summary>Total probability range (2048).</summary>
-    private const uint KBitModelTotal = (1 << KNumBitModelTotalBits);
+    private const uint KBitModelTotal = 1 << KNumBitModelTotalBits;
 
     private const int KNumMoveBits = 5;
 
@@ -22,7 +22,7 @@ internal struct BitDecoder
         }
         else
         {
-            _prob -= (_prob) >> numMoveBits;
+            _prob -= _prob >> numMoveBits;
         }
     }
 
@@ -53,7 +53,7 @@ internal struct BitDecoder
         {
             rangeDecoder.Range -= newBound;
             rangeDecoder.Code -= newBound;
-            _prob -= (_prob) >> KNumMoveBits;
+            _prob -= _prob >> KNumMoveBits;
             if (rangeDecoder.Range < Decoder.KTopValue)
             {
                 rangeDecoder.Code = (rangeDecoder.Code << 8) | rangeDecoder.ReadByteChecked();

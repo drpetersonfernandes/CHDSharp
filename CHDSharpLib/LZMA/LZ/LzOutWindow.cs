@@ -60,7 +60,7 @@ internal class OutWindow
     internal void Train(Stream stream)
     {
         var len = stream.Length;
-        var size = (len < _windowSize) ? (int)len : _windowSize;
+        var size = len < _windowSize ? (int)len : _windowSize;
         stream.Position = len - size;
         Total = 0;
         Limit = size;

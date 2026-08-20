@@ -120,6 +120,6 @@ internal class Crc
     /// <returns><c>true</c> if the computed digest matches <paramref name="digest"/>; otherwise <c>false</c>.</returns>
     public static bool VerifyDigest(uint digest, byte[] data, uint offset, uint size)
     {
-        return (CalculateDigest(data, offset, size) == digest);
+        return CalculateDigest(data, offset, size) == digest;
     }
 }

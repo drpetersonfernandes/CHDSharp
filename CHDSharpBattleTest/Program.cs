@@ -108,6 +108,7 @@ internal static class Program
             var candidate = Path.Combine(dir.FullName, exeName);
             if (File.Exists(candidate))
                 return candidate;
+
             dir = dir.Parent;
         }
 

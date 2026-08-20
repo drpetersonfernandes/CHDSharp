@@ -67,7 +67,7 @@ internal static class ChdMetaData
 
         foreach (var e in internalEntries)
         {
-            entries.Add(new ChdMetadataEntry((e.Tag), e.Data) { Flags = e.Flags });
+            entries.Add(new ChdMetadataEntry(e.Tag, e.Data) { Flags = e.Flags });
         }
 
         return ChdError.Chderrnone;

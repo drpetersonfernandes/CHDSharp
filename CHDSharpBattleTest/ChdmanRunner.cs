@@ -32,7 +32,7 @@ public sealed class ChdmanRunner
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
-            CreateNoWindow = true,
+            CreateNoWindow = true
         };
         psi.ArgumentList.Add(command);
         foreach (var a in args)
@@ -109,12 +109,6 @@ public sealed class ChdmanRunner
         if (!fields.TryGetValue("File Version", out var versionText) || !int.TryParse(versionText, out var version))
             return null;
 
-        static ulong ParseNum(string text)
-        {
-            text = text.Replace(",", "", StringComparison.Ordinal).Split(' ')[0];
-            return ulong.Parse(text, CultureInfo.InvariantCulture);
-        }
-
         return new ChdmanInfo(
             Version: version,
             LogicalBytes: fields.TryGetValue("Logical size", out var ls) ? ParseNum(ls) : 0,
@@ -122,13 +116,19 @@ public sealed class ChdmanRunner
             TotalHunks: fields.TryGetValue("Total Hunks", out var th) ? (uint)ParseNum(th) : 0,
             UnitBytes: fields.TryGetValue("Unit Size", out var us) ? (uint)ParseNum(us) : 0,
             TotalUnits: fields.TryGetValue("Total Units", out var tu) ? (uint)ParseNum(tu) : 0,
-            Compression: fields.TryGetValue("Compression", out var c) ? c : "none",
+            Compression: fields.GetValueOrDefault("Compression", "none"),
             ChdSize: fields.TryGetValue("CHD size", out var cs) ? (long)ParseNum(cs) : 0,
             Sha1: NormalizeHash(fields, "SHA1"),
             DataSha1: NormalizeHash(fields, "Data SHA1"),
             Md5: NormalizeHash(fields, "MD5"),
             ParentSha1: NormalizeHash(fields, "Parent SHA1"),
             ParentMd5: NormalizeHash(fields, "Parent MD5"));
+
+        static ulong ParseNum(string text)
+        {
+            text = text.Replace(",", "", StringComparison.Ordinal).Split(' ')[0];
+            return ulong.Parse(text, CultureInfo.InvariantCulture);
+        }
     }
 
     private static string? NormalizeHash(Dictionary<string, string> fields, string key)

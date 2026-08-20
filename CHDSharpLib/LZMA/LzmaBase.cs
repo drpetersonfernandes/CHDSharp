@@ -41,7 +41,7 @@ internal abstract class Base
     internal const uint KAlignTableSize = 1 << KNumAlignBits;
 
     /// <summary>Alignment mask.</summary>
-    internal const uint KAlignMask = (KAlignTableSize - 1);
+    internal const uint KAlignMask = KAlignTableSize - 1;
 
     /// <summary>Start position model index.</summary>
     internal const uint KStartPosModelIndex = 4;
@@ -65,13 +65,13 @@ internal abstract class Base
     internal const int KNumPosStatesBitsMax = 4;
 
     /// <summary>Maximum position states.</summary>
-    internal const uint KNumPosStatesMax = (1 << KNumPosStatesBitsMax);
+    internal const uint KNumPosStatesMax = 1 << KNumPosStatesBitsMax;
 
     /// <summary>Maximum position state bits (encoding).</summary>
     internal const int KNumPosStatesBitsEncodingMax = 4;
 
     /// <summary>Maximum position states (encoding).</summary>
-    internal const uint KNumPosStatesEncodingMax = (1 << KNumPosStatesBitsEncodingMax);
+    internal const uint KNumPosStatesEncodingMax = 1 << KNumPosStatesBitsEncodingMax;
 
     /// <summary>Number of low length bits.</summary>
     internal const int KNumLowLenBits = 3;

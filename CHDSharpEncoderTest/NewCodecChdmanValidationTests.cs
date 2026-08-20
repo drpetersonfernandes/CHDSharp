@@ -47,8 +47,8 @@ public class NewCodecChdmanValidationTests : IDisposable
         {
             source[i] = (byte)rng.Next(0, 0x8000); // left sample (LE)
             source[i + 1] = (byte)(rng.Next(0, 0x8000) >> 8);
-            source[i + 2] = (byte)((i / 4) % 0x7FFF); // right ramp
-            source[i + 3] = (byte)(((i / 4) % 0x7FFF) >> 8);
+            source[i + 2] = (byte)(i / 4 % 0x7FFF); // right ramp
+            source[i + 3] = (byte)((i / 4 % 0x7FFF) >> 8);
         }
 
         string srcPath = Path.Combine(_testDataDir, $"{codecName}_src.bin");

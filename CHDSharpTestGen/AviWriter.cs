@@ -161,7 +161,7 @@ internal static class AviWriter
         for (var f = 0; f < frames; f++)
         {
             var frame = new byte[width * height * 2];
-            var barX = (f * 3) % width;
+            var barX = f * 3 % width;
             for (var y = 0; y < height; y++)
             {
                 for (var x = 0; x < width; x++)
@@ -186,7 +186,7 @@ internal static class AviWriter
         double phase = 0;
         for (var i = 0; i < totalSamples; i++)
         {
-            phase += 2 * Math.PI * (440 + (i % sampleRate) / 200.0) / sampleRate;
+            phase += 2 * Math.PI * (440 + i % sampleRate / 200.0) / sampleRate;
             var s = (short)(Math.Sin(phase) * 10000);
             audio[i * 2] = (byte)s;
             audio[i * 2 + 1] = (byte)(s >> 8);

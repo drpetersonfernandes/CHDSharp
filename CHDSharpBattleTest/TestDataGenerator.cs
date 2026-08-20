@@ -10,7 +10,10 @@ public static class TestDataGenerator
 {
     // ----- raw inputs -----
 
-    public static byte[] Zeros(int size) => new byte[size];
+    public static byte[] Zeros(int size)
+    {
+        return new byte[size];
+    }
 
     public static byte[] Random(int size, int seed)
     {
@@ -27,7 +30,9 @@ public static class TestDataGenerator
 
         var b = new byte[size];
         for (int i = 0; i < b.Length; i++)
+        {
             b[i] = block[i % block.Length];
+        }
 
         return b;
     }
@@ -66,7 +71,7 @@ public static class TestDataGenerator
                 < 0.45 => (byte)common[rng.Next(common.Length)],
                 < 0.90 => (byte)all[rng.Next(all.Length)],
                 < 0.94 => (byte)' ',
-                _ => (byte)'\n',
+                _ => (byte)'\n'
             };
         }
 
@@ -85,7 +90,9 @@ public static class TestDataGenerator
         for (int i = 0; i < samples; i++)
         {
             if (i % 4096 == 0)
+            {
                 freq = 180 + rng.NextDouble() * 1200;
+            }
 
             phase += 2 * Math.PI * freq / 44100.0;
             var sample = (short)(Math.Sin(phase) * 11000 + (rng.NextDouble() - 0.5) * 400);
@@ -103,21 +110,39 @@ public static class TestDataGenerator
         var b = new byte[size];
         var pos = 0;
 
+        Fill(size / 4, (buf, o, n) => Array.Clear(buf, o, n));
+        Fill(size / 4, (buf, o, n) =>
+        {
+            var r = new byte[n];
+            rng.NextBytes(r);
+            Array.Copy(r, 0, buf, o, n);
+        });
+        Fill(size / 4, (buf, o, n) =>
+        {
+            var t = Text(n, seed + 7);
+            Array.Copy(t, 0, buf, o, n);
+        });
+        Fill(size / 8, (buf, o, n) =>
+        {
+            var p = Pattern(n, seed + 13);
+            Array.Copy(p, 0, buf, o, n);
+        });
+        Fill(size / 8, (buf, o, n) =>
+        {
+            var r = new byte[n];
+            rng.NextBytes(r);
+            Array.Copy(r, 0, buf, o, n);
+        });
+        Fill(size, (buf, o, n) => Array.Clear(buf, o, n));
+
+        return b;
+
         void Fill(int count, Action<byte[], int, int> writer)
         {
             var n = Math.Min(count, size - pos);
             writer(b, pos, n);
             pos += n;
         }
-
-        Fill(size / 4, (buf, o, n) => Array.Clear(buf, o, n));
-        Fill(size / 4, (buf, o, n) => { var r = new byte[n]; rng.NextBytes(r); Array.Copy(r, 0, buf, o, n); });
-        Fill(size / 4, (buf, o, n) => { var t = Text(n, seed + 7); Array.Copy(t, 0, buf, o, n); });
-        Fill(size / 8, (buf, o, n) => { var p = Pattern(n, seed + 13); Array.Copy(p, 0, buf, o, n); });
-        Fill(size / 8, (buf, o, n) => { var r = new byte[n]; rng.NextBytes(r); Array.Copy(r, 0, buf, o, n); });
-        Fill(size, (buf, o, n) => Array.Clear(buf, o, n));
-
-        return b;
     }
 
     // ----- CD image generation -----
@@ -129,9 +154,9 @@ public static class TestDataGenerator
         binPath = Path.Combine(dir, "cd-mixed.bin");
         var rng = new Random(seed);
 
-        const int track1Frames = 500;  // MODE1/2352
-        const int track2Frames = 300;  // AUDIO (with 150-frame pregap)
-        const int track3Frames = 300;  // MODE2/2352
+        const int track1Frames = 500; // MODE1/2352
+        const int track2Frames = 300; // AUDIO (with 150-frame pregap)
+        const int track3Frames = 300; // MODE2/2352
 
         using var fs = File.Create(binPath);
         int lba = 0;
@@ -181,11 +206,11 @@ public static class TestDataGenerator
             WriteAudioFrame(fs, f, rng, silent: false);
 
         fs.Flush();
-        File.WriteAllText(cuePath, $"""
-            FILE "cd-audio.bin" BINARY
-              TRACK 01 AUDIO
-                INDEX 01 00:00:00
-            """);
+        File.WriteAllText(cuePath, """
+                                   FILE "cd-audio.bin" BINARY
+                                     TRACK 01 AUDIO
+                                       INDEX 01 00:00:00
+                                   """);
     }
 
     /// <summary>Creates a 1 MB ISO-9660 image (single MODE1/2048 track source).</summary>
@@ -229,7 +254,10 @@ public static class TestDataGenerator
         rng.NextBytes(data);
         // a recognizable marker so track contents can be eyeballed in extracts
         for (int i = 0; i < data.Length; i += 137)
+        {
             data[i] = (byte)(i ^ salt);
+        }
+
         return data;
     }
 
@@ -253,13 +281,13 @@ public static class TestDataGenerator
     private static void WriteAudioFrame(Stream fs, int lba, Random rng, bool silent)
     {
         var frame = new byte[2352];
-        var phase = (lba * 37.0) % (2 * Math.PI);
+        var phase = lba * 37.0 % (2 * Math.PI);
         for (int s = 0; s < 588; s++)
         {
             short sample = silent
                 ? (short)0
                 : (short)(Math.Sin(phase + s * 0.035) * 9000 + (rng.NextDouble() - 0.5) * 300);
-            frame[s * 2] = (byte)sample;        // little-endian in the BIN
+            frame[s * 2] = (byte)sample; // little-endian in the BIN
             frame[s * 2 + 1] = (byte)(sample >> 8);
         }
 
@@ -270,12 +298,15 @@ public static class TestDataGenerator
     {
         frame[0] = 0x00;
         for (int i = 1; i < 11; i++)
+        {
             frame[i] = 0xFF;
+        }
+
         frame[11] = 0x00;
 
         var msf = lba + 150; // lead-in
         frame[12] = (byte)(msf / (60 * 75));
-        frame[13] = (byte)((msf / 75) % 60);
+        frame[13] = (byte)(msf / 75 % 60);
         frame[14] = (byte)(msf % 75);
         frame[15] = mode;
     }
@@ -283,7 +314,7 @@ public static class TestDataGenerator
     private static string FramesToMsf(int frames)
     {
         var m = frames / (60 * 75);
-        var s = (frames / 75) % 60;
+        var s = frames / 75 % 60;
         var f = frames % 75;
         return $"{m:00}:{s:00}:{f:00}";
     }

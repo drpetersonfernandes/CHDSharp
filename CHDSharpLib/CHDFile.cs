@@ -2483,7 +2483,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             if (err != ChdError.Chderrnone)
                 throw new InvalidDataException($"Failed to read hunk {i}: {err}");
 
-            var bytesToWrite = (i == HunkCount - 1)
+            var bytesToWrite = i == HunkCount - 1
                 ? (int)(TotalBytes - (ulong)i * HunkBytes)
                 : (int)HunkBytes;
             fs.Write(buf, 0, bytesToWrite);

@@ -51,7 +51,7 @@ internal class HuffmanDecoder
         _numcodes = numcodes;
         _maxbits = maxbits;
 
-        _lookup = buffLookup ?? (new ushort[(1 << maxbits)]);
+        _lookup = buffLookup ?? new ushort[1 << maxbits];
 
         _huffnode = new NodeT[numcodes];
 
@@ -86,7 +86,7 @@ internal class HuffmanDecoder
         _bitbuf.Remove((int)(entry & 0x1f));
 
         /* return the value */
-        return (entry >> 5);
+        return entry >> 5;
     }
 
     /// <summary>

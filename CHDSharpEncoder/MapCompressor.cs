@@ -57,7 +57,7 @@ public static class MapCompressor
             huff.CountSymbol(sym);
         huff.BuildTree();
 
-        var nbitsNeeded = (8 * 16) + (12 + Math.Max(Math.Max(lengthBits + 16, selfBits), parentBits)) * (int)hunkCount;
+        var nbitsNeeded = 8 * 16 + (12 + Math.Max(Math.Max(lengthBits + 16, selfBits), parentBits)) * (int)hunkCount;
         var bs = new BitStreamOut(nbitsNeeded / 8 + 1 + 256);
 
         huff.ExportTreeRle(bs);
@@ -168,8 +168,11 @@ public static class MapCompressor
     /// <summary>
     /// RLE-encodes the compression types, promoting SELF references to the compact
     /// SELF_0/SELF_1 forms and PARENT references to the compact PARENT_SELF/PARENT_0/PARENT_1
-    /// forms, and tracking the maximum referenced source hunk and parent unit indices
-    /// (mirrors MAME's compress_v5_map).
+    /// forms, and tracking the maximum referenced source hunk and parent unit indices.
+    /// Mirrors MAME's <c>compress_v5_map</c> RLE loop exactly: the run type is only written
+    /// when it changes (the decoder starts with <c>lastcomp = 0</c>), and the RLE count is the
+    /// full run length, so an all-<c>COMPRESSION_TYPE_0</c> image encodes as
+    /// <c>[RLE_LARGE, hi, lo]</c> with no leading type symbol.
     /// </summary>
     private static List<byte> RleEncode(MapEntry[] entries, uint hunkCount, uint hunkBytes, uint unitBytes,
         out uint maxSelf, out uint maxParent)
@@ -236,55 +239,47 @@ public static class MapCompressor
                 }
             }
 
+            // track repeats
             if (curcomp == lastcomp)
             {
                 count++;
             }
-            else
+
+            // if no repeat, or we're at the end, flush it
+            if (curcomp != lastcomp || hunknum == hunkCount - 1)
             {
-                Flush(count);
-                lastcomp = curcomp;
-                count = 1;
-            }
-        }
-
-        Flush(count);
-
-        return rleList;
-
-        void Flush(int totalCount)
-        {
-            if (totalCount == 0)
-                return;
-
-            rleList.Add(lastcomp);
-
-            var repCount = totalCount - 1;
-            while (repCount > 0)
-            {
-                switch (repCount)
+                while (count != 0)
                 {
-                    case < 3:
-                        rleList.Add(lastcomp);
-                        repCount--;
-                        break;
-                    case <= 3 + 15:
-                        rleList.Add(CompressionRleSmall);
-                        rleList.Add((byte)(repCount - 3));
-                        repCount = 0;
-                        break;
-                    default:
+                    if (count < 3)
                     {
-                        var n = Math.Min(repCount, 3 + 16 + 255);
-                        rleList.Add(CompressionRleLarge);
-                        rleList.Add((byte)((n - 3 - 16) >> 4));
-                        rleList.Add((byte)((n - 3 - 16) & 15));
-                        repCount -= n;
-                        break;
+                        rleList.Add(lastcomp);
+                        count--;
                     }
+                    else if (count <= 3 + 15)
+                    {
+                        rleList.Add(CompressionRleSmall);
+                        rleList.Add((byte)(count - 3));
+                        count = 0;
+                    }
+                    else
+                    {
+                        var thisCount = Math.Min(count, 3 + 16 + 255);
+                        rleList.Add(CompressionRleLarge);
+                        rleList.Add((byte)((thisCount - 3 - 16) >> 4));
+                        rleList.Add((byte)((thisCount - 3 - 16) & 15));
+                        count -= thisCount;
+                    }
+                }
+
+                if (curcomp != lastcomp)
+                {
+                    lastcomp = curcomp;
+                    rleList.Add(lastcomp);
                 }
             }
         }
+
+        return rleList;
     }
 
     private static byte BitsForValue(uint value)

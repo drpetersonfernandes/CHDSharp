@@ -187,12 +187,12 @@ internal static class ChdBlockRead
                 {
                     case ChdCodec.Lzma: return 23;
                     case ChdCodec.Zlib: return 1;
-                    case ChdCodec.Flac: return (me.Length == 41) ? 1 : 2;
+                    case ChdCodec.Flac: return me.Length == 41 ? 1 : 2;
                     case ChdCodec.Huffman: return 64;
 
                     case ChdCodec.Avhuff: return 1;
 
-                    case ChdCodec.Cdflac: return (me.Length == 15) ? 1 : 2;
+                    case ChdCodec.Cdflac: return me.Length == 15 ? 1 : 2;
                     case ChdCodec.Cdlzma: return 18;
                     case ChdCodec.Cdzlib: return 3;
                     default: return 1;

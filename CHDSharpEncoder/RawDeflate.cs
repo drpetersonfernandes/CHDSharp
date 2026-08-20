@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using ZLibDotNet;
 
 namespace CHDSharpEncoder;
 
@@ -10,18 +11,23 @@ public static class RawDeflate
     /// <returns>The compressed bytes, or <c>null</c> if compression did not reduce size.</returns>
     public static byte[]? Compress(byte[] data)
     {
-        using var ms = new MemoryStream(data.Length);
-        using (var ds = new DeflateStream(ms, CompressionLevel.SmallestSize, leaveOpen: true))
+        // raw DEFLATE with chdman's exact zlib parameters (deflateInit2 level=9, windowBits=-15,
+        // memLevel=8, default strategy). DeflateStream's output is byte-identical to chdman on
+        // most data but differs on some (e.g. certain CD audio hunks), so the zlib 1.3.1 port is
+        // used to guarantee byte-for-byte parity.
+        var zlib = new ZLib();
+        var output = new byte[zlib.CompressBound((uint)data.Length)];
+        var zs = new ZStream { Input = data, Output = output };
+        _ = zlib.DeflateInit(ref zs, ZLib.Z_BEST_COMPRESSION, ZLib.Z_DEFLATED, -15, 8, ZLib.Z_DEFAULT_STRATEGY);
+        int status;
+        do
         {
-            ds.Write(data, 0, data.Length);
-        }
+            status = zlib.Deflate(ref zs, ZLib.Z_FINISH);
+        } while (status == ZLib.Z_OK);
 
-        var result = ms.ToArray();
+        _ = zlib.DeflateEnd(ref zs);
 
-        if (HasZlibHeader(result))
-        {
-            result = result.AsSpan(2, result.Length - 6).ToArray();
-        }
+        var result = output.AsSpan(0, (int)zs.TotalOut).ToArray();
 
         if (result.Length >= data.Length)
             return null;
@@ -49,22 +55,5 @@ public static class RawDeflate
         }
 
         return result;
-    }
-
-    private static bool HasZlibHeader(byte[] data)
-    {
-        if (data.Length < 6)
-            return false;
-
-        var cmf = data[0];
-        var flg = data[1];
-
-        if (((cmf & 0x0F) != 8) || ((cmf >> 4) > 7))
-            return false;
-
-        if (((cmf * 256) + flg) % 31 != 0)
-            return false;
-
-        return true;
     }
 }

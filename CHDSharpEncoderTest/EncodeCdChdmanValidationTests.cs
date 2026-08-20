@@ -200,7 +200,7 @@ public class EncodeCdChdmanValidationTests : IDisposable
     private static string Msf(int frames)
     {
         int m = frames / (60 * 75);
-        int s = (frames / 75) % 60;
+        int s = frames / 75 % 60;
         int f = frames % 75;
         return $"{m:D2}:{s:D2}:{f:D2}";
     }

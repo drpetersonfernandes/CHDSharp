@@ -135,7 +135,7 @@ public class ReadSectorTests
 
         // The last LBA of the last track must read successfully.
         var last = chd.Tracks![^1];
-        var lastLba = (uint)((last.StartFrame + (ulong)last.Frames) - 1);
+        var lastLba = (uint)(last.StartFrame + (ulong)last.Frames - 1);
         Assert.Equal(ChdError.Chderrnone, chd.ReadSector(lastLba, sector));
     }
 }

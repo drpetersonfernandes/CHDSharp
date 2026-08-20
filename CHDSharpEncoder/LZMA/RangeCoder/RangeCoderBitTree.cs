@@ -1,9 +1,9 @@
 namespace CHDSharpEncoder.LZMA.RangeCoder;
 
 /// <summary>Bit-tree encoder using adaptive probability models, ported from the LZMA SDK (public domain). Supports forward and reverse bit ordering.</summary>
-internal struct BitTreeEncoder
+internal readonly struct BitTreeEncoder
 {
-    private BitEncoder[] _models;
+    private readonly BitEncoder[] _models;
     private readonly int _numBitLevels;
 
     internal BitTreeEncoder(int numBitLevels)
@@ -14,7 +14,7 @@ internal struct BitTreeEncoder
 
     internal void Init()
     {
-        for (uint i = 1; i < (1 << _numBitLevels); i++)
+        for (uint i = 1; i < 1 << _numBitLevels; i++)
         {
             _models[i].Init();
         }

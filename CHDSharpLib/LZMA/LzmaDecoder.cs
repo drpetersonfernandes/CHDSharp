@@ -329,7 +329,7 @@ internal class Decoder
                     if (posSlot >= Base.KStartPosModelIndex)
                     {
                         var numDirectBits = (int)((posSlot >> 1) - 1);
-                        _rep0 = ((2 | (posSlot & 1)) << numDirectBits);
+                        _rep0 = (2 | (posSlot & 1)) << numDirectBits;
                         if (posSlot < Base.KEndPosModelIndex)
                         {
                             _rep0 += BitTreeDecoder.ReverseDecode(_mPosDecoders,
@@ -337,8 +337,8 @@ internal class Decoder
                         }
                         else
                         {
-                            _rep0 += (rangeDecoder.DecodeDirectBits(
-                                numDirectBits - Base.KNumAlignBits) << Base.KNumAlignBits);
+                            _rep0 += rangeDecoder.DecodeDirectBits(
+                                numDirectBits - Base.KNumAlignBits) << Base.KNumAlignBits;
                             _rep0 += _mPosAlignDecoder.ReverseDecode(rangeDecoder);
                         }
                     }

@@ -162,7 +162,7 @@ public class ParallelEncodeTests : IDisposable
         var rng = new Random(12345);
         for (long h = 0; h < size; h += hunkBytes)
         {
-            if ((h / hunkBytes) % 3 == 0)
+            if (h / hunkBytes % 3 == 0)
                 rng.NextBytes(source.AsSpan((int)h, hunkBytes));
             else
                 Array.Fill(source, (byte)((h / hunkBytes) & 0xFF), (int)h, hunkBytes);

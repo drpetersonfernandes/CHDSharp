@@ -373,7 +373,7 @@ public static partial class Chd
             if (!deepCheck)
                 return ChdError.Chderrnone;
 
-            if ((chd.Totalblocks * (ulong)chd.Blocksize) != chd.Totalbytes)
+            if (chd.Totalblocks * (ulong)chd.Blocksize != chd.Totalbytes)
             {
                 LogBlockSizeMismatch(Log, chd.Totalblocks * (ulong)chd.Blocksize, chd.Totalbytes, null);
             }
@@ -388,7 +388,7 @@ public static partial class Chd
 
             ChdBlockRead.FindBlockReaders(chd);
             ChdBlockRead.FindRepeatedBlocks(chd);
-            var blocksToKeep = (1024 * 1024 * 512) / (int)chd.Blocksize;
+            var blocksToKeep = 1024 * 1024 * 512 / (int)chd.Blocksize;
             ChdBlockRead.KeepMostRepeatedBlocks(chd, blocksToKeep);
 
             valid = DecompressDataParallel(s, chd, out _, progress, cancellationToken);
@@ -456,7 +456,7 @@ public static partial class Chd
 
         ChdBlockRead.FindBlockReaders(chd);
         ChdBlockRead.FindRepeatedBlocks(chd);
-        var blocksToKeep = (1024 * 1024 * 512) / (int)chd.Blocksize;
+        var blocksToKeep = 1024 * 1024 * 512 / (int)chd.Blocksize;
         ChdBlockRead.KeepMostRepeatedBlocks(chd, blocksToKeep);
 
         var err = DecompressDataParallel(s, chd, out computedRawSha1, progress, cancellationToken, verifyHashes: false);
@@ -917,7 +917,7 @@ public static partial class Chd
             var arrPoolOut = new ArrayPool(chd.Blocksize);
             var arrPoolCache = new ArrayPool(chd.Blocksize);
 
-            var blocksToKeep = (1024 * 1024 * 512) / (int)chd.Blocksize;
+            var blocksToKeep = 1024 * 1024 * 512 / (int)chd.Blocksize;
             var aheadLock = new SemaphoreSlim(blocksToKeep, blocksToKeep);
 
             var producerThread = Task.Factory.StartNew(() =>
@@ -936,7 +936,7 @@ public static partial class Chd
                             break;
 
                         /* progress */
-                        if ((block % blockPercent) == 0)
+                        if (block % blockPercent == 0)
                         {
                             LogVerifyingPercent(Log, (long)block * 100 / chd.Totalblocks, null);
                         }

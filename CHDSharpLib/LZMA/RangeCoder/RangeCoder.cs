@@ -4,7 +4,7 @@ namespace CHDSharp.LZMA.RangeCoder;
 internal class Decoder
 {
     /// <summary>Top value used for range normalisation.</summary>
-    internal const uint KTopValue = (1 << 24);
+    internal const uint KTopValue = 1 << 24;
 
     /// <summary>Current range value.</summary>
     internal uint Range;

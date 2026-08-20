@@ -322,9 +322,9 @@ internal static class FlacFrameEncoder
             sum += Math.Abs((long)residual[i]);
         }
 
-        long mean = (count - order) > 0 ? sum / (count - order) : 0;
+        long mean = count - order > 0 ? sum / (count - order) : 0;
         int k = 0;
-        while ((1L << (k + 1)) <= mean && k < 14)
+        while (1L << (k + 1) <= mean && k < 14)
         {
             k++;
         }

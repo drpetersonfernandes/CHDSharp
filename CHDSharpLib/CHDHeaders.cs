@@ -171,7 +171,7 @@ internal static class ChdHeaders
 
             chd.Map[i].Offset = tmpu & 0xfffffffffff;
             chd.Map[i].Length = (uint)(tmpu >> 44);
-            chd.Map[i].Comptype = (chd.Map[i].Length == chd.Blocksize)
+            chd.Map[i].Comptype = chd.Map[i].Length == chd.Blocksize
                 ? CompressionType.Compressionnone
                 : CompressionType.Compressiontype0;
         }
@@ -239,7 +239,7 @@ internal static class ChdHeaders
 
             chd.Map[i].Offset = tmpu & 0xfffffffffff;
             chd.Map[i].Length = (uint)(tmpu >> 44);
-            chd.Map[i].Comptype = (chd.Map[i].Length == chd.Blocksize)
+            chd.Map[i].Comptype = chd.Map[i].Length == chd.Blocksize
                 ? CompressionType.Compressionnone
                 : CompressionType.Compressiontype0;
         }
@@ -347,7 +347,7 @@ internal static class ChdHeaders
             {
                 Offset = br.ReadUInt64Be(),
                 Crc = br.ReadUInt32Be(),
-                Length = (uint)((br.ReadUInt16Be()) | (br.ReadByte() << 16))
+                Length = (uint)(br.ReadUInt16Be() | (br.ReadByte() << 16))
             };
             var mapflag = (MapEntryFlag)br.ReadByte();
             chd.Map[i].Comptype = ChdCommon.ConvMapEntryFlagtoCompressionType(mapflag);
@@ -580,7 +580,7 @@ internal static class ChdHeaders
 
                 case CompressionType.Compressionparentself:
                     map[blockIndex].Comptype = CompressionType.Compressionparent;
-                    lastParent = offset = (blockIndex * ((ulong)blocksize)) / unitbytes;
+                    lastParent = offset = blockIndex * (ulong)blocksize / unitbytes;
                     break;
 
                 case CompressionType.Compressionparent:

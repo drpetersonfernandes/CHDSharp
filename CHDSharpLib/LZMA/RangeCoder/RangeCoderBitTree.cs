@@ -16,7 +16,7 @@ internal readonly struct BitTreeDecoder
     /// <summary>Initialises all probability models in the tree.</summary>
     internal void Init()
     {
-        for (uint i = 1; i < (1 << _numBitLevels); i++)
+        for (uint i = 1; i < 1 << _numBitLevels; i++)
             _models[i].Init();
     }
 
@@ -42,7 +42,7 @@ internal readonly struct BitTreeDecoder
             var bit = _models[m].Decode(rangeDecoder);
             m <<= 1;
             m += bit;
-            symbol |= (bit << bitIndex);
+            symbol |= bit << bitIndex;
         }
 
         return symbol;
@@ -59,7 +59,7 @@ internal readonly struct BitTreeDecoder
             var bit = models[startIndex + m].Decode(rangeDecoder);
             m <<= 1;
             m += bit;
-            symbol |= (bit << bitIndex);
+            symbol |= bit << bitIndex;
         }
 
         return symbol;

@@ -4,7 +4,7 @@ namespace CHDSharpEncoder.LZMA.RangeCoder;
 internal class Encoder
 {
     /// <summary>Top value used for range normalisation.</summary>
-    internal const uint KTopValue = (1 << 24);
+    internal const uint KTopValue = 1 << 24;
 
     private Stream? _stream;
 
@@ -63,7 +63,7 @@ internal class Encoder
     {
         var low = (uint)Low;
         var high = (uint)(Low >> 32);
-        Low = (uint)(low << 8);
+        Low = low << 8;
         if (low < 0xFF000000 || high != 0)
         {
             _stream!.WriteByte((byte)(_cache + high));

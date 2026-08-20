@@ -4,7 +4,7 @@ namespace CHDSharpEncoder.LZMA.RangeCoder;
 internal struct BitEncoder
 {
     private const int KNumBitModelTotalBits = 11;
-    private const uint KBitModelTotal = (1 << KNumBitModelTotalBits);
+    private const uint KBitModelTotal = 1 << KNumBitModelTotalBits;
     private const int KNumMoveBits = 5;
     private const int KNumMoveReducingBits = 2;
     internal const int KNumBitPriceShiftBits = 6;
@@ -54,30 +54,30 @@ internal struct BitEncoder
             {
                 w *= w;
                 bitCount <<= 1;
-                while (w >= (1 << 16))
+                while (w >= 1 << 16)
                 {
                     w >>= 1;
                     bitCount++;
                 }
             }
 
-            prices[i] = (uint)((kNumBitModelTotalBits << kNumBitPriceShiftBits) - 15 - bitCount);
+            prices[i] = (kNumBitModelTotalBits << kNumBitPriceShiftBits) - 15 - bitCount;
         }
 
         return prices;
     }
 
-    internal uint GetPrice(uint symbol)
+    internal readonly uint GetPrice(uint symbol)
     {
-        return ProbPrices[(_prob ^ (0u - symbol & (KBitModelTotal - 1))) >> KNumMoveReducingBits];
+        return ProbPrices[(_prob ^ ((0u - symbol) & (KBitModelTotal - 1))) >> KNumMoveReducingBits];
     }
 
-    internal uint GetPrice0()
+    internal readonly uint GetPrice0()
     {
         return ProbPrices[_prob >> KNumMoveReducingBits];
     }
 
-    internal uint GetPrice1()
+    internal readonly uint GetPrice1()
     {
         return ProbPrices[(_prob ^ (KBitModelTotal - 1)) >> KNumMoveReducingBits];
     }

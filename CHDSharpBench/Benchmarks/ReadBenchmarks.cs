@@ -82,7 +82,7 @@ public class ReadBenchmarks
         var chd = _chd!;
         chd.ConfigureCache(CacheSize);
         var bytes = 0UL;
-        var addr = (_xor = _xor * 6364136223846793005UL + 1442695040888963407UL);
+        var addr = _xor = _xor * 6364136223846793005UL + 1442695040888963407UL;
         const int reads = 256;
         for (var i = 0; i < reads; i++)
         {

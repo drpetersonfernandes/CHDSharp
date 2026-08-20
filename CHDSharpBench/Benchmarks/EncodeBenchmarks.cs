@@ -208,7 +208,7 @@ public class EncodeBenchmarks
             var sample = 0;
             for (var i = 0; i < len; i += 2)
             {
-                sample = ((sample + rng.Next(64000)) & 0xFFFF);
+                sample = (sample + rng.Next(64000)) & 0xFFFF;
                 data[off + i] = (byte)sample;
                 if (i + 1 < len)
                 {

@@ -342,8 +342,8 @@ internal unsafe class BitReader
     internal int ReadbitsSigned(int bits)
     {
         var val = (int)Readbits(bits);
-        val <<= (32 - bits);
-        val >>= (32 - bits);
+        val <<= 32 - bits;
+        val >>= 32 - bits;
         return val;
     }
 
@@ -403,7 +403,7 @@ internal unsafe class BitReader
                 throw new InvalidDataException("invalid utf8 encoding");
 
             v <<= 6;
-            v |= (x & 0x3F);
+            v |= x & 0x3F;
         }
 
         return v;
@@ -461,7 +461,7 @@ internal unsafe class BitReader
                 var uval = (msbs << k) | (uint)((cache >> (64 - btsk)) & mask);
                 cache <<= btsk;
                 haveBits -= btsk;
-                *(r++) = (int)((uval >> 1) ^ -(int)(uval & 1));
+                *r++ = (int)((uval >> 1) ^ -(int)(uval & 1));
             }
 
             _haveBitsM = haveBits;

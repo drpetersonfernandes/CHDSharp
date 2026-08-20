@@ -84,20 +84,7 @@ public sealed class ZlibCodec : IChdCodec
     /// <inheritdoc/>
     public byte[]? Compress(byte[] data)
     {
-        using var ms = new MemoryStream(data.Length);
-        using (var ds = new DeflateStream(ms, CompressionLevel.SmallestSize, leaveOpen: true))
-        {
-            ds.Write(data, 0, data.Length);
-        }
-
-        var result = ms.ToArray();
-        if (result is [0x78, _, ..])
-        {
-            // .NET Framework-era zlib wrapper; strip 2-byte header + 4-byte Adler32 trailer
-            result = result.AsSpan(2, result.Length - 6).ToArray();
-        }
-
-        return result.Length < data.Length ? result : null;
+        return RawDeflate.Compress(data);
     }
 }
 
@@ -148,26 +135,26 @@ public sealed class LzmaCodec : IChdCodec
     {
         _encoder = new Encoder();
         _encoder.SetCoderProperties(
-        [
-            CoderPropID.DictionarySize,
-            CoderPropID.PosStateBits,   // pb
-            CoderPropID.LitContextBits, // lc
-            CoderPropID.LitPosBits,     // lp
-            CoderPropID.Algorithm,
-            CoderPropID.NumFastBytes,
-            CoderPropID.MatchFinder,
-            CoderPropID.EndMarker,
-        ],
-        [
-            (int)hunkBytes,
-            2,      // pb = 2 (chdman default)
-            3,      // lc = 3 (chdman default)
-            0,      // lp = 0 (chdman default)
-            1,      // normal algorithm (fast mode off, as chdman's level-8 profile)
-            64,     // fast bytes (chdman's level-8 profile; 32 was the old default)
-            "bt4",  // binary-tree 4 match finder
-            false,  // no end marker; CHD tracks the hunk size in the map entry
-        ]);
+            [
+                CoderPropId.DictionarySize,
+                CoderPropId.PosStateBits, // pb
+                CoderPropId.LitContextBits, // lc
+                CoderPropId.LitPosBits, // lp
+                CoderPropId.Algorithm,
+                CoderPropId.NumFastBytes,
+                CoderPropId.MatchFinder,
+                CoderPropId.EndMarker
+            ],
+            [
+                (int)hunkBytes,
+                2, // pb = 2 (chdman default)
+                3, // lc = 3 (chdman default)
+                0, // lp = 0 (chdman default)
+                1, // normal algorithm (fast mode off, as chdman's level-8 profile)
+                64, // fast bytes (chdman's level-8 profile; 32 was the old default)
+                "bt4", // binary-tree 4 match finder
+                false // no end marker; CHD tracks the hunk size in the map entry
+            ]);
         _ms = new MemoryStream((int)hunkBytes / 2);
     }
 

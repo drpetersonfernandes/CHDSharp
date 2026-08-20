@@ -122,12 +122,12 @@ public static class PdfExporter
     private static string FormatSubTests(PerFileResult file)
     {
         var parts = file.SubTests.Select(t =>
-            $"{(t.Status switch
+            $"{t.Status switch
             {
                 TestStatus.Passed => "✓",
                 TestStatus.Failed => "✗",
                 _ => "○"
-            })} {t.TestName}");
+            }} {t.TestName}");
         return string.Join("  ", parts);
     }
 }

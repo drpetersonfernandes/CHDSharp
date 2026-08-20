@@ -1,5 +1,3 @@
-using CHDSharp.LZMA;
-
 namespace CHDSharpEncoder.LZMA.LZ;
 
 /// <summary>Binary-tree match finder for the LZMA encoder, ported from the LZMA SDK (public domain).</summary>
@@ -109,7 +107,7 @@ internal class BinTree : InWindow, IMatchFinder
         _cutValue = 16 + (matchMaxLen >> 1);
 
         var windowReservSize = (historySize + keepAddBufferBefore +
-            matchMaxLen + keepAddBufferAfter) / 2 + 256;
+                                matchMaxLen + keepAddBufferAfter) / 2 + 256;
 
         base.Create(historySize + keepAddBufferBefore, matchMaxLen + keepAddBufferAfter, windowReservSize);
 
@@ -132,7 +130,7 @@ internal class BinTree : InWindow, IMatchFinder
             hs |= hs >> 8;
             hs >>= 1;
             hs |= 0xFFFF;
-            if (hs > (1 << 24))
+            if (hs > 1 << 24)
             {
                 hs >>= 1;
             }
@@ -166,7 +164,7 @@ internal class BinTree : InWindow, IMatchFinder
         }
 
         uint offset = 0;
-        var matchMinPos = (Pos > _cyclicBufferSize) ? (Pos - _cyclicBufferSize) : 0;
+        var matchMinPos = Pos > _cyclicBufferSize ? Pos - _cyclicBufferSize : 0;
         var cur = BufferOffset + Pos;
         var maxLen = KStartMaxLen;
         uint hashValue, hash2Value = 0, hash3Value = 0;
@@ -227,8 +225,8 @@ internal class BinTree : InWindow, IMatchFinder
         var ptr0 = (_cyclicBufferPos << 1) + 1;
         var ptr1 = _cyclicBufferPos << 1;
 
-        uint len0, len1;
-        len0 = len1 = _numHashDirectBytes;
+        uint len1;
+        var len0 = len1 = _numHashDirectBytes;
 
         if (_numHashDirectBytes != 0)
         {
@@ -254,9 +252,7 @@ internal class BinTree : InWindow, IMatchFinder
             }
 
             var delta = Pos - curMatch;
-            var cyclicPos = ((delta <= _cyclicBufferPos) ?
-                (_cyclicBufferPos - delta) :
-                (_cyclicBufferPos - delta + _cyclicBufferSize)) << 1;
+            var cyclicPos = (delta <= _cyclicBufferPos ? _cyclicBufferPos - delta : _cyclicBufferPos - delta + _cyclicBufferSize) << 1;
 
             var pby1 = BufferOffset + curMatch;
             var len = Math.Min(len0, len1);
@@ -322,7 +318,7 @@ internal class BinTree : InWindow, IMatchFinder
                 }
             }
 
-            var matchMinPos = (Pos > _cyclicBufferSize) ? (Pos - _cyclicBufferSize) : 0;
+            var matchMinPos = Pos > _cyclicBufferSize ? Pos - _cyclicBufferSize : 0;
             var cur = BufferOffset + Pos;
 
             uint hashValue;
@@ -348,8 +344,8 @@ internal class BinTree : InWindow, IMatchFinder
             var ptr0 = (_cyclicBufferPos << 1) + 1;
             var ptr1 = _cyclicBufferPos << 1;
 
-            uint len0, len1;
-            len0 = len1 = _numHashDirectBytes;
+            uint len1;
+            var len0 = len1 = _numHashDirectBytes;
 
             var count = _cutValue;
             while (true)
@@ -361,9 +357,7 @@ internal class BinTree : InWindow, IMatchFinder
                 }
 
                 var delta = Pos - curMatch;
-                var cyclicPos = ((delta <= _cyclicBufferPos) ?
-                    (_cyclicBufferPos - delta) :
-                    (_cyclicBufferPos - delta + _cyclicBufferSize)) << 1;
+                var cyclicPos = (delta <= _cyclicBufferPos ? _cyclicBufferPos - delta : _cyclicBufferPos - delta + _cyclicBufferSize) << 1;
 
                 var pby1 = BufferOffset + curMatch;
                 var len = Math.Min(len0, len1);

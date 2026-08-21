@@ -93,58 +93,34 @@ public sealed class ZlibCodec : IChdCodec
 /// <c>chd_zstd_compressor</c> (<c>ZSTD_maxCLevel()</c>).
 /// </summary>
 /// <remarks>
-/// The encoder uses the real C zstd library via <see cref="ZstdNative"/> so the emitted frames are
-/// byte-identical to chdman's <c>ZSTD_initCStream</c> + <c>ZSTD_compressStream2(ZSTD_e_end)</c>.
-/// ZstdSharp.Port is a pure-managed zstd reimplementation whose frames differ from C zstd in the
-/// trailing-byte finalization and therefore cannot achieve byte parity for CD compound ('cdzs')
-/// hunks; it is kept only as a fallback when the native library is unavailable.
+/// Backed by the managed <c>ZstdSharp.Port</c> package, keeping the encoder 100% pure C# and
+/// cross-platform. Caveat: ZstdSharp is a reimplementation of zstd whose frames differ from
+/// C zstd in the trailing-byte finalization on some buffer sizes. Raw 'zstd' hunks at common
+/// hunk sizes finalize identically to chdman, but CD compound ('cdzs') hunks can differ in the
+/// final frame byte — such output remains fully valid (chdman verifies it and both decoders
+/// read it) but is not bit-identical to chdman's own cdzs file.
 /// </remarks>
 public sealed class ZstdCodec : IChdCodec
 {
-    private readonly IZstdCompressor _inner;
+    private readonly ZstdSharp.Compressor _compressor = new(ZstdSharp.Compressor.MaxCompressionLevel);
 
-    /// <summary>Creates the codec, preferring the native C zstd binding when available.</summary>
+    /// <summary>Creates the codec.</summary>
     public ZstdCodec()
     {
-        _inner = ZstdNative.Available ? new NativeCompressor() : new ManagedCompressor();
     }
 
     /// <inheritdoc/>
     public uint Tag => CodecTags.Zstd;
 
     /// <inheritdoc/>
-    public byte[]? Compress(byte[] data) => _inner.Compress(data);
-
-    private interface IZstdCompressor
+    public byte[]? Compress(byte[] data)
     {
-        byte[]? Compress(byte[] data);
-    }
-
-    private sealed class NativeCompressor : IZstdCompressor
-    {
-        // A fresh stream per hunk: ZSTD_initCStream fully resets session and parameters, so this
-        // is byte-identical to chdman's reuse pattern while keeping the native handle short-lived
-        // (explicitly disposed, no finalizer).
-        public byte[]? Compress(byte[] data)
-        {
-            using var stream = new ZstdNative.CStream();
-            return stream.Compress(data);
-        }
-    }
-
-    private sealed class ManagedCompressor : IZstdCompressor
-    {
-        private readonly ZstdSharp.Compressor _compressor = new(ZstdSharp.Compressor.MaxCompressionLevel);
-
-        public byte[]? Compress(byte[] data)
-        {
-            _compressor.ResetStream();
-            var dest = new byte[ZstdSharp.Compressor.GetCompressBound(data.Length)];
-            _compressor.WrapStream(data, dest, out int consumed, out int written, isFinalBlock: true);
-            return consumed == data.Length && written < data.Length
-                ? dest.AsSpan(0, written).ToArray()
-                : null;
-        }
+        _compressor.ResetStream();
+        var dest = new byte[ZstdSharp.Compressor.GetCompressBound(data.Length)];
+        _compressor.WrapStream(data, dest, out int consumed, out int written, isFinalBlock: true);
+        return consumed == data.Length && written < data.Length
+            ? dest.AsSpan(0, written).ToArray()
+            : null;
     }
 }
 

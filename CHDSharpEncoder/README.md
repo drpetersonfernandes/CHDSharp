@@ -19,7 +19,7 @@ a parent, and write **uncompressed CHDs** (`-c none`).
 | Raw binary → CHD (`EncodeRaw`) | ✅ |
 | CD images → CHD (`EncodeCd`) via CUE, GDI, ISO, TOC | ✅ |
 | CHD → CHD copy / re-compression (`Copy`) | ✅ |
-| Codecs | all 10 MAME codecs (`zlib`, `zstd`, `lzma`, `huff`, `flac`, `cdzl`, `cdlz`, `cdzs`, `cdfl`, `none`); up to 4 per file, best-per-hunk |
+| Codecs | every codec chdman can produce via `createraw`/`createhd`/`createcd`/`createdvd`/`copy`: `zlib`, `zstd`, `lzma`, `huff`, `flac`, `cdzl`, `cdlz`, `cdzs`, `cdfl`, plus `none`; up to 4 per file, best-per-hunk. (`avhu` is decode-only — chdman writes it solely via skipped `createld`) |
 | SELF-hunk deduplication (COMPRESSION_SELF, with SELF_0/SELF_1 map promotion) | ✅ |
 | Parent CHD / delta creation (COMPRESSION_PARENT, unit-split refs, `-ip`) | ✅ |
 | Uncompressed CHD (`-c none`, V5 raw map, chdman byte-identical) | ✅ |
@@ -28,7 +28,7 @@ a parent, and write **uncompressed CHDs** (`-c none`).
 | Audio byte-swap (little-endian BIN → big-endian CHD, like chdman) | ✅ |
 | Per-hunk compression-ratio logging (`ChdEncodeOptions.HunkCompleted`) | ✅ |
 | Parallel hunk compression (producer→worker→consumer pipeline, `TaskCount` 1–64) | ✅ |
-| NRG (Nero) input | not implemented |
+| NRG (Nero) input | ✅ (`NrgParser`, byte-identical vs `chdman createcd` — see ProposedFixes 8.4) |
 
 **Validation**: 350 xUnit tests (`CHDSharpEncoderTest`), cross-checked against
 `chdman.exe` v0.288 (`chdman info` / `verify` / `extractraw` / `createcd` /
@@ -123,17 +123,23 @@ make the output a delta of a different parent. All commands run a deep CHDSharpL
 
 | Tag | Codec | Notes |
 |-----|-------|-------|
-| `zlib` | Deflate (`System.IO.Compression`, `SmallestSize`) | Default; matches `chdman -c zlib` byte-for-byte |
-| `zstd` | Zstandard at max level (ZstdSharp.Port) | Matches MAME's `ZSTD_maxCLevel()` |
-| `lzma` | Raw headerless LZMA (SharpCompress 0.39.0) | lc=3/lp=0/pb=2, dictionary = hunk size; see plan §3 |
+| `zlib` | Deflate via the vendored zlib 1.3.1 C# port (`ZLib/`) | Default; matches `chdman -c zlib` byte-for-byte |
+| `zstd` | Zstandard at max level (ZstdSharp.Port) | Matches MAME's `ZSTD_maxCLevel()`; see the cdzs caveat below |
+| `lzma` | Raw headerless LZMA (LZMA SDK C# port, in `LZMA/`) | lc=3/lp=0/pb=2, dictionary = hunk size; byte-identical to chdman (price-table 4/4 + BT4 maxLen=3 parity) |
 | `huff` | MAME generic Huffman | Weight-scaled canonical tree, Huffman-encoded tree export (see plan §1) |
-| `flac` | Raw FLAC (2-pass LE/BE, marker byte) | From-scratch FLAC frame encoder; MAME blocksize formula |
+| `flac` | Raw FLAC (2-pass LE/BE, marker byte) | libFLAC-parity encoder; MAME blocksize formula |
 | `cdzl`/`cdlz`/`cdzs` | CD compound (ECC + zlib/LZMA/zstd) | `[ecc bitmap][base length][base][subcode]` layout, Mode-1 sync/ECC clearing |
 | `cdfl` | CD FLAC + deflated subcode | 2352-sample blocks (MAME's cdfl blocksize), validated against libFLAC |
 | `none` | Uncompressed CHD | V5 raw map (4-byte hunk-index entries), chdman byte-identical layout; zero hunks not stored |
 
 All codecs are deterministic: the same input always produces the same output, so
 parallelism can never change the bytes (see [Performance](#performance)).
+
+**100% pure C#**: no native DLLs are shipped or loaded; the library runs identically on
+Windows and Linux. One known parity caveat: the managed zstd port (ZstdSharp) finalizes
+frames with a different trailing byte than C zstd on some buffer sizes, so `cdzs` encode
+output is valid and chdman-verifiable but not always bit-identical to chdman's own file
+(`raw zstd` hunks at common sizes are identical). Every other codec is bit-exact vs chdman.
 
 ---
 

@@ -5,11 +5,14 @@ layout: default
 # CHD creation (CHDSharpEncoder)
 
 `CHDSharpEncoder` is the encoder companion to the CHDSharp reader. It writes **CHD v5**
-files from raw binaries and CD images (CUE/GDI/ISO/TOC), re-compresses existing CHDs
+files from raw binaries and CD images (CUE/GDI/ISO/TOC/NRG), re-compresses existing CHDs
 (`Copy`), creates differential (delta) children against a parent, and writes
 uncompressed CHDs (`-c none`) — producing files that are **byte-for-byte identical to
 `chdman`** when the same codec is used, pass `chdman verify`, and extract back
-identically via `chdman extractraw`.
+identically via `chdman extractraw`. The library is **100% pure C#** (no native DLLs)
+and runs identically on Windows and Linux. One parity caveat: `cdzs` encode output is
+valid and chdman-verifiable but not always bit-identical to chdman's own file (the managed
+zstd port finalizes frames differently on some buffer sizes); every other codec is bit-exact.
 
 Full API docs and project layout: [`CHDSharpEncoder/README.md`](../CHDSharpEncoder/README.md).
 Implementation plan and validation history: [`References/EncoderPlan.md`](../References/EncoderPlan.md).
@@ -23,7 +26,7 @@ Implementation plan and validation history: [`References/EncoderPlan.md`](../Ref
 | Raw encode | `ChdEncoder.EncodeRaw(source, chdPath, hunkBytes, unitBytes, codecTags, options)` |
 | CD encode | `ChdEncoder.EncodeCd(cuePath, chdPath, hunkBytes, unitBytes, codecTags, options)` |
 | Copy / re-compress | `ChdEncoder.Copy(sourceChd, chdPath, codecTags, options)` — any V1–V5 source, metadata cloned |
-| Input formats | raw binary; CUE/BIN, GDI, ISO, TOC (cdrdao-style); existing CHD files |
+| Input formats | raw binary; CUE/BIN, GDI, ISO, TOC (cdrdao-style), NRG (Nero); existing CHD files |
 | Codecs | `zlib` (default), `zstd`, `lzma`, `huff`, `flac`, `cdzl`, `cdlz`, `cdzs`, `cdfl`, `none` — up to 4 per file, smallest output per hunk |
 | Deduplication | SELF references (CRC/SHA-1 keyed), with SELF_0/SELF_1 map promotion |
 | Delta (parent) CHDs | `ChdEncodeOptions.ParentPath` — COMPRESSION_PARENT refs, unit-split windows, chdman `-op` parity |
@@ -55,7 +58,7 @@ produces byte-identical output to encoding without one.
 ## Validation
 
 The encoder is validated against `chdman.exe` v0.288 and the CHDSharpLib reader
-(350 tests in `CHDSharpEncoderTest`):
+(371 tests per target framework in `CHDSharpEncoderTest`):
 
 - `chdman info` reports the file without errors; `chdman verify` passes (raw + overall SHA-1).
 - `chdman extractraw` of encoder output is byte-identical to the source (raw) and to
@@ -68,6 +71,8 @@ The encoder is validated against `chdman.exe` v0.288 and the CHDSharpLib reader
   and delta-child variants).
 - Delta children made from chdman-made parents pass `chdman verify -ip` and byte-identical
   `extractraw -ip`.
+- **cdzs caveat**: output passes `chdman verify`, deep `CheckFile`, and `extractcd` parity,
+  but whole-file bytes may differ from chdman's (managed zstd trailing byte).
 - **100 MB+ integration tests** (`LargeFileValidationTests`) encode 100 MB raw and
   ~100 MB CD images, then check `chdman verify`, `extractraw` SHA-1 vs. the source, and a
   deep CHDSharpLib `CheckFile`:
@@ -110,8 +115,11 @@ CHDSharpCli --copy in.chd out.chd [-c zlib,zstd,lzma,none] [-t 8] [-ip parent.ch
 
 All commands deep-verify the result with CHDSharpLib before exiting.
 
-## Roadmap
+## Status
 
-- NRG (Nero) input parsing.
-- Metadata editing (`addmeta`/`delmeta`).
-- CUE style conversion / Redump matching.
+All chdman-reachable features are implemented: all 9 writable codecs (+ `none`), NRG/GDI/
+ISO/TOC/CUE input, metadata editing (`SetMetadata`/`DeleteMetadata` + CLI `addmeta`/`delmeta`),
+CUE style conversion / Redump matching (`CueConverter`), platform detection with smart codec
+presets (`-c auto`), and byte-exact map clipping parity. `createld` (AVI → laserdisc) is the
+only deliberately skipped chdman command (like CHDlite); `avhu` stays decode-only. Future
+ideas live in [`References/ProposedFixes.md`](../References/ProposedFixes.md).

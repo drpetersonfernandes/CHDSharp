@@ -130,7 +130,7 @@ CHDSharpCli --copy in.chd out.chd [-c zlib,zstd,lzma,none] [-t 8] [-ip parent.ch
 - **Parent/child chaining** — transparent differential CHD support with wrong-parent detection
 - **Track info** — parse CD/GD-ROM table of contents (track types, sector sizes, pregap/postgap, frame offsets)
 - **Metadata** — expose game name, disc labels, and other CHD header metadata
-- **CHD creation** — companion [`CHDSharpEncoder`](CHDSharpEncoder/README.md) writes V5 CHDs from raw binaries and CD images (CUE/GDI/ISO/TOC) with `chdman`-matched output; re-compresses existing CHDs (`Copy`), creates delta children (`-ip parent`), and writes uncompressed CHDs (`-c none`)
+- **CHD creation** — companion [`CHDSharpEncoder`](CHDSharpEncoder/README.md) writes V5 CHDs from raw binaries and CD images (CUE/GDI/ISO/TOC/NRG) with `chdman`-matched output; re-compresses existing CHDs (`Copy`), creates delta children (`-ip parent`), and writes uncompressed CHDs (`-c none`)
 - **100% chdman match** — cross-checked against `chdman info`, `verify`, `copy`, and `extractraw` (MAME 0.288)
 - **Pluggable logging** — `Microsoft.Extensions.Logging` integration; silent by default
 
@@ -199,7 +199,7 @@ CHDSharp vs the two other independent CHD implementations (compared against thei
 | Metadata read | ✅ | ✅ | ✅ | ✅ | ✅ `chd_get_metadata` |
 | **Writing** | | | | | |
 | Write V5 | ✅ (encoder) | ❌ read-only | ✅ | ✅ (reference) | ❌ read-only |
-| All 10 codecs (encode) | ✅ | ❌ | ✅ | ✅ | ❌ |
+| All 10 codecs (encode) | 🟡 9 of 10 (`avhu` decode-only; chdman produces it only via `createld`, deliberately skipped) | ❌ | ✅ | ✅ | ❌ |
 | Uncompressed CHD (`-c none`) | ✅ byte-exact with chdman | 🟡 decode only | 🟡 core supports, CLI rejects | ✅ | 🟡 decode only |
 | Delta/parent CHD creation (`-ip`) | ✅ | ❌ | ✅ | ✅ | ❌ |
 | CHD→CHD copy / re-compress | ✅ | ❌ | ✅ | ✅ | ❌ |

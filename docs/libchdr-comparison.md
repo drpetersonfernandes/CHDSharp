@@ -31,7 +31,7 @@ CHDSharp vs the two other independent CHD implementations ([chd-rs 0.3.4](../Ref
 | Metadata read | ✅ | ✅ | ✅ | ✅ | ✅ `chd_get_metadata` |
 | **Writing** | | | | | |
 | Write V5 | ✅ (encoder) | ❌ read-only | ✅ | ✅ (reference) | ❌ read-only |
-| All 10 codecs (encode) | ✅ | ❌ | ✅ | ✅ | ❌ |
+| All 10 codecs (encode) | 🟡 9 of 10 (`avhu` decode-only; chdman produces it only via `createld`, deliberately skipped) | ❌ | ✅ | ✅ | ❌ |
 | Uncompressed CHD (`-c none`) | ✅ byte-exact with chdman | 🟡 decode only | 🟡 core supports, CLI rejects | ✅ | 🟡 decode only |
 | Delta/parent CHD creation (`-ip`) | ✅ | ❌ | ✅ | ✅ | ❌ |
 | CHD→CHD copy / re-compress | ✅ | ❌ | ✅ | ✅ | ❌ |

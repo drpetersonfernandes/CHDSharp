@@ -1,4 +1,6 @@
-﻿// Original code and comments Copyright (C) 1995-2005, 2010 Mark Adler
+#nullable disable
+using System.Runtime.InteropServices;
+// Original code and comments Copyright (C) 1995-2005, 2010 Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
 namespace ZLibDotNet.Inflate;
@@ -16,6 +18,7 @@ namespace ZLibDotNet.Inflate;
  * of the bit buffer. val is the actual byte to output in the case
  * of a literal, the base length or distance, or the offset from
  * the current table to the next table. Each entry is four bytes. */
+[StructLayout(LayoutKind.Sequential)]
 internal readonly struct Code
 {
     internal readonly byte op;    // operation, extra bits, table bits

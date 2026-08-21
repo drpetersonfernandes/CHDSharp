@@ -110,7 +110,7 @@ public sealed class BattleHarness
         Console.WriteLine($"[{status}] {suite,-24} {name,-58} {detail}  ({seconds,6:N1}s)");
     }
 
-    private static void Assert(bool condition, string message)
+    private static void Assert([System.Diagnostics.CodeAnalysis.DoesNotReturnIf(false)] bool condition, string message)
     {
         if (!condition)
             throw new CheckFailedException(message);
@@ -485,7 +485,7 @@ public sealed class BattleHarness
                 Key = $"{inputName}|{cfg.Label}|ours",
                 Name = $"{inputName} x {cfg.Label} (ours)",
                 ChdPath = ourChd,
-                Expected = refExtract,
+                Expected = refExtract!,
                 IsCd = true,
                 CodecLabel = cfg.Codecs
             });
@@ -494,7 +494,7 @@ public sealed class BattleHarness
                 Key = $"{inputName}|{cfg.Label}|ref",
                 Name = $"{inputName} x {cfg.Label} (chdman)",
                 ChdPath = refChd,
-                Expected = refExtract,
+                Expected = refExtract!,
                 IsCd = true,
                 CodecLabel = cfg.Codecs
             });

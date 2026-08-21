@@ -1,4 +1,6 @@
-﻿namespace ZLibDotNet.Inflate;
+#nullable disable
+#pragma warning disable MA0008
+namespace ZLibDotNet.Inflate;
 
 internal ref struct InflateRefs
 {

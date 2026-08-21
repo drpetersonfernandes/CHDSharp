@@ -1,4 +1,5 @@
-﻿// Original code and comments Copyright (C) 1995-2005, 2014, 2016 Jean-loup Gailly, Mark Adler
+#nullable disable
+// Original code and comments Copyright (C) 1995-2005, 2014, 2016 Jean-loup Gailly, Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
 using System;

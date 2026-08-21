@@ -1,4 +1,5 @@
-﻿// Original code and comments Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler
+#nullable disable
+// Original code and comments Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
 using System;
@@ -136,8 +137,8 @@ internal static partial class Deflater
             return Z_STREAM_ERROR;
         DeflateState s = strm.deflateState;
 
-        if (strm._output == null
-            || strm.avail_in != 0 && strm._input == null
+        if (strm._output.IsEmpty
+            || strm.avail_in != 0 && strm._input.IsEmpty
             || s.status == FinishState && flush != Z_FINISH)
             return ReturnWithError(ref strm, Z_STREAM_ERROR);
         if (strm.avail_out == 0)

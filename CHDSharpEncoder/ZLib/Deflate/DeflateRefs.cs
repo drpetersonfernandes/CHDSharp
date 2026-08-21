@@ -1,4 +1,6 @@
-﻿using System.Runtime.InteropServices;
+#nullable disable
+#pragma warning disable MA0008
+using System.Runtime.InteropServices;
 
 namespace ZLibDotNet.Deflate;
 

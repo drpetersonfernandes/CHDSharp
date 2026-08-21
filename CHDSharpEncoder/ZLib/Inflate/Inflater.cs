@@ -1,4 +1,5 @@
-﻿// Original code and comments Copyright (C) 1995-2024 Mark Adler
+#nullable disable
+// Original code and comments Copyright (C) 1995-2024 Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
 using System;
@@ -104,8 +105,8 @@ internal static partial class Inflater
     internal static int Inflate(ref ZStream strm, int flush)
     {
         if (InflateStateCheck(ref strm)
-            || strm._output == null
-            || strm._input == null && strm.avail_in != 0)
+            || strm._output.IsEmpty
+            || strm._input.IsEmpty && strm.avail_in != 0)
             return Z_STREAM_ERROR;
 
         InflateState state = strm.inflateState;

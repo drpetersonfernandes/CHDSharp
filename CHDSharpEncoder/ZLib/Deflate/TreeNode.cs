@@ -1,8 +1,11 @@
-﻿// Original code and comments Copyright (C) 1995-2024 Jean-loup Gailly
+#nullable disable
+using System.Runtime.InteropServices;
+// Original code and comments Copyright (C) 1995-2024 Jean-loup Gailly
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
 namespace ZLibDotNet.Deflate;
 
+[StructLayout(LayoutKind.Sequential)]
 internal struct TreeNode
 {
     internal ushort fc; // frequency count or bit string

@@ -127,6 +127,60 @@ public class ChdCodecChdmanValidationTests : IDisposable
     }
 
     [Fact]
+    public void CdzsChd_ByteIdenticalToChdmanOnMixedCorpus()
+    {
+        if (ChdmanPath == null) return;
+
+        // Compressible mixed CD (MODE1 data + AUDIO). The cdzs compound codec zstd-compresses the
+        // base and subcode buffers separately; byte parity requires the native libzstd binding —
+        // the managed ZstdSharp port emits frames with a different trailing byte than C zstd.
+        const string cue = """
+                           FILE "cdzs.bin" BINARY
+                             TRACK 01 MODE1/2352
+                               INDEX 01 00:00:00
+                             TRACK 02 AUDIO
+                               INDEX 01 00:01:00
+                           """;
+        string cuePath = Path.Combine(_testDataDir, "cdzs.cue");
+        string binPath = Path.Combine(_testDataDir, "cdzs.bin");
+        string oursPath = Path.Combine(_testDataDir, "cdzs.ours.chd");
+        string refPath = Path.Combine(_testDataDir, "cdzs.ref.chd");
+        File.WriteAllText(cuePath, cue);
+
+        const int dataFrames = 300;
+        const int audioFrames = 300;
+        var bin = new byte[(dataFrames + audioFrames) * CdConstants.FrameSize];
+        int pos = 0;
+        for (int f = 0; f < dataFrames; f++)
+        {
+            for (int i = 0; i < CdConstants.MaxSectorData; i++, pos++)
+                bin[pos] = (byte)("the quick brown fox jumps over the lazy dog "[i % 40] + (f % 7));
+        }
+
+        for (int f = 0; f < audioFrames; f++)
+        {
+            for (int i = 0; i < CdConstants.MaxSectorData / 2; i++)
+            {
+                short v = (short)(12000 * Math.Sin((f * CdConstants.MaxSectorData / 2 + i) * 0.02));
+                bin[pos++] = (byte)(v & 0xFF);
+                bin[pos++] = (byte)((v >> 8) & 0xFF);
+            }
+        }
+
+        File.WriteAllBytes(binPath, bin);
+
+        uint hunkBytes = CdConstants.FramesPerHunk * (uint)CdConstants.FrameSize;
+        ChdEncoder.EncodeCd(cuePath, oursPath, hunkBytes: hunkBytes,
+            unitBytes: (uint)CdConstants.FrameSize, codecTags: [CodecTags.Cdzs]);
+
+        var (createExit, cOut, cErr) = RunChdman("createcd", "-i", cuePath, "-o", refPath, "-c", "cdzs",
+            "-hs", hunkBytes.ToString(), "-f");
+        Assert.True(createExit == 0, $"chdman createcd failed (exit={createExit})\n{cOut}{cErr}");
+
+        Assert.Equal(File.ReadAllBytes(refPath), File.ReadAllBytes(oursPath));
+    }
+
+    [Fact]
     public void FlacChd_ByteIdenticalToChdmanOnPcm16Corpus()
     {
         if (ChdmanPath == null) return;

@@ -25,6 +25,13 @@
       </PackageReference>
     </ItemGroup>
 
+    <!-- Native C zstd (libzstd) used by ZstdNative for byte-identical output vs chdman.
+         Required only on Windows; the managed ZstdSharp fallback is used elsewhere. -->
+    <ItemGroup>
+      <None Include="native\libzstd.dll" Condition="$([MSBuild]::IsOSPlatform('Windows'))"
+            CopyToOutputDirectory="PreserveNewest" Link="libzstd.dll" />
+    </ItemGroup>
+
 </Project>
 
 

@@ -92,19 +92,56 @@ public sealed class ZlibCodec : IChdCodec
 /// Zstandard compression at zstd's maximum level, matching MAME's
 /// <c>chd_zstd_compressor</c> (<c>ZSTD_maxCLevel()</c>).
 /// </summary>
+/// <remarks>
+/// The encoder uses the real C zstd library via <see cref="ZstdNative"/> so the emitted frames are
+/// byte-identical to chdman's <c>ZSTD_initCStream</c> + <c>ZSTD_compressStream2(ZSTD_e_end)</c>.
+/// ZstdSharp.Port is a pure-managed zstd reimplementation whose frames differ from C zstd in the
+/// trailing-byte finalization and therefore cannot achieve byte parity for CD compound ('cdzs')
+/// hunks; it is kept only as a fallback when the native library is unavailable.
+/// </remarks>
 public sealed class ZstdCodec : IChdCodec
 {
-    private readonly ZstdSharp.Compressor _compressor = new(ZstdSharp.Compressor.MaxCompressionLevel);
+    private readonly IZstdCompressor _inner;
+
+    /// <summary>Creates the codec, preferring the native C zstd binding when available.</summary>
+    public ZstdCodec()
+    {
+        _inner = ZstdNative.Available ? new NativeCompressor() : new ManagedCompressor();
+    }
 
     /// <inheritdoc/>
     public uint Tag => CodecTags.Zstd;
 
     /// <inheritdoc/>
-    public byte[]? Compress(byte[] data)
+    public byte[]? Compress(byte[] data) => _inner.Compress(data);
+
+    private interface IZstdCompressor
     {
-        // the returned span is only valid until the next Wrap call; copy immediately
-        var result = _compressor.Wrap(data);
-        return result.Length < data.Length ? result.ToArray() : null;
+        byte[]? Compress(byte[] data);
+    }
+
+    private sealed class NativeCompressor : IZstdCompressor, IDisposable
+    {
+        private readonly ZstdNative.CStream _stream = new();
+
+        public byte[]? Compress(byte[] data) => _stream.Compress(data);
+
+        public void Dispose() => _stream.Dispose();
+    }
+
+    private sealed class ManagedCompressor : IZstdCompressor
+    {
+        private readonly ZstdSharp.Compressor _compressor = new(ZstdSharp.Compressor.MaxCompressionLevel);
+
+        public byte[]? Compress(byte[] data)
+        {
+            _compressor.ResetStream();
+            var dest = new byte[ZstdSharp.Compressor.GetCompressBound(data.Length)];
+            _compressor.WrapStream(data, dest, out int consumed, out int written, isFinalBlock: true);
+            return consumed == data.Length && written < data.Length
+                ? dest.AsSpan(0, written).ToArray()
+                : null;
+        }
     }
 }
 

@@ -155,7 +155,7 @@ public class FlacPcm16Debug : IDisposable
         var sb = new StringBuilder();
         sb.AppendLine("full subdivide_tukey(3) LPC search for mid hunk1");
 
-        var variants = new (string Label, Action<Span<double>, ReadOnlySpan<float>, int> Fn)[]
+        var variants = new (string Label, Action<double[], float[], int> Fn)[]
         {
             ("A portForward14", AutoForward14),
             ("B scalar13", AutoScalar13),
@@ -383,7 +383,7 @@ public class FlacPcm16Debug : IDisposable
 
     private static (int BestOrder, long BestBits, List<(int B, int C, uint Guess, uint Order, double Lrbps, long Bits)> Candidates)
         FullLpcSearch(int[] sig, float[] window, float[] windowed, int blockSize, uint maxLpc, int bps,
-            Action<Span<double>, ReadOnlySpan<float>, int> autocFn)
+            Action<double[], float[], int> autocFn)
     {
         var autoc = new double[14];
         var autocRoot = new double[14];
@@ -592,7 +592,7 @@ public class FlacPcm16Debug : IDisposable
         WindowTukey(window, blockSize, 0.5f / 3.0f);
 
         var sb = new StringBuilder();
-        var variants = new (string Label, Action<Span<double>, ReadOnlySpan<float>, int> Fn)[]
+        var variants = new (string Label, Action<double[], float[], int> Fn)[]
         {
             ("A portForward14", AutoForward14),
             ("C sse2Backward", AutoBackwardSse2),
@@ -613,7 +613,7 @@ public class FlacPcm16Debug : IDisposable
     }
 
     private static List<(int B, int C, uint Guess, int[] Coeffs)> LpcSearchWithCoeffs(int[] sig, float[] window, float[] windowed,
-        int blockSize, uint maxLpc, int bps, Action<Span<double>, ReadOnlySpan<float>, int> autocFn)
+        int blockSize, uint maxLpc, int bps, Action<double[], float[], int> autocFn)
     {
         var autoc = new double[14];
         var autocRoot = new double[14];
@@ -683,7 +683,7 @@ public class FlacPcm16Debug : IDisposable
             sb.AppendLine($"  lpcError[{i}] = {lpcError[i]:R}");
     }
 
-    private static void AutoForward14(Span<double> autoc, ReadOnlySpan<float> data, int dataLen)
+    private static void AutoForward14(double[] autoc, float[] data, int dataLen)
     {
         const int maxLag = 14;
         for (int i = 0; i < maxLag; i++) autoc[i] = 0.0;
@@ -695,7 +695,7 @@ public class FlacPcm16Debug : IDisposable
                 autoc[j] += (double)data[i] * data[i - j];
     }
 
-    private static void AutoScalar13(Span<double> autoc, ReadOnlySpan<float> data, int dataLen)
+    private static void AutoScalar13(double[] autoc, float[] data, int dataLen)
     {
         const uint lag = 13;
         for (int i = 0; i < (int)lag; i++) autoc[i] = 0.0;
@@ -707,7 +707,7 @@ public class FlacPcm16Debug : IDisposable
                 autoc[j] += (double)data[i] * data[i - j];
     }
 
-    private static void AutoBackwardSse2(Span<double> autoc, ReadOnlySpan<float> data, int dataLen)
+    private static void AutoBackwardSse2(double[] autoc, float[] data, int dataLen)
     {
         const int maxLag = 14;
         for (int i = 0; i < maxLag; i++) autoc[i] = 0.0;

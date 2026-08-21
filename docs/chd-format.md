@@ -123,6 +123,8 @@ Each **expanded** entry is 12 bytes:
 
 The map encoding applies RLE to compression types (runs of 3–18 and 19–290 become `RLE_SMALL`/`RLE_LARGE`), promotes consecutive self/parent references to `SELF_0/1` and `PARENT_0/1/PARENT_SELF` pseudo-types, Huffman-encodes the type stream, then writes per-entry auxiliary data (lengths, CRC16s, offsets) at fixed bit widths. The whole uncompressed map's CRC16 is verified against the map header.
 
+**Encoder quirk (small maps):** chdman sizes the bitstream buffer as `(8*16 + (12 + max(lengthbits+16, hunkbits, parentunitbits)) * hunkcount) / 8 + 1` bytes *including* the 16-byte header. For small hunk counts that area is smaller than the actual tree + symbol + auxiliary bits, so MAME's `bitstream_out` silently drops whole trailing bytes while `flush()` still counts them in the map's compressed-length field; the dropped positions read back as zeroes. When a dropped byte is nonzero the stored map no longer matches its header CRC16 and the file cannot be re-opened — not even by chdman itself (reproducible with a single-hunk `createraw`, e.g. `-hs 65536` over random data). CHDSharp's encoder replicates the allocation and clipping byte-for-byte whenever chdman's output is well-formed, and falls back to the full bitstream when clipping would corrupt the map.
+
 ### V5 uncompressed map — 4 bytes per entry
 
 Used when all four codec slots are zero: each entry is a `uint32` **hunk index** (`offset = index × hunkbytes`); `0` means *take the hunk from the parent* (or zero-fill when there is no parent).

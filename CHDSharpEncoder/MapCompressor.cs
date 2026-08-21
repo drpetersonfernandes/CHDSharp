@@ -58,96 +58,136 @@ public static class MapCompressor
         huff.BuildTree();
 
         var nbitsNeeded = 8 * 16 + (12 + Math.Max(Math.Max(lengthBits + 16, selfBits), parentBits)) * (int)hunkCount;
-        var bs = new BitStreamOut(nbitsNeeded / 8 + 1 + 256);
 
-        huff.ExportTreeRle(bs);
+        // chdman's compress_v5_map allocates exactly nbits_needed/8 + 1 bytes INCLUDING the
+        // 16-byte map header and bitstreams over the tail. That estimate under-sizes the
+        // payload for small hunk counts (the RLE tree alone needs up to ~72 bits while only
+        // the per-entry budget remains past the header), so MAME's bitstream_out silently
+        // drops whole bytes beyond its buffer while flush() keeps counting them; the clipped
+        // positions read back as zeroes in the appended map. We replicate the allocation and
+        // clipping first: when nothing was dropped (or only zero bits fell past the end),
+        // the result is byte-identical to chdman's. When real data bits would be lost, the
+        // clipped map's CRC-16 no longer matches its header and even chdman cannot re-open
+        // its own file (upstream bug, hit e.g. by single-hunk images at hunk sizes
+        // 18816/19584/65536); in that case we fall back to the full bitstream so the output
+        // stays verifiable — a deliberate, documented divergence from a corrupt reference.
+        var mapAllocation = nbitsNeeded / 8 + 1;
+        var payloadBytes = mapAllocation - 16;
 
-        foreach (var sym in rleList)
-            huff.Encode(bs, sym);
+        ulong firstOffset;
+        byte[] compressed;
+        int compressedDataLen;
 
-        // iterate the RLE-decoded types in lockstep with the raw entries, writing the
-        // auxiliary data for each hunk (SELF_0/SELF_1 pseudo-types encode nothing)
-        ulong firstOffset = 0;
-        int rleIndex = 0;
-        byte lastComp = 0;
-        int repCount = 0;
-        for (uint i = 0; i < hunkCount; i++)
+        // pass 1: chdman-sized fixed buffer (drops overflow, counts it)
+        compressed = new byte[mapAllocation];
+        var bs = new BitStreamOut(compressed, 16, payloadBytes);
+        firstOffset = WriteMapPayload(bs);
+        compressedDataLen = bs.Flush();
+
+        if (compressedDataLen > payloadBytes)
         {
-            byte type;
-            if (repCount > 0)
+            // pass 2: clipping would corrupt the map — emit the full bitstream instead
+            bs = new BitStreamOut(nbitsNeeded / 8 + 1 + 256);
+            firstOffset = WriteMapPayload(bs);
+            compressedDataLen = bs.Flush();
+            compressed = new byte[16 + compressedDataLen];
+            Array.Copy(bs.ToArray(), 0, compressed, 16, compressedDataLen);
+        }
+
+        // writes tree + RLE symbols + per-entry auxiliary data; returns the first nonzero
+        // stored offset for the map header
+        ulong WriteMapPayload(BitStreamOut stream)
+        {
+            huff.ExportTreeRle(stream);
+
+            foreach (var sym in rleList)
+                huff.Encode(stream, sym);
+
+            // iterate the RLE-decoded types in lockstep with the raw entries, writing the
+            // auxiliary data for each hunk (SELF_0/SELF_1 pseudo-types encode nothing)
+            ulong first = 0;
+            int rleIndex = 0;
+            byte lastComp = 0;
+            int repCount = 0;
+            for (uint i = 0; i < hunkCount; i++)
             {
-                type = lastComp;
-                repCount--;
-            }
-            else
-            {
-                var val = rleList[rleIndex++];
-                switch (val)
+                byte type;
+                if (repCount > 0)
                 {
-                    case CompressionRleSmall:
-                        type = lastComp;
-                        repCount = 2 + rleList[rleIndex++];
+                    type = lastComp;
+                    repCount--;
+                }
+                else
+                {
+                    var val = rleList[rleIndex++];
+                    switch (val)
+                    {
+                        case CompressionRleSmall:
+                            type = lastComp;
+                            repCount = 2 + rleList[rleIndex++];
+                            break;
+                        case CompressionRleLarge:
+                            type = lastComp;
+                            repCount = 2 + 16 + (rleList[rleIndex++] << 4);
+                            repCount += rleList[rleIndex++];
+                            break;
+                        default:
+                            type = lastComp = val;
+                            break;
+                    }
+                }
+
+                var entry = entries[i];
+                switch (type)
+                {
+                    case MapEntry.CompressionType0:
+                    case MapEntry.CompressionType1:
+                    case MapEntry.CompressionType2:
+                    case MapEntry.CompressionType3:
+                        stream.Write(entry.CompLength, lengthBits);
+                        stream.Write(entry.Crc16, 16);
+                        if (first == 0)
+                        {
+                            first = entry.Offset;
+                        }
+
                         break;
-                    case CompressionRleLarge:
-                        type = lastComp;
-                        repCount = 2 + 16 + (rleList[rleIndex++] << 4);
-                        repCount += rleList[rleIndex++];
+                    case MapEntry.CompressionNone:
+                        stream.Write(entry.Crc16, 16);
+                        if (first == 0)
+                        {
+                            first = entry.Offset;
+                        }
+
                         break;
-                    default:
-                        type = lastComp = val;
+                    case MapEntry.CompressionSelf:
+                        // writes the source hunk index with selfBits; guaranteed to fit because
+                        // maxSelf covers every non-promoted SELF reference
+                        stream.Write((uint)entry.Offset, selfBits);
+                        break;
+                    case MapEntry.CompressionParent:
+                        // writes the parent unit index with parentBits; guaranteed to fit because
+                        // maxParent covers every non-promoted PARENT reference
+                        stream.Write((uint)entry.Offset, parentBits);
+                        break;
+                    case CompressionSelf0:
+                    case CompressionSelf1:
+                    case CompressionParentSelf:
+                    case CompressionParent0:
+                    case CompressionParent1:
                         break;
                 }
             }
 
-            var entry = entries[i];
-            switch (type)
-            {
-                case MapEntry.CompressionType0:
-                case MapEntry.CompressionType1:
-                case MapEntry.CompressionType2:
-                case MapEntry.CompressionType3:
-                    bs.Write(entry.CompLength, lengthBits);
-                    bs.Write(entry.Crc16, 16);
-                    if (firstOffset == 0)
-                    {
-                        firstOffset = entry.Offset;
-                    }
-
-                    break;
-                case MapEntry.CompressionNone:
-                    bs.Write(entry.Crc16, 16);
-                    if (firstOffset == 0)
-                    {
-                        firstOffset = entry.Offset;
-                    }
-
-                    break;
-                case MapEntry.CompressionSelf:
-                    // writes the source hunk index with selfBits; guaranteed to fit because
-                    // maxSelf covers every non-promoted SELF reference
-                    bs.Write((uint)entry.Offset, selfBits);
-                    break;
-                case MapEntry.CompressionParent:
-                    // writes the parent unit index with parentBits; guaranteed to fit because
-                    // maxParent covers every non-promoted PARENT reference
-                    bs.Write((uint)entry.Offset, parentBits);
-                    break;
-                case CompressionSelf0:
-                case CompressionSelf1:
-                case CompressionParentSelf:
-                case CompressionParent0:
-                case CompressionParent1:
-                    break;
-            }
+            return first;
         }
-
-        var compressedDataLen = bs.Flush();
 
         var rawMap = new byte[hunkCount * 12];
         for (uint i = 0; i < hunkCount; i++)
             MapEntry.WriteRawMapEntry(rawMap, (int)i, entries[i]);
         var mapCrc = Crc16.Compute(rawMap);
 
+        // map header: complen, firstoffs, mapcrc, lengthbits/selfbits/parentbits/reserved
         var headerW = new BigEndianWriter(16);
         headerW.WriteU32((uint)compressedDataLen);
         headerW.WriteU48(firstOffset);
@@ -157,12 +197,8 @@ public static class MapCompressor
         headerW.WriteU8(parentBits);
         headerW.WriteU8(0);
 
-        var header = headerW.ToArray();
-        var compressedData = bs.ToArray();
-        var result = new byte[header.Length + compressedData.Length];
-        Array.Copy(header, 0, result, 0, header.Length);
-        Array.Copy(compressedData, 0, result, header.Length, compressedData.Length);
-        return result;
+        Array.Copy(headerW.ToArray(), 0, compressed, 0, 16);
+        return compressed.AsSpan(0, Math.Min(16 + compressedDataLen, compressed.Length)).ToArray();
     }
 
     /// <summary>

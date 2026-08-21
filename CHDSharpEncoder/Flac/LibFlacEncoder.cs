@@ -10,6 +10,12 @@ namespace CHDSharpEncoder.Flac;
 /// </summary>
 internal sealed class LibFlacEncoder
 {
+    /// <summary>Debug hook (test-only): receives (subframeName, order, bits) for each LPC candidate.</summary>
+    internal static Action<string, uint, uint>? DebugCandidateHook;
+
+    /// <summary>Debug hook (test-only): receives (channel, bestIdx, bestBits, type, order) after each subframe search.</summary>
+    internal static Action<int, uint, uint, SubframeType, int>? DebugResultHook;
+
     private readonly int blockSize;
     private const int BitsPerSample = 16;
     private const uint MaxLpcOrd = 12;
@@ -239,6 +245,7 @@ internal sealed class LibFlacEncoder
                         if (!ok) continue;
 
                         uint c = LpcBits(sf[ci], sig, bps, wasted, guessLpc, quant, riceLimit, maxPo, rice[ci]);
+                        DebugCandidateHook?.Invoke($"ch{ch}-apA{apA}-apB{apB}-apC{apC}", guessLpc, c);
                         if (c > 0 && c < bestBits)
                         {
                             bestIdx = ci;
@@ -253,6 +260,7 @@ internal sealed class LibFlacEncoder
         sf[bestIdx].WastedBits = wasted;
         if (sf[bestIdx].Type is SubframeType.Fixed or SubframeType.Lpc)
             for (int i = 0; i < sf[bestIdx].Order; i++) sf[bestIdx].Warmup[i] = sig[4 + i];
+        DebugResultHook?.Invoke(ch, bestIdx, bestBits, sf[bestIdx].Type, sf[bestIdx].Order);
     }
 
     private uint VerbatimBits(Subframe sf, int[] sig, int bps, int wasted)

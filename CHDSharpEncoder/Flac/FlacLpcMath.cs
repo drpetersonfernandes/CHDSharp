@@ -150,18 +150,26 @@ internal static class FlacLpcMath
         }
     }
 
-    /// <summary>FLAC__lpc_compute_autocorrelation (scalar dedup, MAX_LAG=14; verified bit-identical to the SSE2 lag-14 variant).</summary>
+    /// <summary>FLAC__lpc_compute_autocorrelation (MAX_LAG=16). Replicates chdman's x86_64
+    /// FLAC__lpc_compute_autocorrelation_intrin_fma_lag_16 dispatch: a backward loop (i from
+    /// dataLen-1 down to 0) accumulating each term as a fused multiply-add
+    /// autoc[j] = fma(data[i], data[i-j], autoc[j]) using double precision. The data are
+    /// FLAC__real (float) promoted to double; the FMA gives a single rounding, which is what
+    /// MAME's chdman produces on an FMA-capable CPU and is required for byte-identical output.</summary>
     public static void ComputeAutocorrelation(ReadOnlySpan<float> data, uint dataLen, uint lag, Span<double> autoc)
     {
-        const int maxLag = 14;
-        int i, j;
-        for (i = 0; i < maxLag; i++) autoc[i] = 0.0;
-        for (i = 0; i < maxLag; i++)
-            for (j = 0; j <= i; j++)
-                autoc[j] += (double)data[i] * data[i - j];
-        for (i = maxLag; i < (int)dataLen; i++)
-            for (j = 0; j < maxLag; j++)
-                autoc[j] += (double)data[i] * data[i - j];
+        int L = (int)lag;
+        for (int i = 0; i < L; i++) autoc[i] = 0.0;
+        for (int i = (int)dataLen - 1; i >= 0; i--)
+        {
+            double d = data[i]; // float -> double (exact)
+            for (int j = 0; j < L; j++)
+            {
+                int idx = i - j;
+                if (idx >= 0)
+                    autoc[j] = Math.FusedMultiplyAdd(d, data[idx], autoc[j]);
+            }
+        }
     }
 
     // ---------------- lpc.c: LP coefficients (Levinson-Durbin) ----------------

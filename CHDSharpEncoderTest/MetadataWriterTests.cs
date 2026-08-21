@@ -86,7 +86,7 @@ public class MetadataWriterTests
             NextOffset = 0x1234
         };
 
-        byte[] data = entry.Serialize();
+        var data = entry.Serialize();
 
         Assert.Equal(16 + 8, data.Length);
         Assert.Equal(0x43, data[0]);
@@ -109,12 +109,12 @@ public class MetadataWriterTests
         toc.Tracks.Add(MakeTrack(2, CdTrackType.Audio, 2000, pregap: 150, pgType: CdTrackType.Audio, pgDataSize: 2352));
 
         using var ms = new MemoryStream();
-        long metaOffset = MetadataWriter.WriteCdMetadata(ms, toc);
+        var metaOffset = MetadataWriter.WriteCdMetadata(ms, toc);
 
         Assert.Equal(0L, metaOffset);
         Assert.True(ms.Length > 0);
 
-        byte[] data = ms.ToArray();
+        var data = ms.ToArray();
         Assert.Equal(MetadataWriter.CdRomTrackMetadata2Tag, ReadU32Be(data, (int)metaOffset));
 
         // entry 0: 'CHT2', length = string + null terminator, next points at entry 1
@@ -123,7 +123,7 @@ public class MetadataWriterTests
         Assert.Equal(0x01, data[(int)metaOffset + 4]);
 
         // entry 1: next = 0 (end of list)
-        long entry1Offset = metaOffset + entry0Len;
+        var entry1Offset = metaOffset + entry0Len;
         Assert.Equal(0UL, ReadU64Be(data, (int)entry1Offset + 8));
         Assert.Equal(entry1Offset + 16 + ReadU24Be(data, (int)entry1Offset + 5), ms.Length);
     }
@@ -135,7 +135,7 @@ public class MetadataWriterTests
         ms.SetLength(100);
         ms.Position = 42;
 
-        long metaOffset = MetadataWriter.WriteCdMetadata(ms, new CdToc());
+        var metaOffset = MetadataWriter.WriteCdMetadata(ms, new CdToc());
 
         Assert.Equal(42L, metaOffset);
         Assert.Equal(100L, ms.Length);
@@ -148,9 +148,9 @@ public class MetadataWriterTests
         toc.Tracks.Add(MakeTrack(1, CdTrackType.Audio, 500));
 
         using var ms = new MemoryStream();
-        long metaOffset = MetadataWriter.WriteCdMetadata(ms, toc);
+        var metaOffset = MetadataWriter.WriteCdMetadata(ms, toc);
 
-        byte[] data = ms.ToArray();
+        var data = ms.ToArray();
         Assert.Equal(0UL, ReadU64Be(data, (int)metaOffset + 8));
         Assert.Equal(metaOffset + 16 + ReadU24Be(data, (int)metaOffset + 5), ms.Length);
     }
@@ -159,23 +159,23 @@ public class MetadataWriterTests
     public void WriteMetadata_LinkedListIntegrity()
     {
         var toc = new CdToc();
-        for (int i = 1; i <= 5; i++)
+        for (var i = 1; i <= 5; i++)
             toc.Tracks.Add(MakeTrack(i, CdTrackType.Audio, 100 + i));
 
         using var ms = new MemoryStream();
-        long firstOffset = MetadataWriter.WriteCdMetadata(ms, toc);
-        byte[] data = ms.ToArray();
+        var firstOffset = MetadataWriter.WriteCdMetadata(ms, toc);
+        var data = ms.ToArray();
 
-        long offset = firstOffset;
-        int entries = 0;
+        var offset = firstOffset;
+        var entries = 0;
         while (true)
         {
             Assert.True((int)offset + 16 <= data.Length, "entry header out of range");
-            uint tag = ReadU32Be(data, (int)offset);
+            var tag = ReadU32Be(data, (int)offset);
             Assert.Equal(MetadataWriter.CdRomTrackMetadata2Tag, tag);
             Assert.Equal(MetadataWriter.ChdMdflagsChecksum, data[(int)offset + 4]);
 
-            ulong next = ReadU64Be(data, (int)offset + 8);
+            var next = ReadU64Be(data, (int)offset + 8);
             long entryLen = 16 + ReadU24Be(data, (int)offset + 5);
             entries++;
 

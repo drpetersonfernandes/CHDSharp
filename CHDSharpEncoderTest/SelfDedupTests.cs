@@ -32,16 +32,16 @@ public class SelfDedupTests : IDisposable
     public void RepeatedHunks_ProduceSmallChd()
     {
         // 256 hunks of identical content
-        byte[] source = new byte[4096 * 256];
-        for (int i = 0; i < 4096; i++)
+        var source = new byte[4096 * 256];
+        for (var i = 0; i < 4096; i++)
         {
             source[i] = (byte)(i & 0xFF);
         }
 
-        for (int h = 1; h < 256; h++)
+        for (var h = 1; h < 256; h++)
             Array.Copy(source, 0, source, h * 4096, 4096);
 
-        string chdPath = Path.Combine(_dir, "repeated.chd");
+        var chdPath = Path.Combine(_dir, "repeated.chd");
         using var ms = new MemoryStream(source);
         ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512);
 
@@ -54,7 +54,7 @@ public class SelfDedupTests : IDisposable
         Assert.Equal(ChdError.Chderrnone, openErr);
         using (chd)
         {
-            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out var actual));
             Assert.Equal(source, actual);
         }
     }
@@ -63,19 +63,19 @@ public class SelfDedupTests : IDisposable
     public void AlternatingHunks_AreDeduplicated()
     {
         // pattern A,B,A,B,... exercises SELF_1 promotion and plain SELF references
-        byte[] patternA = new byte[4096];
-        byte[] patternB = new byte[4096];
-        for (int i = 0; i < 4096; i++)
+        var patternA = new byte[4096];
+        var patternB = new byte[4096];
+        for (var i = 0; i < 4096; i++)
         {
             patternA[i] = (byte)(i & 0xFF);
             patternB[i] = (byte)(~i & 0xFF);
         }
 
-        byte[] source = new byte[4096 * 64];
-        for (int h = 0; h < 64; h++)
+        var source = new byte[4096 * 64];
+        for (var h = 0; h < 64; h++)
             Array.Copy(h % 2 == 0 ? patternA : patternB, 0, source, h * 4096, 4096);
 
-        string chdPath = Path.Combine(_dir, "alternating.chd");
+        var chdPath = Path.Combine(_dir, "alternating.chd");
         using var ms = new MemoryStream(source);
         ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512);
 
@@ -85,7 +85,7 @@ public class SelfDedupTests : IDisposable
         Assert.Equal(ChdError.Chderrnone, openErr);
         using (chd)
         {
-            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out var actual));
             Assert.Equal(source, actual);
         }
     }
@@ -93,8 +93,8 @@ public class SelfDedupTests : IDisposable
     [Fact]
     public void ZeroFilledImage_DeduplicatesToSingleHunk()
     {
-        byte[] source = new byte[4096 * 128]; // all zeros
-        string chdPath = Path.Combine(_dir, "zeros.chd");
+        var source = new byte[4096 * 128]; // all zeros
+        var chdPath = Path.Combine(_dir, "zeros.chd");
 
         using var ms = new MemoryStream(source);
         ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512);
@@ -106,7 +106,7 @@ public class SelfDedupTests : IDisposable
         Assert.Equal(ChdError.Chderrnone, openErr);
         using (chd)
         {
-            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out var actual));
             Assert.Equal(source, actual);
         }
     }
@@ -117,12 +117,12 @@ public class SelfDedupTests : IDisposable
         // 10 hunks: hunk 0 stored, hunks 1..9 SELF references to hunk 7 (max self = 7)
         var entries = new MapEntry[10];
         entries[0] = new MapEntry { Compression = MapEntry.CompressionNone, CompLength = 4096, Offset = 124, Crc16 = 0xFFFF };
-        for (int i = 1; i < 10; i++)
+        for (var i = 1; i < 10; i++)
         {
             entries[i] = new MapEntry { Compression = MapEntry.CompressionSelf, CompLength = 0, Offset = 7, Crc16 = 0 };
         }
 
-        byte[] compressed = MapCompressor.Compress(entries, 10, 4096, 512);
+        var compressed = MapCompressor.Compress(entries, 10, 4096, 512);
 
         // header: [0-3] data length, [4-9] first offset, [10-11] crc, [12] lengthbits, [13] selfbits
         Assert.Equal(3, compressed[13]); // bits_for_value(7) = 3
@@ -135,12 +135,12 @@ public class SelfDedupTests : IDisposable
         // (refHunk == lastSelf), so maxSelf stays 0 → selfbits = 0
         var entries = new MapEntry[4];
         entries[0] = new MapEntry { Compression = MapEntry.CompressionType0, CompLength = 100, Offset = 124, Crc16 = 1 };
-        for (int i = 1; i < 4; i++)
+        for (var i = 1; i < 4; i++)
         {
             entries[i] = new MapEntry { Compression = MapEntry.CompressionSelf, CompLength = 0, Offset = 0, Crc16 = 0 };
         }
 
-        byte[] compressed = MapCompressor.Compress(entries, 4, 4096, 512);
+        var compressed = MapCompressor.Compress(entries, 4, 4096, 512);
 
         Assert.Equal(0, compressed[13]);
     }
@@ -154,14 +154,14 @@ public class SelfDedupTests : IDisposable
         entries[1] = new MapEntry { Compression = MapEntry.CompressionSelf, CompLength = 0, Offset = 0, Crc16 = 0 };
         entries[2] = new MapEntry { Compression = MapEntry.CompressionSelf, CompLength = 0, Offset = 0, Crc16 = 0 };
 
-        byte[] compressed = MapCompressor.Compress(entries, 3, 4096, 512);
+        var compressed = MapCompressor.Compress(entries, 3, 4096, 512);
 
-        byte[] rawMap = new byte[3 * 12];
-        for (int i = 0; i < 3; i++)
+        var rawMap = new byte[3 * 12];
+        for (var i = 0; i < 3; i++)
             MapEntry.WriteRawMapEntry(rawMap, i, entries[i]);
-        ushort expectedCrc = Crc16.Compute(rawMap);
+        var expectedCrc = Crc16.Compute(rawMap);
 
-        ushort storedCrc = (ushort)((compressed[10] << 8) | compressed[11]);
+        var storedCrc = (ushort)((compressed[10] << 8) | compressed[11]);
         Assert.Equal(expectedCrc, storedCrc);
     }
 
@@ -177,14 +177,14 @@ public class SelfDedupTests : IDisposable
                                INDEX 00 00:01:00
                                INDEX 01 00:01:02
                            """;
-        string cuePath = Path.Combine(_dir, "silent.cue");
+        var cuePath = Path.Combine(_dir, "silent.cue");
         File.WriteAllText(cuePath, cue);
         using (var fs = File.Create(Path.Combine(_dir, "game.bin")))
         {
             fs.SetLength(2352L * (60 * 75 + 60 * 75 + 8));
         }
 
-        string chdPath = Path.Combine(_dir, "silent.chd");
+        var chdPath = Path.Combine(_dir, "silent.chd");
 
         ChdEncoder.EncodeCd(cuePath, chdPath);
 
@@ -197,8 +197,8 @@ public class SelfDedupTests : IDisposable
         using (chd)
         {
             // every decoded hunk must be identical (all silence)
-            byte[] expected = new byte[chd!.HunkBytes];
-            byte[] actual = new byte[chd.HunkBytes];
+            var expected = new byte[chd!.HunkBytes];
+            var actual = new byte[chd.HunkBytes];
             Assert.Equal(ChdError.Chderrnone, chd.ReadHunk(0, expected));
             for (uint h = 0; h < chd.HunkCount; h++)
             {

@@ -74,7 +74,7 @@ public class HunkProcessor
         _hunkBytes = hunkBytes;
         _taskCount = taskCount;
         _workerCodecSets = new IChdCodec[taskCount][];
-        for (int t = 0; t < taskCount; t++)
+        for (var t = 0; t < taskCount; t++)
         {
             _workerCodecSets[t] = ChdCodecs.CreateAll(codecTags, hunkBytes);
         }
@@ -96,9 +96,9 @@ public class HunkProcessor
         var crc16 = Crc16.Compute(rawHunk);
 
         // try every codec and keep the smallest result that saves space
-        int bestCodec = -1;
+        var bestCodec = -1;
         byte[]? bestData = null;
-        for (int i = 0; i < _syncCodecs.Length; i++)
+        for (var i = 0; i < _syncCodecs.Length; i++)
         {
             var candidate = _syncCodecs[i].Compress(rawHunk);
             if (candidate != null && (bestData == null || candidate.Length < bestData.Length))
@@ -213,7 +213,7 @@ public class HunkProcessor
             _toCompress = new BlockingCollection<int>(taskCount * 8);
             _toWrite = new BlockingCollection<int>(taskCount * 8);
             _items = new HunkItem[hunkCount];
-            for (int i = 0; i < hunkCount; i++)
+            for (var i = 0; i < hunkCount; i++)
             {
                 _items[i] = new HunkItem();
             }
@@ -228,9 +228,9 @@ public class HunkProcessor
                 () => ProducerLoop(),
                 CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default));
 
-            for (int t = 0; t < _taskCount; t++)
+            for (var t = 0; t < _taskCount; t++)
             {
-                int workerIndex = t;
+                var workerIndex = t;
                 _tasks.Add(Task.Factory.StartNew(
                     () => WorkerLoop(workerIndex),
                     CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default));
@@ -240,7 +240,7 @@ public class HunkProcessor
             {
                 // single consumer: results may arrive out of order, but are emitted in hunk order
                 // so map offsets, dedup state, and block writes stay strictly sequential
-                int next = 0;
+                var next = 0;
                 while (next < _hunkCount)
                 {
                     var h = _toWrite.Take(_ts.Token);
@@ -292,7 +292,7 @@ public class HunkProcessor
                 {
                     var buffer = _owner._rawPool.Rent();
                     Array.Clear(buffer, 0, buffer.Length);
-                    int hashBytes = _readHunk(h, buffer);
+                    var hashBytes = _readHunk(h, buffer);
 
                     // the running raw SHA-1 is appended in hunk order on the producer thread
                     // (one serial pass; per-hunk hashing for dedup runs on the workers)
@@ -303,7 +303,7 @@ public class HunkProcessor
                 }
 
                 // sentinels tell every worker to stop and return
-                for (int i = 0; i < _taskCount; i++)
+                for (var i = 0; i < _taskCount; i++)
                     _toCompress.Add(-1, _ts.Token);
             }
             catch (OperationCanceledException)
@@ -334,10 +334,10 @@ public class HunkProcessor
                     item.Crc16 = Crc16.Compute(raw);
 
                     // try every codec and keep the smallest result that saves space
-                    int bestCodec = -1;
-                    int bestLen = int.MaxValue;
+                    var bestCodec = -1;
+                    var bestLen = int.MaxValue;
                     byte[]? bestData = null;
-                    for (int i = 0; i < codecs.Length; i++)
+                    for (var i = 0; i < codecs.Length; i++)
                     {
                         var candidate = codecs[i].Compress(raw);
                         if (candidate != null && candidate.Length < bestLen)

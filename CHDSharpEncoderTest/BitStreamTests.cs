@@ -93,7 +93,7 @@ public class BitStreamTests
         var bs = new BitStreamOut(16);
         bs.Write(0xA5, 8);
         Assert.Equal(0, bs.ByteLength);
-        int count = bs.Flush();
+        var count = bs.Flush();
         Assert.Equal(1, count);
         Assert.Equal(1, bs.ByteLength);
     }
@@ -104,7 +104,7 @@ public class BitStreamTests
         var bs = new BitStreamOut(4); // small initial buffer
         bs.Write(0x11223344, 32);
         bs.Write(0x55667788, 32);
-        int count = bs.Flush();
+        var count = bs.Flush();
         Assert.Equal(8, count);
         Assert.Equal([0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88], bs.ToArray());
     }
@@ -114,8 +114,8 @@ public class BitStreamTests
     {
         var bs = new BitStreamOut(16);
         bs.Write(0xAB, 8);
-        int c1 = bs.Flush();
-        int c2 = bs.Flush();
+        var c1 = bs.Flush();
+        var c2 = bs.Flush();
         Assert.Equal(c1, c2);
         Assert.Equal(new byte[] { 0xAB }, bs.ToArray());
     }
@@ -143,7 +143,7 @@ public class BitStreamTests
         bs.Write(7, 3); // count-3 = 7 → 10 zeros (fills codes 5-14 = 10 codes, wait: 15-5+1 = 11)
         // Actually code 15 is the 11th zero... let me just verify it flushes
 
-        int bytes = bs.Flush();
+        var bytes = bs.Flush();
         Assert.True(bytes > 0);
     }
 }

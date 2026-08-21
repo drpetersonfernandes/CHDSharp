@@ -2,14 +2,13 @@
 // Original code and comments Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
-global using static ZLibDotNet.ZLib;
-using System;
+global using static CHDSharpEncoder.ZLib.ZLib;
 using System.Runtime.InteropServices;
-using ZLibDotNet.Deflate;
-using ZLibDotNet.Inflate;
-using Adler = ZLibDotNet.Adler32;
+using CHDSharpEncoder.ZLib.Deflate;
+using CHDSharpEncoder.ZLib.Inflate;
+using Adler = CHDSharpEncoder.ZLib.Adler32;
 
-namespace ZLibDotNet;
+namespace CHDSharpEncoder.ZLib;
 
 #pragma warning disable CA1062
 /// <summary>
@@ -290,8 +289,8 @@ public partial class ZLib : IZLib
     /// <returns><see cref="Z_OK"/> if success, <see cref="Z_MEM_ERROR"/> if there was not enough memory, <see cref="Z_BUF_ERROR"/> if there was not enough room in the output buffer, or Z_STREAM_ERROR if any of the level parameters are invalid.</returns>
     public int Compress(Span<byte> dest, out int destLen, ReadOnlySpan<byte> source, int level)
     {
-        uint bytesCompressed = (uint)dest.Length;
-        int ret = Compressor.Compress(dest, ref bytesCompressed, source, (uint)source.Length, level);
+        var bytesCompressed = (uint)dest.Length;
+        var ret = Compressor.Compress(dest, ref bytesCompressed, source, (uint)source.Length, level);
         destLen = (int)bytesCompressed;
         return ret;
     }
@@ -366,9 +365,9 @@ public partial class ZLib : IZLib
     /// <remarks>In the case where there is not enough room, the method will fill the destination buffer with the uncompressed data up to that point.</remarks>
     public int Uncompress(Span<byte> dest, out int destLen, ReadOnlySpan<byte> source, out int sourceLen)
     {
-        uint bytesUncompressed = (uint)dest.Length;
-        uint bytesConsumed = (uint)source.Length;
-        int ret = Compressor.Uncompress(dest, ref bytesUncompressed, source, ref bytesConsumed);
+        var bytesUncompressed = (uint)dest.Length;
+        var bytesConsumed = (uint)source.Length;
+        var ret = Compressor.Uncompress(dest, ref bytesUncompressed, source, ref bytesConsumed);
         destLen = (int)bytesUncompressed;
         sourceLen = (int)bytesConsumed;
         return ret;

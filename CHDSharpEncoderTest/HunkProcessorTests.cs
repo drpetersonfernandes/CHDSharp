@@ -8,7 +8,7 @@ public class HunkProcessorTests
     [Fact]
     public void ZeroHunk_compressesBelowHunkSize()
     {
-        byte[] hunk = new byte[4096];
+        var hunk = new byte[4096];
         var processor = new HunkProcessor(4096);
         var (entry, data) = processor.ProcessHunk(hunk, 124);
 
@@ -19,7 +19,7 @@ public class HunkProcessorTests
     [Fact]
     public void RandomHunk_mayBeUncompressed()
     {
-        byte[] hunk = new byte[4096];
+        var hunk = new byte[4096];
         new Random(42).NextBytes(hunk);
         var processor = new HunkProcessor(4096);
         var (entry, data) = processor.ProcessHunk(hunk, 124);
@@ -34,20 +34,20 @@ public class HunkProcessorTests
     [Fact]
     public void Crc16MatchesExpected()
     {
-        byte[] hunk = new byte[4096];
+        var hunk = new byte[4096];
         hunk[0] = 0x42;
         var processor = new HunkProcessor(4096);
         var (entry, _) = processor.ProcessHunk(hunk, 124);
 
-        ushort expected = Crc16.Compute(hunk);
+        var expected = Crc16.Compute(hunk);
         Assert.Equal(expected, entry.Crc16);
     }
 
     [Fact]
     public void PatternHunk_compresses()
     {
-        byte[] hunk = new byte[4096];
-        for (int i = 0; i < hunk.Length; i++)
+        var hunk = new byte[4096];
+        for (var i = 0; i < hunk.Length; i++)
         {
             hunk[i] = (byte)(i & 0xFF);
         }
@@ -62,8 +62,8 @@ public class HunkProcessorTests
     [Fact]
     public void CompressedData_roundtrips()
     {
-        byte[] original = new byte[4096];
-        for (int i = 0; i < original.Length; i++)
+        var original = new byte[4096];
+        for (var i = 0; i < original.Length; i++)
         {
             original[i] = (byte)((i * 7 + 3) & 0xFF);
         }
@@ -73,7 +73,7 @@ public class HunkProcessorTests
 
         if (entry.Compression == MapEntry.CompressionType0)
         {
-            byte[] decompressed = RawDeflate.Decompress(data, 4096);
+            var decompressed = RawDeflate.Decompress(data, 4096);
             Assert.Equal(original, decompressed);
         }
     }
@@ -81,7 +81,7 @@ public class HunkProcessorTests
     [Fact]
     public void FileOffset_storedInEntry()
     {
-        byte[] hunk = new byte[4096];
+        var hunk = new byte[4096];
         var processor = new HunkProcessor(4096);
         var (entry, _) = processor.ProcessHunk(hunk, 999888);
 
@@ -91,7 +91,7 @@ public class HunkProcessorTests
     [Fact]
     public void HunkSizeMismatch_throws()
     {
-        byte[] hunk = new byte[2048]; // half size
+        var hunk = new byte[2048]; // half size
         var processor = new HunkProcessor(4096);
 
         Assert.Throws<ArgumentException>(() => processor.ProcessHunk(hunk, 124));
@@ -100,8 +100,8 @@ public class HunkProcessorTests
     [Fact]
     public void CdFrameSizeHunk_works()
     {
-        byte[] hunk = new byte[18816]; // 8 CD frames
-        for (int i = 0; i < hunk.Length; i++)
+        var hunk = new byte[18816]; // 8 CD frames
+        for (var i = 0; i < hunk.Length; i++)
         {
             hunk[i] = (byte)((i * 13 + 7) & 0xFF);
         }
@@ -113,7 +113,7 @@ public class HunkProcessorTests
 
         if (entry.Compression == MapEntry.CompressionType0)
         {
-            byte[] decompressed = RawDeflate.Decompress(data, 18816);
+            var decompressed = RawDeflate.Decompress(data, 18816);
             Assert.Equal(hunk, decompressed);
         }
     }
@@ -129,7 +129,7 @@ public class HunkProcessorTests
             Crc16 = 0x9876
         };
 
-        byte[] rawMap = new byte[12];
+        var rawMap = new byte[12];
         MapEntry.WriteRawMapEntry(rawMap, 0, entry);
 
         Assert.Equal(MapEntry.CompressionType0, rawMap[0]);

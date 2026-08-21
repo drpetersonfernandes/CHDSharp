@@ -2,9 +2,7 @@
 // Original code and comments Copyright (C) 1995-2024 Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
-using System;
-
-namespace ZLibDotNet.Inflate;
+namespace CHDSharpEncoder.ZLib.Inflate;
 
 internal static partial class Inflater
 {
@@ -29,7 +27,7 @@ internal static partial class Inflater
         strm.inflateState = state;
         state.mode = InflateMode.Head;
 
-        int ret = InflateReset(ref strm, windowBits);
+        var ret = InflateReset(ref strm, windowBits);
         if (ret != Z_OK)
         {
             s_objectPool.Return(state);

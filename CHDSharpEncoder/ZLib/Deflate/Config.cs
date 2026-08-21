@@ -1,9 +1,10 @@
 #nullable disable
 using System.Runtime.InteropServices;
+
 // Original code and comments Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
-namespace ZLibDotNet.Deflate;
+namespace CHDSharpEncoder.ZLib.Deflate;
 
 [StructLayout(LayoutKind.Sequential)]
 internal readonly struct Config

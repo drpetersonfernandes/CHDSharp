@@ -181,7 +181,7 @@ public class UtilityTests
     {
         var pool = new ArrayPool(64);
         var tasks = new Task[100];
-        for (int i = 0; i < 100; i++)
+        for (var i = 0; i < 100; i++)
         {
             tasks[i] = Task.Run(() =>
             {

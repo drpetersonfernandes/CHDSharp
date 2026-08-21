@@ -1,6 +1,3 @@
-using System;
-using System.Buffers.Binary;
-
 namespace CHDSharpEncoder.Flac;
 
 /// <summary>
@@ -31,9 +28,9 @@ internal sealed class LibFlacBitWriter
 
     private void EnsureCapacity(int bitsToAdd)
     {
-        int neededBytes = (_bitCount + bitsToAdd + 7) / 8;
+        var neededBytes = (_bitCount + bitsToAdd + 7) / 8;
         if (neededBytes <= _buffer.Length) return;
-        int newSize = _buffer.Length;
+        var newSize = _buffer.Length;
         while (newSize < neededBytes) newSize = Math.Max(newSize * 2, 64);
         Array.Resize(ref _buffer, newSize);
     }
@@ -49,12 +46,12 @@ internal sealed class LibFlacBitWriter
     {
         if (bits == 0) return;
         EnsureCapacity(bits);
-        int shift = 32 - bits;
-        uint v = bits < 32 ? value & (0xFFFFFFFFu >> shift) : value;
-        for (int i = bits - 1; i >= 0; i--)
+        var shift = 32 - bits;
+        var v = bits < 32 ? value & (0xFFFFFFFFu >> shift) : value;
+        for (var i = bits - 1; i >= 0; i--)
         {
-            int bytePos = _bitCount >> 3;
-            int bitPos = 7 - (_bitCount & 7);
+            var bytePos = _bitCount >> 3;
+            var bitPos = 7 - (_bitCount & 7);
             if (((v >> i) & 1) != 0) _buffer[bytePos] |= (byte)(1 << bitPos);
             _bitCount++;
         }
@@ -62,7 +59,7 @@ internal sealed class LibFlacBitWriter
 
     public void WriteRawInt32(int value, int bits)
     {
-        uint v = bits < 32 ? (uint)value & (0xFFFFFFFFu >> (32 - bits)) : (uint)value;
+        var v = bits < 32 ? (uint)value & (0xFFFFFFFFu >> (32 - bits)) : (uint)value;
         WriteRawUInt32(v, bits);
     }
 
@@ -137,16 +134,16 @@ internal sealed class LibFlacBitWriter
 
     public void WriteRiceSignedBlock(ReadOnlySpan<int> values, int count, uint parameter)
     {
-        for (int i = 0; i < count; i++)
+        for (var i = 0; i < count; i++)
         {
-            int v = values[i];
-            uint folded = ((uint)v << 1) ^ (uint)(v >> 31);
-            uint msbs = folded >> (int)parameter;
-            uint lsbits = 1 + parameter;
-            uint totalBits = lsbits + msbs;
-            uint mask1 = 0xFFFFFFFFu << (int)parameter;
-            uint mask2 = 0xFFFFFFFFu >> (31 - (int)parameter);
-            uint uval = folded | mask1;
+            var v = values[i];
+            var folded = ((uint)v << 1) ^ (uint)(v >> 31);
+            var msbs = folded >> (int)parameter;
+            var lsbits = 1 + parameter;
+            var totalBits = lsbits + msbs;
+            var mask1 = 0xFFFFFFFFu << (int)parameter;
+            var mask2 = 0xFFFFFFFFu >> (31 - (int)parameter);
+            var uval = folded | mask1;
             uval &= mask2;
 
             if (totalBits <= 32)
@@ -163,14 +160,14 @@ internal sealed class LibFlacBitWriter
 
     public void ZeroPadToByteBoundary()
     {
-        int rem = _bitCount & 7;
+        var rem = _bitCount & 7;
         if (rem != 0) WriteZeroes(8 - rem);
     }
 
     /// <summary>Copies the written bytes (padded to a byte boundary) into the destination buffer starting at offset 0.</summary>
     public int CopyTo(Span<byte> destination)
     {
-        int bytes = (_bitCount + 7) / 8;
+        var bytes = (_bitCount + 7) / 8;
         _buffer.AsSpan(0, bytes).CopyTo(destination);
         return bytes;
     }
@@ -178,14 +175,14 @@ internal sealed class LibFlacBitWriter
     /// <summary>Computes the FLAC CRC-8 over the written bytes (byte-aligned required).</summary>
     public byte GetWriteCrc8()
     {
-        int bytes = (_bitCount + 7) / 8;
+        var bytes = (_bitCount + 7) / 8;
         return FlacCrc.ComputeCrc8(_buffer.AsSpan(0, bytes));
     }
 
     /// <summary>Computes the FLAC CRC-16 over the written bytes (byte-aligned required).</summary>
     public ushort GetWriteCrc16()
     {
-        int bytes = (_bitCount + 7) / 8;
+        var bytes = (_bitCount + 7) / 8;
         return FlacCrc.ComputeCrc16(_buffer.AsSpan(0, bytes));
     }
 }

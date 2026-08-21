@@ -48,6 +48,7 @@ internal static class Program
             serilogLogger.Information("  CHDSharpCli --classify <file.chd>              Classify CHD type (cd/dvd/hdd/gd-rom)");
             serilogLogger.Information("  CHDSharpCli --create <in.bin> <out.chd>        Create CHD from raw binary [-c zlib,zstd,lzma,none] [-hs N] [-us N] [-t N] [-ip parent.chd] [-d] [-v]");
             serilogLogger.Information("  CHDSharpCli --createcd <in.cue> <out.chd>      Create CD CHD from CUE/BIN [-c zlib,zstd,lzma,none] [-hs N] [-us N] [-t N] [-ip parent.chd] [-v]");
+            serilogLogger.Information("  CHDSharpCli --createld <in.avi> <out.chd>      Create laserdisc CHD from AVI [-c avhu] [-isf N] [-if N] [-t N] [-v]");
             serilogLogger.Information("  CHDSharpCli --copy <in.chd> <out.chd>          Re-compress a CHD [-c zlib,zstd,lzma,none] [-t N] [-ip parent.chd] [-op parent.chd] [-v]");
             serilogLogger.Information("  CHDSharpCli --verify <file.chd> [--fix]        Verify a CHD; --fix repairs mismatched SHA-1 header fields");
             serilogLogger.Information("  CHDSharpCli --info <file.chd>                  Print full header/map info (codecs, CRC-16, parent)");
@@ -116,6 +117,13 @@ internal static class Program
                 return;
             case "--createcd":
                 CreateCdTest(args[1].Replace("\"", ""), args[2].Replace("\"", ""), args.Skip(3).ToArray());
+                serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
+            case "--createld" when args.Length < 3:
+                serilogLogger.Warning("--createld requires <input.avi> <output.chd>");
+                return;
+            case "--createld":
+                CreateLdTest(args[1].Replace("\"", ""), args[2].Replace("\"", ""), args.Skip(3).ToArray());
                 serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
                 return;
             case "--copy" when args.Length < 3:
@@ -763,11 +771,119 @@ internal static class Program
         }
     }
 
+    /// <summary>
+    /// Creates a laserdisc CHD from an AVI file using the CHDSharpEncoder ('avhu' codec),
+    /// then verifies the result with a deep CHDSharpLib check.
+    /// </summary>
+    /// <param name="inputPath">Path of the source .avi file.</param>
+    /// <param name="outputPath">Path of the output .chd file.</param>
+    /// <param name="options">Optional <c>-c</c> codec list, <c>-isf</c>/<c>-if</c> frame range,
+    /// <c>-t</c> task count and <c>-v</c> verbose arguments.</param>
+    private static void CreateLdTest(string inputPath, string outputPath, string[] options)
+    {
+        var log = Log.Logger;
+        if (!File.Exists(inputPath))
+        {
+            log.Warning("--createld: input file not found: {Path}", inputPath);
+            return;
+        }
+
+        uint hunkBytes = 0;
+        string? codecs = null;
+        long startFrame = 0;
+        long? lengthFrames = null;
+        var verbose = false;
+        int? taskCount = null;
+        for (int i = 0; i < options.Length; i++)
+        {
+            switch (options[i])
+            {
+                case "-c" or "--codecs" when i + 1 < options.Length:
+                    codecs = options[++i];
+                    break;
+                case "-hs" or "--hunk-size" when i + 1 < options.Length:
+                    if (!uint.TryParse(options[++i], out var hs) || hs == 0)
+                    {
+                        log.Warning("Invalid hunk size: {Value}", options[i]);
+                        return;
+                    }
+
+                    hunkBytes = hs;
+                    break;
+                case "-isf" or "--input-start-frame" when i + 1 < options.Length:
+                    if (!long.TryParse(options[++i], out var isf) || isf < 0)
+                    {
+                        log.Warning("Invalid input start frame: {Value}", options[i]);
+                        return;
+                    }
+
+                    startFrame = isf;
+                    break;
+                case "-if" or "--input-frames" when i + 1 < options.Length:
+                    if (!long.TryParse(options[++i], out var ifr) || ifr < 1)
+                    {
+                        log.Warning("Invalid input frame count: {Value}", options[i]);
+                        return;
+                    }
+
+                    lengthFrames = ifr;
+                    break;
+                case "-t" or "--tasks" when i + 1 < options.Length:
+                    if (!int.TryParse(options[++i], out var t) || t < 1 || t > 64)
+                    {
+                        log.Warning("Invalid task count (1-64): {Value}", options[i]);
+                        return;
+                    }
+
+                    taskCount = t;
+                    break;
+                case "-v" or "--verbose":
+                    verbose = true;
+                    break;
+                default:
+                    log.Warning("Unknown option: {Option}", options[i]);
+                    return;
+            }
+        }
+
+        try
+        {
+            var codecTags = ChdCodecs.ParseCodecTags(codecs ?? "avhu");
+            var encodeOptions = verbose ? new VerboseHunkLogger().Options : null;
+            if (encodeOptions == null && taskCount.HasValue)
+                encodeOptions = new ChdEncodeOptions();
+            if (encodeOptions != null && taskCount.HasValue)
+                encodeOptions.TaskCount = taskCount;
+
+            log.Information("Creating laserdisc CHD: {Input} -> {Output}  (codecs {Codecs}{Tasks})",
+                Path.GetFileName(inputPath), outputPath,
+                string.Join(",", codecTags.Select(CodecTags.ToString)),
+                taskCount.HasValue ? $", {taskCount} tasks" : "");
+
+            var info = ChdEncoder.EncodeLaserDisc(inputPath, outputPath, hunkBytes, codecTags, encodeOptions,
+                startFrame, lengthFrames);
+
+            log.Information("  Frame rate:   {Fps}.{FpsFrac:D6}", info.FpsTimes1million / 1000000, info.FpsTimes1million % 1000000);
+            log.Information("  Frame size:   {Width} x {Height}{Interlaced}", info.Width,
+                info.Interlaced ? info.Height * 2 : info.Height, info.Interlaced ? " interlaced" : "");
+            log.Information("  Audio:        {Channels} channels at {Rate} Hz", info.Channels, info.SampleRate);
+            log.Information("  Frames:       {Frames} ({First}..{Last})", info.Frames, info.FirstFrame,
+                info.FirstFrame + info.Frames - 1);
+            log.Information("  Hunk size:    {Hunk} bytes ({Samples} max samples/frame)", info.HunkBytes, info.MaxSamplesPerFrame);
+            log.Information("  Created ({File:N0} bytes)", new FileInfo(outputPath).Length);
+            VerifyResultChd(outputPath);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or InvalidDataException or IOException or UnauthorizedAccessException)
+        {
+            log.Warning("--createld failed: {Message}", ex.Message);
+        }
+    }
+
     /// <summary>Parses optional <c>-c</c>/<c>-hs</c>/<c>-us</c>/<c>-t</c>/<c>-ip</c>/<c>-d</c>/<c>-v</c> arguments from the CLI.</summary>
     private static bool TryParseOptions(string[] options, ref uint hunkSize, ref uint unitSize, ref string? codecs,
         ref string? parentPath, ref bool verbose, ref int? taskCount, ref bool dvd)
     {
-        for (int i = 0; i < options.Length; i++)
+        for (var i = 0; i < options.Length; i++)
         {
             switch (options[i])
             {
@@ -841,7 +957,7 @@ internal static class Program
         string? outputParentPath = null;
         var verbose = false;
         int? taskCount = null;
-        for (int i = 0; i < options.Length; i++)
+        for (var i = 0; i < options.Length; i++)
         {
             switch (options[i])
             {

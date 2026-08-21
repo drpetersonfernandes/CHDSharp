@@ -502,7 +502,7 @@ internal static class ChdHeaders
         }
 
         var repcount = 0;
-        CompressionType lastcomp = CompressionType.Compressiontype0;
+        var lastcomp = CompressionType.Compressiontype0;
         for (uint blockIndex = 0; blockIndex < totalBlocks; blockIndex++)
         {
             map[blockIndex] = new MapEntry();

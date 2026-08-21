@@ -2,11 +2,10 @@
 // Original code and comments Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
-using System;
 using System.Runtime.InteropServices;
-using static ZLibDotNet.Deflate.Constants;
+using static CHDSharpEncoder.ZLib.Deflate.Constants;
 
-namespace ZLibDotNet.Deflate;
+namespace CHDSharpEncoder.ZLib.Deflate;
 
 internal static partial class Deflater
 {
@@ -14,13 +13,13 @@ internal static partial class Deflater
     {
         if (DeflateStateCheck(ref strm))
             return Z_STREAM_ERROR;
-        DeflateState s = strm.deflateState;
+        var s = strm.deflateState;
 
-        int wrap = s.wrap;
+        var wrap = s.wrap;
         if (wrap == 2 || wrap == 1 && s.status != InitState || s.lookahead != 0)
             return Z_STREAM_ERROR;
 
-        uint dictLength = (uint)dictionary.Length;
+        var dictLength = (uint)dictionary.Length;
         // when using zlib wrappers, compute Adler-32 for provided dictionary
         if (wrap == 1)
             strm.Adler = Adler32.Update(strm.Adler, ref MemoryMarshal.GetReference(dictionary), dictLength);
@@ -42,13 +41,13 @@ internal static partial class Deflater
         }
 
         // insert dictionary into window and hash
-        uint avail = strm.avail_in;
-        uint next = strm.next_in;
-        ReadOnlySpan<byte> input = strm._input;
+        var avail = strm.avail_in;
+        var next = strm.next_in;
+        var input = strm._input;
 #if NET7_0_OR_GREATER
-        ref byte input_ptr = ref strm.input_ptr;
+        ref var input_ptr = ref strm.input_ptr;
         strm.Input = dictionary;
-        ref DeflateRefs refs = ref strm.deflateRefs;
+        ref var refs = ref strm.deflateRefs;
         if (netUnsafe.IsNullRef(ref refs.window))
             refs.window = ref MemoryMarshal.GetReference<byte>(s.window);
         if (netUnsafe.IsNullRef(ref refs.prev))
@@ -59,19 +58,19 @@ internal static partial class Deflater
 #endif
         strm.next_in = next_in;
 
-        ref byte window = ref
+        ref var window = ref
 #if NET7_0_OR_GREATER
         refs.window;
 #else
         MemoryMarshal.GetReference<byte>(s.window);
 #endif
-        ref ushort prev = ref
+        ref var prev = ref
 #if NET7_0_OR_GREATER
         refs.prev;
 #else
         MemoryMarshal.GetReference<ushort>(s.prev);
 #endif
-        ref ushort head = ref
+        ref var head = ref
 #if NET7_0_OR_GREATER
         refs.head;
 #else
@@ -80,12 +79,12 @@ internal static partial class Deflater
         FillWindow(ref strm, ref window, ref prev, ref head);
         while (s.lookahead >= MinMatch)
         {
-            uint str = s.strstart;
-            uint n = s.lookahead - (MinMatch - 1);
+            var str = s.strstart;
+            var n = s.lookahead - (MinMatch - 1);
             do
             {
                 UpdateHash(s, ref s.ins_h, Unsafe.Add(ref window, str + MinMatch - 1));
-                ref ushort temp = ref Unsafe.Add(ref head, s.ins_h);
+                ref var temp = ref Unsafe.Add(ref head, s.ins_h);
                 Unsafe.Add(ref prev, str & s.w_mask) = temp;
                 temp = (ushort)str;
                 str++;

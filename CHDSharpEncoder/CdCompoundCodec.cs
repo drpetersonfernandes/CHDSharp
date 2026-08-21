@@ -50,17 +50,17 @@ public abstract class CdCompoundCodec : IChdCodec
         if (data.Length != _framesPerHunk * CdConstants.FrameSize)
             throw new ArgumentException($"hunk size mismatch: expected {_framesPerHunk * CdConstants.FrameSize}, got {data.Length}");
 
-        int complenBytes = data.Length < 65536 ? 2 : 3;
-        int eccBytes = _eccBitmap.Length;
-        int headerBytes = eccBytes + complenBytes;
+        var complenBytes = data.Length < 65536 ? 2 : 3;
+        var eccBytes = _eccBitmap.Length;
+        var headerBytes = eccBytes + complenBytes;
 
         Array.Clear(_eccBitmap);
 
         // deinterleave frames; clear sync + ECC for sectors that have a valid sync
         // header and ECC (mirrors MAME's chd_cd_compressor::compress)
-        for (int f = 0; f < _framesPerHunk; f++)
+        for (var f = 0; f < _framesPerHunk; f++)
         {
-            int src = f * CdConstants.FrameSize;
+            var src = f * CdConstants.FrameSize;
             Array.Copy(data, src, _dataBuffer, f * CdConstants.MaxSectorData, CdConstants.MaxSectorData);
             Array.Copy(data, src + CdConstants.MaxSectorData, _subcodeBuffer, f * CdConstants.MaxSubcodeData, CdConstants.MaxSubcodeData);
 
@@ -81,7 +81,7 @@ public abstract class CdCompoundCodec : IChdCodec
         if (subcodeData == null)
             return null;
 
-        int total = headerBytes + baseData.Length + subcodeData.Length;
+        var total = headerBytes + baseData.Length + subcodeData.Length;
         if (total >= data.Length)
             return null;
 

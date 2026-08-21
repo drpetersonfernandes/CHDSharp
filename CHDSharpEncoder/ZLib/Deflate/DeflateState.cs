@@ -2,9 +2,9 @@
 // Original code and comments Copyright (C) 1995-2024 Jean-loup Gailly
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
-using static ZLibDotNet.Deflate.Constants;
+using static CHDSharpEncoder.ZLib.Deflate.Constants;
 
-namespace ZLibDotNet.Deflate;
+namespace CHDSharpEncoder.ZLib.Deflate;
 
 /// <summary>
 /// State maintained between <see cref="ZLib.Deflate(ref ZStream, int)"/> calls.

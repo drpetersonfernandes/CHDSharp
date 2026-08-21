@@ -26,9 +26,9 @@ public class TocParser
 
         var toc = new CdToc();
         var tracks = toc.Tracks;
-        int trackIndex = -1;
+        var trackIndex = -1;
 
-        foreach (string rawLine in File.ReadAllLines(tocPath))
+        foreach (var rawLine in File.ReadAllLines(tocPath))
         {
             var tokens = CdImageParser.Tokenize(rawLine);
             if (tokens.Count == 0)
@@ -56,7 +56,7 @@ public class TocParser
                     var track = tracks[trackIndex];
                     track.FileName = CdImageParser.ResolveFileName(tocPath, tokens[1]);
 
-                    int tokenIndex = 2;
+                    var tokenIndex = 2;
                     if (tokenIndex < tokens.Count && string.Equals(tokens[tokenIndex], "SWAP", StringComparison.Ordinal))
                     {
                         track.Swap = true;
@@ -70,7 +70,7 @@ public class TocParser
                     long fileOffset = 0;
                     if (tokenIndex < tokens.Count)
                     {
-                        string offsetToken = tokens[tokenIndex++];
+                        var offsetToken = tokens[tokenIndex++];
                         if (offsetToken.StartsWith('#'))
                         {
                             // decimal byte offset
@@ -86,7 +86,7 @@ public class TocParser
                     track.FileOffset = fileOffset;
 
                     // next token: track length in frames, or an additional offset
-                    int frames = 0;
+                    var frames = 0;
                     if (tokenIndex < tokens.Count && char.IsDigit(tokens[tokenIndex][0]))
                     {
                         frames = CueParser.ParseMsfToFrames(tokens[tokenIndex++]);

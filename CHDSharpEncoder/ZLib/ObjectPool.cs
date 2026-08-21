@@ -1,9 +1,7 @@
 #nullable disable
-using System;
 using System.Collections.Concurrent;
-using System.Threading;
 
-namespace ZLibDotNet;
+namespace CHDSharpEncoder.ZLib;
 
 /// <summary>
 /// An implementation of <see cref="ObjectPool{T}"/> based on the one in dotnet/aspnetcore GitHub repository.
@@ -37,7 +35,7 @@ internal class ObjectPool<T> where T : class, new()
     /// <returns>A <typeparamref name="T"/>.</returns>
     public T Get()
     {
-        T item = _fastItem;
+        var item = _fastItem;
         if (item == null || Interlocked.CompareExchange(ref _fastItem, null, item) != item)
         {
             if (_items.TryDequeue(out item))

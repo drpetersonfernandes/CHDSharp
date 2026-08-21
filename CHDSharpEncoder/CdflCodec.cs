@@ -49,26 +49,26 @@ public sealed class CdflCodec : IChdCodec
         // ([2352 data][96 subcode] per frame); FLAC sees the data portion and zlib the
         // subcode portion, each contiguous (mirrors MAME's chd_cd_flac_compressor)
         var subcode = new byte[_subcodeBytes];
-        for (int f = 0; f < _framesPerHunk; f++)
+        for (var f = 0; f < _framesPerHunk; f++)
         {
-            int src = f * CdConstants.FrameSize;
+            var src = f * CdConstants.FrameSize;
             Array.Copy(data, src, _leBuffer, f * CdConstants.MaxSectorData, CdConstants.MaxSectorData);
             Array.Copy(data, src + CdConstants.MaxSectorData, subcode, f * CdConstants.MaxSubcodeData, CdConstants.MaxSubcodeData);
         }
 
         // FLAC stores samples little-endian; CHD audio is big-endian, so swap
-        for (int i = 0; i < _dataBytes; i += 2)
+        for (var i = 0; i < _dataBytes; i += 2)
         {
             (_leBuffer[i], _leBuffer[i + 1]) = (_leBuffer[i + 1], _leBuffer[i]);
         }
 
-        int flacLen = new LibFlacEncoder(_blockSize).Encode(_flacBuffer, _leBuffer);
+        var flacLen = new LibFlacEncoder(_blockSize).Encode(_flacBuffer, _leBuffer);
 
         var compressedSubcode = RawDeflate.Compress(subcode);
         if (compressedSubcode == null)
             return null;
 
-        int total = flacLen + compressedSubcode.Length;
+        var total = flacLen + compressedSubcode.Length;
         if (total >= data.Length)
             return null;
 

@@ -4,7 +4,7 @@
 
 using System.Diagnostics;
 
-namespace ZLibDotNet;
+namespace CHDSharpEncoder.ZLib;
 
 internal static class Trace
 {

@@ -19,16 +19,16 @@ public sealed class ReadRawHunkCorpusTests
         // v5_none.chd uses the V5 uncompressed map: every hunk is stored raw at
         // hunkIndex * HunkBytes — except all-zero hunks, which are unallocated
         // (offset word 0) and read as zero-fill with no on-disk data
-        string path = Path.Combine(TestDataDir, "v5_none.chd");
+        var path = Path.Combine(TestDataDir, "v5_none.chd");
         var err = ChdFile.Open(path, out var file);
         Assert.Equal(ChdError.Chderrnone, err);
         using (file)
         {
             var hunk = new byte[file!.HunkBytes];
-            int zeroFillHunks = 0;
+            var zeroFillHunks = 0;
             for (uint h = 0; h < file.HunkCount; h++)
             {
-                byte[]? raw = file.ReadRawHunk(h);
+                var raw = file.ReadRawHunk(h);
                 Assert.Equal(ChdError.Chderrnone, file.ReadHunk(h, hunk));
 
                 if (raw == null)
@@ -50,18 +50,18 @@ public sealed class ReadRawHunkCorpusTests
     {
         // v3_child.chd is a differential CHD whose map contains parent references; such
         // hunks must report no on-disk data, yet still decompress through the parent
-        string childPath = Path.Combine(TestDataDir, "v3_child.chd");
-        string parentPath = Path.Combine(TestDataDir, "v3_zlib.chd");
+        var childPath = Path.Combine(TestDataDir, "v3_child.chd");
+        var parentPath = Path.Combine(TestDataDir, "v3_zlib.chd");
 
         var err = ChdFile.Open(childPath, parentPath, out var file);
         Assert.Equal(ChdError.Chderrnone, err);
         using (file)
         {
             var hunk = new byte[file!.HunkBytes];
-            int parentReferenced = 0;
+            var parentReferenced = 0;
             for (uint h = 0; h < file.HunkCount; h++)
             {
-                byte[]? raw = file.ReadRawHunk(h);
+                var raw = file.ReadRawHunk(h);
                 if (raw == null)
                 {
                     parentReferenced++;
@@ -80,16 +80,16 @@ public sealed class ReadRawHunkCorpusTests
         // v1_zlib.chd has a legacy map mixing none/self/type0 entries: hunks stored raw
         // (COMPRESSION_NONE) must satisfy ReadRawHunk == ReadHunk; every hunk must either
         // return raw bytes or still decompress (SELF resolves to a stored hunk)
-        string path = Path.Combine(TestDataDir, "v1_zlib.chd");
+        var path = Path.Combine(TestDataDir, "v1_zlib.chd");
         var err = ChdFile.Open(path, out var file);
         Assert.Equal(ChdError.Chderrnone, err);
         using (file)
         {
             var hunk = new byte[file!.HunkBytes];
-            int rawCount = 0;
+            var rawCount = 0;
             for (uint h = 0; h < file.HunkCount; h++)
             {
-                byte[]? raw = file.ReadRawHunk(h);
+                var raw = file.ReadRawHunk(h);
                 Assert.Equal(ChdError.Chderrnone, file.ReadHunk(h, hunk));
 
                 if (raw is { Length: > 0 })
@@ -107,12 +107,12 @@ public sealed class ReadRawHunkCorpusTests
     [Fact]
     public void RawHunk_AfterPrecache_Matches()
     {
-        string path = Path.Combine(TestDataDir, "v5_multi.chd");
+        var path = Path.Combine(TestDataDir, "v5_multi.chd");
         var err = ChdFile.Open(path, out var file);
         Assert.Equal(ChdError.Chderrnone, err);
         using (file)
         {
-            byte[] before = file!.ReadRawHunk(0)!;
+            var before = file!.ReadRawHunk(0)!;
             Assert.NotNull(before);
             Assert.Equal(ChdError.Chderrnone, file.Precache());
             Assert.Equal(before, file.ReadRawHunk(0));
@@ -122,15 +122,15 @@ public sealed class ReadRawHunkCorpusTests
     [Fact]
     public async Task RawHunk_AsyncMatchesSync_OnCorpus()
     {
-        string path = Path.Combine(TestDataDir, "v3_zlib.chd");
+        var path = Path.Combine(TestDataDir, "v3_zlib.chd");
         var err = ChdFile.Open(path, out var file);
         Assert.Equal(ChdError.Chderrnone, err);
         await using (file)
         {
             for (uint h = 0; h < file!.HunkCount; h++)
             {
-                byte[]? sync = file.ReadRawHunk(h);
-                byte[]? async = await file.ReadRawHunkAsync(h);
+                var sync = file.ReadRawHunk(h);
+                var async = await file.ReadRawHunkAsync(h);
                 Assert.Equal(sync, async);
             }
         }

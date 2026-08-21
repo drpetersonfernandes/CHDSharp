@@ -41,17 +41,17 @@ public class DeltaEncodeTests : IDisposable
     public void ChildHunks_MatchingParent_AreReferencedAndRoundTrip()
     {
         // 64 hunks: hunks 20..39 replaced with new random data, the rest identical to the parent
-        byte[] parentData = CreateTestFile(4096 * 64, 11);
-        byte[] childData = (byte[])parentData.Clone();
-        for (int h = 20; h < 40; h++)
+        var parentData = CreateTestFile(4096 * 64, 11);
+        var childData = (byte[])parentData.Clone();
+        for (var h = 20; h < 40; h++)
         {
             var rng = new Random(100 + h);
             rng.NextBytes(childData.AsSpan(h * 4096, 4096));
         }
 
-        string parentPath = Path.Combine(_dir, "parent.chd");
-        string childPath = Path.Combine(_dir, "child.chd");
-        string standalonePath = Path.Combine(_dir, "standalone.chd");
+        var parentPath = Path.Combine(_dir, "parent.chd");
+        var childPath = Path.Combine(_dir, "child.chd");
+        var standalonePath = Path.Combine(_dir, "standalone.chd");
         using (var ms = new MemoryStream(parentData))
         {
             ChdEncoder.EncodeRaw(ms, parentPath, 4096, 512);
@@ -69,8 +69,8 @@ public class DeltaEncodeTests : IDisposable
 
         // 44 of 64 hunks are PARENT references: the delta must be much smaller than a
         // standalone encode of the same image
-        long childSize = new FileInfo(childPath).Length;
-        long standaloneSize = new FileInfo(standalonePath).Length;
+        var childSize = new FileInfo(childPath).Length;
+        var standaloneSize = new FileInfo(standalonePath).Length;
         Assert.True(childSize < standaloneSize / 2,
             $"expected the delta to be much smaller, delta={childSize} standalone={standaloneSize}");
 
@@ -79,7 +79,7 @@ public class DeltaEncodeTests : IDisposable
         Assert.Equal(ChdError.Chderrnone, openErr);
         using (chd)
         {
-            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out var actual));
             Assert.Equal(childData, actual);
         }
 
@@ -88,17 +88,17 @@ public class DeltaEncodeTests : IDisposable
         Assert.Equal(ChdError.Chderrnone, result.Error);
 
         // the child header's parent-SHA-1 field must equal the parent's overall SHA-1
-        byte[] childBytes = File.ReadAllBytes(childPath);
-        byte[] parentBytes = File.ReadAllBytes(parentPath);
+        var childBytes = File.ReadAllBytes(childPath);
+        var parentBytes = File.ReadAllBytes(parentPath);
         Assert.Equal(parentBytes.AsSpan(84, 20).ToArray(), childBytes.AsSpan(104, 20).ToArray());
     }
 
     [Fact]
     public void IdenticalImage_ProducesTinyDelta()
     {
-        byte[] data = CreateTestFile(4096 * 32, 22);
-        string parentPath = Path.Combine(_dir, "identical_parent.chd");
-        string childPath = Path.Combine(_dir, "identical_child.chd");
+        var data = CreateTestFile(4096 * 32, 22);
+        var parentPath = Path.Combine(_dir, "identical_parent.chd");
+        var childPath = Path.Combine(_dir, "identical_child.chd");
         using (var ms = new MemoryStream(data))
         {
             ChdEncoder.EncodeRaw(ms, parentPath, 4096, 512);
@@ -117,7 +117,7 @@ public class DeltaEncodeTests : IDisposable
         Assert.Equal(ChdError.Chderrnone, openErr);
         using (chd)
         {
-            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out var actual));
             Assert.Equal(data, actual);
         }
     }
@@ -128,12 +128,12 @@ public class DeltaEncodeTests : IDisposable
         // child = parent data shifted by one 512-byte unit: every hunk (except the final,
         // zero-padded one) matches a parent unit window that is NOT hunk-aligned, so the
         // references are unit-split and the reader must stitch two adjacent parent hunks
-        byte[] parentData = CreateTestFile(4096 * 16, 33);
-        byte[] childData = new byte[parentData.Length - 512];
+        var parentData = CreateTestFile(4096 * 16, 33);
+        var childData = new byte[parentData.Length - 512];
         Array.Copy(parentData, 512, childData, 0, childData.Length);
 
-        string parentPath = Path.Combine(_dir, "shift_parent.chd");
-        string childPath = Path.Combine(_dir, "shift_child.chd");
+        var parentPath = Path.Combine(_dir, "shift_parent.chd");
+        var childPath = Path.Combine(_dir, "shift_child.chd");
         using (var ms = new MemoryStream(parentData))
         {
             ChdEncoder.EncodeRaw(ms, parentPath, 4096, 512);
@@ -151,7 +151,7 @@ public class DeltaEncodeTests : IDisposable
         Assert.Equal(ChdError.Chderrnone, openErr);
         using (chd)
         {
-            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out var actual));
             Assert.Equal(childData, actual);
         }
 
@@ -163,24 +163,24 @@ public class DeltaEncodeTests : IDisposable
     {
         // pattern A,A,B,B repeated: duplicates within the child must stay SELF references
         // (chdman checks the self map before the parent map)
-        byte[] patternA = new byte[4096];
-        byte[] patternB = new byte[4096];
-        for (int i = 0; i < 4096; i++)
+        var patternA = new byte[4096];
+        var patternB = new byte[4096];
+        for (var i = 0; i < 4096; i++)
         {
             patternA[i] = (byte)(i & 0xFF);
             patternB[i] = (byte)(~i & 0xFF);
         }
 
-        byte[] parentData = CreateTestFile(4096 * 32, 44);
-        byte[] childData = new byte[4096 * 32];
-        for (int h = 0; h < 32; h++)
+        var parentData = CreateTestFile(4096 * 32, 44);
+        var childData = new byte[4096 * 32];
+        for (var h = 0; h < 32; h++)
         {
             var pattern = h % 4 < 2 ? patternA : patternB;
             Array.Copy(pattern, 0, childData, h * 4096, 4096);
         }
 
-        string parentPath = Path.Combine(_dir, "prio_parent.chd");
-        string childPath = Path.Combine(_dir, "prio_child.chd");
+        var parentPath = Path.Combine(_dir, "prio_parent.chd");
+        var childPath = Path.Combine(_dir, "prio_child.chd");
         using (var ms = new MemoryStream(parentData))
         {
             ChdEncoder.EncodeRaw(ms, parentPath, 4096, 512);
@@ -198,7 +198,7 @@ public class DeltaEncodeTests : IDisposable
         Assert.Equal(ChdError.Chderrnone, openErr);
         using (chd)
         {
-            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out var actual));
             Assert.Equal(childData, actual);
         }
     }
@@ -206,17 +206,17 @@ public class DeltaEncodeTests : IDisposable
     [Fact]
     public void ParallelAndSingleThreadedChildren_AreByteIdentical()
     {
-        byte[] parentData = CreateTestFile(4096 * 48, 55);
-        byte[] childData = (byte[])parentData.Clone();
-        for (int h = 10; h < 20; h++)
+        var parentData = CreateTestFile(4096 * 48, 55);
+        var childData = (byte[])parentData.Clone();
+        for (var h = 10; h < 20; h++)
         {
             var rng = new Random(300 + h);
             rng.NextBytes(childData.AsSpan(h * 4096, 4096));
         }
 
-        string parentPath = Path.Combine(_dir, "par_parent.chd");
-        string singlePath = Path.Combine(_dir, "par_single.chd");
-        string parallelPath = Path.Combine(_dir, "par_parallel.chd");
+        var parentPath = Path.Combine(_dir, "par_parent.chd");
+        var singlePath = Path.Combine(_dir, "par_single.chd");
+        var parallelPath = Path.Combine(_dir, "par_parallel.chd");
         using (var ms = new MemoryStream(parentData))
         {
             ChdEncoder.EncodeRaw(ms, parentPath, 4096, 512);
@@ -238,8 +238,8 @@ public class DeltaEncodeTests : IDisposable
     [Fact]
     public void MismatchedHunkSize_Throws()
     {
-        byte[] data = CreateTestFile(4096 * 8, 66);
-        string parentPath = Path.Combine(_dir, "hs_parent.chd");
+        var data = CreateTestFile(4096 * 8, 66);
+        var parentPath = Path.Combine(_dir, "hs_parent.chd");
         using (var ms = new MemoryStream(data))
         {
             ChdEncoder.EncodeRaw(ms, parentPath, 4096, 512);
@@ -258,8 +258,8 @@ public class DeltaEncodeTests : IDisposable
     [Fact]
     public void MismatchedUnitSize_Throws()
     {
-        byte[] data = CreateTestFile(4096 * 8, 77);
-        string parentPath = Path.Combine(_dir, "us_parent.chd");
+        var data = CreateTestFile(4096 * 8, 77);
+        var parentPath = Path.Combine(_dir, "us_parent.chd");
         using (var ms = new MemoryStream(data))
         {
             ChdEncoder.EncodeRaw(ms, parentPath, 4096, 512);
@@ -277,7 +277,7 @@ public class DeltaEncodeTests : IDisposable
     [Fact]
     public void MissingParentFile_Throws()
     {
-        byte[] data = CreateTestFile(4096, 88);
+        var data = CreateTestFile(4096, 88);
         using var ms = new MemoryStream(data);
         Assert.Throws<IOException>(() =>
             ChdEncoder.EncodeRaw(ms, Path.Combine(_dir, "missing_parent_child.chd"), 4096, 512,
@@ -287,16 +287,16 @@ public class DeltaEncodeTests : IDisposable
     [Fact]
     public void ParentThatItselfRequiresParent_Throws()
     {
-        byte[] data = CreateTestFile(4096 * 16, 99);
-        byte[] grandData = (byte[])data.Clone();
-        for (int h = 4; h < 8; h++)
+        var data = CreateTestFile(4096 * 16, 99);
+        var grandData = (byte[])data.Clone();
+        for (var h = 4; h < 8; h++)
         {
             var rng = new Random(500 + h);
             rng.NextBytes(grandData.AsSpan(h * 4096, 4096));
         }
 
-        string grandPath = Path.Combine(_dir, "grand.chd");
-        string parentPath = Path.Combine(_dir, "chain_parent.chd");
+        var grandPath = Path.Combine(_dir, "grand.chd");
+        var parentPath = Path.Combine(_dir, "chain_parent.chd");
         using (var ms = new MemoryStream(grandData))
         {
             ChdEncoder.EncodeRaw(ms, grandPath, 4096, 512);
@@ -318,17 +318,17 @@ public class DeltaEncodeTests : IDisposable
     public void CdChild_WithParent_RoundTrips()
     {
         // one MODE1/2352 data track, 40 frames (multiple of 4, so no padding)
-        string cuePath = Path.Combine(_dir, "cd.cue");
+        var cuePath = Path.Combine(_dir, "cd.cue");
         File.WriteAllText(cuePath, """
             FILE "cd.bin" BINARY
               TRACK 01 MODE1/2352
                 INDEX 01 00:00:00
             """);
-        byte[] bin = BuildBinFrames(40, 555);
+        var bin = BuildBinFrames(40, 555);
         File.WriteAllBytes(Path.Combine(_dir, "cd.bin"), bin);
 
-        string parentPath = Path.Combine(_dir, "cd_parent.chd");
-        string childPath = Path.Combine(_dir, "cd_child.chd");
+        var parentPath = Path.Combine(_dir, "cd_parent.chd");
+        var childPath = Path.Combine(_dir, "cd_child.chd");
         ChdEncoder.EncodeCd(cuePath, parentPath);
 
         var parentErr = ChdFile.Open(parentPath, out var parent);
@@ -348,7 +348,7 @@ public class DeltaEncodeTests : IDisposable
         Assert.Equal(ChdError.Chderrnone, childErr);
         using (child)
         {
-            Assert.Equal(ChdError.Chderrnone, child!.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, child!.ReadAllBytes(out var actual));
             Assert.Equal(parentImage, actual);
         }
 
@@ -360,18 +360,18 @@ public class DeltaEncodeTests : IDisposable
     {
         if (ChdmanPath == null) return;
 
-        byte[] parentData = CreateTestFile(4096 * 32, 111);
-        byte[] childData = (byte[])parentData.Clone();
-        for (int h = 5; h < 12; h++)
+        var parentData = CreateTestFile(4096 * 32, 111);
+        var childData = (byte[])parentData.Clone();
+        for (var h = 5; h < 12; h++)
         {
             var rng = new Random(700 + h);
             rng.NextBytes(childData.AsSpan(h * 4096, 4096));
         }
 
-        string srcPath = Path.Combine(_dir, "chdman_src.bin");
-        string parentPath = Path.Combine(_dir, "chdman_parent.chd");
-        string childPath = Path.Combine(_dir, "chdman_child.chd");
-        string extractedPath = Path.Combine(_dir, "chdman_extracted.raw");
+        var srcPath = Path.Combine(_dir, "chdman_src.bin");
+        var parentPath = Path.Combine(_dir, "chdman_parent.chd");
+        var childPath = Path.Combine(_dir, "chdman_child.chd");
+        var extractedPath = Path.Combine(_dir, "chdman_extracted.raw");
         File.WriteAllBytes(srcPath, childData);
 
         var (createExit, cstdout, cstderr) = RunChdman("createraw", "-i", srcPath, "-o", parentPath,
@@ -393,7 +393,7 @@ public class DeltaEncodeTests : IDisposable
         Assert.Equal(childData, File.ReadAllBytes(extractedPath));
 
         // the delta must be far smaller than a standalone encode (most hunks are parent refs)
-        string standalonePath = Path.Combine(_dir, "chdman_standalone.chd");
+        var standalonePath = Path.Combine(_dir, "chdman_standalone.chd");
         using (var ms = new MemoryStream(childData))
         {
             ChdEncoder.EncodeRaw(ms, standalonePath, 4096, 512);
@@ -407,7 +407,7 @@ public class DeltaEncodeTests : IDisposable
 
     private static byte[] CreateTestFile(int size, int seed)
     {
-        byte[] data = new byte[size];
+        var data = new byte[size];
         var rng = new Random(seed);
         rng.NextBytes(data);
         return data;
@@ -424,7 +424,7 @@ public class DeltaEncodeTests : IDisposable
 
     private static (int ExitCode, string StdOut, string StdErr) RunChdman(params string[] args)
     {
-        string chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
+        var chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
 
         var psi = new ProcessStartInfo
         {
@@ -447,10 +447,10 @@ public class DeltaEncodeTests : IDisposable
 
     private static string? ResolveChdmanPath()
     {
-        string exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
+        var exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
 
-        string baseDir = AppContext.BaseDirectory;
-        string candidate = Path.Combine(baseDir, exeName);
+        var baseDir = AppContext.BaseDirectory;
+        var candidate = Path.Combine(baseDir, exeName);
         if (File.Exists(candidate))
             return candidate;
 

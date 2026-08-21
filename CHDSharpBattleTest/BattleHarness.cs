@@ -121,7 +121,7 @@ public sealed class BattleHarness
         if (expected.Length != actual.Length)
             throw new CheckFailedException($"{what}: length {actual.Length} != expected {expected.Length}");
 
-        for (int i = 0; i < expected.Length; i++)
+        for (var i = 0; i < expected.Length; i++)
         {
             if (expected[i] != actual[i])
                 throw new CheckFailedException($"{what}: first diff at byte {i} (0x{expected[i]:X2} != 0x{actual[i]:X2})");
@@ -936,7 +936,7 @@ public sealed class BattleHarness
                     var buf = new byte[count];
                     var r = chd.Read(o, buf, 0, count);
                     Assert(r == ChdError.Chderrnone, $"Read(offset={o}): {r}");
-                    for (int i = 0; i < count; i++)
+                    for (var i = 0; i < count; i++)
                         Assert(buf[i] == asset.Expected[(int)(o + (ulong)i)], $"byte {o + (ulong)i} mismatch");
                 }
             }
@@ -955,7 +955,7 @@ public sealed class BattleHarness
                     var r = chd.ReadHunk(h, buf);
                     Assert(r == ChdError.Chderrnone, $"ReadHunk({h}): {r}");
                     var expectedOffset = (int)((ulong)h * chd.HunkBytes);
-                    for (int i = 0; i < buf.Length && expectedOffset + i < asset.Expected.Length; i++)
+                    for (var i = 0; i < buf.Length && expectedOffset + i < asset.Expected.Length; i++)
                         Assert(buf[i] == asset.Expected[expectedOffset + i], $"hunk {h} byte {i} mismatch");
                 }
             }

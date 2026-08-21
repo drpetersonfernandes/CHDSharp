@@ -4,7 +4,7 @@
 
 using System.Buffers;
 
-namespace ZLibDotNet.Deflate;
+namespace CHDSharpEncoder.ZLib.Deflate;
 
 internal static partial class Deflater
 {
@@ -13,8 +13,8 @@ internal static partial class Deflater
         if (DeflateStateCheck(ref strm))
             return Z_STREAM_ERROR;
 
-        DeflateState s = strm.deflateState;
-        int status = s.status;
+        var s = strm.deflateState;
+        var status = s.status;
 
         if (s.window != default)
             ArrayPool<byte>.Shared.Return(s.window);

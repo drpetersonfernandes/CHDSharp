@@ -26,6 +26,12 @@ public static class MetadataWriter
     /// <summary>'DVD ' DVD-ROM metadata tag (big-endian).</summary>
     public const uint DvdMetadataTag = 0x44564420;
 
+    /// <summary>'AVAV' A/V metadata tag (big-endian), MAME's <c>AV_METADATA_TAG</c>.</summary>
+    public const uint AvMetadataTag = 0x41564156;
+
+    /// <summary>'AVLD' laserdisc VBI metadata tag (big-endian), MAME's <c>AV_LD_METADATA_TAG</c>.</summary>
+    public const uint AvLdMetadataTag = 0x41564C44;
+
     /// <summary>CHD_MDFLAGS_CHECKSUM: the entry is covered by the combined SHA-1 verification.</summary>
     public const byte ChdMdflagsChecksum = 0x01;
 
@@ -59,7 +65,7 @@ public static class MetadataWriter
         ulong cylinders = 0;
         if (bytesPerSector > 0)
         {
-            ulong perCylinder = (ulong)bytesPerSector * heads * sectorsPerTrack;
+            var perCylinder = (ulong)bytesPerSector * heads * sectorsPerTrack;
             cylinders = (totalBytes + perCylinder - 1) / perCylinder;
             if (cylinders > uint.MaxValue)
             {
@@ -91,6 +97,52 @@ public static class MetadataWriter
     }
 
     /// <summary>
+    /// Builds the 'AVAV' A/V metadata entry for a laserdisc image, matching chdman
+    /// <c>createld</c> and MAME's <c>AV_METADATA_FORMAT</c>:
+    /// <c>FPS:%d.%06d WIDTH:%d HEIGHT:%d INTERLACED:%d CHANNELS:%d SAMPLERATE:%d</c>
+    /// (null-terminated, checksummed).
+    /// </summary>
+    /// <param name="fpsTimes1million">Frame rate in frames per 1,000,000 seconds.</param>
+    /// <param name="width">Video width in pixels.</param>
+    /// <param name="height">Video height in lines (field height for interlaced sources).</param>
+    /// <param name="interlaced">Whether the source is interlaced.</param>
+    /// <param name="channels">Audio channel count.</param>
+    /// <param name="sampleRate">Audio sample rate in Hz.</param>
+    public static MetadataEntry BuildAvMetadata(ulong fpsTimes1million, uint width, uint height,
+        bool interlaced, uint channels, uint sampleRate)
+    {
+        var text = $"FPS:{fpsTimes1million / 1000000}.{fpsTimes1million % 1000000:D6} " +
+                   $"WIDTH:{width} HEIGHT:{height} INTERLACED:{(interlaced ? 1 : 0)} " +
+                   $"CHANNELS:{channels} SAMPLERATE:{sampleRate}";
+        return new MetadataEntry
+        {
+            Tag = AvMetadataTag,
+            Flags = ChdMdflagsChecksum,
+            Payload = Encoding.ASCII.GetBytes(text + '\0')
+        };
+    }
+
+    /// <summary>
+    /// Builds the 'AVLD' laserdisc VBI metadata entry from packed per-frame records
+    /// (16 bytes each, see <see cref="VbiParse.MetadataPack"/>). Matches chdman
+    /// <c>createld</c>'s post-compression write with flags 0 (not covered by the SHA-1).
+    /// </summary>
+    /// <param name="packedFrames">The concatenated per-frame VBI records.</param>
+    public static MetadataEntry BuildAvLdMetadata(byte[] packedFrames)
+    {
+        ArgumentNullException.ThrowIfNull(packedFrames);
+        if (packedFrames.Length == 0)
+            throw new ArgumentException("AVLD metadata requires at least one frame record", nameof(packedFrames));
+
+        return new MetadataEntry
+        {
+            Tag = AvLdMetadataTag,
+            Flags = 0,
+            Payload = packedFrames
+        };
+    }
+
+    /// <summary>
     /// Appends one CHT2 metadata entry per track at the current stream position, linking them
     /// into a forward linked list (each entry's <c>next</c> points at the following entry; the
     /// last entry has <c>next = 0</c>).
@@ -117,13 +169,13 @@ public static class MetadataWriter
         ArgumentNullException.ThrowIfNull(stream);
         ArgumentNullException.ThrowIfNull(entries);
 
-        long firstOffset = stream.Position;
-        bool hasPrevious = false;
+        var firstOffset = stream.Position;
+        var hasPrevious = false;
         long previousOffset = 0;
 
         foreach (var entry in entries)
         {
-            long entryOffset = stream.Position;
+            var entryOffset = stream.Position;
             var serialized = entry.Serialize();
             stream.Write(serialized, 0, serialized.Length);
 
@@ -153,13 +205,13 @@ public static class MetadataWriter
     {
         ArgumentNullException.ThrowIfNull(toc);
 
-        bool gdRom = (toc.Flags & CdTocFlags.GdRom) != 0;
-        uint tag = gdRom ? GdRomTrackMetadataTag : CdRomTrackMetadata2Tag;
+        var gdRom = (toc.Flags & CdTocFlags.GdRom) != 0;
+        var tag = gdRom ? GdRomTrackMetadataTag : CdRomTrackMetadata2Tag;
 
         var entries = new List<MetadataEntry>(toc.Tracks.Count);
         foreach (var track in toc.Tracks)
         {
-            string text = gdRom ? BuildGdRomString(track) : BuildChd2String(track);
+            var text = gdRom ? BuildGdRomString(track) : BuildChd2String(track);
             entries.Add(new MetadataEntry
             {
                 Tag = tag,
@@ -221,9 +273,9 @@ public static class MetadataWriter
 
     private static int CompareBytes(byte[] x, byte[] y)
     {
-        for (int i = 0; i < x.Length && i < y.Length; i++)
+        for (var i = 0; i < x.Length && i < y.Length; i++)
         {
-            int v = x[i].CompareTo(y[i]);
+            var v = x[i].CompareTo(y[i]);
             if (v != 0)
                 return v;
         }
@@ -240,7 +292,7 @@ public static class MetadataWriter
     /// </summary>
     public static string BuildChd2String(CdTrack track)
     {
-        string pgType = track.PgDataSize > 0
+        var pgType = track.PgDataSize > 0
             ? "V" + GetTypeString(track.PgType)
             : GetTypeString(track.PgType);
 

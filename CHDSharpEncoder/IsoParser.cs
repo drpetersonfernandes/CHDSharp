@@ -22,7 +22,7 @@ public class IsoParser
         if (!File.Exists(isoPath))
             throw new FileNotFoundException($"ISO file not found: {isoPath}", isoPath);
 
-        long size = new FileInfo(isoPath).Length;
+        var size = new FileInfo(isoPath).Length;
 
         var track = new CdTrack
         {

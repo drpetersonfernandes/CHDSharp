@@ -35,7 +35,7 @@ internal sealed class FlacBitWriter
     /// <summary>Writes <paramref name="count"/> bits of <paramref name="value"/> MSB-first.</summary>
     public void WriteBits(uint value, int count)
     {
-        for (int i = count - 1; i >= 0; i--)
+        for (var i = count - 1; i >= 0; i--)
         {
             WriteBit((int)((value >> i) & 1));
         }
@@ -44,7 +44,7 @@ internal sealed class FlacBitWriter
     /// <summary>Writes <paramref name="count"/> unary bits: zeros followed by a one.</summary>
     public void WriteUnary(int count)
     {
-        for (int i = 0; i < count; i++)
+        for (var i = 0; i < count; i++)
         {
             WriteBit(0);
         }
@@ -58,8 +58,8 @@ internal sealed class FlacBitWriter
     /// </summary>
     public void WriteRiceSigned(int k, int value)
     {
-        uint folded = ((uint)value << 1) ^ (uint)(value >> 31);
-        uint quotient = folded >> k;
+        var folded = ((uint)value << 1) ^ (uint)(value >> 31);
+        var quotient = folded >> k;
         WriteUnary((int)quotient);
         WriteBits(folded, k);
     }
@@ -76,7 +76,7 @@ internal sealed class FlacBitWriter
     /// <returns>The number of bytes copied.</returns>
     public int CopyTo(byte[] destination)
     {
-        int length = ByteLength;
+        var length = ByteLength;
         Array.Copy(_buffer, destination, length);
         return length;
     }

@@ -23,7 +23,7 @@ public class BigEndianTests
     [Fact]
     public void ReadUInt16Be_zero()
     {
-        byte[] data = "\0\0"u8.ToArray();
+        var data = "\0\0"u8.ToArray();
         Assert.Equal(0, data.ReadUInt16Be(0));
     }
 
@@ -94,7 +94,7 @@ public class BigEndianTests
     [Fact]
     public void PutUInt16Be_writes_big_endian()
     {
-        byte[] data = new byte[2];
+        var data = new byte[2];
         data.PutUInt16Be(0, 0xABCD);
         Assert.Equal(0xAB, data[0]);
         Assert.Equal(0xCD, data[1]);
@@ -103,7 +103,7 @@ public class BigEndianTests
     [Fact]
     public void PutUInt16Be_roundtrip()
     {
-        byte[] data = new byte[2];
+        var data = new byte[2];
         data.PutUInt16Be(0, 0x1234);
         Assert.Equal(0x1234, data.ReadUInt16Be(0));
     }
@@ -113,7 +113,7 @@ public class BigEndianTests
     [Fact]
     public void PutUInt24Be_writes_big_endian()
     {
-        byte[] data = new byte[3];
+        var data = new byte[3];
         data.PutUInt24Be(0, 0xABCDEF);
         Assert.Equal(0xAB, data[0]);
         Assert.Equal(0xCD, data[1]);
@@ -123,7 +123,7 @@ public class BigEndianTests
     [Fact]
     public void PutUInt24Be_roundtrip()
     {
-        byte[] data = new byte[3];
+        var data = new byte[3];
         data.PutUInt24Be(0, 0x123456);
         Assert.Equal(0x123456u, data.ReadUInt24Be(0));
     }
@@ -133,7 +133,7 @@ public class BigEndianTests
     [Fact]
     public void PutUInt48Be_writes_big_endian()
     {
-        byte[] data = new byte[6];
+        var data = new byte[6];
         data.PutUInt48Be(0, 0x010203040506UL);
         Assert.Equal(0x01, data[0]);
         Assert.Equal(0x02, data[1]);
@@ -146,7 +146,7 @@ public class BigEndianTests
     [Fact]
     public void PutUInt48Be_roundtrip()
     {
-        byte[] data = new byte[6];
+        var data = new byte[6];
         data.PutUInt48Be(0, 0xABCDEF123456UL);
         Assert.Equal(0xABCDEF123456UL, data.ReadUInt48Be(0));
     }
@@ -221,7 +221,7 @@ public class BigEndianTests
     [Fact]
     public void PutUInt16Be_read_roundtrip_at_offset()
     {
-        byte[] data = new byte[10];
+        var data = new byte[10];
         data.PutUInt16Be(3, 0xBEEF);
         Assert.Equal(0xBEEF, data.ReadUInt16Be(3));
     }
@@ -229,7 +229,7 @@ public class BigEndianTests
     [Fact]
     public void PutUInt48Be_read_roundtrip_at_offset()
     {
-        byte[] data = new byte[10];
+        var data = new byte[10];
         data.PutUInt48Be(2, 0xCAFEBABE1234UL);
         Assert.Equal(0xCAFEBABE1234UL, data.ReadUInt48Be(2));
     }

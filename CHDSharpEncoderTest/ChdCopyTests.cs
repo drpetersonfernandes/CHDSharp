@@ -41,10 +41,10 @@ public class ChdCopyTests : IDisposable
     public void Copy_Recompresses_And_ContentIsByteIdentical()
     {
         // compressible + incompressible mix, seeded deterministically
-        byte[] source = CreateTestFile(4096 * 64, 42);
+        var source = CreateTestFile(4096 * 64, 42);
 
-        string srcChd = Path.Combine(_dir, "src_lzma.chd");
-        string dstChd = Path.Combine(_dir, "dst_zstd.chd");
+        var srcChd = Path.Combine(_dir, "src_lzma.chd");
+        var dstChd = Path.Combine(_dir, "dst_zstd.chd");
         using (var ms = new MemoryStream(source))
         {
             ChdEncoder.EncodeRaw(ms, srcChd, 4096, 512, [CodecTags.Lzma]);
@@ -57,7 +57,7 @@ public class ChdCopyTests : IDisposable
         Assert.Equal(ChdError.Chderrnone, err);
         using (chd)
         {
-            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out var actual));
             Assert.Equal(source, actual);
         }
 
@@ -68,10 +68,10 @@ public class ChdCopyTests : IDisposable
     [Fact]
     public void Copy_PreservesMetadata()
     {
-        byte[] source = CreateTestFile(4096 * 8, 43);
+        var source = CreateTestFile(4096 * 8, 43);
 
-        string srcChd = Path.Combine(_dir, "meta_src.chd");
-        string dstChd = Path.Combine(_dir, "meta_dst.chd");
+        var srcChd = Path.Combine(_dir, "meta_src.chd");
+        var dstChd = Path.Combine(_dir, "meta_dst.chd");
         var meta = new MetadataEntry
         {
             Tag = MetadataWriter.TagFromString("GAME"),
@@ -99,17 +99,17 @@ public class ChdCopyTests : IDisposable
     [Fact]
     public void Copy_ChildSource_ResolvesThroughSourceParentPath()
     {
-        byte[] parentData = CreateTestFile(4096 * 32, 44);
-        byte[] childData = (byte[])parentData.Clone();
-        for (int h = 10; h < 16; h++)
+        var parentData = CreateTestFile(4096 * 32, 44);
+        var childData = (byte[])parentData.Clone();
+        for (var h = 10; h < 16; h++)
         {
             var rng = new Random(500 + h);
             rng.NextBytes(childData.AsSpan(h * 4096, 4096));
         }
 
-        string parentPath = Path.Combine(_dir, "parent.chd");
-        string childPath = Path.Combine(_dir, "child.chd");
-        string copyPath = Path.Combine(_dir, "child_copy.chd");
+        var parentPath = Path.Combine(_dir, "parent.chd");
+        var childPath = Path.Combine(_dir, "child.chd");
+        var copyPath = Path.Combine(_dir, "child_copy.chd");
         using (var ms = new MemoryStream(parentData))
         {
             ChdEncoder.EncodeRaw(ms, parentPath, 4096, 512);
@@ -127,7 +127,7 @@ public class ChdCopyTests : IDisposable
         Assert.Equal(ChdError.Chderrnone, err);
         using (chd)
         {
-            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out var actual));
             Assert.Equal(childData, actual);
         }
     }
@@ -135,9 +135,9 @@ public class ChdCopyTests : IDisposable
     [Fact]
     public void Copy_ChildSource_WithoutParent_Throws()
     {
-        byte[] parentData = CreateTestFile(4096 * 8, 45);
-        string parentPath = Path.Combine(_dir, "p.chd");
-        string childPath = Path.Combine(_dir, "c.chd");
+        var parentData = CreateTestFile(4096 * 8, 45);
+        var parentPath = Path.Combine(_dir, "p.chd");
+        var childPath = Path.Combine(_dir, "c.chd");
         using (var ms = new MemoryStream(parentData))
         {
             ChdEncoder.EncodeRaw(ms, parentPath, 4096, 512);
@@ -155,17 +155,17 @@ public class ChdCopyTests : IDisposable
     [Fact]
     public void Copy_WithOutputParent_CreatesDeltaChild()
     {
-        byte[] parentData = CreateTestFile(4096 * 32, 46);
-        byte[] childData = (byte[])parentData.Clone();
-        for (int h = 20; h < 26; h++)
+        var parentData = CreateTestFile(4096 * 32, 46);
+        var childData = (byte[])parentData.Clone();
+        for (var h = 20; h < 26; h++)
         {
             var rng = new Random(600 + h);
             rng.NextBytes(childData.AsSpan(h * 4096, 4096));
         }
 
-        string srcChd = Path.Combine(_dir, "full.chd");
-        string parentPath = Path.Combine(_dir, "out_parent.chd");
-        string deltaPath = Path.Combine(_dir, "delta.chd");
+        var srcChd = Path.Combine(_dir, "full.chd");
+        var parentPath = Path.Combine(_dir, "out_parent.chd");
+        var deltaPath = Path.Combine(_dir, "delta.chd");
         using (var ms = new MemoryStream(childData))
         {
             ChdEncoder.EncodeRaw(ms, srcChd, 4096, 512, [CodecTags.Zlib]);
@@ -190,10 +190,10 @@ public class ChdCopyTests : IDisposable
     [Fact]
     public void Copy_ParallelAndSingleThreaded_AreByteIdentical()
     {
-        byte[] source = CreateTestFile(4096 * 48, 47);
-        string srcChd = Path.Combine(_dir, "par_src.chd");
-        string singlePath = Path.Combine(_dir, "par_single.chd");
-        string parallelPath = Path.Combine(_dir, "par_parallel.chd");
+        var source = CreateTestFile(4096 * 48, 47);
+        var srcChd = Path.Combine(_dir, "par_src.chd");
+        var singlePath = Path.Combine(_dir, "par_single.chd");
+        var parallelPath = Path.Combine(_dir, "par_parallel.chd");
         using (var ms = new MemoryStream(source))
         {
             ChdEncoder.EncodeRaw(ms, srcChd, 4096, 512, [CodecTags.Zlib, CodecTags.Lzma]);
@@ -208,7 +208,7 @@ public class ChdCopyTests : IDisposable
     [Fact]
     public void Copy_Cd_RoundTrips()
     {
-        string cuePath = Path.Combine(_dir, "cd.cue");
+        var cuePath = Path.Combine(_dir, "cd.cue");
         File.WriteAllText(cuePath, """
             FILE "cd.bin" BINARY
               TRACK 01 MODE1/2352
@@ -216,13 +216,13 @@ public class ChdCopyTests : IDisposable
               TRACK 02 AUDIO
                 INDEX 01 00:00:40
             """);
-        byte[] bin = new byte[80 * CdConstants.MaxSectorData];
+        var bin = new byte[80 * CdConstants.MaxSectorData];
         var rng = new Random(48);
         rng.NextBytes(bin);
         File.WriteAllBytes(Path.Combine(_dir, "cd.bin"), bin);
 
-        string srcChd = Path.Combine(_dir, "cd_src.chd");
-        string dstChd = Path.Combine(_dir, "cd_dst.chd");
+        var srcChd = Path.Combine(_dir, "cd_src.chd");
+        var dstChd = Path.Combine(_dir, "cd_dst.chd");
         ChdEncoder.EncodeCd(cuePath, srcChd, codecTags: [CodecTags.Cdfl]);
         ChdEncoder.Copy(srcChd, dstChd, [CodecTags.Zlib]);
 
@@ -233,7 +233,7 @@ public class ChdCopyTests : IDisposable
             // tracks are preserved through the copy
             Assert.True(chd!.IsCd);
             Assert.Equal(2, chd.Tracks!.Count);
-            Assert.Equal(ChdError.Chderrnone, chd.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, chd.ReadAllBytes(out var actual));
             // the CHD stores 2448-byte frames (data + subcode), the BIN only 2352
             Assert.Equal(80 * CdConstants.FrameSize, actual.Length);
         }
@@ -242,9 +242,9 @@ public class ChdCopyTests : IDisposable
     [Fact]
     public void Copy_ToNoneCodec_ProducesUncompressedChd()
     {
-        byte[] source = CreateTestFile(4096 * 16, 49);
-        string srcChd = Path.Combine(_dir, "n_src.chd");
-        string dstChd = Path.Combine(_dir, "n_dst.chd");
+        var source = CreateTestFile(4096 * 16, 49);
+        var srcChd = Path.Combine(_dir, "n_src.chd");
+        var dstChd = Path.Combine(_dir, "n_dst.chd");
         using (var ms = new MemoryStream(source))
         {
             ChdEncoder.EncodeRaw(ms, srcChd, 4096, 512, [CodecTags.Zlib]);
@@ -253,14 +253,14 @@ public class ChdCopyTests : IDisposable
         ChdEncoder.Copy(srcChd, dstChd, [CodecTags.None]);
 
         // uncompressed header: all compressor slots zero
-        byte[] header = File.ReadAllBytes(dstChd).AsSpan(0, 32).ToArray();
+        var header = File.ReadAllBytes(dstChd).AsSpan(0, 32).ToArray();
         Assert.True(header.Skip(16).All(b => b == 0), "compressor slots must be zero for -c none");
 
         var err = ChdFile.Open(dstChd, out var chd);
         Assert.Equal(ChdError.Chderrnone, err);
         using (chd)
         {
-            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out var actual));
             Assert.Equal(source, actual);
         }
     }
@@ -277,10 +277,10 @@ public class ChdCopyTests : IDisposable
     {
         if (ChdmanPath == null) return;
 
-        byte[] source = CreateTestFile(4096 * 24, 50);
-        string srcChd = Path.Combine(_dir, "cm_src.chd");
-        string dstChd = Path.Combine(_dir, "cm_dst.chd");
-        string extractPath = Path.Combine(_dir, "cm_extract.raw");
+        var source = CreateTestFile(4096 * 24, 50);
+        var srcChd = Path.Combine(_dir, "cm_src.chd");
+        var dstChd = Path.Combine(_dir, "cm_dst.chd");
+        var extractPath = Path.Combine(_dir, "cm_extract.raw");
         using (var ms = new MemoryStream(source))
         {
             ChdEncoder.EncodeRaw(ms, srcChd, 4096, 512, [CodecTags.Lzma]);
@@ -301,18 +301,18 @@ public class ChdCopyTests : IDisposable
     {
         if (ChdmanPath == null) return;
 
-        byte[] parentData = CreateTestFile(4096 * 16, 51);
-        byte[] childData = (byte[])parentData.Clone();
-        for (int h = 4; h < 8; h++)
+        var parentData = CreateTestFile(4096 * 16, 51);
+        var childData = (byte[])parentData.Clone();
+        for (var h = 4; h < 8; h++)
         {
             var rng = new Random(700 + h);
             rng.NextBytes(childData.AsSpan(h * 4096, 4096));
         }
 
-        string parentPath = Path.Combine(_dir, "cm_parent.chd");
-        string childPath = Path.Combine(_dir, "cm_child.chd");
-        string copyPath = Path.Combine(_dir, "cm_copy.chd");
-        string extractPath = Path.Combine(_dir, "cm_copy.raw");
+        var parentPath = Path.Combine(_dir, "cm_parent.chd");
+        var childPath = Path.Combine(_dir, "cm_child.chd");
+        var copyPath = Path.Combine(_dir, "cm_copy.chd");
+        var extractPath = Path.Combine(_dir, "cm_copy.raw");
         using (var ms = new MemoryStream(parentData))
         {
             ChdEncoder.EncodeRaw(ms, parentPath, 4096, 512);
@@ -337,7 +337,7 @@ public class ChdCopyTests : IDisposable
 
     private static byte[] CreateTestFile(int size, int seed)
     {
-        byte[] data = new byte[size];
+        var data = new byte[size];
         var rng = new Random(seed);
         rng.NextBytes(data);
         return data;
@@ -345,7 +345,7 @@ public class ChdCopyTests : IDisposable
 
     private static (int ExitCode, string StdOut, string StdErr) RunChdman(params string[] args)
     {
-        string chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
+        var chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
 
         var psi = new ProcessStartInfo
         {
@@ -368,10 +368,10 @@ public class ChdCopyTests : IDisposable
 
     private static string? ResolveChdmanPath()
     {
-        string exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
+        var exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
 
-        string baseDir = AppContext.BaseDirectory;
-        string candidate = Path.Combine(baseDir, exeName);
+        var baseDir = AppContext.BaseDirectory;
+        var candidate = Path.Combine(baseDir, exeName);
         if (File.Exists(candidate))
             return candidate;
 

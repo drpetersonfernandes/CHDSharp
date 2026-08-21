@@ -2,11 +2,10 @@
 // Original code and comments Copyright (C) 1995-2005, 2014, 2016 Jean-loup Gailly, Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
-using System;
-using ZLibDotNet.Deflate;
-using ZLibDotNet.Inflate;
+using CHDSharpEncoder.ZLib.Deflate;
+using CHDSharpEncoder.ZLib.Inflate;
 
-namespace ZLibDotNet;
+namespace CHDSharpEncoder.ZLib;
 
 internal static class Compressor
 {
@@ -14,11 +13,11 @@ internal static class Compressor
 
     internal static int Compress(Span<byte> dest, ref uint destLen, ReadOnlySpan<byte> source, uint sourceLen, int level)
     {
-        uint left = destLen;
+        var left = destLen;
         destLen = 0;
 
         ZStream stream = new();
-        int err = Deflater.DeflateInit(ref stream, level);
+        var err = Deflater.DeflateInit(ref stream, level);
         if (err != Z_OK)
             return err;
 
@@ -50,7 +49,7 @@ internal static class Compressor
     internal static int Uncompress(Span<byte> dest, ref uint destLen, ReadOnlySpan<byte> source, ref uint sourceLen)
     {
         uint left;
-        uint len = sourceLen;
+        var len = sourceLen;
         byte[] buf = default; // for detection of incomplete stream when destLen == 0
         if (destLen != 0)
         {
@@ -70,7 +69,7 @@ internal static class Compressor
             avail_in = 0
         };
 
-        int err = Inflater.InflateInit(ref stream, DefaultWindowBits);
+        var err = Inflater.InflateInit(ref stream, DefaultWindowBits);
         if (err != Z_OK)
             return err;
 

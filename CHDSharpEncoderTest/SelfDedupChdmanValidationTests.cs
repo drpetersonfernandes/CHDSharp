@@ -38,18 +38,18 @@ public class SelfDedupChdmanValidationTests : IDisposable
         if (ChdmanPath == null) return;
 
         // 1 MiB made of 256 identical 4 KiB hunks
-        byte[] source = new byte[4096 * 256];
-        for (int i = 0; i < 4096; i++)
+        var source = new byte[4096 * 256];
+        for (var i = 0; i < 4096; i++)
         {
             source[i] = (byte)(i & 0xFF);
         }
 
-        for (int h = 1; h < 256; h++)
+        for (var h = 1; h < 256; h++)
             Array.Copy(source, 0, source, h * 4096, 4096);
 
-        string srcPath = Path.Combine(_testDataDir, "repeated.bin");
-        string chdPath = Path.Combine(_testDataDir, "repeated.chd");
-        string extractPath = Path.Combine(_testDataDir, "repeated.raw");
+        var srcPath = Path.Combine(_testDataDir, "repeated.bin");
+        var chdPath = Path.Combine(_testDataDir, "repeated.chd");
+        var extractPath = Path.Combine(_testDataDir, "repeated.raw");
         File.WriteAllBytes(srcPath, source);
 
         ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512);
@@ -72,21 +72,21 @@ public class SelfDedupChdmanValidationTests : IDisposable
     {
         if (ChdmanPath == null) return;
 
-        byte[] patternA = new byte[4096];
-        byte[] patternB = new byte[4096];
-        for (int i = 0; i < 4096; i++)
+        var patternA = new byte[4096];
+        var patternB = new byte[4096];
+        for (var i = 0; i < 4096; i++)
         {
             patternA[i] = (byte)(i & 0xFF);
             patternB[i] = (byte)(~i & 0xFF);
         }
 
-        byte[] source = new byte[4096 * 128];
-        for (int h = 0; h < 128; h++)
+        var source = new byte[4096 * 128];
+        for (var h = 0; h < 128; h++)
             Array.Copy(h % 2 == 0 ? patternA : patternB, 0, source, h * 4096, 4096);
 
-        string srcPath = Path.Combine(_testDataDir, "alternating.bin");
-        string ourChd = Path.Combine(_testDataDir, "our.chd");
-        string chdmanChd = Path.Combine(_testDataDir, "chdman.chd");
+        var srcPath = Path.Combine(_testDataDir, "alternating.bin");
+        var ourChd = Path.Combine(_testDataDir, "our.chd");
+        var chdmanChd = Path.Combine(_testDataDir, "chdman.chd");
         File.WriteAllBytes(srcPath, source);
 
         ChdEncoder.EncodeRaw(srcPath, ourChd, 4096, 512);
@@ -97,8 +97,8 @@ public class SelfDedupChdmanValidationTests : IDisposable
         // strongest check: byte-for-byte identical CHD files (dedup + map encoding parity)
         Assert.Equal(File.ReadAllBytes(chdmanChd), File.ReadAllBytes(ourChd));
 
-        string ourExtract = Path.Combine(_testDataDir, "our.raw");
-        string chdmanExtract = Path.Combine(_testDataDir, "chdman.raw");
+        var ourExtract = Path.Combine(_testDataDir, "our.raw");
+        var chdmanExtract = Path.Combine(_testDataDir, "chdman.raw");
         var (e1, o1, e1R) = RunChdman("extractraw", "-i", ourChd, "-o", ourExtract, "-f");
         Assert.True(e1 == 0, $"extractraw our failed (exit={e1})\n{o1}{e1R}");
         var (e2, o2, e2R) = RunChdman("extractraw", "-i", chdmanChd, "-o", chdmanExtract, "-f");
@@ -110,7 +110,7 @@ public class SelfDedupChdmanValidationTests : IDisposable
 
     private static (int ExitCode, string StdOut, string StdErr) RunChdman(params string[] args)
     {
-        string chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
+        var chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
 
         var psi = new ProcessStartInfo
         {
@@ -133,10 +133,10 @@ public class SelfDedupChdmanValidationTests : IDisposable
 
     private static string? ResolveChdmanPath()
     {
-        string exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
+        var exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
 
-        string baseDir = AppContext.BaseDirectory;
-        string candidate = Path.Combine(baseDir, exeName);
+        var baseDir = AppContext.BaseDirectory;
+        var candidate = Path.Combine(baseDir, exeName);
         if (File.Exists(candidate))
             return candidate;
 

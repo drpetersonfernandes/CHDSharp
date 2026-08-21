@@ -2,7 +2,7 @@
 // Original code and comments Copyright (C) 1995-2011, 2016 Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
-namespace ZLibDotNet;
+namespace CHDSharpEncoder.ZLib;
 
 internal static class Adler32
 {
@@ -14,7 +14,7 @@ internal static class Adler32
         const ushort Base = 65521; // largest prime smaller than 65536
 
         // split Adler-32 into component sums
-        uint sum2 = (adler >> 16) & 0xffff;
+        var sum2 = (adler >> 16) & 0xffff;
         adler &= 0xffff;
 
         // in case user likes doing a byte at a time, keep it fast

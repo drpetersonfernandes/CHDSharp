@@ -44,16 +44,16 @@ public class LargeFileValidationTests : IDisposable
 
         const int hunkBytes = 65536;
         const long size = 100L * 1024 * 1024; // 100 MB
-        string srcPath = Path.Combine(_dir, "large_src.bin");
-        string chdPath = Path.Combine(_dir, "large.chd");
-        string extractPath = Path.Combine(_dir, "large_extracted.raw");
+        var srcPath = Path.Combine(_dir, "large_src.bin");
+        var chdPath = Path.Combine(_dir, "large.chd");
+        var extractPath = Path.Combine(_dir, "large_extracted.raw");
 
         WriteMixedData(srcPath, size, hunkBytes, seed: 2024);
-        string srcSha1 = Sha1Hex(srcPath);
+        var srcSha1 = Sha1Hex(srcPath);
 
         ChdEncoder.EncodeRaw(srcPath, chdPath, hunkBytes, 4096);
 
-        long chdSize = new FileInfo(chdPath).Length;
+        var chdSize = new FileInfo(chdPath).Length;
         // two thirds of the data is a repeating pattern, so the CHD must be well under half the source size
         Assert.True(chdSize < size / 2, $"expected significant compression, CHD is {chdSize:N0} bytes");
 
@@ -81,10 +81,10 @@ public class LargeFileValidationTests : IDisposable
         // 44616 % 4 == 0, so no track padding is needed
         const int dataFrames = 16;
         const int audioFrames = 44600;
-        string cuePath = Path.Combine(_dir, "large.cue");
-        string binPath = Path.Combine(_dir, "large.bin");
-        string chdPath = Path.Combine(_dir, "large_cd.chd");
-        string extractPath = Path.Combine(_dir, "large_cd.raw");
+        var cuePath = Path.Combine(_dir, "large.cue");
+        var binPath = Path.Combine(_dir, "large.bin");
+        var chdPath = Path.Combine(_dir, "large_cd.chd");
+        var extractPath = Path.Combine(_dir, "large_cd.raw");
 
         WriteCdBin(binPath, dataFrames, audioFrames);
         File.WriteAllText(cuePath, $"""
@@ -120,7 +120,7 @@ public class LargeFileValidationTests : IDisposable
     private static void WriteMixedData(string path, long size, int blockBytes, int seed)
     {
         var pattern = new byte[blockBytes];
-        for (int i = 0; i < blockBytes; i++)
+        for (var i = 0; i < blockBytes; i++)
         {
             pattern[i] = (byte)(i & 0xFF);
         }
@@ -131,9 +131,9 @@ public class LargeFileValidationTests : IDisposable
         using var fs = File.Create(path);
         for (long offset = 0; offset < size; offset += blockBytes)
         {
-            int n = (int)Math.Min(blockBytes, size - offset);
+            var n = (int)Math.Min(blockBytes, size - offset);
             // every third block is incompressible; the rest are a repeating pattern
-            byte[] block = offset / blockBytes % 3 == 0 ? randomBlock : pattern;
+            var block = offset / blockBytes % 3 == 0 ? randomBlock : pattern;
             if (ReferenceEquals(block, randomBlock))
                 rng.NextBytes(randomBlock.AsSpan(0, n));
             fs.Write(block, 0, n);
@@ -148,9 +148,9 @@ public class LargeFileValidationTests : IDisposable
         var sector = new byte[CdConstants.MaxSectorData];
         using var fs = File.Create(path);
 
-        for (int f = 0; f < dataFrames; f++)
+        for (var f = 0; f < dataFrames; f++)
         {
-            for (int j = 0; j < CdConstants.MaxSectorData; j++)
+            for (var j = 0; j < CdConstants.MaxSectorData; j++)
             {
                 sector[j] = (byte)((f * 31 + j * 7) & 0xFF);
             }
@@ -158,11 +158,11 @@ public class LargeFileValidationTests : IDisposable
             fs.Write(sector);
         }
 
-        for (int f = 0; f < audioFrames; f++)
+        for (var f = 0; f < audioFrames; f++)
         {
-            for (int j = 0; j < CdConstants.MaxSectorData / 2; j++)
+            for (var j = 0; j < CdConstants.MaxSectorData / 2; j++)
             {
-                int sample = (f * 1000 + j) & 0xFFFF;
+                var sample = (f * 1000 + j) & 0xFFFF;
                 sector[j * 2] = (byte)sample;
                 sector[j * 2 + 1] = (byte)(sample >> 8);
             }
@@ -178,24 +178,24 @@ public class LargeFileValidationTests : IDisposable
     {
         using var sha = SHA1.Create();
         var frame = new byte[CdConstants.FrameSize];
-        int total = dataFrames + audioFrames;
+        var total = dataFrames + audioFrames;
 
-        for (int f = 0; f < total; f++)
+        for (var f = 0; f < total; f++)
         {
             Array.Clear(frame);
             if (f < dataFrames)
             {
-                for (int j = 0; j < CdConstants.MaxSectorData; j++)
+                for (var j = 0; j < CdConstants.MaxSectorData; j++)
                 {
                     frame[j] = (byte)((f * 31 + j * 7) & 0xFF);
                 }
             }
             else
             {
-                int audioFrame = f - dataFrames;
-                for (int j = 0; j < CdConstants.MaxSectorData / 2; j++)
+                var audioFrame = f - dataFrames;
+                for (var j = 0; j < CdConstants.MaxSectorData / 2; j++)
                 {
-                    int sample = (audioFrame * 1000 + j) & 0xFFFF;
+                    var sample = (audioFrame * 1000 + j) & 0xFFFF;
                     frame[j * 2] = (byte)(sample >> 8);
                     frame[j * 2 + 1] = (byte)sample;
                 }
@@ -222,7 +222,7 @@ public class LargeFileValidationTests : IDisposable
 
     private static (int ExitCode, string StdOut, string StdErr) RunChdman(params string[] args)
     {
-        string chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
+        var chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
 
         var psi = new ProcessStartInfo
         {
@@ -245,11 +245,11 @@ public class LargeFileValidationTests : IDisposable
 
     private static string? ResolveChdmanPath()
     {
-        string exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
+        var exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
 
         // check alongside the test assembly
-        string baseDir = AppContext.BaseDirectory;
-        string candidate = Path.Combine(baseDir, exeName);
+        var baseDir = AppContext.BaseDirectory;
+        var candidate = Path.Combine(baseDir, exeName);
         if (File.Exists(candidate))
             return candidate;
 

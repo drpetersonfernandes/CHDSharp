@@ -35,9 +35,9 @@ public class FlacPcm16Debug : IDisposable
         // battle pcm16 corpus (seed 1337) — replicate TestDataGenerator.Pcm16 exactly
         var source = Pcm16(512 * 1024, 1337);
 
-        string srcPath = Path.Combine(_dir, "pcm16.bin");
-        string oursPath = Path.Combine(_dir, "pcm16.ours.chd");
-        string refPath = Path.Combine(_dir, "pcm16.ref.chd");
+        var srcPath = Path.Combine(_dir, "pcm16.bin");
+        var oursPath = Path.Combine(_dir, "pcm16.ours.chd");
+        var refPath = Path.Combine(_dir, "pcm16.ref.chd");
         File.WriteAllBytes(srcPath, source);
 
         ChdEncoder.EncodeRaw(srcPath, oursPath, 4096, 512, [CodecTags.Flac]);
@@ -49,11 +49,11 @@ public class FlacPcm16Debug : IDisposable
         Assert.Equal(ChdError.Chderrnone, ours);
         Assert.Equal(ChdError.Chderrnone, refs);
 
-        int firstDiff = -1;
+        var firstDiff = -1;
         for (uint h = 0; h < oFile!.HunkCount; h++)
         {
-            byte[]? oRaw = oFile.ReadRawHunk(h);
-            byte[]? rRaw = rFile!.ReadRawHunk(h);
+            var oRaw = oFile.ReadRawHunk(h);
+            var rRaw = rFile!.ReadRawHunk(h);
             if (oRaw == null || rRaw == null) continue;
             if (!oRaw.AsSpan().SequenceEqual(rRaw))
             {
@@ -69,9 +69,9 @@ public class FlacPcm16Debug : IDisposable
         var rng = new Random(seed);
         var samples = size / 2;
         var b = new byte[samples * 2];
-        double freq = 220 + rng.NextDouble() * 200;
+        var freq = 220 + rng.NextDouble() * 200;
         double phase = 0;
-        for (int i = 0; i < samples; i++)
+        for (var i = 0; i < samples; i++)
         {
             if (i % 4096 == 0) freq = 180 + rng.NextDouble() * 1200;
             phase += 2 * Math.PI * freq / 44100.0;
@@ -84,7 +84,7 @@ public class FlacPcm16Debug : IDisposable
 
     private static (int ExitCode, string StdOut, string StdErr) RunChdman(params string[] args)
     {
-        string chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
+        var chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
         var psi = new ProcessStartInfo
         {
             FileName = chdmanPath,
@@ -103,9 +103,9 @@ public class FlacPcm16Debug : IDisposable
 
     private static string? ResolveChdmanPath()
     {
-        string exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
-        string baseDir = AppContext.BaseDirectory;
-        string candidate = Path.Combine(baseDir, exeName);
+        var exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
+        var baseDir = AppContext.BaseDirectory;
+        var candidate = Path.Combine(baseDir, exeName);
         if (File.Exists(candidate)) return candidate;
         candidate = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "CHDSharpTester", exeName));
         if (File.Exists(candidate)) return candidate;

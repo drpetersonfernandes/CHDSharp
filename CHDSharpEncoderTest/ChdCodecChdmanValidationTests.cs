@@ -40,16 +40,16 @@ public class ChdCodecChdmanValidationTests : IDisposable
     {
         if (ChdmanPath == null) return;
 
-        byte[] source = CreateCompressible(128);
-        string srcPath = Path.Combine(_testDataDir, "zstd.bin");
-        string chdPath = Path.Combine(_testDataDir, "zstd.chd");
-        string extractPath = Path.Combine(_testDataDir, "zstd.raw");
+        var source = CreateCompressible(128);
+        var srcPath = Path.Combine(_testDataDir, "zstd.bin");
+        var chdPath = Path.Combine(_testDataDir, "zstd.chd");
+        var extractPath = Path.Combine(_testDataDir, "zstd.raw");
         File.WriteAllBytes(srcPath, source);
 
         ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512, [CodecTags.Zstd]);
 
         var (infoExit, infoOut, infoErr) = RunChdman("info", "-i", chdPath);
-        string info = infoOut + infoErr;
+        var info = infoOut + infoErr;
         Assert.True(infoExit == 0, $"chdman info failed (exit={infoExit})\n{info}");
         Assert.Contains("Zstandard", info, StringComparison.Ordinal);
 
@@ -67,16 +67,16 @@ public class ChdCodecChdmanValidationTests : IDisposable
     {
         if (ChdmanPath == null) return;
 
-        byte[] source = CreateCompressible(128);
-        string srcPath = Path.Combine(_testDataDir, "lzma.bin");
-        string chdPath = Path.Combine(_testDataDir, "lzma.chd");
-        string extractPath = Path.Combine(_testDataDir, "lzma.raw");
+        var source = CreateCompressible(128);
+        var srcPath = Path.Combine(_testDataDir, "lzma.bin");
+        var chdPath = Path.Combine(_testDataDir, "lzma.chd");
+        var extractPath = Path.Combine(_testDataDir, "lzma.raw");
         File.WriteAllBytes(srcPath, source);
 
         ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512, [CodecTags.Lzma]);
 
         var (infoExit, infoOut, infoErr) = RunChdman("info", "-i", chdPath);
-        string info = infoOut + infoErr;
+        var info = infoOut + infoErr;
         Assert.True(infoExit == 0, $"chdman info failed (exit={infoExit})\n{info}");
         Assert.Contains("LZMA", info, StringComparison.Ordinal);
 
@@ -101,7 +101,7 @@ public class ChdCodecChdmanValidationTests : IDisposable
         const string all = "etaoinshrdlucmfwypvbgkjqxz ETAOINSHRDLUCMFWYPVBGKJQXZ0123456789.,!?;:'\"()-";
         const int size = 4096 * 128;
         var source = new byte[size];
-        for (int i = 0; i < size; i++)
+        for (var i = 0; i < size; i++)
         {
             var r = rng.NextDouble();
             source[i] = r switch
@@ -113,9 +113,9 @@ public class ChdCodecChdmanValidationTests : IDisposable
             };
         }
 
-        string srcPath = Path.Combine(_testDataDir, "lzma-text.bin");
-        string oursPath = Path.Combine(_testDataDir, "lzma-text.ours.chd");
-        string refPath = Path.Combine(_testDataDir, "lzma-text.ref.chd");
+        var srcPath = Path.Combine(_testDataDir, "lzma-text.bin");
+        var oursPath = Path.Combine(_testDataDir, "lzma-text.ours.chd");
+        var refPath = Path.Combine(_testDataDir, "lzma-text.ref.chd");
         File.WriteAllBytes(srcPath, source);
 
         ChdEncoder.EncodeRaw(srcPath, oursPath, 4096, 512, [CodecTags.Lzma]);
@@ -143,27 +143,27 @@ public class ChdCodecChdmanValidationTests : IDisposable
                              TRACK 02 AUDIO
                                INDEX 01 00:04:00
                            """;
-        string cuePath = Path.Combine(_testDataDir, "cdzs.cue");
-        string binPath = Path.Combine(_testDataDir, "cdzs.bin");
-        string oursPath = Path.Combine(_testDataDir, "cdzs.ours.chd");
-        string refPath = Path.Combine(_testDataDir, "cdzs.ref.chd");
+        var cuePath = Path.Combine(_testDataDir, "cdzs.cue");
+        var binPath = Path.Combine(_testDataDir, "cdzs.bin");
+        var oursPath = Path.Combine(_testDataDir, "cdzs.ours.chd");
+        var refPath = Path.Combine(_testDataDir, "cdzs.ref.chd");
         File.WriteAllText(cuePath, cue);
 
         const int dataFrames = 300;
         const int audioFrames = 300;
         var bin = new byte[(dataFrames + audioFrames) * CdConstants.MaxSectorData];
-        int pos = 0;
-        for (int f = 0; f < dataFrames; f++)
+        var pos = 0;
+        for (var f = 0; f < dataFrames; f++)
         {
-            for (int i = 0; i < CdConstants.MaxSectorData; i++, pos++)
+            for (var i = 0; i < CdConstants.MaxSectorData; i++, pos++)
                 bin[pos] = (byte)("the quick brown fox jumps over the lazy dog "[i % 40] + (f % 7));
         }
 
-        for (int f = 0; f < audioFrames; f++)
+        for (var f = 0; f < audioFrames; f++)
         {
-            for (int i = 0; i < CdConstants.MaxSectorData / 2; i++)
+            for (var i = 0; i < CdConstants.MaxSectorData / 2; i++)
             {
-                short v = (short)(12000 * Math.Sin((f * CdConstants.MaxSectorData / 2 + i) * 0.02));
+                var v = (short)(12000 * Math.Sin((f * CdConstants.MaxSectorData / 2 + i) * 0.02));
                 bin[pos++] = (byte)(v & 0xFF);
                 bin[pos++] = (byte)((v >> 8) & 0xFF);
             }
@@ -171,7 +171,7 @@ public class ChdCodecChdmanValidationTests : IDisposable
 
         File.WriteAllBytes(binPath, bin);
 
-        uint hunkBytes = CdConstants.FramesPerHunk * (uint)CdConstants.FrameSize;
+        var hunkBytes = CdConstants.FramesPerHunk * (uint)CdConstants.FrameSize;
         ChdEncoder.EncodeCd(cuePath, oursPath, hunkBytes: hunkBytes,
             unitBytes: (uint)CdConstants.FrameSize, codecTags: [CodecTags.Cdzs]);
 
@@ -189,8 +189,8 @@ public class ChdCodecChdmanValidationTests : IDisposable
         }
 
         // chdman extractcd must reproduce the source BIN exactly from our output
-        string extractPath = Path.Combine(_testDataDir, "cdzs.extract.bin");
-        string extractCue = Path.Combine(_testDataDir, "cdzs.extract.cue");
+        var extractPath = Path.Combine(_testDataDir, "cdzs.extract.bin");
+        var extractCue = Path.Combine(_testDataDir, "cdzs.extract.cue");
         var (exExit, eOut, eErr) = RunChdman("extractcd", "-i", oursPath, "-o", extractCue, "-ob", extractPath, "-f");
         Assert.True(exExit == 0, $"extractcd failed (exit={exExit})\n{eOut}{eErr}");
         Assert.Equal(bin, File.ReadAllBytes(extractPath));
@@ -204,16 +204,16 @@ public class ChdCodecChdmanValidationTests : IDisposable
         // Deterministic sine-wave PCM (compressible, exercises LPC subframe selection).
         const int size = 4096 * 8;
         var source = new byte[size];
-        for (int i = 0; i < size / 2; i++)
+        for (var i = 0; i < size / 2; i++)
         {
-            short v = (short)(30000 * Math.Sin(i * 0.01) + 5000 * Math.Sin(i * 0.001));
+            var v = (short)(30000 * Math.Sin(i * 0.01) + 5000 * Math.Sin(i * 0.001));
             source[2 * i] = (byte)(v & 0xFF);
             source[2 * i + 1] = (byte)((v >> 8) & 0xFF);
         }
 
-        string srcPath = Path.Combine(_testDataDir, "flac-pcm16.bin");
-        string oursPath = Path.Combine(_testDataDir, "flac-pcm16.ours.chd");
-        string refPath = Path.Combine(_testDataDir, "flac-pcm16.ref.chd");
+        var srcPath = Path.Combine(_testDataDir, "flac-pcm16.bin");
+        var oursPath = Path.Combine(_testDataDir, "flac-pcm16.ours.chd");
+        var refPath = Path.Combine(_testDataDir, "flac-pcm16.ref.chd");
         File.WriteAllBytes(srcPath, source);
 
         ChdEncoder.EncodeRaw(srcPath, oursPath, 4096, 512, [CodecTags.Flac]);
@@ -238,9 +238,9 @@ public class ChdCodecChdmanValidationTests : IDisposable
                              TRACK 02 AUDIO
                                INDEX 01 00:00:10
                            """;
-        string cuePath = Path.Combine(_testDataDir, "cdfl.cue");
-        string binPath = Path.Combine(_testDataDir, "cdfl.bin");
-        string chdPath = Path.Combine(_testDataDir, "cdfl.chd");
+        var cuePath = Path.Combine(_testDataDir, "cdfl.cue");
+        var binPath = Path.Combine(_testDataDir, "cdfl.bin");
+        var chdPath = Path.Combine(_testDataDir, "cdfl.chd");
         File.WriteAllText(cuePath, cue);
 
         var bin = new byte[(10 + 40) * CdConstants.MaxSectorData];
@@ -258,8 +258,8 @@ public class ChdCodecChdmanValidationTests : IDisposable
         Assert.Equal(ChdError.Chderrnone, check.Error);
 
         // chdman extractcd must reproduce the source BIN exactly
-        string extractPath = Path.Combine(_testDataDir, "cdfl.extract.bin");
-        string extractCue = Path.Combine(_testDataDir, "cdfl.extract.cue");
+        var extractPath = Path.Combine(_testDataDir, "cdfl.extract.bin");
+        var extractCue = Path.Combine(_testDataDir, "cdfl.extract.cue");
         var (exExit, eOut, eErr) = RunChdman("extractcd", "-i", chdPath, "-o", extractCue, "-ob", extractPath, "-f");
         Assert.True(exExit == 0, $"extractcd failed (exit={exExit})\n{eOut}{eErr}");
         Assert.Equal(bin, File.ReadAllBytes(extractPath));
@@ -270,15 +270,15 @@ public class ChdCodecChdmanValidationTests : IDisposable
     {
         if (ChdmanPath == null) return;
 
-        byte[] source = CreateCompressible(128);
-        string srcPath = Path.Combine(_testDataDir, "multi.bin");
-        string chdPath = Path.Combine(_testDataDir, "multi.chd");
+        var source = CreateCompressible(128);
+        var srcPath = Path.Combine(_testDataDir, "multi.bin");
+        var chdPath = Path.Combine(_testDataDir, "multi.chd");
         File.WriteAllBytes(srcPath, source);
 
         ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512, [CodecTags.Zlib, CodecTags.Zstd, CodecTags.Lzma]);
 
         var (infoExit, infoOut, infoErr) = RunChdman("info", "-i", chdPath);
-        string info = infoOut + infoErr;
+        var info = infoOut + infoErr;
         Assert.True(infoExit == 0, $"chdman info failed (exit={infoExit})\n{info}");
         Assert.Contains("zlib", info, StringComparison.Ordinal);
         Assert.Contains("Zstandard", info, StringComparison.Ordinal);
@@ -301,9 +301,9 @@ public class ChdCodecChdmanValidationTests : IDisposable
                                INDEX 00 00:00:40
                                INDEX 01 00:00:42
                            """;
-        string cuePath = Path.Combine(_testDataDir, "cd.cue");
-        string binPath = Path.Combine(_testDataDir, "game.bin");
-        string chdPath = Path.Combine(_testDataDir, "cd.chd");
+        var cuePath = Path.Combine(_testDataDir, "cd.cue");
+        var binPath = Path.Combine(_testDataDir, "game.bin");
+        var chdPath = Path.Combine(_testDataDir, "cd.chd");
         File.WriteAllText(cuePath, cue);
         using (var fs = File.Create(binPath))
         {
@@ -325,15 +325,15 @@ public class ChdCodecChdmanValidationTests : IDisposable
 
     private static byte[] CreateCompressible(int hunkCount)
     {
-        byte[] source = new byte[4096 * hunkCount];
-        for (int h = 0; h < hunkCount; h++)
+        var source = new byte[4096 * hunkCount];
+        for (var h = 0; h < hunkCount; h++)
         {
-            for (int i = 0; i < 4064; i++)
+            for (var i = 0; i < 4064; i++)
             {
                 source[h * 4096 + i] = 0;
             }
 
-            for (int i = 4064; i < 4096; i++)
+            for (var i = 4064; i < 4096; i++)
             {
                 source[h * 4096 + i] = (byte)(h + i);
             }
@@ -344,7 +344,7 @@ public class ChdCodecChdmanValidationTests : IDisposable
 
     private static (int ExitCode, string StdOut, string StdErr) RunChdman(params string[] args)
     {
-        string chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
+        var chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
 
         var psi = new ProcessStartInfo
         {
@@ -367,10 +367,10 @@ public class ChdCodecChdmanValidationTests : IDisposable
 
     private static string? ResolveChdmanPath()
     {
-        string exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
+        var exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
 
-        string baseDir = AppContext.BaseDirectory;
-        string candidate = Path.Combine(baseDir, exeName);
+        var baseDir = AppContext.BaseDirectory;
+        var candidate = Path.Combine(baseDir, exeName);
         if (File.Exists(candidate))
             return candidate;
 

@@ -119,7 +119,7 @@ public static class PlatformDetector
         {
             using var probe = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
             var length = probe.Length;
-            uint frameSize = DetectSectorSize(probe, length);
+            var frameSize = DetectSectorSize(probe, length);
 
             return DetectCore(ReadSector, frameSize == 2048 ? "dvd" : "cd", "raw file");
 

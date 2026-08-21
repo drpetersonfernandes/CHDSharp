@@ -1,6 +1,6 @@
 #nullable disable
 #pragma warning disable MA0008
-namespace ZLibDotNet.Inflate;
+namespace CHDSharpEncoder.ZLib.Inflate;
 
 internal ref struct InflateRefs
 {

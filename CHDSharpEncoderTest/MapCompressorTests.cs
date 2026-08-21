@@ -13,10 +13,10 @@ public class MapCompressorTests
             new MapEntry { Compression = MapEntry.CompressionNone, CompLength = 4096, Offset = 124, Crc16 = 0xB76F }
         };
 
-        byte[] compressed = MapCompressor.Compress(entries, 1, 4096, 512);
+        var compressed = MapCompressor.Compress(entries, 1, 4096, 512);
 
         Assert.True(compressed.Length >= 16);
-        uint dataLen = ReadU32Be(compressed, 0);
+        var dataLen = ReadU32Be(compressed, 0);
         Assert.Equal((uint)compressed.Length - 16, dataLen);
     }
 
@@ -27,10 +27,10 @@ public class MapCompressorTests
         entries[0] = new MapEntry { Compression = MapEntry.CompressionNone, CompLength = 4096, Offset = 124, Crc16 = 0xFFFF };
         entries[1] = new MapEntry { Compression = MapEntry.CompressionNone, CompLength = 4096, Offset = 124 + 4096, Crc16 = 0x1234 };
 
-        byte[] compressed = MapCompressor.Compress(entries, 2, 4096, 512);
+        var compressed = MapCompressor.Compress(entries, 2, 4096, 512);
 
         Assert.True(compressed.Length >= 16);
-        uint dataLen = ReadU32Be(compressed, 0);
+        var dataLen = ReadU32Be(compressed, 0);
         Assert.Equal((uint)(compressed.Length - 16), dataLen);
     }
 
@@ -42,19 +42,19 @@ public class MapCompressorTests
             new MapEntry { Compression = MapEntry.CompressionType0, CompLength = 100, Offset = 200, Crc16 = 0xABCD }
         };
 
-        byte[] compressed = MapCompressor.Compress(entries, 1, 4096, 512);
+        var compressed = MapCompressor.Compress(entries, 1, 4096, 512);
 
-        uint dataLen = ReadU32Be(compressed, 0);
-        ulong firstOffset = ReadU48Be(compressed, 4);
-        ushort mapCrc = ReadU16Be(compressed, 10);
+        var dataLen = ReadU32Be(compressed, 0);
+        var firstOffset = ReadU48Be(compressed, 4);
+        var mapCrc = ReadU16Be(compressed, 10);
 
         Assert.True(dataLen > 0);
         Assert.Equal(200uL, firstOffset);
 
         // mapCrc should be CRC16 of the raw (uncompressed) map
-        byte[] rawMap = new byte[12];
+        var rawMap = new byte[12];
         MapEntry.WriteRawMapEntry(rawMap, 0, entries[0]);
-        ushort expectedMapCrc = Crc16.Compute(rawMap);
+        var expectedMapCrc = Crc16.Compute(rawMap);
         Assert.Equal(expectedMapCrc, mapCrc);
     }
 
@@ -68,7 +68,7 @@ public class MapCompressorTests
         entries[3] = new MapEntry { Compression = MapEntry.CompressionNone, CompLength = 4096, Offset = 4366, Crc16 = 0xA004 };
         entries[4] = new MapEntry { Compression = MapEntry.CompressionType0, CompLength = 70, Offset = 8462, Crc16 = 0xA005 };
 
-        byte[] compressed = MapCompressor.Compress(entries, 5, 4096, 512);
+        var compressed = MapCompressor.Compress(entries, 5, 4096, 512);
         Assert.True(compressed.Length > 16);
     }
 
@@ -76,14 +76,14 @@ public class MapCompressorTests
     public void CompressedLength_matchesDataLength()
     {
         var entries = new MapEntry[3];
-        for (int i = 0; i < 3; i++)
+        for (var i = 0; i < 3; i++)
         {
             entries[i] = new MapEntry { Compression = MapEntry.CompressionType0, CompLength = (uint)(100 + i * 10), Offset = (ulong)(124 + i * 120), Crc16 = (ushort)(0x1000 + i) };
         }
 
-        byte[] compressed = MapCompressor.Compress(entries, 3, 4096, 512);
+        var compressed = MapCompressor.Compress(entries, 3, 4096, 512);
 
-        uint headerDataLen = ReadU32Be(compressed, 0);
+        var headerDataLen = ReadU32Be(compressed, 0);
         Assert.Equal((uint)(compressed.Length - 16), headerDataLen);
     }
 
@@ -92,12 +92,12 @@ public class MapCompressorTests
     {
         const int count = 100;
         var entries = new MapEntry[count];
-        for (int i = 0; i < count; i++)
+        for (var i = 0; i < count; i++)
         {
             entries[i] = new MapEntry { Compression = MapEntry.CompressionType0, CompLength = 50, Offset = (ulong)(124 + i * 60), Crc16 = 0 };
         }
 
-        byte[] compressed = MapCompressor.Compress(entries, count, 4096, 512);
+        var compressed = MapCompressor.Compress(entries, count, 4096, 512);
 
         // The compressed map should be much smaller than 100 × 12 = 1200 bytes
         Assert.True(compressed.Length < 1200);
@@ -111,9 +111,9 @@ public class MapCompressorTests
             new MapEntry { Compression = MapEntry.CompressionType0, CompLength = 4000, Offset = 124, Crc16 = 0 }
         };
 
-        byte[] compressed = MapCompressor.Compress(entries, 1, 4096, 512);
+        var compressed = MapCompressor.Compress(entries, 1, 4096, 512);
 
-        byte lengthBits = compressed[12];
+        var lengthBits = compressed[12];
         // 4000 needs 12 bits (2^11 = 2048, 2^12 = 4096)
         Assert.Equal(12, lengthBits);
     }
@@ -126,7 +126,7 @@ public class MapCompressorTests
             new MapEntry { Compression = MapEntry.CompressionType0, CompLength = 100, Offset = 124, Crc16 = 0 }
         };
 
-        byte[] compressed = MapCompressor.Compress(entries, 1, 4096, 512);
+        var compressed = MapCompressor.Compress(entries, 1, 4096, 512);
 
         Assert.Equal(0, compressed[13]); // selfbits
         Assert.Equal(0, compressed[14]); // parentbits
@@ -137,19 +137,19 @@ public class MapCompressorTests
     public void MapCrc_matchesUncompressedMap()
     {
         var entries = new MapEntry[4];
-        for (int i = 0; i < 4; i++)
+        for (var i = 0; i < 4; i++)
         {
             entries[i] = new MapEntry { Compression = i < 2 ? MapEntry.CompressionType0 : MapEntry.CompressionNone, CompLength = (uint)(100 + i * 25), Offset = (ulong)(124 + i * 150), Crc16 = (ushort)(0xE000 + i) };
         }
 
-        byte[] rawMap = new byte[4 * 12];
-        for (int i = 0; i < 4; i++)
+        var rawMap = new byte[4 * 12];
+        for (var i = 0; i < 4; i++)
             MapEntry.WriteRawMapEntry(rawMap, i, entries[i]);
 
-        ushort rawMapCrc = Crc16.Compute(rawMap);
+        var rawMapCrc = Crc16.Compute(rawMap);
 
-        byte[] compressed = MapCompressor.Compress(entries, 4, 4096, 512);
-        ushort headerMapCrc = ReadU16Be(compressed, 10);
+        var compressed = MapCompressor.Compress(entries, 4, 4096, 512);
+        var headerMapCrc = ReadU16Be(compressed, 10);
 
         Assert.Equal(rawMapCrc, headerMapCrc);
     }

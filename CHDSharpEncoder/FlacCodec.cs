@@ -46,18 +46,18 @@ public sealed class FlacCodec : IChdCodec
         var encoder = new LibFlacEncoder(_blockSize);
 
         // little-endian pass: samples read as little-endian (bytes as-is)
-        int leLen = encoder.Encode(leOut, data);
+        var leLen = encoder.Encode(leOut, data);
 
         // big-endian pass: samples read as big-endian (each 16-bit pair swapped)
         SwapPairs(data, _swappedBuffer);
-        int beLen = encoder.Encode(beOut, _swappedBuffer);
+        var beLen = encoder.Encode(beOut, _swappedBuffer);
 
         if (leLen + 1 >= data.Length && beLen + 1 >= data.Length)
             return null;
 
         // pick the smaller; marker 'L' = stored little-endian, 'B' = stored big-endian
         // (MAME: dest[0] = 'L'; 'B' only when the big-endian pass won)
-        int winnerLen = Math.Min(leLen, beLen);
+        var winnerLen = Math.Min(leLen, beLen);
         var winner = leLen <= beLen ? leOut : beOut;
 
         var result = new byte[winnerLen + 1];
@@ -68,7 +68,7 @@ public sealed class FlacCodec : IChdCodec
 
     private static void SwapPairs(byte[] source, byte[] dest)
     {
-        for (int i = 0; i < source.Length; i += 2)
+        for (var i = 0; i < source.Length; i += 2)
         {
             dest[i] = source[i + 1];
             dest[i + 1] = source[i];

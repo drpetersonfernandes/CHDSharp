@@ -2,9 +2,7 @@
 // Original code and comments Copyright (C) 1995-2024 Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
-using System;
-
-namespace ZLibDotNet.Inflate;
+namespace CHDSharpEncoder.ZLib.Inflate;
 
 internal static partial class Inflater
 {
@@ -13,14 +11,14 @@ internal static partial class Inflater
         if (InflateStateCheck(ref strm))
             return Z_STREAM_ERROR;
 
-        InflateState state = strm.inflateState;
+        var state = strm.inflateState;
         if (state.wrap != 0 && state.mode != InflateMode.Dict)
             return Z_STREAM_ERROR;
 
         // check for correct dictionary identifier
         if (state.mode == InflateMode.Dict)
         {
-            uint dictid = Adler32.Update(0, ref netUnsafe.NullRef<byte>(), 0);
+            var dictid = Adler32.Update(0, ref netUnsafe.NullRef<byte>(), 0);
             dictid = Adler32.Update(dictid, ref dictionary, dictLength);
             if (dictid != state.check)
                 return Z_DATA_ERROR;

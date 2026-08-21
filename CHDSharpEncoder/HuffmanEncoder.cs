@@ -60,8 +60,8 @@ internal sealed class HuffmanEncoder
     /// </summary>
     public void BuildTree()
     {
-        int totalData = 0;
-        for (int i = 0; i < _numCodes; i++)
+        var totalData = 0;
+        for (var i = 0; i < _numCodes; i++)
         {
             totalData += _histogram[i];
         }
@@ -73,12 +73,12 @@ internal sealed class HuffmanEncoder
         }
 
         // binary search for the largest weight multiplier whose tree fits in _maxBits
-        int lowerWeight = 0;
-        int upperWeight = totalData * 2;
+        var lowerWeight = 0;
+        var upperWeight = totalData * 2;
         while (true)
         {
-            int curWeight = (upperWeight + lowerWeight) / 2;
-            int curMaxBits = BuildTree(totalData, curWeight);
+            var curWeight = (upperWeight + lowerWeight) / 2;
+            var curMaxBits = BuildTree(totalData, curWeight);
 
             if (curMaxBits <= _maxBits)
             {
@@ -106,12 +106,12 @@ internal sealed class HuffmanEncoder
         // runs as an RLE token (0) followed by (run - 2)
         var rleData = new List<byte>(_numCodes);
         var rleLengths = new List<int>();
-        int last = -1;
-        int repCount = 0;
+        var last = -1;
+        var repCount = 0;
 
-        for (int curCode = 0; curCode < _numCodes; curCode++)
+        for (var curCode = 0; curCode < _numCodes; curCode++)
         {
-            int newVal = NumBits[curCode];
+            var newVal = NumBits[curCode];
             if (newVal != last && repCount > 0)
             {
                 if (repCount == 1)
@@ -158,7 +158,7 @@ internal sealed class HuffmanEncoder
 
         // determine the first and last non-zero nodes
         int firstNonZero = 31, lastNonZero = 0;
-        for (int index = 1; index < 24; index++)
+        for (var index = 1; index < 24; index++)
         {
             if (smallHuff.NumBits[index] != 0)
             {
@@ -178,19 +178,19 @@ internal sealed class HuffmanEncoder
         // following nodes, terminated by a 7
         bs.Write((uint)smallHuff.NumBits[0], 3);
         bs.Write((uint)(firstNonZero - 1), 3);
-        for (int index = firstNonZero; index <= lastNonZero; index++)
+        for (var index = firstNonZero; index <= lastNonZero; index++)
             bs.Write((uint)smallHuff.NumBits[index], 3);
         bs.Write(7, 3);
 
         // the maximum length of an RLE count
-        int rleFullBits = 0;
-        for (int temp = _numCodes - 9; temp != 0; temp >>= 1)
+        var rleFullBits = 0;
+        for (var temp = _numCodes - 9; temp != 0; temp >>= 1)
         {
             rleFullBits++;
         }
 
         // encode the RLE data
-        int lengthIndex = 0;
+        var lengthIndex = 0;
         foreach (var data in rleData)
         {
             smallHuff.Encode(bs, data);
@@ -198,7 +198,7 @@ internal sealed class HuffmanEncoder
             // an RLE token is followed by the run length
             if (data == 0)
             {
-                int count = rleLengths[lengthIndex++];
+                var count = rleLengths[lengthIndex++];
                 if (count < 7)
                 {
                     bs.Write((uint)count, 3);
@@ -208,6 +208,72 @@ internal sealed class HuffmanEncoder
                     bs.Write(7, 3);
                     bs.Write((uint)(count - 7), rleFullBits);
                 }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Writes the tree to <paramref name="bs"/> RLE-encoded (MAME's <c>export_tree_rle</c>,
+    /// src/lib/util/huffman.cpp): code lengths are emitted with a repeat escape; the number
+    /// of bits per entry depends on <c>maxBits</c> (5 for ≥16). Used by the avhu codec's
+    /// delta-RLE video/audio trees.
+    /// </summary>
+    public void ExportTreeRle(BitStreamOut bs)
+    {
+        // bits per entry depends on the maxbits (huffman.cpp:207-213)
+        var numBits = _maxBits >= 16 ? 5 : _maxBits >= 8 ? 4 : 3;
+
+        // RLE encode the lengths (huffman.cpp:216-236)
+        var lastVal = ~0;
+        var repCount = 0;
+        for (var curCode = 0; curCode < _numCodes; curCode++)
+        {
+            var newVal = NumBits[curCode];
+            if (newVal == lastVal)
+            {
+                repCount++;
+            }
+            else
+            {
+                if (repCount != 0)
+                {
+                    WriteRleTreeBits(bs, lastVal, repCount, numBits);
+                }
+
+                lastVal = newVal;
+                repCount = 1;
+            }
+        }
+
+        WriteRleTreeBits(bs, lastVal, repCount, numBits);
+    }
+
+    /// <summary>Writes one run of equal code lengths (MAME's <c>write_rle_tree_bits</c>, huffman.cpp:468).</summary>
+    private static void WriteRleTreeBits(BitStreamOut bs, int value, int repCount, int numBits)
+    {
+        while (repCount > 0)
+        {
+            // a 1 is written twice as it is the escape code
+            if (value == 1)
+            {
+                bs.Write(1, numBits);
+                bs.Write(1, numBits);
+                repCount--;
+            }
+            else if (repCount <= 2)
+            {
+                // two or fewer in a row are written raw
+                bs.Write((uint)value, numBits);
+                repCount--;
+            }
+            else
+            {
+                // longer runs use an escape triple: 1, value, extra reps beyond 3
+                var curReps = Math.Min(repCount - 3, (1 << numBits) - 1);
+                bs.Write(1, numBits);
+                bs.Write((uint)value, numBits);
+                bs.Write((uint)curReps, numBits);
+                repCount -= curReps + 3;
             }
         }
     }
@@ -229,7 +295,7 @@ internal sealed class HuffmanEncoder
         Array.Clear(_nodes);
         var list = new List<int>(_numCodes * 2);
 
-        for (int curCode = 0; curCode < _numCodes; curCode++)
+        for (var curCode = 0; curCode < _numCodes; curCode++)
         {
             if (_histogram[curCode] != 0)
             {
@@ -239,7 +305,7 @@ internal sealed class HuffmanEncoder
                 _nodes[curCode].Parent = -1;
 
                 // scale the weight by the current effective length, ensuring it does not go to 0
-                long weight = (long)_histogram[curCode] * totalWeight / totalData;
+                var weight = (long)_histogram[curCode] * totalWeight / totalData;
                 _nodes[curCode].Weight = weight == 0 ? 1 : (int)weight;
             }
         }
@@ -247,27 +313,27 @@ internal sealed class HuffmanEncoder
         // sort by weight descending, then by code index ascending (MAME's tree_node_compare)
         list.Sort((a, b) =>
         {
-            int weightCompare = _nodes[b].Weight.CompareTo(_nodes[a].Weight);
+            var weightCompare = _nodes[b].Weight.CompareTo(_nodes[a].Weight);
             return weightCompare != 0 ? weightCompare : a.CompareTo(b);
         });
 
         // build the tree by merging the two lowest-weight nodes
-        int nextAlloc = _numCodes;
+        var nextAlloc = _numCodes;
         while (list.Count > 1)
         {
-            int node1 = list[^1];
+            var node1 = list[^1];
             list.RemoveAt(list.Count - 1);
-            int node0 = list[^1];
+            var node0 = list[^1];
             list.RemoveAt(list.Count - 1);
 
-            int newNode = nextAlloc++;
+            var newNode = nextAlloc++;
             _nodes[newNode].Parent = -1;
             _nodes[newNode].Weight = _nodes[node0].Weight + _nodes[node1].Weight;
             _nodes[node0].Parent = newNode;
             _nodes[node1].Parent = newNode;
 
             // insert before the first item with strictly smaller weight (equal weights stay first)
-            int insertPos = 0;
+            var insertPos = 0;
             while (insertPos < list.Count && _nodes[newNode].Weight <= _nodes[list[insertPos]].Weight)
             {
                 insertPos++;
@@ -277,14 +343,14 @@ internal sealed class HuffmanEncoder
         }
 
         // compute the number of bits in each code
-        int maxBits = 0;
+        var maxBits = 0;
         Array.Clear(NumBits);
-        for (int curCode = 0; curCode < _numCodes; curCode++)
+        for (var curCode = 0; curCode < _numCodes; curCode++)
         {
             if (_histogram[curCode] != 0)
             {
-                int numbits = 0;
-                for (int node = curCode; _nodes[node].Parent >= 0; node = _nodes[node].Parent)
+                var numbits = 0;
+                for (var node = curCode; _nodes[node].Parent >= 0; node = _nodes[node].Parent)
                 {
                     numbits++;
                 }
@@ -306,9 +372,9 @@ internal sealed class HuffmanEncoder
     private void AssignCanonicalCodes()
     {
         var bitHisto = new int[33];
-        for (int curCode = 0; curCode < _numCodes; curCode++)
+        for (var curCode = 0; curCode < _numCodes; curCode++)
         {
-            int numbits = NumBits[curCode];
+            var numbits = NumBits[curCode];
             if (numbits is > 0 and <= 32)
             {
                 bitHisto[numbits]++;
@@ -316,14 +382,14 @@ internal sealed class HuffmanEncoder
         }
 
         uint curStart = 0;
-        for (int codeLen = 32; codeLen > 0; codeLen--)
+        for (var codeLen = 32; codeLen > 0; codeLen--)
         {
-            uint nextStart = (curStart + (uint)bitHisto[codeLen]) >> 1;
+            var nextStart = (curStart + (uint)bitHisto[codeLen]) >> 1;
             bitHisto[codeLen] = (int)curStart;
             curStart = nextStart;
         }
 
-        for (int curCode = 0; curCode < _numCodes; curCode++)
+        for (var curCode = 0; curCode < _numCodes; curCode++)
         {
             if (NumBits[curCode] > 0)
             {

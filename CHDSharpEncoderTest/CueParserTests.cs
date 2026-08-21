@@ -393,7 +393,7 @@ public class CueParserTests : IDisposable
 
     private void WriteWav(int frames)
     {
-        uint dataLength = (uint)(frames * CdConstants.MaxSectorData);
+        var dataLength = (uint)(frames * CdConstants.MaxSectorData);
         using var fs = new FileStream(Path.Combine(_dir, "audio.wav"), FileMode.Create, FileAccess.Write);
         using var w = new BinaryWriter(fs);
 
@@ -411,8 +411,8 @@ public class CueParserTests : IDisposable
         WriteFourCc("data");
         w.Write(dataLength);
 
-        byte[] silence = new byte[CdConstants.MaxSectorData];
-        for (int i = 0; i < frames; i++)
+        var silence = new byte[CdConstants.MaxSectorData];
+        for (var i = 0; i < frames; i++)
             w.Write(silence);
         return;
 

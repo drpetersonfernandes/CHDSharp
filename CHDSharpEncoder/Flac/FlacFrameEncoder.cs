@@ -36,36 +36,36 @@ internal static class FlacFrameEncoder
         if (blockSize is < 1 or > 65535)
             throw new ArgumentException($"Invalid block size {blockSize}");
 
-        int bytesPerSample = bitsPerSample / 8;
-        int totalSamples = interleavedLeSamples.Length / (bytesPerSample * channels);
-        int frameCount = (totalSamples + blockSize - 1) / blockSize;
+        var bytesPerSample = bitsPerSample / 8;
+        var totalSamples = interleavedLeSamples.Length / (bytesPerSample * channels);
+        var frameCount = (totalSamples + blockSize - 1) / blockSize;
 
         // worst case: verbatim subframes, all frames
         var writer = new FlacBitWriter(blockSize * channels * bitsPerSample / 8 + 64);
         var frameBuffer = new byte[blockSize * channels * bitsPerSample / 8 + 64];
         var channelSamples = new int[2][];
-        for (int c = 0; c < channels; c++)
+        for (var c = 0; c < channels; c++)
         {
             channelSamples[c] = new int[blockSize];
         }
 
-        int outputPos = 0;
-        for (int frameIndex = 0; frameIndex < frameCount; frameIndex++)
+        var outputPos = 0;
+        for (var frameIndex = 0; frameIndex < frameCount; frameIndex++)
         {
-            int blockStart = frameIndex * blockSize;
-            int samplesInBlock = Math.Min(blockSize, totalSamples - blockStart);
+            var blockStart = frameIndex * blockSize;
+            var samplesInBlock = Math.Min(blockSize, totalSamples - blockStart);
 
-            for (int c = 0; c < channels; c++)
+            for (var c = 0; c < channels; c++)
             {
                 var dest = channelSamples[c];
-                for (int i = 0; i < samplesInBlock; i++)
+                for (var i = 0; i < samplesInBlock; i++)
                 {
-                    int src = (blockStart + i) * bytesPerSample * channels + c * bytesPerSample;
+                    var src = (blockStart + i) * bytesPerSample * channels + c * bytesPerSample;
                     dest[i] = (short)(interleavedLeSamples[src] | (interleavedLeSamples[src + 1] << 8));
                 }
             }
 
-            int frameLen = EncodeFrame(writer, frameBuffer, channelSamples, samplesInBlock, frameIndex, blockSize);
+            var frameLen = EncodeFrame(writer, frameBuffer, channelSamples, samplesInBlock, frameIndex, blockSize);
             Array.Copy(frameBuffer, 0, output, outputPos, frameLen);
             outputPos += frameLen;
         }
@@ -80,14 +80,14 @@ internal static class FlacFrameEncoder
         WriteFrameHeader(writer, frameNumber, blockSize);
 
         var header = writer.ToArray();
-        byte crc8 = FlacCrc.ComputeCrc8(header);
+        var crc8 = FlacCrc.ComputeCrc8(header);
         writer.WriteBits(crc8, 8);
 
-        for (int c = 0; c < channelSamples.Length; c++)
+        for (var c = 0; c < channelSamples.Length; c++)
             WriteSubframe(writer, channelSamples[c], samplesInBlock, 16);
 
-        int frameLen = writer.CopyTo(frameBuffer);
-        ushort crc16 = FlacCrc.ComputeCrc16(frameBuffer.AsSpan(0, frameLen));
+        var frameLen = writer.CopyTo(frameBuffer);
+        var crc16 = FlacCrc.ComputeCrc16(frameBuffer.AsSpan(0, frameLen));
         frameBuffer[frameLen] = (byte)(crc16 >> 8);
         frameBuffer[frameLen + 1] = (byte)crc16;
         return frameLen + 2;
@@ -103,7 +103,7 @@ internal static class FlacFrameEncoder
         writer.WriteBit(0);
 
         // blocksize code: table match or 16-bit custom
-        int bsCode = Array.IndexOf(BlocksizeCodes, blockSize);
+        var bsCode = Array.IndexOf(BlocksizeCodes, blockSize);
         if (bsCode >= 0)
         {
             writer.WriteBits((uint)bsCode, 4);
@@ -146,10 +146,10 @@ internal static class FlacFrameEncoder
     private static void WriteSubframe(FlacBitWriter writer, int[] samples, int count, int bitsPerSample)
     {
         // detect wasted bits: common trailing zero bits across all samples
-        int wasted = 0;
+        var wasted = 0;
         while (wasted < 15 && wasted < bitsPerSample - 1 && AllEven(samples, count))
         {
-            for (int i = 0; i < count; i++)
+            for (var i = 0; i < count; i++)
             {
                 samples[i] >>= 1;
             }
@@ -157,8 +157,8 @@ internal static class FlacFrameEncoder
             wasted++;
         }
 
-        int effectiveBps = bitsPerSample - wasted;
-        uint mask = (1u << effectiveBps) - 1;
+        var effectiveBps = bitsPerSample - wasted;
+        var mask = (1u << effectiveBps) - 1;
 
         // subframe header
         writer.WriteBit(0); // zero bit
@@ -171,19 +171,19 @@ internal static class FlacFrameEncoder
         }
 
         // choose the best fixed order or verbatim by estimated encoded size
-        int bestOrder = -1;
-        long bestBits = long.MaxValue;
-        int bestK = 0;
+        var bestOrder = -1;
+        var bestBits = long.MaxValue;
+        var bestK = 0;
         var residual = new int[count];
 
-        for (int order = 0; order <= MaxFixedOrder && order < count; order++)
+        for (var order = 0; order <= MaxFixedOrder && order < count; order++)
         {
             ComputeResidual(samples, count, order, residual);
-            int k = ChooseRiceParameter(residual, count, order);
-            long bits = (long)order * effectiveBps + 2 + 4 + 4; // warmup + method + porder + rice param
-            for (int i = order; i < count; i++)
+            var k = ChooseRiceParameter(residual, count, order);
+            var bits = (long)order * effectiveBps + 2 + 4 + 4; // warmup + method + porder + rice param
+            for (var i = order; i < count; i++)
             {
-                uint folded = ((uint)residual[i] << 1) ^ (uint)(residual[i] >> 31);
+                var folded = ((uint)residual[i] << 1) ^ (uint)(residual[i] >> 31);
                 bits += (folded >> k) + 1 + k;
             }
 
@@ -195,13 +195,13 @@ internal static class FlacFrameEncoder
             }
         }
 
-        long verbatimBits = (long)count * effectiveBps;
+        var verbatimBits = (long)count * effectiveBps;
         if (bestOrder < 0 || bestBits >= verbatimBits)
         {
             // VERBATIM
             writer.WriteBits(1, 6);
             WriteWastedBits(writer, wasted);
-            for (int i = 0; i < count; i++)
+            for (var i = 0; i < count; i++)
                 writer.WriteBits((uint)samples[i] & mask, effectiveBps);
             return;
         }
@@ -213,7 +213,7 @@ internal static class FlacFrameEncoder
         ComputeResidual(samples, count, bestOrder, residual);
 
         // warmup samples
-        for (int i = 0; i < bestOrder; i++)
+        for (var i = 0; i < bestOrder; i++)
             writer.WriteBits((uint)samples[i] & mask, effectiveBps);
 
         // residual: rice partition coding (method 0), single partition (order 0);
@@ -222,7 +222,7 @@ internal static class FlacFrameEncoder
         writer.WriteBits(0, 2); // coding method
         writer.WriteBits(0, 4); // partition order
         writer.WriteBits((uint)bestK, 4);
-        for (int i = bestOrder; i < count; i++)
+        for (var i = bestOrder; i < count; i++)
             writer.WriteRiceSigned(bestK, residual[i]);
     }
 
@@ -241,7 +241,7 @@ internal static class FlacFrameEncoder
 
     private static bool AllEven(int[] samples, int count)
     {
-        for (int i = 0; i < count; i++)
+        for (var i = 0; i < count; i++)
         {
             if ((samples[i] & 1) != 0)
                 return false;
@@ -252,7 +252,7 @@ internal static class FlacFrameEncoder
 
     private static bool IsConstant(int[] samples, int count)
     {
-        for (int i = 1; i < count; i++)
+        for (var i = 1; i < count; i++)
         {
             if (samples[i] != samples[0])
                 return false;
@@ -267,7 +267,7 @@ internal static class FlacFrameEncoder
         switch (order)
         {
             case 0:
-                for (int i = 0; i < count; i++)
+                for (var i = 0; i < count; i++)
                 {
                     residual[i] = samples[i];
                 }
@@ -275,7 +275,7 @@ internal static class FlacFrameEncoder
                 break;
             case 1:
                 residual[0] = samples[0];
-                for (int i = 1; i < count; i++)
+                for (var i = 1; i < count; i++)
                 {
                     residual[i] = samples[i] - samples[i - 1];
                 }
@@ -284,7 +284,7 @@ internal static class FlacFrameEncoder
             case 2:
                 residual[0] = samples[0];
                 residual[1] = samples[1] - samples[0];
-                for (int i = 2; i < count; i++)
+                for (var i = 2; i < count; i++)
                 {
                     residual[i] = samples[i] - 2 * samples[i - 1] + samples[i - 2];
                 }
@@ -294,7 +294,7 @@ internal static class FlacFrameEncoder
                 residual[0] = samples[0];
                 residual[1] = samples[1] - samples[0];
                 residual[2] = samples[2] - 2 * samples[1] + samples[0];
-                for (int i = 3; i < count; i++)
+                for (var i = 3; i < count; i++)
                 {
                     residual[i] = samples[i] - 3 * samples[i - 1] + 3 * samples[i - 2] - samples[i - 3];
                 }
@@ -305,7 +305,7 @@ internal static class FlacFrameEncoder
                 residual[1] = samples[1] - samples[0];
                 residual[2] = samples[2] - 2 * samples[1] + samples[0];
                 residual[3] = samples[3] - 3 * samples[2] + 3 * samples[1] - samples[0];
-                for (int i = 4; i < count; i++)
+                for (var i = 4; i < count; i++)
                 {
                     residual[i] = samples[i] - 4 * samples[i - 1] + 6 * samples[i - 2] - 4 * samples[i - 3] + samples[i - 4];
                 }
@@ -317,13 +317,13 @@ internal static class FlacFrameEncoder
     private static int ChooseRiceParameter(int[] residual, int count, int order)
     {
         long sum = 0;
-        for (int i = order; i < count; i++)
+        for (var i = order; i < count; i++)
         {
             sum += Math.Abs((long)residual[i]);
         }
 
-        long mean = count - order > 0 ? sum / (count - order) : 0;
-        int k = 0;
+        var mean = count - order > 0 ? sum / (count - order) : 0;
+        var k = 0;
         while (1L << (k + 1) <= mean && k < 14)
         {
             k++;

@@ -28,7 +28,7 @@ public class GdiParser
 
         // first line: track count
         var headerTokens = CdImageParser.Tokenize(lines.Length > 0 ? lines[0] : string.Empty);
-        if (headerTokens.Count == 0 || !int.TryParse(headerTokens[0], NumberStyles.None, CultureInfo.InvariantCulture, out int numTracks) || numTracks <= 0)
+        if (headerTokens.Count == 0 || !int.TryParse(headerTokens[0], NumberStyles.None, CultureInfo.InvariantCulture, out var numTracks) || numTracks <= 0)
             throw new InvalidDataException("GDI header specifies no tracks");
 
         var toc = new CdToc
@@ -36,31 +36,31 @@ public class GdiParser
             Flags = CdTocFlags.GdRom
         };
         var tracks = new CdTrack?[numTracks];
-        int trackCount = 0;
+        var trackCount = 0;
 
-        for (int lineIndex = 1; lineIndex < lines.Length; lineIndex++)
+        for (var lineIndex = 1; lineIndex < lines.Length; lineIndex++)
         {
             var tokens = CdImageParser.Tokenize(lines[lineIndex]);
             if (tokens.Count == 0)
                 continue;
 
-            if (!int.TryParse(tokens[0], NumberStyles.None, CultureInfo.InvariantCulture, out int trackNumber) ||
+            if (!int.TryParse(tokens[0], NumberStyles.None, CultureInfo.InvariantCulture, out var trackNumber) ||
                 trackNumber < 1 || trackNumber > numTracks)
                 throw new InvalidDataException($"Track {tokens[0]} is out of expected range of 1 to {numTracks}");
 
             if (tokens.Count != 6)
                 throw new InvalidDataException($"GDI track entry should have 6 parameters, found {tokens.Count}");
 
-            int trknum = trackNumber - 1;
+            var trknum = trackNumber - 1;
             if (tracks[trknum] != null)
             {
                 throw new InvalidDataException($"Track {trackNumber} defined multiple times");
             }
 
-            int physframeofs = int.Parse(tokens[1], CultureInfo.InvariantCulture);
-            int trktype = int.Parse(tokens[2], CultureInfo.InvariantCulture);
-            int trksize = int.Parse(tokens[3], CultureInfo.InvariantCulture);
-            string fileName = CdImageParser.ResolveFileName(gdiPath, tokens[4]);
+            var physframeofs = int.Parse(tokens[1], CultureInfo.InvariantCulture);
+            var trktype = int.Parse(tokens[2], CultureInfo.InvariantCulture);
+            var trksize = int.Parse(tokens[3], CultureInfo.InvariantCulture);
+            var fileName = CdImageParser.ResolveFileName(gdiPath, tokens[4]);
             // tokens[5] = offset parameter, unused (matching MAME)
 
             var track = new CdTrack
@@ -103,7 +103,7 @@ public class GdiParser
             // zero-filled pad frames appended to the previous track (MAME's parse_gdi)
             if (trknum != 0 && tracks[trknum - 1] is { } previous)
             {
-                int dif = physframeofs - (previous.Frames + previous.PhysicalFrameOffset);
+                var dif = physframeofs - (previous.Frames + previous.PhysicalFrameOffset);
                 previous.Frames += dif;
                 previous.PadFrames = dif;
                 tracks[trknum - 1] = previous;

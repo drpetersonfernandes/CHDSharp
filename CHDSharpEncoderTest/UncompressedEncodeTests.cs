@@ -44,9 +44,9 @@ public class UncompressedEncodeTests : IDisposable
         if (ChdmanPath == null) return;
 
         // mixed corpus: random + all-zero + compressible hunks exercises the zero-skip path
-        byte[] source = new byte[4096 * 9];
+        var source = new byte[4096 * 9];
         var rng = new Random(2026);
-        for (int h = 0; h < 9; h++)
+        for (var h = 0; h < 9; h++)
         {
             switch (h % 3)
             {
@@ -61,9 +61,9 @@ public class UncompressedEncodeTests : IDisposable
             }
         }
 
-        string srcPath = Path.Combine(_dir, "none_src.bin");
-        string chdmanPath = Path.Combine(_dir, "chdman_none.chd");
-        string oursPath = Path.Combine(_dir, "ours_none.chd");
+        var srcPath = Path.Combine(_dir, "none_src.bin");
+        var chdmanPath = Path.Combine(_dir, "chdman_none.chd");
+        var oursPath = Path.Combine(_dir, "ours_none.chd");
         File.WriteAllBytes(srcPath, source);
 
         var (exit, stdout, stderr) = RunChdman("createraw", "-i", srcPath, "-o", chdmanPath,
@@ -82,27 +82,27 @@ public class UncompressedEncodeTests : IDisposable
     [Fact]
     public void NoneCodec_RoundTrips_ThroughChdSharpLib()
     {
-        byte[] source = new byte[4096 * 12];
+        var source = new byte[4096 * 12];
         var rng = new Random(31);
         rng.NextBytes(source);
-        for (int h = 2; h < 12; h += 3)
+        for (var h = 2; h < 12; h += 3)
             Array.Clear(source, h * 4096, 4096); // zero hunks exercise the zero-fill read path
 
-        string chdPath = Path.Combine(_dir, "rt_none.chd");
+        var chdPath = Path.Combine(_dir, "rt_none.chd");
         using (var ms = new MemoryStream(source))
         {
             ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.None]);
         }
 
         // header: compressor slots all zero, hashes zero (nothing to verify)
-        byte[] raw = File.ReadAllBytes(chdPath);
+        var raw = File.ReadAllBytes(chdPath);
         Assert.True(raw.AsSpan(16, 16).IndexOfAnyExcept((byte)0) < 0, "compressor slots must be zero");
 
         var openErr = ChdFile.Open(chdPath, out var chd);
         Assert.Equal(ChdError.Chderrnone, openErr);
         using (chd)
         {
-            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out var actual));
             Assert.Equal(source, actual);
         }
 
@@ -114,12 +114,12 @@ public class UncompressedEncodeTests : IDisposable
     public void NoneCodec_ZeroHunks_AreNotStored()
     {
         // 16 hunks, 8 of them all-zero: the stored data must be ~8 hunks, not 16
-        byte[] source = new byte[4096 * 16];
+        var source = new byte[4096 * 16];
         var rng = new Random(32);
-        for (int h = 0; h < 16; h += 2)
+        for (var h = 0; h < 16; h += 2)
             rng.NextBytes(source.AsSpan(h * 4096, 4096));
 
-        string chdPath = Path.Combine(_dir, "zeros_none.chd");
+        var chdPath = Path.Combine(_dir, "zeros_none.chd");
         using (var ms = new MemoryStream(source))
         {
             ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.None]);
@@ -133,7 +133,7 @@ public class UncompressedEncodeTests : IDisposable
         Assert.Equal(ChdError.Chderrnone, openErr);
         using (chd)
         {
-            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out var actual));
             Assert.Equal(source, actual);
         }
     }
@@ -142,10 +142,10 @@ public class UncompressedEncodeTests : IDisposable
     public void NoneCodec_PartialFinalHunk_RoundTrips()
     {
         // source size is not a multiple of the hunk size
-        byte[] source = new byte[4096 * 3 + 1000];
+        var source = new byte[4096 * 3 + 1000];
         new Random(33).NextBytes(source);
 
-        string chdPath = Path.Combine(_dir, "partial_none.chd");
+        var chdPath = Path.Combine(_dir, "partial_none.chd");
         using (var ms = new MemoryStream(source))
         {
             ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.None]);
@@ -155,7 +155,7 @@ public class UncompressedEncodeTests : IDisposable
         Assert.Equal(ChdError.Chderrnone, openErr);
         using (chd)
         {
-            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out var actual));
             Assert.Equal(source, actual);
         }
     }
@@ -163,7 +163,7 @@ public class UncompressedEncodeTests : IDisposable
     [Fact]
     public void NoneCodec_WithMetadata_RoundTrips()
     {
-        byte[] source = new byte[4096 * 6];
+        var source = new byte[4096 * 6];
         new Random(34).NextBytes(source);
 
         var meta = new MetadataEntry
@@ -173,7 +173,7 @@ public class UncompressedEncodeTests : IDisposable
             Payload = "Uncompressed"u8.ToArray().Append((byte)0).ToArray()
         };
 
-        string chdPath = Path.Combine(_dir, "meta_none.chd");
+        var chdPath = Path.Combine(_dir, "meta_none.chd");
         using (var ms = new MemoryStream(source))
         {
             ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.None], new ChdEncodeOptions { Metadata = [meta] });
@@ -187,7 +187,7 @@ public class UncompressedEncodeTests : IDisposable
             Assert.NotNull(copied);
             Assert.Equal(meta.Payload, copied.Data);
 
-            Assert.Equal(ChdError.Chderrnone, chd.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, chd.ReadAllBytes(out var actual));
             Assert.Equal(source, actual);
         }
     }
@@ -197,16 +197,16 @@ public class UncompressedEncodeTests : IDisposable
     {
         // uncompressed child: zero hunks become map entry 0, which reads the parent's
         // same-index hunk; non-zero hunks are stored raw (chdman semantics)
-        byte[] parentData = CreateTestFile(4096 * 8, 35);
-        byte[] childData = new byte[4096 * 8];
-        for (int h = 2; h < 6; h++)
+        var parentData = CreateTestFile(4096 * 8, 35);
+        var childData = new byte[4096 * 8];
+        for (var h = 2; h < 6; h++)
         {
             var rng = new Random(400 + h);
             rng.NextBytes(childData.AsSpan(h * 4096, 4096)); // differs from parent: stored raw
         }
 
-        string parentPath = Path.Combine(_dir, "n_parent.chd");
-        string childPath = Path.Combine(_dir, "n_child.chd");
+        var parentPath = Path.Combine(_dir, "n_parent.chd");
+        var childPath = Path.Combine(_dir, "n_child.chd");
         using (var ms = new MemoryStream(parentData))
         {
             ChdEncoder.EncodeRaw(ms, parentPath, 4096, 512);
@@ -218,14 +218,14 @@ public class UncompressedEncodeTests : IDisposable
         }
 
         // the child header must carry the parent's SHA-1
-        byte[] childBytes = File.ReadAllBytes(childPath);
-        byte[] parentBytes = File.ReadAllBytes(parentPath);
+        var childBytes = File.ReadAllBytes(childPath);
+        var parentBytes = File.ReadAllBytes(parentPath);
         Assert.Equal(parentBytes.AsSpan(84, 20).ToArray(), childBytes.AsSpan(104, 20).ToArray());
 
         // zero hunks (0,1,6,7) resolve to the parent's same-index data; the stored hunks
         // (2-5) carry the child's own data
-        byte[] expected = (byte[])childData.Clone();
-        for (int h = 0; h < 8; h++)
+        var expected = (byte[])childData.Clone();
+        for (var h = 0; h < 8; h++)
         {
             if (h is 0 or 1 or 6 or 7)
                 Array.Copy(parentData, h * 4096, expected, h * 4096, 4096);
@@ -235,7 +235,7 @@ public class UncompressedEncodeTests : IDisposable
         Assert.Equal(ChdError.Chderrnone, openErr);
         using (chd)
         {
-            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, chd!.ReadAllBytes(out var actual));
             Assert.Equal(expected, actual);
         }
     }
@@ -243,7 +243,7 @@ public class UncompressedEncodeTests : IDisposable
     [Fact]
     public void NoneCodec_EncodeCd_RoundTrips()
     {
-        string cuePath = Path.Combine(_dir, "none.cue");
+        var cuePath = Path.Combine(_dir, "none.cue");
         File.WriteAllText(cuePath, """
             FILE "none.bin" BINARY
               TRACK 01 MODE1/2352
@@ -251,14 +251,14 @@ public class UncompressedEncodeTests : IDisposable
               TRACK 02 AUDIO
                 INDEX 01 00:00:16
             """);
-        byte[] bin = new byte[64 * CdConstants.MaxSectorData];
+        var bin = new byte[64 * CdConstants.MaxSectorData];
         var rng = new Random(36);
         rng.NextBytes(bin);
-        for (int f = 48; f < 64; f++)
+        for (var f = 48; f < 64; f++)
             Array.Clear(bin, f * CdConstants.MaxSectorData, CdConstants.MaxSectorData);
 
         File.WriteAllBytes(Path.Combine(_dir, "none.bin"), bin);
-        string chdPath = Path.Combine(_dir, "cd_none.chd");
+        var chdPath = Path.Combine(_dir, "cd_none.chd");
         ChdEncoder.EncodeCd(cuePath, chdPath, codecTags: [CodecTags.None]);
 
         var openErr = ChdFile.Open(chdPath, out var chd);
@@ -267,7 +267,7 @@ public class UncompressedEncodeTests : IDisposable
         {
             Assert.True(chd!.IsCd);
             Assert.Equal(2, chd.Tracks!.Count);
-            Assert.Equal(ChdError.Chderrnone, chd.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, chd.ReadAllBytes(out var actual));
             // the CHD stores 2448-byte frames (data + subcode), the BIN only 2352
             Assert.Equal(64 * CdConstants.FrameSize, actual.Length);
         }
@@ -276,12 +276,12 @@ public class UncompressedEncodeTests : IDisposable
     [Fact]
     public void NoneCodec_ParallelAndSingleThreaded_AreByteIdentical()
     {
-        byte[] source = new byte[4096 * 32];
+        var source = new byte[4096 * 32];
         var rng = new Random(37);
         rng.NextBytes(source);
 
-        string singlePath = Path.Combine(_dir, "n1.chd");
-        string parallelPath = Path.Combine(_dir, "n8.chd");
+        var singlePath = Path.Combine(_dir, "n1.chd");
+        var parallelPath = Path.Combine(_dir, "n8.chd");
         using (var ms = new MemoryStream(source))
         {
             ChdEncoder.EncodeRaw(ms, singlePath, 4096, 512, [CodecTags.None], new ChdEncodeOptions { TaskCount = 1 });
@@ -298,11 +298,11 @@ public class UncompressedEncodeTests : IDisposable
     [Fact]
     public void NoneCodec_ProgressReports_HaveNoneCodecName()
     {
-        byte[] source = new byte[4096 * 4];
+        var source = new byte[4096 * 4];
         new Random(38).NextBytes(source);
 
         var reports = new List<HunkProgress>();
-        string chdPath = Path.Combine(_dir, "prog_none.chd");
+        var chdPath = Path.Combine(_dir, "prog_none.chd");
         using var ms = new MemoryStream(source);
         ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.None],
             new ChdEncodeOptions { HunkCompleted = reports.Add });
@@ -326,13 +326,13 @@ public class UncompressedEncodeTests : IDisposable
     {
         if (ChdmanPath == null) return;
 
-        byte[] source = new byte[4096 * 10];
+        var source = new byte[4096 * 10];
         new Random(39).NextBytes(source);
-        for (int h = 1; h < 10; h += 2)
+        for (var h = 1; h < 10; h += 2)
             Array.Clear(source, h * 4096, 4096);
 
-        string chdPath = Path.Combine(_dir, "cv_none.chd");
-        string extractPath = Path.Combine(_dir, "cv_none.raw");
+        var chdPath = Path.Combine(_dir, "cv_none.chd");
+        var extractPath = Path.Combine(_dir, "cv_none.raw");
         using (var ms = new MemoryStream(source))
         {
             ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.None]);
@@ -352,10 +352,10 @@ public class UncompressedEncodeTests : IDisposable
     {
         if (ChdmanPath == null) return;
 
-        byte[] source = new byte[4096 * 4];
+        var source = new byte[4096 * 4];
         new Random(40).NextBytes(source);
 
-        string chdPath = Path.Combine(_dir, "ci_none.chd");
+        var chdPath = Path.Combine(_dir, "ci_none.chd");
         using (var ms = new MemoryStream(source))
         {
             ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, [CodecTags.None]);
@@ -370,7 +370,7 @@ public class UncompressedEncodeTests : IDisposable
 
     private static byte[] CreateTestFile(int size, int seed)
     {
-        byte[] data = new byte[size];
+        var data = new byte[size];
         var rng = new Random(seed);
         rng.NextBytes(data);
         return data;
@@ -378,7 +378,7 @@ public class UncompressedEncodeTests : IDisposable
 
     private static (int ExitCode, string StdOut, string StdErr) RunChdman(params string[] args)
     {
-        string chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
+        var chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
 
         var psi = new ProcessStartInfo
         {
@@ -401,10 +401,10 @@ public class UncompressedEncodeTests : IDisposable
 
     private static string? ResolveChdmanPath()
     {
-        string exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
+        var exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
 
-        string baseDir = AppContext.BaseDirectory;
-        string candidate = Path.Combine(baseDir, exeName);
+        var baseDir = AppContext.BaseDirectory;
+        var candidate = Path.Combine(baseDir, exeName);
         if (File.Exists(candidate))
             return candidate;
 

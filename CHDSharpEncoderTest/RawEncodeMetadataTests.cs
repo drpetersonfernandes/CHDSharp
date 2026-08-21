@@ -36,7 +36,7 @@ public class RawEncodeMetadataTests : IDisposable
     [Fact]
     public void UserMetadata_IsWrittenAndReadable()
     {
-        byte[] source = new byte[8192];
+        var source = new byte[8192];
         new Random(1).NextBytes(source);
 
         var userEntry = new MetadataEntry
@@ -46,7 +46,7 @@ public class RawEncodeMetadataTests : IDisposable
             Payload = "hello\0"u8.ToArray()
         };
 
-        string chdPath = Path.Combine(_dir, "user.chd");
+        var chdPath = Path.Combine(_dir, "user.chd");
         using var ms = new MemoryStream(source);
         ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, options: new ChdEncodeOptions { Metadata = [userEntry] });
 
@@ -59,7 +59,7 @@ public class RawEncodeMetadataTests : IDisposable
             Assert.Equal("TEST", meta[0].Tag);
             Assert.Equal("hello\0", meta[0].GetText());
 
-            Assert.Equal(ChdError.Chderrnone, file.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, file.ReadAllBytes(out var actual));
             Assert.Equal(source, actual);
         }
     }
@@ -67,10 +67,10 @@ public class RawEncodeMetadataTests : IDisposable
     [Fact]
     public void UserMetadata_WithoutAutoClassify_NoExtraEntries()
     {
-        byte[] source = new byte[8192];
+        var source = new byte[8192];
         new Random(2).NextBytes(source);
 
-        string chdPath = Path.Combine(_dir, "user_only.chd");
+        var chdPath = Path.Combine(_dir, "user_only.chd");
         using var ms = new MemoryStream(source);
         ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, options: new ChdEncodeOptions
         {
@@ -91,10 +91,10 @@ public class RawEncodeMetadataTests : IDisposable
     [Fact]
     public void AutoClassify_RawInput_WritesGdddMetadata()
     {
-        byte[] source = new byte[65536];
+        var source = new byte[65536];
         new Random(3).NextBytes(source);
 
-        string chdPath = Path.Combine(_dir, "hdd.chd");
+        var chdPath = Path.Combine(_dir, "hdd.chd");
         using var ms = new MemoryStream(source);
         ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, options: new ChdEncodeOptions { AutoClassify = true });
 
@@ -106,7 +106,7 @@ public class RawEncodeMetadataTests : IDisposable
             Assert.False(file.IsDvd);
 
             var meta = file.Metadata.Single(m => string.Equals(m.Tag, "GDDD", StringComparison.Ordinal));
-            string text = meta.GetText();
+            var text = meta.GetText();
             Assert.StartsWith("CYLS:", text, StringComparison.Ordinal);
             Assert.Contains("HEADS:16", text, StringComparison.Ordinal);
             Assert.Contains("SECS:63", text, StringComparison.Ordinal);
@@ -119,11 +119,11 @@ public class RawEncodeMetadataTests : IDisposable
     {
         // ISO-9660: the primary volume descriptor at sector 16 (offset 0x8000) has the
         // "CD001" magic. Everything else is plausible disc content.
-        byte[] source = new byte[0x8000 + 2048 * 32];
+        var source = new byte[0x8000 + 2048 * 32];
         new Random(4).NextBytes(source);
         "CD001"u8.CopyTo(source.AsSpan(0x8000));
 
-        string chdPath = Path.Combine(_dir, "dvd.chd");
+        var chdPath = Path.Combine(_dir, "dvd.chd");
         using var ms = new MemoryStream(source);
         ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, options: new ChdEncodeOptions { AutoClassify = true });
 
@@ -140,7 +140,7 @@ public class RawEncodeMetadataTests : IDisposable
             var item = Assert.Single(file.Metadata[0].Data); // single null byte, chdman parity
             Assert.Equal(0, item);
 
-            Assert.Equal(ChdError.Chderrnone, file.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, file.ReadAllBytes(out var actual));
             Assert.Equal(source, actual);
         }
     }
@@ -149,11 +149,11 @@ public class RawEncodeMetadataTests : IDisposable
     public void AutoClassify_KeepsExplicitUnitBytes()
     {
         // a caller that explicitly passes unitBytes 4096 keeps it even for ISO input
-        byte[] source = new byte[0x8000 + 2048 * 32];
+        var source = new byte[0x8000 + 2048 * 32];
         new Random(6).NextBytes(source);
         "CD001"u8.CopyTo(source.AsSpan(0x8000));
 
-        string chdPath = Path.Combine(_dir, "dvd_custom.chd");
+        var chdPath = Path.Combine(_dir, "dvd_custom.chd");
         using var ms = new MemoryStream(source);
         ChdEncoder.EncodeRaw(ms, chdPath, 8192, 4096, options: new ChdEncodeOptions { AutoClassify = true });
 
@@ -170,10 +170,10 @@ public class RawEncodeMetadataTests : IDisposable
     public void WithoutOptions_NoMetadataWritten()
     {
         // default behaviour must stay chdman-compatible: no metadata at all
-        byte[] source = new byte[8192];
+        var source = new byte[8192];
         new Random(7).NextBytes(source);
 
-        string chdPath = Path.Combine(_dir, "plain.chd");
+        var chdPath = Path.Combine(_dir, "plain.chd");
         using var ms = new MemoryStream(source);
         ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512);
 
@@ -192,10 +192,10 @@ public class RawEncodeMetadataTests : IDisposable
     {
         // the reader recomputes the combined SHA-1 over the metadata; a wrong combined
         // hash would surface as a metadata/verification error
-        byte[] source = new byte[65536];
+        var source = new byte[65536];
         new Random(8).NextBytes(source);
 
-        string chdPath = Path.Combine(_dir, "sha1.chd");
+        var chdPath = Path.Combine(_dir, "sha1.chd");
         using var ms = new MemoryStream(source);
         ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, options: new ChdEncodeOptions
         {
@@ -212,8 +212,8 @@ public class RawEncodeMetadataTests : IDisposable
     public void EncodeCd_AppendsUserMetadata()
     {
         // CD encodes keep their CHT2 track entries and append user entries after them
-        string cuePath = WriteSimpleCue();
-        byte[] bin = new byte[2352 * 300];
+        var cuePath = WriteSimpleCue();
+        var bin = new byte[2352 * 300];
         new Random(10).NextBytes(bin);
         File.WriteAllBytes(Path.Combine(_dir, "cd.bin"), bin);
 
@@ -224,7 +224,7 @@ public class RawEncodeMetadataTests : IDisposable
             Payload = "extra\0"u8.ToArray()
         };
 
-        string chdPath = Path.Combine(_dir, "cd_meta.chd");
+        var chdPath = Path.Combine(_dir, "cd_meta.chd");
         ChdEncoder.EncodeCd(cuePath, chdPath, options: new ChdEncodeOptions { Metadata = [userEntry] });
 
         var err = ChdFile.Open(chdPath, out var file);
@@ -239,7 +239,7 @@ public class RawEncodeMetadataTests : IDisposable
 
     private string WriteSimpleCue()
     {
-        string cuePath = Path.Combine(_dir, "cd.cue");
+        var cuePath = Path.Combine(_dir, "cd.cue");
         File.WriteAllText(cuePath, """
             FILE "cd.bin" BINARY
               TRACK 01 MODE1/2352

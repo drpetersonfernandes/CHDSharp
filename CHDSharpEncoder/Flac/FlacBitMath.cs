@@ -55,7 +55,7 @@ internal static class FlacBitMath
     {
         if (v == 0) return 0;
         if (v == -1) return 2;
-        ulong av = (v < 0) ? (ulong)(-(v + 1)) : (ulong)v;
+        var av = (v < 0) ? (ulong)(-(v + 1)) : (ulong)v;
         return ILog2Wide(av) + 2;
     }
 
@@ -75,7 +75,7 @@ internal static class FlacBitMath
     /// <summary>Limits a partition order so that each partition still holds more than the predictor order.</summary>
     public static uint MaxRicePartitionOrderLimited(uint limit, uint blocksize, uint predictorOrder)
     {
-        uint maxOrder = limit;
+        var maxOrder = limit;
         while (maxOrder > 0 && (blocksize >> (int)maxOrder) <= predictorOrder)
             maxOrder--;
         return maxOrder;

@@ -33,10 +33,10 @@ internal static class FlacCrc
     private static byte[] BuildTable8()
     {
         var table = new byte[256];
-        for (int i = 0; i < 256; i++)
+        for (var i = 0; i < 256; i++)
         {
-            byte crc = (byte)i;
-            for (int j = 0; j < 8; j++)
+            var crc = (byte)i;
+            for (var j = 0; j < 8; j++)
             {
                 crc = (crc & 0x80) != 0 ? (byte)((crc << 1) ^ 0x07) : (byte)(crc << 1);
             }
@@ -50,10 +50,10 @@ internal static class FlacCrc
     private static ushort[] BuildTable16()
     {
         var table = new ushort[256];
-        for (int i = 0; i < 256; i++)
+        for (var i = 0; i < 256; i++)
         {
-            ushort crc = (ushort)(i << 8);
-            for (int j = 0; j < 8; j++)
+            var crc = (ushort)(i << 8);
+            for (var j = 0; j < 8; j++)
             {
                 crc = (crc & 0x8000) != 0 ? (ushort)((crc << 1) ^ 0x8005) : (ushort)(crc << 1);
             }

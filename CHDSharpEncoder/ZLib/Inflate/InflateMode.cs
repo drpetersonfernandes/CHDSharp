@@ -2,7 +2,7 @@
 // Original code and comments Copyright (C) 1995-2019 Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
-namespace ZLibDotNet.Inflate;
+namespace CHDSharpEncoder.ZLib.Inflate;
 
 /// <summary>
 /// Possible inflate modes between <see cref="Inflater.Inflate(ref ZStream, int)"/> calls.

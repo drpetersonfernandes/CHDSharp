@@ -2,10 +2,9 @@
 // Original code and comments Copyright (C) 1995-2024 Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
-using System;
 using System.Runtime.InteropServices;
 
-namespace ZLibDotNet.Inflate;
+namespace CHDSharpEncoder.ZLib.Inflate;
 
 internal static partial class Inflater
 {
@@ -13,7 +12,7 @@ internal static partial class Inflater
     {
         if (InflateStateCheck(ref strm))
             return Z_STREAM_ERROR;
-        InflateState state = strm.inflateState;
+        var state = strm.inflateState;
         if (strm.avail_in == 0 && state.bits < 8)
             return Z_BUF_ERROR;
 
@@ -22,11 +21,11 @@ internal static partial class Inflater
         if (state.mode != InflateMode.Sync)
         {
             state.mode = InflateMode.Sync;
-            uint temp = state.bits & 7;
+            var temp = state.bits & 7;
             state.hold >>= (int)temp;
             state.bits -= temp;
             Span<byte> span = stackalloc byte[4];
-            ref byte buf = ref MemoryMarshal.GetReference(span);
+            ref var buf = ref MemoryMarshal.GetReference(span);
             while (state.bits >= 8)
             {
                 Unsafe.Add(ref buf, len) = (byte)state.hold;
@@ -39,7 +38,7 @@ internal static partial class Inflater
         }
 
         // search available input
-        uint @in = SyncSearch(ref state.have, ref
+        var @in = SyncSearch(ref state.have, ref
 #if NET7_0_OR_GREATER
             Unsafe.Add(ref strm.input_ptr, strm.next_in),
 #else
@@ -74,11 +73,11 @@ internal static partial class Inflater
 
     private static uint SyncSearch(ref uint have, ref byte buf, uint len)
     {
-        uint got = have;
+        var got = have;
         uint next = 0;
         while (next < len && got < 4)
         {
-            byte b = Unsafe.Add(ref buf, next);
+            var b = Unsafe.Add(ref buf, next);
             if (b == (got < 2 ? 0 : 0xff))
                 got++;
             else if (b != 0)

@@ -38,9 +38,9 @@ public class ParallelEncodeTests : IDisposable
     {
         // mixed corpus: compressible, incompressible, duplicate and zero hunks exercises
         // every map entry type while workers finish out of order
-        byte[] source = new byte[4096 * 512];
+        var source = new byte[4096 * 512];
         var rng = new Random(2024);
-        for (int h = 0; h < 512; h++)
+        for (var h = 0; h < 512; h++)
         {
             switch (h % 4)
             {
@@ -56,8 +56,8 @@ public class ParallelEncodeTests : IDisposable
             }
         }
 
-        string single = Path.Combine(_dir, "single.chd");
-        string parallel = Path.Combine(_dir, "parallel.chd");
+        var single = Path.Combine(_dir, "single.chd");
+        var parallel = Path.Combine(_dir, "parallel.chd");
         using (var ms = new MemoryStream(source))
         {
             ChdEncoder.EncodeRaw(ms, single, 4096, 512, options: new ChdEncodeOptions { TaskCount = 1 });
@@ -81,16 +81,16 @@ public class ParallelEncodeTests : IDisposable
     [Fact]
     public void MultiCodec_ParallelOutput_IsByteIdentical_ToSingleThreaded()
     {
-        byte[] source = new byte[4096 * 256];
+        var source = new byte[4096 * 256];
         var rng = new Random(77);
         rng.NextBytes(source);
-        for (int h = 0; h < 256; h += 2)
+        for (var h = 0; h < 256; h += 2)
             Array.Fill(source, (byte)(h & 0xFF), h * 4096, 4096);
 
         uint[] tags = [CodecTags.Zlib, CodecTags.Zstd, CodecTags.Lzma];
 
-        string single = Path.Combine(_dir, "multi_single.chd");
-        string parallel = Path.Combine(_dir, "multi_parallel.chd");
+        var single = Path.Combine(_dir, "multi_single.chd");
+        var parallel = Path.Combine(_dir, "multi_parallel.chd");
         using (var ms = new MemoryStream(source))
         {
             ChdEncoder.EncodeRaw(ms, single, 4096, 512, codecTags: tags, options: new ChdEncodeOptions { TaskCount = 1 });
@@ -113,7 +113,7 @@ public class ParallelEncodeTests : IDisposable
         // 16 data + 64 audio frames (no track padding; the shape used by the 100 MB
         // validation tests), with a deterministic constant-pattern audio tail that
         // deduplicates into SELF references
-        string cuePath = Path.Combine(_dir, "parallel.cue");
+        var cuePath = Path.Combine(_dir, "parallel.cue");
         File.WriteAllText(cuePath, """
             FILE "game.bin" BINARY
               TRACK 01 MODE1/2352
@@ -124,9 +124,9 @@ public class ParallelEncodeTests : IDisposable
         var bin = new byte[80 * CdConstants.MaxSectorData];
         var rng = new Random(9);
         rng.NextBytes(bin);
-        for (int f = 48; f < 80; f++)
+        for (var f = 48; f < 80; f++)
         {
-            for (int j = 0; j < CdConstants.MaxSectorData; j++)
+            for (var j = 0; j < CdConstants.MaxSectorData; j++)
             {
                 bin[f * CdConstants.MaxSectorData + j] = (byte)(f & 1);
             }
@@ -134,8 +134,8 @@ public class ParallelEncodeTests : IDisposable
 
         File.WriteAllBytes(Path.Combine(_dir, "game.bin"), bin);
 
-        string single = Path.Combine(_dir, "cd_single.chd");
-        string parallel = Path.Combine(_dir, "cd_parallel.chd");
+        var single = Path.Combine(_dir, "cd_single.chd");
+        var parallel = Path.Combine(_dir, "cd_parallel.chd");
         ChdEncoder.EncodeCd(cuePath, single, options: new ChdEncodeOptions { TaskCount = 1 });
         ChdEncoder.EncodeCd(cuePath, parallel, options: new ChdEncodeOptions { TaskCount = 8 });
 
@@ -158,7 +158,7 @@ public class ParallelEncodeTests : IDisposable
         // 128 MB mixed corpus (every 3rd hunk incompressible), 64 KB hunks: zlib dominates
         const int hunkBytes = 65536;
         const long size = 128L * 1024 * 1024;
-        byte[] source = new byte[size];
+        var source = new byte[size];
         var rng = new Random(12345);
         for (long h = 0; h < size; h += hunkBytes)
         {
@@ -168,8 +168,8 @@ public class ParallelEncodeTests : IDisposable
                 Array.Fill(source, (byte)((h / hunkBytes) & 0xFF), (int)h, hunkBytes);
         }
 
-        string single = Path.Combine(_dir, "speed_single.chd");
-        string parallel = Path.Combine(_dir, "speed_parallel.chd");
+        var single = Path.Combine(_dir, "speed_single.chd");
+        var parallel = Path.Combine(_dir, "speed_parallel.chd");
 
         // warm the parallel path first so JIT costs don't inflate the single-threaded time
         using (var warm = new MemoryStream(source))
@@ -214,7 +214,7 @@ public class ParallelEncodeTests : IDisposable
         processor.CompressAll(64,
             (h, buf) =>
             {
-                for (int i = 0; i < buf.Length; i++)
+                for (var i = 0; i < buf.Length; i++)
                 {
                     buf[i] = (byte)((h * 31 + i) & 0xFF);
                 }
@@ -228,8 +228,8 @@ public class ParallelEncodeTests : IDisposable
                 Assert.Equal(expectedIndex, result.HunkIndex);
                 expectedIndex++;
                 Assert.NotNull(result.Data);
-                byte[] expected = new byte[4096];
-                for (int i = 0; i < 4096; i++)
+                var expected = new byte[4096];
+                for (var i = 0; i < 4096; i++)
                 {
                     expected[i] = (byte)((result.HunkIndex * 31 + i) & 0xFF);
                 }
@@ -245,10 +245,10 @@ public class ParallelEncodeTests : IDisposable
     {
         var processor = new HunkProcessor(4096, [CodecTags.Zlib], 4);
         var sha1 = new Sha1();
-        byte[] expectedRaw = new byte[4096 * 16];
-        for (int h = 0; h < 16; h++)
+        var expectedRaw = new byte[4096 * 16];
+        for (var h = 0; h < 16; h++)
         {
-            for (int i = 0; i < 4096; i++)
+            for (var i = 0; i < 4096; i++)
             {
                 expectedRaw[h * 4096 + i] = (byte)((h * 3 + i) & 0xFF);
             }
@@ -269,11 +269,11 @@ public class ParallelEncodeTests : IDisposable
     [Fact]
     public void ProgressReports_FireInOrder_WithParallelWorkers()
     {
-        byte[] source = new byte[4096 * 128];
+        var source = new byte[4096 * 128];
         new Random(5).NextBytes(source);
 
         var reports = new List<HunkProgress>();
-        string chdPath = Path.Combine(_dir, "progress.chd");
+        var chdPath = Path.Combine(_dir, "progress.chd");
         using var ms = new MemoryStream(source);
         ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, options: new ChdEncodeOptions
         {
@@ -295,13 +295,13 @@ public class ParallelEncodeTests : IDisposable
     [Fact]
     public void TaskCount_64_Works()
     {
-        byte[] source = new byte[4096 * 4];
-        for (int i = 0; i < source.Length; i++)
+        var source = new byte[4096 * 4];
+        for (var i = 0; i < source.Length; i++)
         {
             source[i] = (byte)(i & 0xFF);
         }
 
-        string chdPath = Path.Combine(_dir, "many_tasks.chd");
+        var chdPath = Path.Combine(_dir, "many_tasks.chd");
         using var ms = new MemoryStream(source);
         ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, options: new ChdEncodeOptions { TaskCount = 64 });
 
@@ -312,12 +312,12 @@ public class ParallelEncodeTests : IDisposable
     [Fact]
     public void PreCancelledToken_ThrowsOperationCanceled()
     {
-        byte[] source = new byte[4096 * 16];
+        var source = new byte[4096 * 16];
         new Random(3).NextBytes(source);
 
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        string chdPath = Path.Combine(_dir, "cancelled.chd");
+        var chdPath = Path.Combine(_dir, "cancelled.chd");
         using var ms = new MemoryStream(source);
         Assert.Throws<OperationCanceledException>(() =>
             ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, cancellationToken: cts.Token));
@@ -327,7 +327,7 @@ public class ParallelEncodeTests : IDisposable
     public void MidRunCancellation_ThrowsOperationCanceled_AndDoesNotHang()
     {
         // 1024 hunks, each slow-ish to compress; cancel after the first 16 progress reports
-        byte[] source = new byte[4096 * 1024];
+        var source = new byte[4096 * 1024];
         new Random(11).NextBytes(source);
 
         using var cts = new CancellationTokenSource();
@@ -338,7 +338,7 @@ public class ParallelEncodeTests : IDisposable
     private void AssertMidRunCancellation(byte[] source, CancellationTokenSource cts)
     {
         var seen = 0;
-        string chdPath = Path.Combine(_dir, "mid_cancel.chd");
+        var chdPath = Path.Combine(_dir, "mid_cancel.chd");
         using var ms = new MemoryStream(source);
         Assert.Throws<OperationCanceledException>(() =>
             ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512,

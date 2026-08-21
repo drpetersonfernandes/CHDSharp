@@ -65,7 +65,7 @@ public class MapClippingChdmanValidationTests : IDisposable
             new MapEntry { Compression = MapEntry.CompressionNone, CompLength = 8192, Offset = 124, Crc16 = 0x0000 }
         };
 
-        byte[] map = MapCompressor.Compress(entries, 1, 8192, 512);
+        var map = MapCompressor.Compress(entries, 1, 8192, 512);
 
         Assert.Equal(23, map.Length);
         Assert.Equal(7u, ReadU32Be(map, 0)); // complen includes the clipped (zero) byte
@@ -84,7 +84,7 @@ public class MapClippingChdmanValidationTests : IDisposable
             new MapEntry { Compression = MapEntry.CompressionNone, CompLength = 8192, Offset = 124, Crc16 = 0x0001 }
         };
 
-        byte[] map = MapCompressor.Compress(entries, 1, 8192, 512);
+        var map = MapCompressor.Compress(entries, 1, 8192, 512);
 
         Assert.Equal(23, map.Length);
         Assert.Equal(7u, ReadU32Be(map, 0));
@@ -125,7 +125,7 @@ public class MapClippingChdmanValidationTests : IDisposable
 
         var source = new byte[hunkBytes];
         new Random(SeedFor(hunkBytes, oddCrc: false)).NextBytes(source);
-        string tag = $"benign-{hunkBytes}";
+        var tag = $"benign-{hunkBytes}";
         var (srcPath, oursPath, refPath) = WriteSources(tag, source);
 
         ChdEncoder.EncodeRaw(srcPath, oursPath, hunkBytes, unitBytes, [CodecTags.Zlib]);
@@ -151,7 +151,7 @@ public class MapClippingChdmanValidationTests : IDisposable
 
         var source = new byte[hunkBytes];
         new Random(SeedFor(hunkBytes, oddCrc: true)).NextBytes(source);
-        string tag = $"corrupt-{hunkBytes}";
+        var tag = $"corrupt-{hunkBytes}";
         var (srcPath, oursPath, refPath) = WriteSources(tag, source);
 
         ChdEncoder.EncodeRaw(srcPath, oursPath, hunkBytes, unitBytes, [CodecTags.Zlib]);
@@ -190,7 +190,7 @@ public class MapClippingChdmanValidationTests : IDisposable
         const int hunkCount = 16;
         var source = new byte[hunkBytes * hunkCount];
         var rng = new Random(1337);
-        for (int h = 0; h < hunkCount; h++)
+        for (var h = 0; h < hunkCount; h++)
         {
             var span = source.AsSpan(h * (int)hunkBytes, (int)hunkBytes);
             if (h % 5 != 2)
@@ -200,13 +200,13 @@ public class MapClippingChdmanValidationTests : IDisposable
             }
 
             const string phrase = "the quick brown fox jumps over the lazy dog. ";
-            for (int i = 0; i < span.Length; i++)
+            for (var i = 0; i < span.Length; i++)
             {
                 span[i] = (byte)phrase[i % phrase.Length];
             }
         }
 
-        string tag = $"mixed-{hunkBytes}";
+        var tag = $"mixed-{hunkBytes}";
         var (srcPath, oursPath, refPath) = WriteSources(tag, source);
 
         ChdEncoder.EncodeRaw(srcPath, oursPath, hunkBytes, unitBytes, [CodecTags.Zlib]);
@@ -225,7 +225,7 @@ public class MapClippingChdmanValidationTests : IDisposable
 
     private (string SrcPath, string OursPath, string RefPath) WriteSources(string tag, byte[] source)
     {
-        string srcPath = Path.Combine(_testDataDir, tag + ".bin");
+        var srcPath = Path.Combine(_testDataDir, tag + ".bin");
         File.WriteAllBytes(srcPath, source);
         return (srcPath, Path.Combine(_testDataDir, tag + ".ours.chd"), Path.Combine(_testDataDir, tag + ".ref.chd"));
     }
@@ -243,7 +243,7 @@ public class MapClippingChdmanValidationTests : IDisposable
             {
                 var readErr = chd.ReadHunk(h, buffer);
                 Assert.Equal(ChdError.Chderrnone, readErr);
-                int valid = (int)Math.Min((ulong)buffer.Length, (ulong)expected.Length - h * (ulong)buffer.Length);
+                var valid = (int)Math.Min((ulong)buffer.Length, (ulong)expected.Length - h * (ulong)buffer.Length);
                 Assert.Equal(expected.AsSpan((int)(h * buffer.Length), valid).ToArray(), buffer.AsSpan(0, valid).ToArray());
             }
         }
@@ -251,7 +251,7 @@ public class MapClippingChdmanValidationTests : IDisposable
 
     private static (int ExitCode, string StdOut, string StdErr) RunChdman(params string[] args)
     {
-        string chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
+        var chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
 
         var psi = new ProcessStartInfo
         {
@@ -274,10 +274,10 @@ public class MapClippingChdmanValidationTests : IDisposable
 
     private static string? ResolveChdmanPath()
     {
-        string exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
+        var exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
 
-        string baseDir = AppContext.BaseDirectory;
-        string candidate = Path.Combine(baseDir, exeName);
+        var baseDir = AppContext.BaseDirectory;
+        var candidate = Path.Combine(baseDir, exeName);
         if (File.Exists(candidate))
             return candidate;
 

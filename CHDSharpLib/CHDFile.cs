@@ -1010,7 +1010,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         if (me.Comptype == CompressionType.Compressionparent)
             return await ReadParentHunkAsync(me, buffer, cancellationToken).ConfigureAwait(false);
 
-        MapEntry? dataEntry = me;
+        var dataEntry = me;
         while (dataEntry is { Comptype: CompressionType.Compressionself })
         {
             dataEntry = dataEntry.SelfMapEntry;
@@ -1642,7 +1642,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         }
 
         // Resolve the entry that actually holds compressed data (follow SELF links).
-        MapEntry? dataEntry = me;
+        var dataEntry = me;
         while (dataEntry is { Comptype: CompressionType.Compressionself })
         {
             dataEntry = dataEntry.SelfMapEntry;
@@ -1721,7 +1721,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             return ReadParentHunkConcurrent(me, buffer);
 
         // Resolve the entry that actually holds compressed data (follow SELF links).
-        MapEntry? dataEntry = me;
+        var dataEntry = me;
         while (dataEntry is { Comptype: CompressionType.Compressionself })
         {
             dataEntry = dataEntry.SelfMapEntry;
@@ -1886,7 +1886,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             throw new ArgumentOutOfRangeException(nameof(hunknum), $"Hunk {hunknum} is out of range (0..{_chd.Totalblocks - 1})");
 
         // Resolve the entry that actually holds the stored data (follow SELF links).
-        MapEntry? dataEntry = _chd.Map[hunknum];
+        var dataEntry = _chd.Map[hunknum];
         while (dataEntry is { Comptype: CompressionType.Compressionself })
         {
             dataEntry = dataEntry.SelfMapEntry;
@@ -1923,7 +1923,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         if (hunknum >= _chd.Totalblocks)
             throw new ArgumentOutOfRangeException(nameof(hunknum), $"Hunk {hunknum} is out of range (0..{_chd.Totalblocks - 1})");
 
-        MapEntry? dataEntry = _chd.Map[hunknum];
+        var dataEntry = _chd.Map[hunknum];
         while (dataEntry is { Comptype: CompressionType.Compressionself })
         {
             dataEntry = dataEntry.SelfMapEntry;

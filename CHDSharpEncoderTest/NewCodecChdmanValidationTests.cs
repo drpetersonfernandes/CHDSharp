@@ -41,9 +41,9 @@ public class NewCodecChdmanValidationTests : IDisposable
         if (ChdmanPath == null) return;
 
         // 16-bit stereo sample data: FLAC-compressible, and huff handles the raw bytes
-        byte[] source = new byte[4096 * 32];
+        var source = new byte[4096 * 32];
         var rng = new Random(1234);
-        for (int i = 0; i < source.Length; i += 4)
+        for (var i = 0; i < source.Length; i += 4)
         {
             source[i] = (byte)rng.Next(0, 0x8000); // left sample (LE)
             source[i + 1] = (byte)(rng.Next(0, 0x8000) >> 8);
@@ -51,20 +51,20 @@ public class NewCodecChdmanValidationTests : IDisposable
             source[i + 3] = (byte)((i / 4 % 0x7FFF) >> 8);
         }
 
-        string srcPath = Path.Combine(_testDataDir, $"{codecName}_src.bin");
-        string chdPath = Path.Combine(_testDataDir, $"{codecName}.chd");
+        var srcPath = Path.Combine(_testDataDir, $"{codecName}_src.bin");
+        var chdPath = Path.Combine(_testDataDir, $"{codecName}.chd");
         File.WriteAllBytes(srcPath, source);
         ChdEncoder.EncodeRaw(srcPath, chdPath, 4096, 512, [CodecTags.FromName(codecName)]);
 
         var (infoExit, infoOut, infoErr) = RunChdman("info", "-i", chdPath);
-        string info = infoOut + infoErr;
+        var info = infoOut + infoErr;
         Assert.True(infoExit == 0, $"chdman info failed (exit={infoExit})\n{info}");
         Assert.Contains(chdmanCodecName, info, StringComparison.Ordinal);
 
         var (verifyExit, vOut, vErr) = RunChdman("verify", "-i", chdPath);
         Assert.True(verifyExit == 0, $"chdman verify failed (exit={verifyExit})\n{vOut}{vErr}");
 
-        string extractPath = Path.Combine(_testDataDir, $"{codecName}_extracted.raw");
+        var extractPath = Path.Combine(_testDataDir, $"{codecName}_extracted.raw");
         var (extractExit, eOut, eErr) = RunChdman("extractraw", "-i", chdPath, "-o", extractPath, "-f");
         Assert.True(extractExit == 0, $"extractraw failed (exit={extractExit})\n{eOut}{eErr}");
 
@@ -87,25 +87,25 @@ public class NewCodecChdmanValidationTests : IDisposable
                                INDEX 00 00:00:20
                                INDEX 01 00:00:22
                            """;
-        string cuePath = Path.Combine(_testDataDir, "test.cue");
+        var cuePath = Path.Combine(_testDataDir, "test.cue");
         File.WriteAllText(cuePath, cue);
 
-        byte[] bin = new byte[40 * CdConstants.MaxSectorData];
-        for (int f = 0; f < 20; f++)
+        var bin = new byte[40 * CdConstants.MaxSectorData];
+        for (var f = 0; f < 20; f++)
         {
-            int offset = f * CdConstants.MaxSectorData;
-            for (int i = 0; i < CdConstants.MaxSectorData; i++)
+            var offset = f * CdConstants.MaxSectorData;
+            for (var i = 0; i < CdConstants.MaxSectorData; i++)
             {
                 bin[offset + i] = (byte)(i & 0xFF);
             }
         }
 
-        for (int f = 20; f < 40; f++)
+        for (var f = 20; f < 40; f++)
         {
-            int offset = f * CdConstants.MaxSectorData;
-            for (int s = 0; s < 588; s++)
+            var offset = f * CdConstants.MaxSectorData;
+            for (var s = 0; s < 588; s++)
             {
-                int sample = (int)(Math.Sin(s * 0.05) * 12000);
+                var sample = (int)(Math.Sin(s * 0.05) * 12000);
                 bin[offset + s * 4] = (byte)sample;
                 bin[offset + s * 4 + 1] = (byte)(sample >> 8);
                 bin[offset + s * 4 + 2] = (byte)sample;
@@ -115,24 +115,24 @@ public class NewCodecChdmanValidationTests : IDisposable
 
         File.WriteAllBytes(Path.Combine(_testDataDir, "game.bin"), bin);
 
-        string chdPath = Path.Combine(_testDataDir, $"{codecName}.chd");
+        var chdPath = Path.Combine(_testDataDir, $"{codecName}.chd");
         ChdEncoder.EncodeCd(cuePath, chdPath, hunkBytes: CdConstants.FramesPerHunk * CdConstants.FrameSize,
             unitBytes: CdConstants.FrameSize, codecTags: [CodecTags.FromName(codecName)]);
 
         var (infoExit, infoOut, infoErr) = RunChdman("info", "-i", chdPath);
-        string info = infoOut + infoErr;
+        var info = infoOut + infoErr;
         Assert.True(infoExit == 0, $"chdman info failed (exit={infoExit})\n{info}");
         Assert.Contains(chdmanCodecName, info, StringComparison.Ordinal);
 
         var (verifyExit, vOut, vErr) = RunChdman("verify", "-i", chdPath);
         Assert.True(verifyExit == 0, $"chdman verify failed (exit={verifyExit})\n{vOut}{vErr}");
 
-        string extractPath = Path.Combine(_testDataDir, $"{codecName}_extracted.raw");
+        var extractPath = Path.Combine(_testDataDir, $"{codecName}_extracted.raw");
         var (extractExit, eOut, eErr) = RunChdman("extractraw", "-i", chdPath, "-o", extractPath, "-f");
         Assert.True(extractExit == 0, $"extractraw failed (exit={extractExit})\n{eOut}{eErr}");
 
         // expected logical image: 20 data frames + 20 audio frames (byte-swapped) + zero padding
-        byte[] expected = new byte[40 * CdConstants.FrameSize];
+        var expected = new byte[40 * CdConstants.FrameSize];
         PlaceBinFrames(expected, 0, bin, 20, 0, swap: false);
         PlaceBinFrames(expected, 20, bin, 20, 20 * CdConstants.MaxSectorData, swap: true);
 
@@ -141,13 +141,13 @@ public class NewCodecChdmanValidationTests : IDisposable
 
     private static void PlaceBinFrames(byte[] image, int chdFrameStart, byte[] bin, int binFrameCount, int binOffset, bool swap)
     {
-        for (int f = 0; f < binFrameCount; f++)
+        for (var f = 0; f < binFrameCount; f++)
         {
-            int dest = (chdFrameStart + f) * CdConstants.FrameSize;
+            var dest = (chdFrameStart + f) * CdConstants.FrameSize;
             Array.Copy(bin, binOffset + f * CdConstants.MaxSectorData, image, dest, CdConstants.MaxSectorData);
             if (swap)
             {
-                for (int i = 0; i < CdConstants.MaxSectorData; i += 2)
+                for (var i = 0; i < CdConstants.MaxSectorData; i += 2)
                 {
                     (image[dest + i], image[dest + i + 1]) = (image[dest + i + 1], image[dest + i]);
                 }
@@ -157,10 +157,10 @@ public class NewCodecChdmanValidationTests : IDisposable
 
     private static string? ResolveChdmanPath()
     {
-        string repoRoot = FindRepoRoot();
-        foreach (string candidate in new[] { "chdman.exe", "chdman" })
+        var repoRoot = FindRepoRoot();
+        foreach (var candidate in new[] { "chdman.exe", "chdman" })
         {
-            string path = Path.Combine(repoRoot, candidate);
+            var path = Path.Combine(repoRoot, candidate);
             if (File.Exists(path))
                 return path;
         }
@@ -192,8 +192,8 @@ public class NewCodecChdmanValidationTests : IDisposable
             psi.ArgumentList.Add(arg);
 
         using var process = Process.Start(psi)!;
-        string stdout = process.StandardOutput.ReadToEnd();
-        string stderr = process.StandardError.ReadToEnd();
+        var stdout = process.StandardOutput.ReadToEnd();
+        var stderr = process.StandardError.ReadToEnd();
         process.WaitForExit();
         return (process.ExitCode, stdout, stderr);
     }

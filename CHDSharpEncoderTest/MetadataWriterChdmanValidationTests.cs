@@ -58,9 +58,9 @@ public class MetadataWriterChdmanValidationTests : IDisposable
                              TRACK 05 AUDIO
                                INDEX 01 12:02:00
                            """;
-        string cuePath = Path.Combine(_testDataDir, "saturn.cue");
-        string binPath = Path.Combine(_testDataDir, "game.bin");
-        string chdPath = Path.Combine(_testDataDir, "saturn.chd");
+        var cuePath = Path.Combine(_testDataDir, "saturn.cue");
+        var binPath = Path.Combine(_testDataDir, "game.bin");
+        var chdPath = Path.Combine(_testDataDir, "saturn.chd");
         File.WriteAllText(cuePath, cue);
         using (var fs = File.Create(binPath))
         {
@@ -75,18 +75,18 @@ public class MetadataWriterChdmanValidationTests : IDisposable
         using var ourStream = new MemoryStream();
         ourStream.SetLength(4096); // simulate prior file content; also keeps first offset > 0
         ourStream.Position = 4096;
-        long ourFirstOffset = MetadataWriter.WriteCdMetadata(ourStream, toc);
-        byte[] ourBytes = ourStream.ToArray();
+        var ourFirstOffset = MetadataWriter.WriteCdMetadata(ourStream, toc);
+        var ourBytes = ourStream.ToArray();
 
         // chdman's metadata chain, walked from the header's metaoffset
-        byte[] chdBytes = File.ReadAllBytes(chdPath);
-        ulong chdMetaOffset = ReadU64Be(chdBytes, 48);
+        var chdBytes = File.ReadAllBytes(chdPath);
+        var chdMetaOffset = ReadU64Be(chdBytes, 48);
 
         var ours = WalkChain(ourBytes, (ulong)ourFirstOffset);
         var theirs = WalkChain(chdBytes, chdMetaOffset);
 
         Assert.Equal(theirs.Count, ours.Count);
-        for (int i = 0; i < theirs.Count; i++)
+        for (var i = 0; i < theirs.Count; i++)
         {
             var expected = theirs[i];
             var actual = ours[i];
@@ -112,9 +112,9 @@ public class MetadataWriterChdmanValidationTests : IDisposable
                              TRACK 03 AUDIO
                                INDEX 01 02:00:00
                            """;
-        string cuePath = Path.Combine(_testDataDir, "saturn.cue");
-        string binPath = Path.Combine(_testDataDir, "game.bin");
-        string chdPath = Path.Combine(_testDataDir, "saturn.chd");
+        var cuePath = Path.Combine(_testDataDir, "saturn.cue");
+        var binPath = Path.Combine(_testDataDir, "game.bin");
+        var chdPath = Path.Combine(_testDataDir, "saturn.chd");
         File.WriteAllText(cuePath, cue);
         using (var fs = File.Create(binPath))
         {
@@ -135,9 +135,9 @@ public class MetadataWriterChdmanValidationTests : IDisposable
         {
             var header = new byte[16];
             ms.ReadExactly(header, 0, header.Length);
-            uint tag = ReadU32Be(header, 0);
-            uint length = ReadU24Be(header, 5);
-            byte[] payload = new byte[length];
+            var tag = ReadU32Be(header, 0);
+            var length = ReadU24Be(header, 5);
+            var payload = new byte[length];
             ms.ReadExactly(payload, 0, payload.Length);
             expectedEntries.Add(new ChdMetadataEntry(
                 $"{(char)((tag >> 24) & 0xFF)}{(char)((tag >> 16) & 0xFF)}{(char)((tag >> 8) & 0xFF)}{(char)(tag & 0xFF)}",
@@ -157,7 +157,7 @@ public class MetadataWriterChdmanValidationTests : IDisposable
                 .ToList();
 
             Assert.Equal(expectedEntries.Count, actualEntries.Count);
-            for (int i = 0; i < expectedEntries.Count; i++)
+            for (var i = 0; i < expectedEntries.Count; i++)
             {
                 Assert.Equal(expectedEntries[i].Flags, actualEntries[i].Flags);
                 Assert.Equal(expectedEntries[i].Data, actualEntries[i].Data);
@@ -168,20 +168,20 @@ public class MetadataWriterChdmanValidationTests : IDisposable
     private static List<MetaEntry> WalkChain(byte[] fileBytes, ulong firstOffset)
     {
         var entries = new List<MetaEntry>();
-        ulong offset = firstOffset;
+        var offset = firstOffset;
         var visited = new HashSet<ulong>();
         while (offset != 0)
         {
             Assert.True(visited.Add(offset), "metadata chain contains a cycle");
             Assert.True((long)offset + 16 <= fileBytes.Length, "metadata header out of range");
 
-            uint tag = ReadU32Be(fileBytes, (int)offset);
-            byte flags = fileBytes[(int)offset + 4];
-            uint length = ReadU24Be(fileBytes, (int)offset + 5);
-            ulong next = ReadU64Be(fileBytes, (int)offset + 8);
+            var tag = ReadU32Be(fileBytes, (int)offset);
+            var flags = fileBytes[(int)offset + 4];
+            var length = ReadU24Be(fileBytes, (int)offset + 5);
+            var next = ReadU64Be(fileBytes, (int)offset + 8);
 
             Assert.True(length <= 1024 * 1024, "metadata length out of range");
-            byte[] payload = new byte[length];
+            var payload = new byte[length];
             Array.Copy(fileBytes, (int)offset + 16, payload, 0, (int)length);
 
             entries.Add(new MetaEntry
@@ -229,7 +229,7 @@ public class MetadataWriterChdmanValidationTests : IDisposable
 
     private static (int ExitCode, string StdOut, string StdErr) RunChdman(params string[] args)
     {
-        string chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
+        var chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
 
         var psi = new ProcessStartInfo
         {
@@ -252,10 +252,10 @@ public class MetadataWriterChdmanValidationTests : IDisposable
 
     private static string? ResolveChdmanPath()
     {
-        string exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
+        var exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
 
-        string baseDir = AppContext.BaseDirectory;
-        string candidate = Path.Combine(baseDir, exeName);
+        var baseDir = AppContext.BaseDirectory;
+        var candidate = Path.Combine(baseDir, exeName);
         if (File.Exists(candidate))
             return candidate;
 

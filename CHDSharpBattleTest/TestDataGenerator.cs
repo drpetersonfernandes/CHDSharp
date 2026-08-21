@@ -29,7 +29,7 @@ public static class TestDataGenerator
         rng.NextBytes(block);
 
         var b = new byte[size];
-        for (int i = 0; i < b.Length; i++)
+        for (var i = 0; i < b.Length; i++)
         {
             b[i] = block[i % block.Length];
         }
@@ -42,14 +42,14 @@ public static class TestDataGenerator
     {
         var rng = new Random(seed);
         var distinct = new byte[distinctHunks][];
-        for (int i = 0; i < distinctHunks; i++)
+        for (var i = 0; i < distinctHunks; i++)
         {
             distinct[i] = new byte[hunkBytes];
             rng.NextBytes(distinct[i]);
         }
 
         var b = new byte[distinctHunks * repeats * hunkBytes];
-        for (int i = 0; i < distinctHunks * repeats; i++)
+        for (var i = 0; i < distinctHunks * repeats; i++)
             Array.Copy(distinct[i % distinctHunks], 0, b, i * hunkBytes, hunkBytes);
 
         return b;
@@ -63,7 +63,7 @@ public static class TestDataGenerator
         const string all = "etaoinshrdlucmfwypvbgkjqxz ETAOINSHRDLUCMFWYPVBGKJQXZ0123456789.,!?;:'\"()-";
 
         var b = new byte[size];
-        for (int i = 0; i < b.Length; i++)
+        for (var i = 0; i < b.Length; i++)
         {
             var r = rng.NextDouble();
             b[i] = r switch
@@ -85,9 +85,9 @@ public static class TestDataGenerator
         var samples = size / 2;
         var b = new byte[samples * 2];
 
-        double freq = 220 + rng.NextDouble() * 200;
+        var freq = 220 + rng.NextDouble() * 200;
         double phase = 0;
-        for (int i = 0; i < samples; i++)
+        for (var i = 0; i < samples; i++)
         {
             if (i % 4096 == 0)
             {
@@ -159,20 +159,20 @@ public static class TestDataGenerator
         const int track3Frames = 300; // MODE2/2352
 
         using var fs = File.Create(binPath);
-        int lba = 0;
+        var lba = 0;
 
         // track 1: Mode1 sectors with garbage EDC/ECC (chdman recomputes for CD codecs)
-        for (int f = 0; f < track1Frames; f++, lba++)
+        for (var f = 0; f < track1Frames; f++, lba++)
             WriteMode1Frame(fs, lba, MakeSectorData(2048, rng, seed + f));
 
         // track 2: audio — 150 pregap frames then 300 data frames
-        for (int f = 0; f < 150; f++, lba++)
+        for (var f = 0; f < 150; f++, lba++)
             WriteAudioFrame(fs, lba, rng, silent: true);
-        for (int f = 0; f < track2Frames; f++, lba++)
+        for (var f = 0; f < track2Frames; f++, lba++)
             WriteAudioFrame(fs, lba, rng, silent: false);
 
         // track 3: Mode2 formless (2336-byte user data)
-        for (int f = 0; f < track3Frames; f++, lba++)
+        for (var f = 0; f < track3Frames; f++, lba++)
             WriteMode2Frame(fs, lba, MakeSectorData(2336, rng, seed + 10_000 + f));
 
         fs.Flush();
@@ -202,7 +202,7 @@ public static class TestDataGenerator
 
         const int frames = 800;
         using var fs = File.Create(binPath);
-        for (int f = 0; f < frames; f++)
+        for (var f = 0; f < frames; f++)
             WriteAudioFrame(fs, f, rng, silent: false);
 
         fs.Flush();
@@ -221,7 +221,7 @@ public static class TestDataGenerator
         const int sectors = 512;
 
         using var fs = File.Create(isoPath);
-        for (int s = 0; s < sectors; s++)
+        for (var s = 0; s < sectors; s++)
         {
             var sector = new byte[2048];
             if (s == 16)
@@ -253,7 +253,7 @@ public static class TestDataGenerator
         var data = new byte[length];
         rng.NextBytes(data);
         // a recognizable marker so track contents can be eyeballed in extracts
-        for (int i = 0; i < data.Length; i += 137)
+        for (var i = 0; i < data.Length; i += 137)
         {
             data[i] = (byte)(i ^ salt);
         }
@@ -282,9 +282,9 @@ public static class TestDataGenerator
     {
         var frame = new byte[2352];
         var phase = lba * 37.0 % (2 * Math.PI);
-        for (int s = 0; s < 588; s++)
+        for (var s = 0; s < 588; s++)
         {
-            short sample = silent
+            var sample = silent
                 ? (short)0
                 : (short)(Math.Sin(phase + s * 0.035) * 9000 + (rng.NextDouble() - 0.5) * 300);
             frame[s * 2] = (byte)sample; // little-endian in the BIN
@@ -297,7 +297,7 @@ public static class TestDataGenerator
     private static void WriteSyncHeader(byte[] frame, int lba, byte mode)
     {
         frame[0] = 0x00;
-        for (int i = 1; i < 11; i++)
+        for (var i = 1; i < 11; i++)
         {
             frame[i] = 0xFF;
         }

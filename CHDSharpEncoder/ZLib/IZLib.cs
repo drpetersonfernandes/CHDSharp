@@ -2,9 +2,7 @@
 // Original code and comments Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
-using System;
-
-namespace ZLibDotNet;
+namespace CHDSharpEncoder.ZLib;
 
 /// <summary>
 /// Provides in-memory compression and decompression methods, including integrity checks of the uncompressed data. 

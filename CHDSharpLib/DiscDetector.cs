@@ -269,13 +269,13 @@ public static class DiscDetector
             uint offset = 0;
             while (offset + 33 < 2048)
             {
-                byte recLen = sector[offset];
+                var recLen = sector[offset];
                 if (recLen < 33 || offset + recLen > 2048)
                     break;
 
                 var rec = sector.AsSpan((int)offset);
-                byte nameLen = rec[32];
-                byte flags = rec[25];
+                var nameLen = rec[32];
+                var flags = rec[25];
                 if (nameLen > 1)
                 {
                     var rawName = Encoding.ASCII.GetString(rec.Slice(33, nameLen));
@@ -313,8 +313,8 @@ public static class DiscDetector
 
     private static bool IsoFileExists(SectorReader readSector, Pvd pvd, string path)
     {
-        uint dirExtent = pvd.RootExtent;
-        uint dirLength = pvd.RootLength;
+        var dirExtent = pvd.RootExtent;
+        var dirLength = pvd.RootLength;
 
         var components = path.Split('/');
         for (var i = 0; i < components.Length; i++)
@@ -338,8 +338,8 @@ public static class DiscDetector
 
     private static byte[]? IsoReadFile(SectorReader readSector, Pvd pvd, string path, uint maxBytes = 4096)
     {
-        uint dirExtent = pvd.RootExtent;
-        uint dirLength = pvd.RootLength;
+        var dirExtent = pvd.RootExtent;
+        var dirLength = pvd.RootLength;
 
         var components = path.Split('/');
         for (var i = 0; i < components.Length; i++)
@@ -355,8 +355,8 @@ public static class DiscDetector
 
                 var toRead = Math.Min(found.Value.Length, maxBytes);
                 var content = new List<byte>((int)toRead);
-                uint remaining = toRead;
-                uint lba = found.Value.Extent;
+                var remaining = toRead;
+                var lba = found.Value.Extent;
                 while (remaining > 0)
                 {
                     var sector = readSector(lba);
@@ -429,9 +429,9 @@ public static class DiscDetector
         if (sector.Length < 13)
             return false;
 
-        byte iplbln = sector[0x03];
-        ushort iplsta = ReadLe16(sector.AsSpan(0x04));
-        ushort ipljmp = ReadLe16(sector.AsSpan(0x06));
+        var iplbln = sector[0x03];
+        var iplsta = ReadLe16(sector.AsSpan(0x04));
+        var ipljmp = ReadLe16(sector.AsSpan(0x06));
         if (iplbln == 0 || iplsta < 0x2000 || ipljmp == 0)
             return false;
 
@@ -581,17 +581,17 @@ public static class DiscDetector
         if (sfo[0] != 0x00 || sfo[1] != 0x50 || sfo[2] != 0x53 || sfo[3] != 0x46)
             return null;
 
-        uint keyTable = ReadLe32(sfo.AsSpan(8));
-        uint dataTable = ReadLe32(sfo.AsSpan(12));
-        uint numEntries = ReadLe32(sfo.AsSpan(16));
+        var keyTable = ReadLe32(sfo.AsSpan(8));
+        var dataTable = ReadLe32(sfo.AsSpan(12));
+        var numEntries = ReadLe32(sfo.AsSpan(16));
 
         for (uint i = 0; i < numEntries && 20 + (i + 1) * 16 <= sfo.Length; i++)
         {
             var idx = sfo.AsSpan((int)(20 + i * 16));
-            ushort keyOffset = ReadLe16(idx);
-            uint dataOffset = ReadLe32(idx[12..]);
-            int keyPos = (int)(keyTable + keyOffset);
-            int dataPos = (int)(dataTable + dataOffset);
+            var keyOffset = ReadLe16(idx);
+            var dataOffset = ReadLe32(idx[12..]);
+            var keyPos = (int)(keyTable + keyOffset);
+            var dataPos = (int)(dataTable + dataOffset);
             if (keyPos < 0 || keyPos >= sfo.Length || dataPos < 0 || dataPos >= sfo.Length)
                 continue;
 

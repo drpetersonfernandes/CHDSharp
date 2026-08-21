@@ -21,7 +21,7 @@ public static class CdImageParser
     {
         ArgumentNullException.ThrowIfNull(descriptorPath);
 
-        string extension = Path.GetExtension(descriptorPath).ToLowerInvariant();
+        var extension = Path.GetExtension(descriptorPath).ToLowerInvariant();
         switch (extension)
         {
             case ".gdi":
@@ -47,14 +47,14 @@ public static class CdImageParser
     internal static List<string> Tokenize(string line)
     {
         var tokens = new List<string>();
-        bool singleQuote = false;
-        bool doubleQuote = false;
+        var singleQuote = false;
+        var doubleQuote = false;
         var sb = new StringBuilder();
 
-        int i = 0;
+        var i = 0;
         while (i < line.Length)
         {
-            char c = line[i];
+            var c = line[i];
             if (!singleQuote && c == '"')
             {
                 doubleQuote = !doubleQuote;
@@ -95,7 +95,7 @@ public static class CdImageParser
     /// </summary>
     internal static string ResolveFileName(string descriptorPath, string fileName)
     {
-        string baseDir = Path.GetDirectoryName(Path.GetFullPath(descriptorPath)) ?? string.Empty;
+        var baseDir = Path.GetDirectoryName(Path.GetFullPath(descriptorPath)) ?? string.Empty;
         return Path.Combine(baseDir, fileName);
     }
 }

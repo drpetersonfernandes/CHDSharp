@@ -35,7 +35,7 @@ internal static class Program
         var noKeep = false;
         var seed = 1337;
 
-        for (int i = 0; i < args.Length; i++)
+        for (var i = 0; i < args.Length; i++)
         {
             switch (args[i])
             {

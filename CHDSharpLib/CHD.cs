@@ -154,8 +154,8 @@ public static partial class Chd
         byte[]? headerSha1 = null;
         byte[]? headerMd5 = null;
         byte[]? computedRawSha1 = null;
-        bool needRaw = false;
-        bool needCombined = false;
+        var needRaw = false;
+        var needCombined = false;
         byte[]? combined = null;
         uint rawSha1Offset = 0;
         uint? combinedSha1Offset = null;

@@ -4,7 +4,7 @@
 
 using System.Runtime.InteropServices;
 
-namespace ZLibDotNet.Deflate;
+namespace CHDSharpEncoder.ZLib.Deflate;
 
 internal static partial class Deflater
 {
@@ -12,26 +12,26 @@ internal static partial class Deflater
     {
         if (DeflateStateCheck(ref strm))
             return Z_STREAM_ERROR;
-        DeflateState s = strm.deflateState;
+        var s = strm.deflateState;
 
         if (level == Z_DEFAULT_COMPRESSION)
             level = 6;
         if (level < 0 || level > 9 || strategy < 0 || strategy > Z_FIXED)
             return Z_STREAM_ERROR;
 
-        ref Config configuration_table = ref
+        ref var configuration_table = ref
 #if NET7_0_OR_GREATER
             strm.deflateRefs.configuration_table;
 #else
             MemoryMarshal.GetReference<Config>(s_configuration_table);
 #endif
-        Config.DeflateType deflate_type = Unsafe.Add(ref configuration_table, (uint)s.level).deflate_type;
-        ref Config config = ref Unsafe.Add(ref configuration_table, (uint)level);
+        var deflate_type = Unsafe.Add(ref configuration_table, (uint)s.level).deflate_type;
+        ref var config = ref Unsafe.Add(ref configuration_table, (uint)level);
         if ((strategy != s.strategy || deflate_type != config.deflate_type)
             && s.last_flush != -2)
         {
             // Flush the last buffer:
-            int err = Deflate(ref strm, Z_BLOCK);
+            var err = Deflate(ref strm, Z_BLOCK);
             if (err == Z_STREAM_ERROR)
                 return err;
             if (strm.avail_in != 0 || s.strstart - s.block_start + s.lookahead != 0)
@@ -44,11 +44,11 @@ internal static partial class Deflater
                 if (s.matches == 1)
                 {
 #if NET7_0_OR_GREATER
-                    ref DeflateRefs refs = ref strm.deflateRefs;
+                    ref var refs = ref strm.deflateRefs;
                     if (netUnsafe.IsNullRef(ref refs.prev))
                         refs.prev = ref MemoryMarshal.GetReference<ushort>(s.prev);
 #endif
-                    ref ushort prev = ref
+                    ref var prev = ref
 #if NET7_0_OR_GREATER
                     refs.prev;
 #else

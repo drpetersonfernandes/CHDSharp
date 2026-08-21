@@ -2,7 +2,7 @@
 // Original code and comments Copyright (C) 1995-2024 Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
-namespace ZLibDotNet.Inflate;
+namespace CHDSharpEncoder.ZLib.Inflate;
 
 internal static partial class Inflater
 {

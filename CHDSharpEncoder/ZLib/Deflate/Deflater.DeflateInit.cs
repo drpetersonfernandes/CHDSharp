@@ -2,13 +2,10 @@
 // Original code and comments Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
-using System;
 using System.Buffers;
-#if NET7_0_OR_GREATER
 using System.Runtime.InteropServices;
-#endif
 
-namespace ZLibDotNet.Deflate;
+namespace CHDSharpEncoder.ZLib.Deflate;
 
 internal static partial class Deflater
 {
@@ -28,7 +25,7 @@ internal static partial class Deflater
         if (level == Z_DEFAULT_COMPRESSION)
             level = 6;
 
-        int wrap = 1;
+        var wrap = 1;
         if (windowBits < 0) // suppress zlib wrapper
         {
             wrap = 0;
@@ -63,13 +60,13 @@ internal static partial class Deflater
             s.w_size = 1U << windowBits;
             s.w_mask = s.w_size - 1;
 
-            int hash_bits = memLevel + 7;
+            var hash_bits = memLevel + 7;
             s.hash_bits = (uint)hash_bits;
             s.hash_size = 1U << hash_bits;
             s.hash_mask = s.hash_size - 1;
             s.hash_shift = (hash_bits + MinMatch - 1) / MinMatch;
 
-            int w_size = (int)s.w_size;
+            var w_size = (int)s.w_size;
             s.window = ArrayPool<byte>.Shared.Rent(w_size * 2);
             s.prev = ArrayPool<ushort>.Shared.Rent(w_size);
             s.head = ArrayPool<ushort>.Shared.Rent((int)s.hash_size);
@@ -81,7 +78,7 @@ internal static partial class Deflater
             s.pending_buf_size = s.lit_bufsize * 4;
             s.pending_buf = ArrayPool<byte>.Shared.Rent((int)s.pending_buf_size);
 #if NET7_0_OR_GREATER
-            ref DeflateRefs refs = ref strm.deflateRefs;
+            ref var refs = ref strm.deflateRefs;
             refs.head = ref MemoryMarshal.GetReference<ushort>(s.head);
             refs.pending_buf = ref MemoryMarshal.GetReference<byte>(s.pending_buf);
 #endif

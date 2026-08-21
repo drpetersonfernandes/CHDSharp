@@ -2,37 +2,36 @@
 // Original code and comments Copyright (C) 1995-2017 Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
-using System;
 #if !NET7_0_OR_GREATER
 using System.Runtime.InteropServices;
 #endif
 
-namespace ZLibDotNet.Inflate;
+namespace CHDSharpEncoder.ZLib.Inflate;
 
 internal static partial class Inflater
 {
     private static void InflateFast(ref ZStream strm, uint start, ref byte window, ref Code lcode, ref Code dcode)
     {
-        InflateState state = strm.inflateState;
-        uint last = strm.next_in + (strm.avail_in - 5);      // have enough input while in < last
-        uint beg = strm.next_out - (start - strm.avail_out); // inflate()'s initial strm.next_out
-        uint end = strm.next_out + (strm.avail_out - 257);   // while out < end, enough space available
-        uint wsize = state.wsize;
-        uint whave = state.whave;
-        uint wnext = state.wnext;
-        uint hold = state.hold;
-        uint bits = state.bits;
-        uint lmask = (1U << state.lenbits) - 1;
-        uint dmask = (1U << state.distbits) - 1;
+        var state = strm.inflateState;
+        var last = strm.next_in + (strm.avail_in - 5);      // have enough input while in < last
+        var beg = strm.next_out - (start - strm.avail_out); // inflate()'s initial strm.next_out
+        var end = strm.next_out + (strm.avail_out - 257);   // while out < end, enough space available
+        var wsize = state.wsize;
+        var whave = state.whave;
+        var wnext = state.wnext;
+        var hold = state.hold;
+        var bits = state.bits;
+        var lmask = (1U << state.lenbits) - 1;
+        var dmask = (1U << state.distbits) - 1;
         uint len;   // match length, unused bytes
 
-        ref byte @in = ref
+        ref var @in = ref
 #if NET7_0_OR_GREATER
             Unsafe.Add(ref strm.input_ptr, strm.next_in);
 #else
             MemoryMarshal.GetReference(strm._input.Slice((int)strm.next_in));
 #endif
-        ref byte @out = ref
+        ref var @out = ref
 #if NET7_0_OR_GREATER
             Unsafe.Add(ref strm.output_ptr, strm.next_out);
 #else
@@ -52,7 +51,7 @@ internal static partial class Inflater
                 bits += 8;
                 strm.next_in += 2;
             }
-            ref Code here = ref Unsafe.Add(ref lcode, hold & lmask); // retrieved table entry
+            ref var here = ref Unsafe.Add(ref lcode, hold & lmask); // retrieved table entry
         dolen:
             uint op = here.bits; // code bits, operation, extra bits, or window position, window bytes to copy
             hold >>= (int)op;
@@ -136,7 +135,7 @@ internal static partial class Inflater
                                 break;
                             }
                         }
-                        ref byte from = ref window; // where to copy match from
+                        ref var from = ref window; // where to copy match from
                         if (wnext == 0) // very common case
                         {
                             from = ref Unsafe.Add(ref from, wsize - op);
@@ -232,7 +231,7 @@ internal static partial class Inflater
                     }
                     else
                     {
-                        ref byte from = ref Unsafe.Subtract(ref @out, dist); // copy direct from output
+                        ref var from = ref Unsafe.Subtract(ref @out, dist); // copy direct from output
                         do // minimum length is three
                         {
                             @out = from;

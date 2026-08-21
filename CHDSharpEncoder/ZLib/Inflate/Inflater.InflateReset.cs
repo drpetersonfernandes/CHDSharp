@@ -4,7 +4,7 @@
 
 using System.Buffers;
 
-namespace ZLibDotNet.Inflate;
+namespace CHDSharpEncoder.ZLib.Inflate;
 
 internal static partial class Inflater
 {
@@ -13,7 +13,7 @@ internal static partial class Inflater
         if (InflateStateCheck(ref strm))
             return Z_STREAM_ERROR;
 
-        InflateState state = strm.inflateState;
+        var state = strm.inflateState;
         state.wsize = 0;
         state.whave = 0;
         state.wnext = 0;
@@ -25,7 +25,7 @@ internal static partial class Inflater
         if (InflateStateCheck(ref strm))
             return Z_STREAM_ERROR;
 
-        InflateState state = strm.inflateState;
+        var state = strm.inflateState;
         int wrap;
         // extract wrap request from windowBits parameter
         if (windowBits < 0)
@@ -60,7 +60,7 @@ internal static partial class Inflater
         if (InflateStateCheck(ref strm))
             return Z_STREAM_ERROR;
 
-        InflateState state = strm.inflateState;
+        var state = strm.inflateState;
         strm.total_in = strm.total_out = state.total = 0;
         strm.msg = null;
         if (state.wrap != 0)

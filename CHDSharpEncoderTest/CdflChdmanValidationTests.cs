@@ -47,26 +47,26 @@ public class CdflChdmanValidationTests : IDisposable
                                INDEX 00 00:00:20
                                INDEX 01 00:00:22
                            """;
-        string cuePath = Path.Combine(_testDataDir, "test.cue");
+        var cuePath = Path.Combine(_testDataDir, "test.cue");
         File.WriteAllText(cuePath, cue);
 
-        byte[] bin = new byte[(20 + 20) * CdConstants.MaxSectorData];
-        for (int f = 0; f < 20; f++)
+        var bin = new byte[(20 + 20) * CdConstants.MaxSectorData];
+        for (var f = 0; f < 20; f++)
         {
-            int offset = f * CdConstants.MaxSectorData;
-            for (int i = 0; i < CdConstants.MaxSectorData; i++)
+            var offset = f * CdConstants.MaxSectorData;
+            for (var i = 0; i < CdConstants.MaxSectorData; i++)
             {
                 bin[offset + i] = (byte)(i & 0xFF); // MODE1 pattern
             }
         }
 
-        for (int f = 20; f < 40; f++)
+        for (var f = 20; f < 40; f++)
         {
-            int offset = f * CdConstants.MaxSectorData;
-            for (int s = 0; s < 588; s++)
+            var offset = f * CdConstants.MaxSectorData;
+            for (var s = 0; s < 588; s++)
             {
                 // standard CUE/BIN audio: little-endian 16-bit samples
-                int sample = (int)(Math.Sin(s * 0.05) * 12000);
+                var sample = (int)(Math.Sin(s * 0.05) * 12000);
                 bin[offset + s * 4] = (byte)sample;
                 bin[offset + s * 4 + 1] = (byte)(sample >> 8);
                 bin[offset + s * 4 + 2] = (byte)sample;
@@ -76,24 +76,24 @@ public class CdflChdmanValidationTests : IDisposable
 
         File.WriteAllBytes(Path.Combine(_testDataDir, "game.bin"), bin);
 
-        string chdPath = Path.Combine(_testDataDir, "test.chd");
+        var chdPath = Path.Combine(_testDataDir, "test.chd");
         ChdEncoder.EncodeCd(cuePath, chdPath, hunkBytes: CdConstants.FramesPerHunk * CdConstants.FrameSize,
             unitBytes: CdConstants.FrameSize, codecTags: [CodecTags.Cdfl]);
 
         var (infoExit, infoOut, infoErr) = RunChdman("info", "-i", chdPath);
-        string info = infoOut + infoErr;
+        var info = infoOut + infoErr;
         Assert.True(infoExit == 0, $"chdman info failed (exit={infoExit})\n{info}");
         Assert.Contains("CD FLAC", info, StringComparison.Ordinal);
 
         var (verifyExit, vOut, vErr) = RunChdman("verify", "-i", chdPath);
         Assert.True(verifyExit == 0, $"chdman verify failed (exit={verifyExit})\n{vOut}{vErr}");
 
-        string extractPath = Path.Combine(_testDataDir, "extracted.raw");
+        var extractPath = Path.Combine(_testDataDir, "extracted.raw");
         var (extractExit, eOut, eErr) = RunChdman("extractraw", "-i", chdPath, "-o", extractPath, "-f");
         Assert.True(extractExit == 0, $"extractraw failed (exit={extractExit})\n{eOut}{eErr}");
 
         // expected logical image: 20 data frames (raw) + 20 audio frames (byte-swapped to BE)
-        byte[] expected = new byte[40 * CdConstants.FrameSize];
+        var expected = new byte[40 * CdConstants.FrameSize];
         PlaceBinFrames(expected, 0, bin, 20, 0, swap: false);
         PlaceBinFrames(expected, 20, bin, 20, 20 * CdConstants.MaxSectorData, swap: true);
 
@@ -102,13 +102,13 @@ public class CdflChdmanValidationTests : IDisposable
 
     private static void PlaceBinFrames(byte[] image, int chdFrameStart, byte[] bin, int binFrameCount, int binOffset, bool swap)
     {
-        for (int f = 0; f < binFrameCount; f++)
+        for (var f = 0; f < binFrameCount; f++)
         {
-            int dest = (chdFrameStart + f) * CdConstants.FrameSize;
+            var dest = (chdFrameStart + f) * CdConstants.FrameSize;
             Array.Copy(bin, binOffset + f * CdConstants.MaxSectorData, image, dest, CdConstants.MaxSectorData);
             if (swap)
             {
-                for (int i = 0; i < CdConstants.MaxSectorData; i += 2)
+                for (var i = 0; i < CdConstants.MaxSectorData; i += 2)
                 {
                     (image[dest + i], image[dest + i + 1]) = (image[dest + i + 1], image[dest + i]);
                 }
@@ -118,7 +118,7 @@ public class CdflChdmanValidationTests : IDisposable
 
     private static (int ExitCode, string StdOut, string StdErr) RunChdman(params string[] args)
     {
-        string chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
+        var chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
 
         var psi = new ProcessStartInfo
         {
@@ -141,10 +141,10 @@ public class CdflChdmanValidationTests : IDisposable
 
     private static string? ResolveChdmanPath()
     {
-        string exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
+        var exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
 
-        string baseDir = AppContext.BaseDirectory;
-        string candidate = Path.Combine(baseDir, exeName);
+        var baseDir = AppContext.BaseDirectory;
+        var candidate = Path.Combine(baseDir, exeName);
         if (File.Exists(candidate))
             return candidate;
 

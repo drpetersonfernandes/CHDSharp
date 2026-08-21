@@ -58,9 +58,9 @@ public class CueParserChdmanValidationTests : IDisposable
                              TRACK 05 AUDIO
                                INDEX 01 12:02:00
                            """;
-        string cuePath = Path.Combine(_testDataDir, "saturn.cue");
-        string binPath = Path.Combine(_testDataDir, "game.bin");
-        string chdPath = Path.Combine(_testDataDir, "saturn.chd");
+        var cuePath = Path.Combine(_testDataDir, "saturn.cue");
+        var binPath = Path.Combine(_testDataDir, "game.bin");
+        var chdPath = Path.Combine(_testDataDir, "saturn.chd");
         File.WriteAllText(cuePath, cue);
         using (var fs = File.Create(binPath))
         {
@@ -85,7 +85,7 @@ public class CueParserChdmanValidationTests : IDisposable
                 .ToList();
 
             Assert.Equal(expected.Count, actual.Count);
-            for (int i = 0; i < expected.Count; i++)
+            for (var i = 0; i < expected.Count; i++)
                 Assert.Equal(expected[i], actual[i]);
         }
     }
@@ -104,8 +104,8 @@ public class CueParserChdmanValidationTests : IDisposable
                                INDEX 00 00:02:00
                                INDEX 01 00:04:00
                            """;
-        string cuePath = Path.Combine(_testDataDir, "twofile.cue");
-        string chdPath = Path.Combine(_testDataDir, "twofile.chd");
+        var cuePath = Path.Combine(_testDataDir, "twofile.cue");
+        var chdPath = Path.Combine(_testDataDir, "twofile.chd");
         File.WriteAllText(cuePath, cue);
         using (var fs = File.Create(Path.Combine(_testDataDir, "data.bin")))
         {
@@ -133,14 +133,14 @@ public class CueParserChdmanValidationTests : IDisposable
                 .ToList();
 
             Assert.Equal(expected.Count, actual.Count);
-            for (int i = 0; i < expected.Count; i++)
+            for (var i = 0; i < expected.Count; i++)
                 Assert.Equal(expected[i], actual[i]);
         }
     }
 
     private static (int ExitCode, string StdOut, string StdErr) RunChdman(params string[] args)
     {
-        string chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
+        var chdmanPath = ChdmanPath ?? throw new InvalidOperationException("chdman.exe not available");
 
         var psi = new ProcessStartInfo
         {
@@ -163,10 +163,10 @@ public class CueParserChdmanValidationTests : IDisposable
 
     private static string? ResolveChdmanPath()
     {
-        string exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
+        var exeName = OperatingSystem.IsWindows() ? "chdman.exe" : "chdman";
 
-        string baseDir = AppContext.BaseDirectory;
-        string candidate = Path.Combine(baseDir, exeName);
+        var baseDir = AppContext.BaseDirectory;
+        var candidate = Path.Combine(baseDir, exeName);
         if (File.Exists(candidate))
             return candidate;
 

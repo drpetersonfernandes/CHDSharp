@@ -2,7 +2,7 @@
 #pragma warning disable MA0008
 using System.Runtime.InteropServices;
 
-namespace ZLibDotNet.Deflate;
+namespace CHDSharpEncoder.ZLib.Deflate;
 
 internal ref struct DeflateRefs
 {

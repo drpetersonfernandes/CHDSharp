@@ -2,13 +2,13 @@
 // Original code and comments Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
-namespace ZLibDotNet.Deflate;
+namespace CHDSharpEncoder.ZLib.Deflate;
 
 internal static partial class Deflater
 {
     internal static int DeflateReset(ref ZStream strm)
     {
-        int ret = DeflateResetKeep(ref strm);
+        var ret = DeflateResetKeep(ref strm);
         if (ret == Z_OK)
             LongestMatchInit(ref strm);
         return ret;
@@ -25,11 +25,11 @@ internal static partial class Deflater
         strm.msg = null;
         strm.data_type = Z_UNKNOWN;
 
-        DeflateState s = strm.deflateState;
+        var s = strm.deflateState;
         s.pending = 0;
         s.pending_out = s.pending_buf;
 #if NET7_0_OR_GREATER
-        ref DeflateRefs refs = ref strm.deflateRefs;
+        ref var refs = ref strm.deflateRefs;
         refs.pending_out = ref refs.pending_buf;
 #endif
 

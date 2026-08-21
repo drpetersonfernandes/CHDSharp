@@ -38,7 +38,7 @@ public sealed class NrgParser
         if (tail[4] != 0 || tail[5] != 0 || tail[6] != 0 || tail[7] != 0)
             throw new InvalidDataException("NRG file size exceeds 4 GB, unsupported");
 
-        uint chainOffset = BinaryPrimitives.ReadUInt32BigEndian(tail[8..]);
+        var chainOffset = BinaryPrimitives.ReadUInt32BigEndian(tail[8..]);
 
         var toc = new CdToc();
         List<CdTrack>? tracks = null;
@@ -53,16 +53,16 @@ public sealed class NrgParser
 
             file.Position = chainOffset;
             file.ReadExactly(chunkHeader);
-            uint chunkSize = BinaryPrimitives.ReadUInt32BigEndian(chunkHeader[4..]);
+            var chunkSize = BinaryPrimitives.ReadUInt32BigEndian(chunkHeader[4..]);
 
             if (chunkHeader[..4].SequenceEqual("DAOX"u8))
             {
                 // Skip the second chunk size field and the UPC code (16 + 4 bytes).
                 file.Position = chainOffset + 8 + 16 + 4;
 
-                byte startTrack = (byte)file.ReadByte();
-                byte endTrack = (byte)file.ReadByte();
-                int numTracks = endTrack - startTrack + 1;
+                var startTrack = (byte)file.ReadByte();
+                var endTrack = (byte)file.ReadByte();
+                var numTracks = endTrack - startTrack + 1;
                 if (numTracks is <= 0 or > CdConstants.MaxTracks)
                     throw new InvalidDataException($"Invalid NRG track range {startTrack}-{endTrack}");
 
@@ -75,10 +75,10 @@ public sealed class NrgParser
                     file.Position += 12;
                     file.ReadExactly(buffer[..30]);
                     uint size = BinaryPrimitives.ReadUInt16BigEndian(buffer[..]);
-                    ushort mode = BinaryPrimitives.ReadUInt16BigEndian(buffer[2..]);
-                    ulong index0 = BinaryPrimitives.ReadUInt64BigEndian(buffer[6..14]);
-                    ulong index1 = BinaryPrimitives.ReadUInt64BigEndian(buffer[14..22]);
-                    ulong trackEnd = BinaryPrimitives.ReadUInt64BigEndian(buffer[22..]);
+                    var mode = BinaryPrimitives.ReadUInt16BigEndian(buffer[2..]);
+                    var index0 = BinaryPrimitives.ReadUInt64BigEndian(buffer[6..14]);
+                    var index1 = BinaryPrimitives.ReadUInt64BigEndian(buffer[14..22]);
+                    var trackEnd = BinaryPrimitives.ReadUInt64BigEndian(buffer[22..]);
 
                     if (size == 0)
                         throw new InvalidDataException($"NRG track {track} has a zero sector size");

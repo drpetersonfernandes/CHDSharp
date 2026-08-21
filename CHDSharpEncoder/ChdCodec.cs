@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using CHDSharpEncoder.Interfaces;
 using CHDSharpEncoder.LZMA;
 using CHDSharpEncoder.Models;
@@ -35,6 +34,9 @@ public static class CodecTags
     /// <summary>CD FLAC codec tag (implemented by the encoder; CD-sized hunks only).</summary>
     public const uint Cdfl = 0x6364666C; // 'cdfl'
 
+    /// <summary>A/V Huffman (laserdisc) codec tag.</summary>
+    public const uint Avhu = 0x61766875; // 'avhu'
+
     /// <summary>No-compression codec tag (recognized but not supported by the encoder yet).</summary>
     public const uint None = 0x00000000;
 
@@ -69,6 +71,7 @@ public static class CodecTags
             "cdlz" => Cdlz,
             "cdzs" => Cdzs,
             "cdfl" => Cdfl,
+            "avhu" => Avhu,
             "none" => None,
             _ => throw new ArgumentException($"Unknown codec [{name}]")
         };
@@ -117,7 +120,7 @@ public sealed class ZstdCodec : IChdCodec
     {
         _compressor.ResetStream();
         var dest = new byte[ZstdSharp.Compressor.GetCompressBound(data.Length)];
-        _compressor.WrapStream(data, dest, out int consumed, out int written, isFinalBlock: true);
+        _compressor.WrapStream(data, dest, out var consumed, out var written, isFinalBlock: true);
         return consumed == data.Length && written < data.Length
             ? dest.AsSpan(0, written).ToArray()
             : null;
@@ -199,7 +202,7 @@ public sealed class LzmaCodec : IChdCodec
 public static class ChdCodecs
 {
     /// <summary>Comma-separated list of codec names the encoder can actually compress with.</summary>
-    public const string SupportedCodecNames = "zlib, zstd, lzma, huff, flac, cdzl, cdlz, cdzs, cdfl, none";
+    public const string SupportedCodecNames = "zlib, zstd, lzma, huff, flac, cdzl, cdlz, cdzs, cdfl, avhu, none";
 
     /// <summary>
     /// Creates one codec instance per tag, in order (up to 4, per the CHD header).
@@ -234,7 +237,7 @@ public static class ChdCodecs
             if (tag == CodecTags.None)
                 throw new ArgumentException("Codec 'none' cannot be combined with other codecs", nameof(codecTags));
 
-            IChdCodec codec = tag switch
+            var codec = tag switch
             {
                 CodecTags.Zlib => new ZlibCodec(),
                 CodecTags.Zstd => new ZstdCodec(),
@@ -248,6 +251,7 @@ public static class ChdCodecs
                 CodecTags.Cdfl or CodecTags.Cdzl or CodecTags.Cdlz or CodecTags.Cdzs => throw new ArgumentException(
                     $"Codec '{CodecTags.ToString(tag)}' requires CD-sized hunks (multiple of {CdConstants.FrameSize} bytes); hunk is {hunkBytes} bytes",
                     nameof(codecTags)),
+                CodecTags.Avhu => new AvHuffCodec(),
                 _ => throw new ArgumentException(
                     $"Unknown codec tag [{CodecTags.ToString(tag)}]; supported codecs: {SupportedCodecNames}",
                     nameof(codecTags))
@@ -292,6 +296,7 @@ public static class ChdCodecs
                 "cdlz" => CodecTags.Cdlz,
                 "cdzs" => CodecTags.Cdzs,
                 "cdfl" => CodecTags.Cdfl,
+                "avhu" => CodecTags.Avhu,
                 "none" => CodecTags.None,
                 _ => throw new ArgumentException($"Unknown codec [{name}]")
             });

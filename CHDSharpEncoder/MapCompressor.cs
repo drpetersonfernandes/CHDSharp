@@ -106,9 +106,9 @@ public static class MapCompressor
             // iterate the RLE-decoded types in lockstep with the raw entries, writing the
             // auxiliary data for each hunk (SELF_0/SELF_1 pseudo-types encode nothing)
             ulong first = 0;
-            int rleIndex = 0;
+            var rleIndex = 0;
             byte lastComp = 0;
-            int repCount = 0;
+            var repCount = 0;
             for (uint i = 0; i < hunkCount; i++)
             {
                 byte type;

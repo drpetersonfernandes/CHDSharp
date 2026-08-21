@@ -2,10 +2,9 @@
 // Original code and comments Copyright (C) 1995-2024 Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
-using System;
 using System.Runtime.InteropServices;
 
-namespace ZLibDotNet.Inflate;
+namespace CHDSharpEncoder.ZLib.Inflate;
 
 internal static partial class Inflater
 {
@@ -109,26 +108,26 @@ internal static partial class Inflater
             || strm._input.IsEmpty && strm.avail_in != 0)
             return Z_STREAM_ERROR;
 
-        InflateState state = strm.inflateState;
+        var state = strm.inflateState;
         if (state.mode == InflateMode.Type) // Skip check
             state.mode = InflateMode.Typedo;
 
-        ref byte next = ref // next input
+        ref var next = ref // next input
 #if NET7_0_OR_GREATER
             Unsafe.Add(ref strm.input_ptr, strm.next_in);
 #else
             MemoryMarshal.GetReference(strm._input.Slice((int)strm.next_in));
 #endif
-        ref byte put = ref // next output
+        ref var put = ref // next output
 #if NET7_0_OR_GREATER
             Unsafe.Add(ref strm.output_ptr, strm.next_out);
 #else
             MemoryMarshal.GetReference(strm._output.Slice((int)strm.next_out));
 #endif
-        ref byte from = ref netUnsafe.NullRef<byte>(); // where to copy match bytes from
+        ref var from = ref netUnsafe.NullRef<byte>(); // where to copy match bytes from
 #if NET7_0_OR_GREATER
-        ref InflateRefs refs = ref strm.inflateRefs;
-        ref Code codes = ref refs.codes;
+        ref var refs = ref strm.inflateRefs;
+        ref var codes = ref refs.codes;
 #else
         ref Code codes = ref netUnsafe.NullRef<Code>();
         ref ushort lens = ref netUnsafe.NullRef<ushort>();
@@ -142,19 +141,19 @@ internal static partial class Inflater
         ref ushort dbase = ref netUnsafe.NullRef<ushort>();
         ref ushort dext = ref netUnsafe.NullRef<ushort>();
 #endif
-        uint have = strm.avail_in;          // available input
-        uint left = strm.avail_out;         // ...and output
-        uint hold = strm.inflateState.hold; // bit buffer
-        uint bits = strm.inflateState.bits; // bits in bit buffer
-        uint @in = have;    // save starting available input
-        uint @out = left;   // ...and output
+        var have = strm.avail_in;          // available input
+        var left = strm.avail_out;         // ...and output
+        var hold = strm.inflateState.hold; // bit buffer
+        var bits = strm.inflateState.bits; // bits in bit buffer
+        var @in = have;    // save starting available input
+        var @out = left;   // ...and output
         uint copy;          // number of stored or match bytes to copy
         Code here;          // current decoding table entry
         Code last;          // parent table entry
         uint len;           // length to copy for repeats, bits to drop
-        uint next_in = strm.next_in;
-        uint next_out = strm.next_out;
-        int ret = Z_OK;
+        var next_in = strm.next_in;
+        var next_out = strm.next_out;
+        var ret = Z_OK;
 
         for (; ; )
             switch (state.mode)

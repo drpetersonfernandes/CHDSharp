@@ -1,14 +1,12 @@
 #nullable disable
 // Copyright (C) 2022-2024 Magnus Montin
 
-using System;
-#if NET7_0_OR_GREATER
-using System.Runtime.InteropServices;
-#endif
-using ZLibDotNet.Deflate;
-using ZLibDotNet.Inflate;
 
-namespace ZLibDotNet;
+using System.Runtime.InteropServices;
+using CHDSharpEncoder.ZLib.Deflate;
+using CHDSharpEncoder.ZLib.Inflate;
+
+namespace CHDSharpEncoder.ZLib;
 
 /// <summary>
 /// Represents a stream of data that can be compressed and uncompressed using the zlib data format.

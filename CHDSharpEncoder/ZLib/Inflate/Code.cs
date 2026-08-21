@@ -1,9 +1,10 @@
 #nullable disable
 using System.Runtime.InteropServices;
+
 // Original code and comments Copyright (C) 1995-2005, 2010 Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
-namespace ZLibDotNet.Inflate;
+namespace CHDSharpEncoder.ZLib.Inflate;
 
 /* Structure for decoding tables. Each entry provides either the
  * information needed to do the operation requested by the code that

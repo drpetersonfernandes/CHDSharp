@@ -1,5 +1,5 @@
 using System.IO.Compression;
-using ZLibDotNet;
+using CHDSharpEncoder.ZLib;
 
 namespace CHDSharpEncoder;
 
@@ -15,15 +15,15 @@ public static class RawDeflate
     /// <returns>The compressed bytes, or <c>null</c> if compression did not reduce size.</returns>
     public static byte[]? Compress(byte[] data)
     {
-        var zlib = new ZLib();
+        var zlib = new ZLib.ZLib();
         var output = new byte[zlib.CompressBound((uint)data.Length)];
         var zs = new ZStream { Input = data, Output = output };
-        _ = zlib.DeflateInit(ref zs, ZLib.Z_BEST_COMPRESSION, ZLib.Z_DEFLATED, -15, 8, ZLib.Z_DEFAULT_STRATEGY);
+        _ = zlib.DeflateInit(ref zs, ZLib.ZLib.Z_BEST_COMPRESSION, ZLib.ZLib.Z_DEFLATED, -15, 8, ZLib.ZLib.Z_DEFAULT_STRATEGY);
         int status;
         do
         {
-            status = zlib.Deflate(ref zs, ZLib.Z_FINISH);
-        } while (status == ZLib.Z_OK);
+            status = zlib.Deflate(ref zs, ZLib.ZLib.Z_FINISH);
+        } while (status == ZLib.ZLib.Z_OK);
 
         _ = zlib.DeflateEnd(ref zs);
 

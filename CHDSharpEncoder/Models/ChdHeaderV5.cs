@@ -132,7 +132,7 @@ public class ChdHeaderV5
         ArgumentNullException.ThrowIfNull(compressors);
 
         var codecArray = new uint[4];
-        for (int i = 0; i < 4; i++)
+        for (var i = 0; i < 4; i++)
         {
             codecArray[i] = i < compressors.Length ? compressors[i] : CodecTags.None;
         }

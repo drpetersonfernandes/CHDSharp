@@ -1564,7 +1564,7 @@ internal class Encoder : ICoder, ISetCoderProperties, IWriteCoderProperties
                         if (dist != 0)
                         {
                             var distance = _reps[dist];
-                            for (uint i = dist; i >= 1; i--)
+                            for (var i = dist; i >= 1; i--)
                             {
                                 _reps[i] = _reps[i - 1];
                             }
@@ -1730,7 +1730,7 @@ internal class Encoder : ICoder, ISetCoderProperties, IWriteCoderProperties
 
     private void FillDistancesPrices()
     {
-        for (uint i = Base.KStartPosModelIndex; i < Base.KNumFullDistances; i++)
+        for (var i = Base.KStartPosModelIndex; i < Base.KNumFullDistances; i++)
         {
             var posSlot = GetPosSlot(i);
             var footerBits = (int)((posSlot >> 1) - 1);

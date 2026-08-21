@@ -345,7 +345,7 @@ public class BoundsValidationTests
         // within the default cap (2x hunk bytes). It must read back correctly, NOT be rejected.
         const int blocksize = 512;
 
-        byte[] payload = new byte[blocksize];
+        var payload = new byte[blocksize];
         new Random(42).NextBytes(payload); // incompressible
         var compressed = Deflate(payload);
 

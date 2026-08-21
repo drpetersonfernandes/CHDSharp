@@ -2,10 +2,9 @@
 // Original code and comments Copyright (C) 1995-2024 Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
-using System;
 using System.Runtime.InteropServices;
 
-namespace ZLibDotNet.Inflate;
+namespace CHDSharpEncoder.ZLib.Inflate;
 
 internal static partial class Inflater
 {
@@ -37,7 +36,7 @@ internal static partial class Inflater
         Code here;                          // table entry for duplication
         const byte Length = MaxBits + 1;
         Span<ushort> count = stackalloc ushort[Length];// number of codes of each length
-        ref ushort ptrToCount = ref MemoryMarshal.GetReference(count);
+        ref var ptrToCount = ref MemoryMarshal.GetReference(count);
 
         // accumulate lengths for codes (assumes lens[] all in 0..MAXBITS)
         netUnsafe.InitBlock(ref netUnsafe.As<ushort, byte>(ref ptrToCount), 0, Length * sizeof(ushort));
@@ -47,7 +46,7 @@ internal static partial class Inflater
             Unsafe.Add(ref ptrToCount, (uint)Unsafe.Add(ref lens, sym))++;
 
         // bound code lengths, force root to be within code lengths
-        int root = bits;   // number of index bits for root table
+        var root = bits;   // number of index bits for root table
         uint max = MaxBits; // maximum code lengths
         for (; max >= 1; max--)
             if (Unsafe.Add(ref ptrToCount, max) != 0)
@@ -73,7 +72,7 @@ internal static partial class Inflater
             root = (int)min;
 
         // check for an over-subscribed or incomplete set of lengths
-        int left = 1; // number of prefix codes available
+        var left = 1; // number of prefix codes available
         uint len = 1;  // a code's length in bits
         for (; len <= MaxBits; len++)
         {
@@ -87,7 +86,7 @@ internal static partial class Inflater
 
         // generate offsets into symbol table for each length for sorting
         Span<ushort> offs = stackalloc ushort[Length]; // offsets in table for each length
-        ref ushort ptrToOffs = ref MemoryMarshal.GetReference(offs);
+        ref var ptrToOffs = ref MemoryMarshal.GetReference(offs);
         Unsafe.Add(ref ptrToOffs, 1U) = 0;
         for (len = 1; len < MaxBits; len++)
             Unsafe.Add(ref ptrToOffs, len + 1) = (ushort)(Unsafe.Add(ref ptrToOffs, len) + Unsafe.Add(ref ptrToCount, len));
@@ -97,8 +96,8 @@ internal static partial class Inflater
             if (Unsafe.Add(ref lens, sym) != 0)
                 Unsafe.Add(ref work, (uint)Unsafe.Add(ref ptrToOffs, (uint)Unsafe.Add(ref lens, sym))++) = (ushort)sym;
 
-        ref ushort @base = ref dbase; // base value table to use
-        ref ushort extra = ref dext; // extra bits table to use
+        ref var @base = ref dbase; // base value table to use
+        ref var extra = ref dext; // extra bits table to use
         uint match = 0; // use base and extra for symbol >= match
         // set up for code type
         switch (type)
@@ -120,11 +119,11 @@ internal static partial class Inflater
         sym = 0;                    // starting code symbol
         len = min;                  // starting code length
         uint next = 0;              // current offset to table to fill in
-        uint curr = (uint)root;     // current table index bits
+        var curr = (uint)root;     // current table index bits
         uint drop = 0;              // current bits to drop from code for index
-        uint low = uint.MaxValue;   // trigger new sub-table when len > root
-        uint used = 1U << root;     // use root table entries
-        uint mask = used - 1;       // mask for comparing low
+        var low = uint.MaxValue;   // trigger new sub-table when len > root
+        var used = 1U << root;     // use root table entries
+        var mask = used - 1;       // mask for comparing low
 
         // check available table space
         if (type == CodeType.Lens && used > EnoughLens ||
@@ -137,9 +136,9 @@ internal static partial class Inflater
         for (; ; )
         {
             // create table entry
-            byte temp = (byte)(len - drop);
-            ushort wsym = Unsafe.Add(ref work, sym);
-            uint diff = wsym - match;
+            var temp = (byte)(len - drop);
+            var wsym = Unsafe.Add(ref work, sym);
+            var diff = wsym - match;
             if (wsym + 1 < match)
                 here = new Code(0, temp, wsym);
             else if (wsym >= match)

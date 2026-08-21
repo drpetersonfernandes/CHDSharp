@@ -29,11 +29,11 @@ public class HunkProgressTests : IDisposable
     [Fact]
     public void Callback_FiresOncePerHunk_InHunkOrder()
     {
-        byte[] source = new byte[4096 * 3];
+        var source = new byte[4096 * 3];
         new Random(1).NextBytes(source);
 
         var reports = new List<HunkProgress>();
-        string chdPath = Path.Combine(_dir, "ordered.chd");
+        var chdPath = Path.Combine(_dir, "ordered.chd");
         using var ms = new MemoryStream(source);
         ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, options: new ChdEncodeOptions { HunkCompleted = reports.Add });
 
@@ -50,9 +50,9 @@ public class HunkProgressTests : IDisposable
     public void CompressibleHunks_ReportZlibAndSelf()
     {
         // all-zero image: the first hunk is stored compressed (zlib), the rest deduplicate
-        byte[] source = new byte[4096 * 4];
+        var source = new byte[4096 * 4];
         var reports = new List<HunkProgress>();
-        string chdPath = Path.Combine(_dir, "ratio.chd");
+        var chdPath = Path.Combine(_dir, "ratio.chd");
         using var ms = new MemoryStream(source);
         ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, options: new ChdEncodeOptions { HunkCompleted = reports.Add });
 
@@ -66,11 +66,11 @@ public class HunkProgressTests : IDisposable
     [Fact]
     public void IncompressibleHunks_ReportNone()
     {
-        byte[] source = new byte[4096 * 2];
+        var source = new byte[4096 * 2];
         new Random(99).NextBytes(source);
 
         var reports = new List<HunkProgress>();
-        string chdPath = Path.Combine(_dir, "none.chd");
+        var chdPath = Path.Combine(_dir, "none.chd");
         using var ms = new MemoryStream(source);
         ChdEncoder.EncodeRaw(ms, chdPath, 4096, 512, options: new ChdEncodeOptions { HunkCompleted = reports.Add });
 
@@ -87,9 +87,9 @@ public class HunkProgressTests : IDisposable
     public void WithCallback_OutputIsByteIdentical_ToWithout()
     {
         // mixed corpus: compressible and incompressible blocks exercise all entry types
-        byte[] source = new byte[4096 * 64];
+        var source = new byte[4096 * 64];
         var rng = new Random(1234);
-        for (int h = 0; h < 64; h++)
+        for (var h = 0; h < 64; h++)
         {
             if (h % 3 == 0)
                 Array.Fill(source, (byte)(h & 0xFF), h * 4096, 4096);
@@ -97,8 +97,8 @@ public class HunkProgressTests : IDisposable
                 rng.NextBytes(source.AsSpan(h * 4096, 4096));
         }
 
-        string without = Path.Combine(_dir, "without.chd");
-        string with = Path.Combine(_dir, "with.chd");
+        var without = Path.Combine(_dir, "without.chd");
+        var with = Path.Combine(_dir, "with.chd");
         using (var ms = new MemoryStream(source))
         {
             ChdEncoder.EncodeRaw(ms, without, 4096, 512);
@@ -116,7 +116,7 @@ public class HunkProgressTests : IDisposable
     public void EncodeCd_ReportsPerHunk_InOrder()
     {
         // 16 data frames + 16 audio frames = 32 frames = 4 hunks of 8 frames
-        string cuePath = Path.Combine(_dir, "test.cue");
+        var cuePath = Path.Combine(_dir, "test.cue");
         File.WriteAllText(cuePath, """
             FILE "game.bin" BINARY
               TRACK 01 MODE1/2352
@@ -124,8 +124,8 @@ public class HunkProgressTests : IDisposable
               TRACK 02 AUDIO
                 INDEX 01 00:00:16
             """);
-        byte[] bin = new byte[32 * CdConstants.MaxSectorData];
-        for (int i = 0; i < bin.Length; i++)
+        var bin = new byte[32 * CdConstants.MaxSectorData];
+        for (var i = 0; i < bin.Length; i++)
         {
             bin[i] = (byte)(i & 0xFF);
         }
@@ -138,7 +138,7 @@ public class HunkProgressTests : IDisposable
 
         const int framesPerHunk = CdConstants.FramesPerHunk;
         Assert.Equal(4u, (uint)reports.Count);
-        for (int i = 0; i < reports.Count; i++)
+        for (var i = 0; i < reports.Count; i++)
             Assert.Equal((uint)i, reports[i].HunkIndex);
         foreach (var r in reports)
         {

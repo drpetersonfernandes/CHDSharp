@@ -5,13 +5,13 @@
 using System.Buffers;
 using System.Runtime.InteropServices;
 
-namespace ZLibDotNet.Inflate;
+namespace CHDSharpEncoder.ZLib.Inflate;
 
 internal static partial class Inflater
 {
     private static void UpdateWindow(ref ZStream strm, ref byte end, uint copy, ref byte window)
     {
-        InflateState state = strm.inflateState;
+        var state = strm.inflateState;
 
         // if it hasn't been done already, allocate space for the window
         if (state.window == null)
@@ -41,7 +41,7 @@ internal static partial class Inflater
         }
         else
         {
-            uint dist = state.wsize - state.wnext;
+            var dist = state.wsize - state.wnext;
             if (dist > copy)
                 dist = copy;
             netUnsafe.CopyBlockUnaligned(ref Unsafe.Add(ref window, state.wnext), ref Unsafe.Subtract(ref end, copy), dist);

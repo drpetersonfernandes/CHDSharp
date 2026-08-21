@@ -2,11 +2,10 @@
 // Original code and comments Copyright (C) 1995-2022 Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
-using System;
 using System.Buffers;
 using System.Runtime.InteropServices;
 
-namespace ZLibDotNet.Inflate;
+namespace CHDSharpEncoder.ZLib.Inflate;
 
 internal static partial class Inflater
 {
@@ -15,7 +14,7 @@ internal static partial class Inflater
         // check input
         if (InflateStateCheck(ref source))
             return Z_STREAM_ERROR;
-        InflateState state = source.inflateState;
+        var state = source.inflateState;
 
         // allocate space
         InflateState copy;
@@ -88,44 +87,44 @@ internal static partial class Inflater
         copy.was = state.was;
 
 #if NET7_0_OR_GREATER
-        ref InflateRefs sourceRefs = ref source.inflateRefs;
-        ref InflateRefs destRefs = ref dest.inflateRefs;
+        ref var sourceRefs = ref source.inflateRefs;
+        ref var destRefs = ref dest.inflateRefs;
         InitRefFields(state, ref sourceRefs);
         InitRefFields(copy, ref destRefs);
 #endif
 
-        ref ushort sourceLens = ref
+        ref var sourceLens = ref
 #if NET7_0_OR_GREATER
         sourceRefs.lens;
 #else
         MemoryMarshal.GetReference<ushort>(state.lens);
 #endif
-        ref ushort sourceWork = ref
+        ref var sourceWork = ref
 #if NET7_0_OR_GREATER
         sourceRefs.work;
 #else
         MemoryMarshal.GetReference<ushort>(state.work);
 #endif
-        ref Code sourceCodes = ref
+        ref var sourceCodes = ref
 #if NET7_0_OR_GREATER
         sourceRefs.codes;
 #else
         MemoryMarshal.GetReference<Code>(state.codes);
 #endif
 
-        ref ushort destLens = ref
+        ref var destLens = ref
 #if NET7_0_OR_GREATER
         destRefs.lens;
 #else
         MemoryMarshal.GetReference<ushort>(copy.lens);
 #endif
-        ref ushort destWork = ref
+        ref var destWork = ref
 #if NET7_0_OR_GREATER
         destRefs.work;
 #else
         MemoryMarshal.GetReference<ushort>(copy.work);
 #endif
-        ref Code destCodes = ref
+        ref var destCodes = ref
 #if NET7_0_OR_GREATER
         destRefs.codes;
 #else

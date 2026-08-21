@@ -40,11 +40,11 @@ public class EncodeCdTests : IDisposable
                 INDEX 01 00:00:05
             """);
         WriteBin(2352L * 13);
-        string chdPath = Path.Combine(_dir, "test.chd");
+        var chdPath = Path.Combine(_dir, "test.chd");
 
         ChdEncoder.EncodeCd(Path.Combine(_dir, "test.cue"), chdPath);
 
-        byte[] chd = File.ReadAllBytes(chdPath);
+        var chd = File.ReadAllBytes(chdPath);
         Assert.Equal("MComprHD", System.Text.Encoding.ASCII.GetString(chd, 0, 8));
         Assert.Equal(5u, ReadU32Be(chd, 12));
         Assert.Equal(CodecTags.Zlib, ReadU32Be(chd, 16));
@@ -53,8 +53,8 @@ public class EncodeCdTests : IDisposable
         Assert.Equal((uint)CdConstants.FrameSize, ReadU32Be(chd, 60));
         Assert.Equal((uint)(CdConstants.FramesPerHunk * CdConstants.FrameSize), ReadU32Be(chd, 56));
 
-        ulong metaOffset = ReadU64Be(chd, 48);
-        ulong mapOffset = ReadU64Be(chd, 40);
+        var metaOffset = ReadU64Be(chd, 48);
+        var mapOffset = ReadU64Be(chd, 40);
         // metadata is written immediately after the header, before the hunk data,
         // matching chdman's byte layout (chd_file::create appends metadata first)
         Assert.Equal(ChdHeaderV5.Length, metaOffset);
@@ -77,16 +77,16 @@ public class EncodeCdTests : IDisposable
                 INDEX 00 00:00:05
                 INDEX 01 00:00:07
             """);
-        byte[] bin = BuildBinFrames(5, dataFrames: true)
+        var bin = BuildBinFrames(5, dataFrames: true)
             .Concat(BuildBinFrames(7, dataFrames: false))
             .ToArray();
         File.WriteAllBytes(Path.Combine(_dir, "game.bin"), bin);
-        string chdPath = Path.Combine(_dir, "test.chd");
+        var chdPath = Path.Combine(_dir, "test.chd");
 
         ChdEncoder.EncodeCd(Path.Combine(_dir, "test.cue"), chdPath);
 
         // expected logical image: 8 data frames (raw) + 8 audio frames (byte-swapped) + zero padding
-        byte[] expected = new byte[16 * CdConstants.FrameSize];
+        var expected = new byte[16 * CdConstants.FrameSize];
         PlaceBinFrames(expected, 0, bin, 5, 0, swap: false);
         PlaceBinFrames(expected, 8, bin, 7, 5 * CdConstants.MaxSectorData, swap: true);
 
@@ -94,7 +94,7 @@ public class EncodeCdTests : IDisposable
         Assert.Equal(ChdError.Chderrnone, openErr);
         using (chd)
         {
-            var readErr = chd!.ReadAllBytes(out byte[] actual);
+            var readErr = chd!.ReadAllBytes(out var actual);
             Assert.Equal(ChdError.Chderrnone, readErr);
             Assert.Equal(expected, actual);
         }
@@ -115,11 +115,11 @@ public class EncodeCdTests : IDisposable
                 INDEX 00 00:00:05
                 INDEX 01 00:00:07
             """);
-        byte[] bin = BuildBinFrames(5, dataFrames: true)
+        var bin = BuildBinFrames(5, dataFrames: true)
             .Concat(BuildBinFrames(3, dataFrames: false))
             .ToArray();
         File.WriteAllBytes(Path.Combine(_dir, "game.bin"), bin);
-        string chdPath = Path.Combine(_dir, "test.chd");
+        var chdPath = Path.Combine(_dir, "test.chd");
 
         ChdEncoder.EncodeCd(Path.Combine(_dir, "test.cue"), chdPath);
 
@@ -127,10 +127,10 @@ public class EncodeCdTests : IDisposable
         Assert.Equal(ChdError.Chderrnone, openErr);
         using (chd)
         {
-            var readErr = chd!.ReadAllBytes(out byte[] logicalImage);
+            var readErr = chd!.ReadAllBytes(out var logicalImage);
             Assert.Equal(ChdError.Chderrnone, readErr);
             // the logical image is exactly what chdman hashes; the header must match it
-            byte[] storedRawSha1 = File.ReadAllBytes(chdPath).AsSpan(64, 20).ToArray();
+            var storedRawSha1 = File.ReadAllBytes(chdPath).AsSpan(64, 20).ToArray();
             Assert.Equal(Sha1.Compute(logicalImage), storedRawSha1);
         }
     }
@@ -146,16 +146,16 @@ public class EncodeCdTests : IDisposable
               TRACK 02 AUDIO
                 INDEX 01 00:00:00
             """);
-        byte[] dataBin = BuildBinFrames(4, dataFrames: true);
-        byte[] audioBin = BuildBinFrames(6, dataFrames: false);
+        var dataBin = BuildBinFrames(4, dataFrames: true);
+        var audioBin = BuildBinFrames(6, dataFrames: false);
         File.WriteAllBytes(Path.Combine(_dir, "data.bin"), dataBin);
         File.WriteAllBytes(Path.Combine(_dir, "audio.bin"), audioBin);
-        string chdPath = Path.Combine(_dir, "test.chd");
+        var chdPath = Path.Combine(_dir, "test.chd");
 
         ChdEncoder.EncodeCd(Path.Combine(_dir, "test.cue"), chdPath);
 
         // 4 data frames (no padding) + 6 audio frames padded to 8 = 12 frames total
-        byte[] expected = new byte[12 * CdConstants.FrameSize];
+        var expected = new byte[12 * CdConstants.FrameSize];
         PlaceBinFrames(expected, 0, dataBin, 4, 0, swap: false);
         PlaceBinFrames(expected, 4, audioBin, 6, 0, swap: true);
 
@@ -163,7 +163,7 @@ public class EncodeCdTests : IDisposable
         Assert.Equal(ChdError.Chderrnone, openErr);
         using (chd)
         {
-            var readErr = chd!.ReadAllBytes(out byte[] actual);
+            var readErr = chd!.ReadAllBytes(out var actual);
             Assert.Equal(ChdError.Chderrnone, readErr);
             Assert.Equal(expected, actual);
         }
@@ -180,7 +180,7 @@ public class EncodeCdTests : IDisposable
                 INDEX 01 01:00:00
             """);
         WriteBin(2352L * (60 * 75 + 100));
-        string chdPath = Path.Combine(_dir, "test.chd");
+        var chdPath = Path.Combine(_dir, "test.chd");
 
         ChdEncoder.EncodeCd(Path.Combine(_dir, "test.cue"), chdPath);
 
@@ -202,7 +202,7 @@ public class EncodeCdTests : IDisposable
                 INDEX 01 01:02:00
             """);
         WriteBin(2352L * (60 * 75 + 60 * 75 + 8));
-        string chdPath = Path.Combine(_dir, "test.chd");
+        var chdPath = Path.Combine(_dir, "test.chd");
 
         ChdEncoder.EncodeCd(Path.Combine(_dir, "test.cue"), chdPath);
 
@@ -271,13 +271,13 @@ public class EncodeCdTests : IDisposable
     private static byte[] BuildBinFrames(int frames, bool dataFrames)
     {
         var result = new byte[frames * CdConstants.MaxSectorData];
-        for (int f = 0; f < frames; f++)
+        for (var f = 0; f < frames; f++)
         {
-            int offset = f * CdConstants.MaxSectorData;
+            var offset = f * CdConstants.MaxSectorData;
             if (dataFrames)
             {
                 // distinguishable per-frame pattern over the full 2352-byte data area
-                for (int j = 0; j < CdConstants.MaxSectorData; j++)
+                for (var j = 0; j < CdConstants.MaxSectorData; j++)
                 {
                     result[offset + j] = (byte)((f * 31 + j * 7) & 0xFF);
                 }
@@ -285,9 +285,9 @@ public class EncodeCdTests : IDisposable
             else
             {
                 // little-endian 16-bit samples: sample value = f * 1000 + j
-                for (int j = 0; j < CdConstants.MaxSectorData / 2; j++)
+                for (var j = 0; j < CdConstants.MaxSectorData / 2; j++)
                 {
-                    int sample = (f * 1000 + j) & 0xFFFF;
+                    var sample = (f * 1000 + j) & 0xFFFF;
                     result[offset + j * 2] = (byte)sample;
                     result[offset + j * 2 + 1] = (byte)(sample >> 8);
                 }
@@ -300,13 +300,13 @@ public class EncodeCdTests : IDisposable
     /// <summary>Copies BIN sectors into a 2448-byte-per-frame logical image, swapping audio data.</summary>
     private static void PlaceBinFrames(byte[] image, int chdFrameStart, byte[] bin, int binFrameCount, int binOffset, bool swap)
     {
-        for (int f = 0; f < binFrameCount; f++)
+        for (var f = 0; f < binFrameCount; f++)
         {
-            int dest = (chdFrameStart + f) * CdConstants.FrameSize;
+            var dest = (chdFrameStart + f) * CdConstants.FrameSize;
             Array.Copy(bin, binOffset + f * CdConstants.MaxSectorData, image, dest, CdConstants.MaxSectorData);
             if (swap)
             {
-                for (int i = 0; i < CdConstants.MaxSectorData; i += 2)
+                for (var i = 0; i < CdConstants.MaxSectorData; i += 2)
                 {
                     (image[dest + i], image[dest + i + 1]) = (image[dest + i + 1], image[dest + i]);
                 }

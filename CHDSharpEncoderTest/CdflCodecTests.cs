@@ -32,14 +32,14 @@ public class CdflCodecTests : IDisposable
     public void CdflCodec_Compress_HasFlacThenZlibLayout()
     {
         // 8-frame CD hunk: audio samples (sine) + subcode
-        byte[] hunk = new byte[8 * CdConstants.FrameSize];
-        for (int f = 0; f < 8; f++)
+        var hunk = new byte[8 * CdConstants.FrameSize];
+        for (var f = 0; f < 8; f++)
         {
             // big-endian 16-bit stereo samples
-            for (int s = 0; s < 588; s++)
+            for (var s = 0; s < 588; s++)
             {
-                int sample = (int)(Math.Sin(s * 0.1 + f) * 8000);
-                int offset = f * CdConstants.FrameSize + s * 4;
+                var sample = (int)(Math.Sin(s * 0.1 + f) * 8000);
+                var offset = f * CdConstants.FrameSize + s * 4;
                 hunk[offset] = (byte)(sample >> 8);
                 hunk[offset + 1] = (byte)sample;
                 hunk[offset + 2] = (byte)(sample >> 8);
@@ -49,7 +49,7 @@ public class CdflCodecTests : IDisposable
         }
 
         var codec = new CdflCodec(8 * (uint)CdConstants.FrameSize);
-        byte[]? compressed = codec.Compress(hunk);
+        var compressed = codec.Compress(hunk);
 
         Assert.NotNull(compressed);
         Assert.True(compressed.Length < hunk.Length, $"expected compression, got {compressed.Length}");
@@ -65,9 +65,9 @@ public class CdflCodecTests : IDisposable
     [Fact]
     public void CdflCodec_Silence_CompressesWell()
     {
-        byte[] hunk = new byte[8 * CdConstants.FrameSize]; // all zeros → constant subframes
+        var hunk = new byte[8 * CdConstants.FrameSize]; // all zeros → constant subframes
         var codec = new CdflCodec(8 * (uint)CdConstants.FrameSize);
-        byte[]? compressed = codec.Compress(hunk);
+        var compressed = codec.Compress(hunk);
 
         Assert.NotNull(compressed);
         // silence should collapse dramatically (8×2352 = 18816 bytes of audio → tiny)
@@ -86,26 +86,26 @@ public class CdflCodecTests : IDisposable
                                INDEX 00 00:00:12
                                INDEX 01 00:00:14
                            """;
-        string cuePath = Path.Combine(_dir, "test.cue");
+        var cuePath = Path.Combine(_dir, "test.cue");
         File.WriteAllText(cuePath, cue);
 
-        byte[] bin = new byte[(12 + 12) * CdConstants.MaxSectorData];
-        for (int f = 0; f < 12; f++)
+        var bin = new byte[(12 + 12) * CdConstants.MaxSectorData];
+        for (var f = 0; f < 12; f++)
         {
-            int offset = f * CdConstants.MaxSectorData;
-            for (int i = 0; i < CdConstants.MaxSectorData; i++)
+            var offset = f * CdConstants.MaxSectorData;
+            for (var i = 0; i < CdConstants.MaxSectorData; i++)
             {
                 bin[offset + i] = (byte)(i & 0xFF); // MODE1 pattern
             }
         }
 
-        for (int f = 12; f < 24; f++)
+        for (var f = 12; f < 24; f++)
         {
-            int offset = f * CdConstants.MaxSectorData;
-            for (int s = 0; s < 588; s++)
+            var offset = f * CdConstants.MaxSectorData;
+            for (var s = 0; s < 588; s++)
             {
                 // standard CUE/BIN audio: little-endian 16-bit samples
-                int sample = (int)(Math.Sin(s * 0.05) * 12000);
+                var sample = (int)(Math.Sin(s * 0.05) * 12000);
                 bin[offset + s * 4] = (byte)sample;
                 bin[offset + s * 4 + 1] = (byte)(sample >> 8);
                 bin[offset + s * 4 + 2] = (byte)sample;
@@ -115,15 +115,15 @@ public class CdflCodecTests : IDisposable
 
         File.WriteAllBytes(Path.Combine(_dir, "game.bin"), bin);
 
-        string chdPath = Path.Combine(_dir, "test.chd");
+        var chdPath = Path.Combine(_dir, "test.chd");
         ChdEncoder.EncodeCd(cuePath, chdPath, hunkBytes: CdConstants.FramesPerHunk * CdConstants.FrameSize,
             unitBytes: CdConstants.FrameSize, codecTags: [CodecTags.Cdfl]);
 
-        byte[] chd = File.ReadAllBytes(chdPath);
+        var chd = File.ReadAllBytes(chdPath);
         Assert.Equal(CodecTags.Cdfl, ReadU32Be(chd, 16)); // compressors[0] = cdfl
 
         // expected image: 12 data frames (pad to 12) + 12 audio frames (pad to 12), swapped
-        byte[] expected = new byte[24 * CdConstants.FrameSize];
+        var expected = new byte[24 * CdConstants.FrameSize];
         PlaceBinFrames(expected, 0, bin, 12, 0, swap: false);
         PlaceBinFrames(expected, 12, bin, 12, 12 * CdConstants.MaxSectorData, swap: true);
 
@@ -131,20 +131,20 @@ public class CdflCodecTests : IDisposable
         Assert.Equal(ChdError.Chderrnone, openErr);
         using (file)
         {
-            Assert.Equal(ChdError.Chderrnone, file!.ReadAllBytes(out byte[] actual));
+            Assert.Equal(ChdError.Chderrnone, file!.ReadAllBytes(out var actual));
             Assert.Equal(expected, actual);
         }
     }
 
     private static void PlaceBinFrames(byte[] image, int chdFrameStart, byte[] bin, int binFrameCount, int binOffset, bool swap)
     {
-        for (int f = 0; f < binFrameCount; f++)
+        for (var f = 0; f < binFrameCount; f++)
         {
-            int dest = (chdFrameStart + f) * CdConstants.FrameSize;
+            var dest = (chdFrameStart + f) * CdConstants.FrameSize;
             Array.Copy(bin, binOffset + f * CdConstants.MaxSectorData, image, dest, CdConstants.MaxSectorData);
             if (swap)
             {
-                for (int i = 0; i < CdConstants.MaxSectorData; i += 2)
+                for (var i = 0; i < CdConstants.MaxSectorData; i += 2)
                 {
                     (image[dest + i], image[dest + i + 1]) = (image[dest + i + 1], image[dest + i]);
                 }

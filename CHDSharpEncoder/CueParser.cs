@@ -24,16 +24,16 @@ public abstract class CueParser
         if (!File.Exists(cueFilePath))
             throw new FileNotFoundException($"CUE file not found: {cueFilePath}", cueFilePath);
 
-        string baseDir = Path.GetDirectoryName(Path.GetFullPath(cueFilePath)) ?? string.Empty;
+        var baseDir = Path.GetDirectoryName(Path.GetFullPath(cueFilePath)) ?? string.Empty;
 
         var toc = new CdToc();
         var tracks = toc.Tracks;
         CdTrack? currentTrack = null;
-        string lastFile = string.Empty;
+        var lastFile = string.Empty;
         long wavLength = 0;
         long wavOffset = 0;
 
-        foreach (string rawLine in File.ReadLines(cueFilePath))
+        foreach (var rawLine in File.ReadLines(cueFilePath))
         {
             var tokens = Tokenize(rawLine);
             if (tokens.Count == 0)
@@ -69,7 +69,7 @@ public abstract class CueParser
                 {
                     if (tokens.Count < 3)
                         throw new InvalidDataException($"Malformed TRACK command: {rawLine}");
-                    if (!int.TryParse(tokens[1], NumberStyles.None, CultureInfo.InvariantCulture, out int trackNumber) ||
+                    if (!int.TryParse(tokens[1], NumberStyles.None, CultureInfo.InvariantCulture, out var trackNumber) ||
                         trackNumber < 1 || trackNumber > CdConstants.MaxTracks)
                         throw new InvalidDataException($"Invalid track number [{tokens[1]}]");
 
@@ -113,12 +113,12 @@ public abstract class CueParser
                         throw new InvalidDataException($"INDEX command without a preceding TRACK: {rawLine}");
                     if (tokens.Count < 3)
                         throw new InvalidDataException($"Malformed INDEX command: {rawLine}");
-                    if (!int.TryParse(tokens[1], NumberStyles.None, CultureInfo.InvariantCulture, out int indexNumber) ||
+                    if (!int.TryParse(tokens[1], NumberStyles.None, CultureInfo.InvariantCulture, out var indexNumber) ||
                         indexNumber < 0 || indexNumber > CdConstants.MaxIndex)
                         throw new InvalidDataException($"Encountered invalid index [{tokens[1]}]");
 
                     var track = currentTrack.Value;
-                    int frames = ParseMsfToFrames(tokens[2]);
+                    var frames = ParseMsfToFrames(tokens[2]);
 
                     switch (indexNumber)
                     {
@@ -189,20 +189,20 @@ public abstract class CueParser
     /// </summary>
     public static int ParseMsfToFrames(string token)
     {
-        string[] parts = token.Split(':');
+        var parts = token.Split(':');
         switch (parts.Length)
         {
             case 1:
             {
-                if (!int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out int frames))
+                if (!int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out var frames))
                     throw new InvalidDataException($"Invalid frame count [{token}]");
 
                 return frames;
             }
             case 3 when
-                int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out int minutes) &&
-                int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out int seconds) &&
-                int.TryParse(parts[2], NumberStyles.None, CultureInfo.InvariantCulture, out int frame):
+                int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out var minutes) &&
+                int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var seconds) &&
+                int.TryParse(parts[2], NumberStyles.None, CultureInfo.InvariantCulture, out var frame):
                 return minutes * 60 * 75 + seconds * 75 + frame;
             default:
                 throw new InvalidDataException($"Invalid MSF time format [{token}]");
@@ -211,7 +211,7 @@ public abstract class CueParser
 
     private static void ResolveTrackLengths(List<CdTrack> tracks)
     {
-        for (int i = 0; i < tracks.Count; i++)
+        for (var i = 0; i < tracks.Count; i++)
         {
             var track = tracks[i];
 
@@ -231,13 +231,13 @@ public abstract class CueParser
                 continue;
             }
 
-            bool sameFileAsPrev = i > 0 && string.Equals(track.FileName, tracks[i - 1].FileName, StringComparison.Ordinal);
-            bool sameFileAsNext = i + 1 < tracks.Count && string.Equals(track.FileName, tracks[i + 1].FileName, StringComparison.Ordinal);
+            var sameFileAsPrev = i > 0 && string.Equals(track.FileName, tracks[i - 1].FileName, StringComparison.Ordinal);
+            var sameFileAsNext = i + 1 < tracks.Count && string.Equals(track.FileName, tracks[i + 1].FileName, StringComparison.Ordinal);
 
             if (i + 1 >= tracks.Count && sameFileAsPrev)
             {
                 // last track in a shared file: remainder of the file
-                long prevSize = (long)tracks[i - 1].Frames * (tracks[i - 1].DataSize + tracks[i - 1].SubSize);
+                var prevSize = (long)tracks[i - 1].Frames * (tracks[i - 1].DataSize + tracks[i - 1].SubSize);
                 track.FileOffset = tracks[i - 1].FileOffset + prevSize;
                 track.Frames = (int)((GetFileSize(track.FileName!) - track.FileOffset) / (track.DataSize + track.SubSize));
             }
@@ -249,7 +249,7 @@ public abstract class CueParser
 
                 if (i > 0)
                 {
-                    long prevSize = (long)tracks[i - 1].Frames * (tracks[i - 1].DataSize + tracks[i - 1].SubSize);
+                    var prevSize = (long)tracks[i - 1].Frames * (tracks[i - 1].DataSize + tracks[i - 1].SubSize);
                     track.FileOffset = tracks[i - 1].FileOffset + prevSize;
                 }
             }
@@ -347,7 +347,7 @@ public abstract class CueParser
     private static (long Length, long Offset) ParseWavSample(string fileName)
     {
         using var fs = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read);
-        long fileSize = fs.Length;
+        var fileSize = fs.Length;
         long offset = 0;
 
         if (!string.Equals(ReadFourCc(fs, offset), "RIFF", StringComparison.Ordinal))
@@ -364,7 +364,7 @@ public abstract class CueParser
         long length;
         while (true)
         {
-            string tag = ReadFourCc(fs, offset);
+            var tag = ReadFourCc(fs, offset);
             offset += 4;
             length = ReadU32Le(fs, ref offset);
             if (string.Equals(tag, "fmt ", StringComparison.Ordinal))
@@ -395,7 +395,7 @@ public abstract class CueParser
         // seek until we find a data tag
         while (true)
         {
-            string tag = ReadFourCc(fs, offset);
+            var tag = ReadFourCc(fs, offset);
             offset += 4;
             length = ReadU32Le(fs, ref offset);
             if (string.Equals(tag, "data", StringComparison.Ordinal))
@@ -412,7 +412,7 @@ public abstract class CueParser
     private static string ReadFourCc(Stream stream, long position)
     {
         stream.Position = position;
-        byte[] buffer = new byte[4];
+        var buffer = new byte[4];
         if (stream.Read(buffer, 0, 4) != 4)
             throw new InvalidDataException("Unexpected end of WAV file");
 
@@ -422,7 +422,7 @@ public abstract class CueParser
     private static uint ReadU32Le(Stream stream, ref long offset)
     {
         stream.Position = offset;
-        byte[] buffer = new byte[4];
+        var buffer = new byte[4];
         if (stream.Read(buffer, 0, 4) != 4)
             throw new InvalidDataException("Unexpected end of WAV file");
 
@@ -433,7 +433,7 @@ public abstract class CueParser
     private static ushort ReadU16Le(Stream stream, ref long offset)
     {
         stream.Position = offset;
-        byte[] buffer = new byte[2];
+        var buffer = new byte[2];
         if (stream.Read(buffer, 0, 2) != 2)
             throw new InvalidDataException("Unexpected end of WAV file");
 

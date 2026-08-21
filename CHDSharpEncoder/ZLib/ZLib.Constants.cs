@@ -2,8 +2,9 @@
 // Original code and comments Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler
 // Managed C#/.NET code Copyright (C) 2022-2024 Magnus Montin
 
-namespace ZLibDotNet;
+namespace CHDSharpEncoder.ZLib;
 
+#pragma warning disable MA0049 // Type name should not match containing namespace (vendored zlib keeps its historical class name)
 public partial class ZLib
 {
 #pragma warning disable CS1591

@@ -16,7 +16,7 @@ public class ChdHeaderV5Tests
             UnitBytes = 512
         };
 
-        byte[] data = header.Serialize();
+        var data = header.Serialize();
         Assert.Equal(124, data.Length);
     }
 
@@ -24,9 +24,9 @@ public class ChdHeaderV5Tests
     public void Serialize_startsWithMagic()
     {
         var header = ChdHeaderV5.CreateRaw(CodecTags.Zlib, 8192, 4096, 512);
-        byte[] data = header.Serialize();
+        var data = header.Serialize();
 
-        string magic = System.Text.Encoding.ASCII.GetString(data, 0, 8);
+        var magic = System.Text.Encoding.ASCII.GetString(data, 0, 8);
         Assert.Equal("MComprHD", magic);
     }
 
@@ -34,9 +34,9 @@ public class ChdHeaderV5Tests
     public void Serialize_lengthFieldEquals124()
     {
         var header = ChdHeaderV5.CreateRaw(CodecTags.Zlib, 8192, 4096, 512);
-        byte[] data = header.Serialize();
+        var data = header.Serialize();
 
-        uint length = ReadU32Be(data, 8);
+        var length = ReadU32Be(data, 8);
         Assert.Equal(124u, length);
     }
 
@@ -44,9 +44,9 @@ public class ChdHeaderV5Tests
     public void Serialize_versionIs5()
     {
         var header = ChdHeaderV5.CreateRaw(CodecTags.Zlib, 8192, 4096, 512);
-        byte[] data = header.Serialize();
+        var data = header.Serialize();
 
-        uint version = ReadU32Be(data, 12);
+        var version = ReadU32Be(data, 12);
         Assert.Equal(5u, version);
     }
 
@@ -54,7 +54,7 @@ public class ChdHeaderV5Tests
     public void Serialize_compressorFields()
     {
         var header = ChdHeaderV5.CreateRaw(CodecTags.Zlib, 8192, 4096, 512);
-        byte[] data = header.Serialize();
+        var data = header.Serialize();
 
         Assert.Equal(CodecTags.Zlib, ReadU32Be(data, 16));
         Assert.Equal(0u, ReadU32Be(data, 20));
@@ -78,7 +78,7 @@ public class ChdHeaderV5Tests
             ParentSha1 = Enumerable.Range(40, 20).Select(i => (byte)i).ToArray()
         };
 
-        byte[] data = header.Serialize();
+        var data = header.Serialize();
 
         Assert.Equal(header.LogicalBytes, ReadU64Be(data, 32));
         Assert.Equal(header.MapOffset, ReadU64Be(data, 40));
@@ -103,7 +103,7 @@ public class ChdHeaderV5Tests
             ParentSha1 = Enumerable.Range(0, 20).Select(i => (byte)(i * 7)).ToArray()
         };
 
-        byte[] serialized = original.Serialize();
+        var serialized = original.Serialize();
         var result = ChdHeaderV5.Deserialize(serialized);
 
         Assert.Equal(original.LogicalBytes, result.LogicalBytes);
@@ -121,9 +121,9 @@ public class ChdHeaderV5Tests
     public void UncompressedHeader_hasMapOffsetEqualToHeaderLength()
     {
         var header = ChdHeaderV5.CreateRaw(CodecTags.None, 8192, 4096, 512);
-        byte[] data = header.Serialize();
+        var data = header.Serialize();
 
-        ulong mapOffset = ReadU64Be(data, 40);
+        var mapOffset = ReadU64Be(data, 40);
         Assert.Equal(ChdHeaderV5.Length, mapOffset);
     }
 
@@ -131,9 +131,9 @@ public class ChdHeaderV5Tests
     public void CompressedHeader_hasMapOffsetZero()
     {
         var header = ChdHeaderV5.CreateRaw(CodecTags.Zlib, 8192, 4096, 512);
-        byte[] data = header.Serialize();
+        var data = header.Serialize();
 
-        ulong mapOffset = ReadU64Be(data, 40);
+        var mapOffset = ReadU64Be(data, 40);
         Assert.Equal(0uL, mapOffset);
     }
 
@@ -169,10 +169,10 @@ public class ChdHeaderV5Tests
 
         Assert.Equal(124, ms.Length);
         ms.Position = 0;
-        byte[] data = new byte[124];
+        var data = new byte[124];
         ms.ReadExactly(data, 0, 124);
 
-        string magic = System.Text.Encoding.ASCII.GetString(data, 0, 8);
+        var magic = System.Text.Encoding.ASCII.GetString(data, 0, 8);
         Assert.Equal("MComprHD", magic);
     }
 

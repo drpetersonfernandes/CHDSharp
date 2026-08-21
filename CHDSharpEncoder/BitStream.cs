@@ -101,6 +101,7 @@ public class BitStreamOut
         }
 
         _bitBuf = 0;
+        _bitsInBuf = 0;
         return ByteLength;
     }
 

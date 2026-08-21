@@ -1,6 +1,11 @@
 ﻿namespace CHDSharp.Utils;
 
-/// <summary>Provides bit-level reading from a byte buffer, used by the Huffman decoder to extract variable-length codes.</summary>
+/// <summary>
+/// Bit-level reading from a byte buffer, matching MAME's <c>bitstream_in</c>
+/// (src/lib/util/bitstream.h) exactly — including partial-byte reads via
+/// <see cref="_dbitoffs"/> so that <see cref="Flush"/> returns the same
+/// consumed-byte count as MAME's <c>flush()</c>.
+/// </summary>
 internal class BitStream
 {
     private uint _buffer;
@@ -8,6 +13,7 @@ internal class BitStream
     private readonly byte[] _readBuffer;
     private int _doffset;
     private readonly int _dlength;
+    private int _dbitoffs;
 
     private readonly int _initialOffset;
 
@@ -33,6 +39,7 @@ internal class BitStream
         _readBuffer = src;
         _doffset = _initialOffset = offset;
         _dlength = offset + length;
+        _dbitoffs = 0;
     }
 
     /*-----------------------------------------------------
@@ -41,29 +48,45 @@ internal class BitStream
     *-----------------------------------------------------
     */
     /// <summary>Peeks at the next <paramref name="numbits"/> bits from the stream without advancing the position. Fetches more data if needed.</summary>
-    /// <param name="numbits">The number of bits to peek (0-24).</param>
+    /// <param name="numbits">The number of bits to peek (0–32).</param>
     /// <returns>The requested number of bits as an unsigned integer.</returns>
     public uint Peek(int numbits)
     {
         if (numbits == 0)
             return 0;
 
-        /* fetch data if we need more */
+        // fetch data if we need more
         if (numbits > _bits)
         {
-            while (_bits <= 24)
+            while (_bits < 32)
             {
+                uint newbits = 0;
+
                 if (_doffset < _dlength)
                 {
-                    _buffer |= (uint)_readBuffer[_doffset] << (24 - _bits);
+                    // adjust current data to discard any previously read partial bits
+                    newbits = ((uint)_readBuffer[_doffset] << _dbitoffs) & 0xff;
                 }
 
-                _doffset++;
-                _bits += 8;
+                if (_bits + 8 > 32)
+                {
+                    // take only what can be used to fill out the rest of the buffer
+                    _dbitoffs = 32 - _bits;
+                    newbits >>= 8 - _dbitoffs;
+                    _buffer |= newbits;
+                    _bits += _dbitoffs;
+                }
+                else
+                {
+                    _buffer |= newbits << (24 - _bits);
+                    _bits += 8 - _dbitoffs;
+                    _dbitoffs = 0;
+                    _doffset++;
+                }
             }
         }
 
-        /* return the data */
+        // return the data
         return _buffer >> (32 - numbits);
     }
 
@@ -110,8 +133,12 @@ internal class BitStream
             _bits -= 8;
         }
 
+        if (_dbitoffs > _bits)
+            _doffset++;
+
         _bits = 0;
         _buffer = 0;
+        _dbitoffs = 0;
         return _doffset - _initialOffset;
     }
 }

@@ -85,7 +85,10 @@ internal static class ZstdNative
         public nuint pos;
     }
 
-    /// <summary>A reusable C zstd compression stream, matching chdman's per-hunk reset pattern.</summary>
+    /// <summary>
+    /// A C zstd compression stream. Must be disposed (or used via <c>using</c>) to release the
+    /// native context; there is no finalizer, so keep instances short-lived.
+    /// </summary>
     public sealed class CStream : IDisposable
     {
         private IntPtr _handle;
@@ -150,11 +153,6 @@ internal static class ZstdNative
                 ZSTD_freeCStream(_handle);
                 _handle = IntPtr.Zero;
             }
-
-            GC.SuppressFinalize(this);
         }
-
-        /// <summary>Frees the native stream if not disposed.</summary>
-        ~CStream() => Dispose();
     }
 }

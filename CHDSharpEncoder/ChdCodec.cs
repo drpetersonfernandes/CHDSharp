@@ -120,13 +120,16 @@ public sealed class ZstdCodec : IChdCodec
         byte[]? Compress(byte[] data);
     }
 
-    private sealed class NativeCompressor : IZstdCompressor, IDisposable
+    private sealed class NativeCompressor : IZstdCompressor
     {
-        private readonly ZstdNative.CStream _stream = new();
-
-        public byte[]? Compress(byte[] data) => _stream.Compress(data);
-
-        public void Dispose() => _stream.Dispose();
+        // A fresh stream per hunk: ZSTD_initCStream fully resets session and parameters, so this
+        // is byte-identical to chdman's reuse pattern while keeping the native handle short-lived
+        // (explicitly disposed, no finalizer).
+        public byte[]? Compress(byte[] data)
+        {
+            using var stream = new ZstdNative.CStream();
+            return stream.Compress(data);
+        }
     }
 
     private sealed class ManagedCompressor : IZstdCompressor

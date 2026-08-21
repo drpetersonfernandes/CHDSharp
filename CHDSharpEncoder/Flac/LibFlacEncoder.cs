@@ -10,12 +10,6 @@ namespace CHDSharpEncoder.Flac;
 /// </summary>
 internal sealed class LibFlacEncoder
 {
-    /// <summary>Debug hook (test-only): receives (subframeName, order, bits) for each LPC candidate.</summary>
-    internal static Action<string, uint, uint>? DebugCandidateHook;
-
-    /// <summary>Debug hook (test-only): receives (channel, bestIdx, bestBits, type, order) after each subframe search.</summary>
-    internal static Action<int, uint, uint, SubframeType, int>? DebugResultHook;
-
     private readonly int blockSize;
     private const int BitsPerSample = 16;
     private const uint MaxLpcOrd = 12;
@@ -192,7 +186,10 @@ internal sealed class LibFlacEncoder
                             // full block window
                             FlacLpcMath.WindowData(sig.AsSpan(4), window, windowed, (uint)blockSize);
                             FlacLpcMath.ComputeAutocorrelation(windowed, (uint)blockSize, maxLpcThis + 1, autoc);
-                            Array.Copy(autoc, autocRoot, (int)maxLpcThis + 1);
+                            // libFLAC 1.4.3 quirk (apply_apodization_): the root copy moves only
+                            // max_lpc_order (NOT +1) entries -- the dead for-loop around the memcpy
+                            // changed nothing. autoc_root[maxLpcThis] stays stale, matching chdman.
+                            Array.Copy(autoc, autocRoot, (int)maxLpcThis);
                             apB++;
                         }
                         else
@@ -211,8 +208,10 @@ internal sealed class LibFlacEncoder
                             }
                             else
                             {
-                                // punchout: root autocorrelation minus partial
-                                for (int ai = 0; ai < (int)maxLpcThis + 1; ai++)
+                                // punchout: root autocorrelation minus partial. libFLAC 1.4.3 only
+                                // subtracts the first max_lpc_order entries, so autoc[maxLpcThis]
+                                // keeps the partial window's value and feeds Levinson-Durbin as-is.
+                                for (int ai = 0; ai < (int)maxLpcThis; ai++)
                                     autoc[ai] = autocRoot[ai] - autoc[ai];
                             }
                             SetNextSubdivideTukey(3, ref apA, ref apB, ref apC);
@@ -245,7 +244,6 @@ internal sealed class LibFlacEncoder
                         if (!ok) continue;
 
                         uint c = LpcBits(sf[ci], sig, bps, wasted, guessLpc, quant, riceLimit, maxPo, rice[ci]);
-                        DebugCandidateHook?.Invoke($"ch{ch}-apA{apA}-apB{apB}-apC{apC}", guessLpc, c);
                         if (c > 0 && c < bestBits)
                         {
                             bestIdx = ci;
@@ -260,7 +258,6 @@ internal sealed class LibFlacEncoder
         sf[bestIdx].WastedBits = wasted;
         if (sf[bestIdx].Type is SubframeType.Fixed or SubframeType.Lpc)
             for (int i = 0; i < sf[bestIdx].Order; i++) sf[bestIdx].Warmup[i] = sig[4 + i];
-        DebugResultHook?.Invoke(ch, bestIdx, bestBits, sf[bestIdx].Type, sf[bestIdx].Order);
     }
 
     private uint VerbatimBits(Subframe sf, int[] sig, int bps, int wasted)

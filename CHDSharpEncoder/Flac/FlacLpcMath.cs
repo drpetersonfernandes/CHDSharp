@@ -150,26 +150,30 @@ internal static class FlacLpcMath
         }
     }
 
-    /// <summary>FLAC__lpc_compute_autocorrelation (MAX_LAG=16). Replicates chdman's x86_64
-    /// FLAC__lpc_compute_autocorrelation_intrin_fma_lag_16 dispatch: a backward loop (i from
-    /// dataLen-1 down to 0) accumulating each term as a fused multiply-add
-    /// autoc[j] = fma(data[i], data[i-j], autoc[j]) using double precision. The data are
-    /// FLAC__real (float) promoted to double; the FMA gives a single rounding, which is what
-    /// MAME's chdman produces on an FMA-capable CPU and is required for byte-identical output.</summary>
+    /// <summary>FLAC__lpc_compute_autocorrelation, MAX_LAG=16 instantiation of
+    /// deduplication/lpc_compute_autocorrelation_intrin.c. This is byte-exact what chdman's
+    /// x86_64 dispatch executes for max_lpc_order=12 (level 8): on FMA-capable CPUs
+    /// FLAC__lpc_compute_autocorrelation_intrin_fma_lag_16 is selected, and despite the name it
+    /// is plain double multiply+add in ascending sample order (MSVC does not contract to FMA) --
+    /// identical to the scalar lpc.c path for lag &lt;= 16. The lag parameter is ignored by the C
+    /// code ((void) lag); 16 coefficients are always computed.</summary>
     public static void ComputeAutocorrelation(ReadOnlySpan<float> data, uint dataLen, uint lag, Span<double> autoc)
     {
-        int L = (int)lag;
-        for (int i = 0; i < L; i++) autoc[i] = 0.0;
-        for (int i = (int)dataLen - 1; i >= 0; i--)
-        {
-            double d = data[i]; // float -> double (exact)
-            for (int j = 0; j < L; j++)
-            {
-                int idx = i - j;
-                if (idx >= 0)
-                    autoc[j] = Math.FusedMultiplyAdd(d, data[idx], autoc[j]);
-            }
-        }
+        const int maxLag = 16;
+        int n = (int)dataLen;
+
+        for (int i = 0; i < maxLag; i++) autoc[i] = 0.0;
+
+        // head: samples 0..15 with the triangular j<=i access pattern
+        int head = Math.Min(maxLag, n);
+        for (int i = 0; i < head; i++)
+            for (int j = 0; j <= i; j++)
+                autoc[j] += (double)data[i] * data[i - j];
+
+        // tail: every remaining sample contributes to all 16 coefficients
+        for (int i = maxLag; i < n; i++)
+            for (int j = 0; j < maxLag; j++)
+                autoc[j] += (double)data[i] * data[i - j];
     }
 
     // ---------------- lpc.c: LP coefficients (Levinson-Durbin) ----------------

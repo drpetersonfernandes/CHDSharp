@@ -19,7 +19,7 @@
 
     <ItemGroup>
       <PackageReference Include="ZstdSharp.Port" Version="0.8.8" />
-      <PackageReference Update="Meziantou.Analyzer" Version="3.0.163">
+      <PackageReference Update="Meziantou.Analyzer" Version="3.0.176">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>

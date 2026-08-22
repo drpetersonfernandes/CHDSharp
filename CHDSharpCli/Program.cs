@@ -836,7 +836,7 @@ internal static class Program
                     codecs = options[++i];
                     break;
                 case "-hs" or "--hunk-size" when i + 1 < options.Length:
-                    if (!uint.TryParse(options[++i], out var hs) || hs == 0)
+                    if (!TryParseSizeWithSuffix(options[++i], out uint hs) || hs == 0)
                     {
                         log.Warning("Invalid hunk size: {Value}", options[i]);
                         return;
@@ -996,7 +996,7 @@ internal static class Program
                     parentPath = options[++i];
                     break;
                 case "-hs" or "--hunk-size" when i + 1 < options.Length:
-                    if (!uint.TryParse(options[++i], out var hs) || hs == 0)
+                    if (!TryParseSizeWithSuffix(options[++i], out uint hs) || hs == 0)
                     {
                         Log.Logger.Warning("Invalid hunk size: {Value}", options[i]);
                         return false;
@@ -1005,7 +1005,7 @@ internal static class Program
                     hunkSize = hs;
                     break;
                 case "-us" or "--unit-size" when i + 1 < options.Length:
-                    if (!uint.TryParse(options[++i], out var us) || us == 0)
+                    if (!TryParseSizeWithSuffix(options[++i], out uint us) || us == 0)
                     {
                         Log.Logger.Warning("Invalid unit size: {Value}", options[i]);
                         return false;
@@ -1733,5 +1733,70 @@ internal static class Program
 
             log.Information("  Deleted {Tag} (index {Index})", tag, index);
         }
+    }
+
+    /// <summary>
+    /// Parses a number string with an optional K/M/G suffix (e.g. "10M" = 10485760).
+    /// Matches MAME chdman's <c>parse_number()</c> behaviour.
+    /// </summary>
+    private static bool TryParseSizeWithSuffix(string s, out uint result)
+    {
+        if (TryParseSizeWithSuffix(s, out long r) && r >= 0 && r <= uint.MaxValue)
+        {
+            result = (uint)r;
+            return true;
+        }
+
+        result = 0;
+        return false;
+    }
+
+    /// <summary>
+    /// Parses a number string with an optional K/M/G suffix (e.g. "10M" = 10485760).
+    /// Matches MAME chdman's <c>parse_number()</c> behaviour.
+    /// </summary>
+    private static bool TryParseSizeWithSuffix(string s, out long result)
+    {
+        result = 0;
+        if (string.IsNullOrEmpty(s))
+            return false;
+
+        s = s.Trim();
+        long multiplier = 1;
+        var digits = s;
+
+        if (s.Length > 1)
+        {
+            var last = s[^1];
+            switch (last)
+            {
+                case 'k' or 'K':
+                    multiplier = 1024;
+                    digits = s[..^1];
+                    break;
+                case 'm' or 'M':
+                    multiplier = 1024 * 1024;
+                    digits = s[..^1];
+                    break;
+                case 'g' or 'G':
+                    multiplier = 1024L * 1024 * 1024;
+                    digits = s[..^1];
+                    break;
+            }
+        }
+
+        if (!long.TryParse(digits, out var num) || num < 0)
+            return false;
+
+        try
+        {
+            result = checked(num * multiplier);
+        }
+        catch (OverflowException)
+        {
+            return false;
+        }
+
+        return true;
     }
 }

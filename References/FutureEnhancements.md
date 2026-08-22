@@ -392,8 +392,9 @@ Legend — issue references: `#NN` = [rtissera/libchdr issue](https://github.com
 | Field | Value |
 |-------|-------|
 | **Missing Feature** | chdman accepts human-readable size suffixes: `10M` = 10485760, `2G` = 2147483648, `512K` = 524288. CHDSharp's CLI parses only plain numeric values for `--hunksize`, `--unitsize`, `--size`, `--inputbytes` etc. |
-| **Implementation Status** | Not planned |
-| **Proposed Logic** | Add `ParseSizeWithSuffix(string s)` utility that: (1) strips trailing K/M/G/T suffix, (2) parses the numeric part, (3) multiplies by 1024/1048576/1073741824/1099511627776. Apply to all CLI options that accept byte sizes. |
+| **Implementation Status** | Finished |
+| **Proposed Logic** | Add `TryParseSizeWithSuffix(string s)` utility that: (1) strips trailing K/M/G suffix, (2) parses the numeric part, (3) multiplies by 1024/1048576/1073741824. Apply to all CLI options that accept byte sizes. |
+| **Implemented As** | Added `TryParseSizeWithSuffix` (two overloads: `uint` and `long`) to `Program.cs`, matching MAME chdman's `parse_number()` behaviour — `K`/`k` = ×1024, `M`/`m` = ×1048576, `G`/`g` = ×1073741824, with `checked` overflow protection. Applied to `-hs` (hunk size) and `-us` (unit size) parsing in both `TryParseOptions` (shared by `--create`, `--createcd`) and `CreateLdTest` (`--createld`). |
 | **Estimated Time** | 30 minutes |
 
 ---

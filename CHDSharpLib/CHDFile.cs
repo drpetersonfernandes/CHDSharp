@@ -315,6 +315,26 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
+    /// Gets the PCMCIA Card Information Structure (CIS) metadata bytes, or <c>null</c>
+    /// if this CHD does not contain a <c>CIS </c> metadata entry. Used by PC Engine CD
+    /// and other platforms with PCMCIA interfaces.
+    /// </summary>
+    public byte[]? PcmciaCisData
+    {
+        get
+        {
+            EnsureMetadataLoaded();
+            if (_metadata == null) return null;
+            foreach (var entry in _metadata)
+            {
+                if (string.Equals(entry.Tag, "CIS ", StringComparison.Ordinal))
+                    return entry.Data;
+            }
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Gets the list of metadata entries from the CHD header (game name,
     /// disc info, etc.). Lazy-loaded on first access; empty list if the CHD
     /// has no metadata or an error occurs. For V1/V2 CHDs (which have no

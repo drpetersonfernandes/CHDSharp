@@ -348,8 +348,9 @@ Legend — issue references: `#NN` = [rtissera/libchdr issue](https://github.com
 | Field | Value |
 |-------|-------|
 | **Missing Feature** | chdman stores PCMCIA Card Information Structure as `CIS ` metadata (binary blob). Used by PC Engine CD and other platforms with PCMCIA interfaces. CHDSharp has no read/write support for this tag. |
-| **Implementation Status** | Not planned |
+| **Implementation Status** | Finished |
 | **Proposed Logic** | (1) Add `PcmciaCisMetadataTag = 0x43495320` ("CIS ") constant. (2) Expose `PcmciaCisData` property on `ChdFile`. (3) During `copy`, clone `CIS ` entries. |
+| **Implemented As** | Added `PcmciaCisMetadataTag = 0x43495320` constant to `MetadataWriter`. Added `PcmciaCisData` property to `ChdFile` that returns the raw CIS metadata bytes (or null if absent). CIS metadata is automatically cloned during `ChdEncoder.Copy()` (all non-legacy metadata is cloned verbatim). Added6 unit tests: read/write, absent returns null, preserved during copy, set/delete, empty data, and coexistence with other metadata. All18 PcmciaCisMetadataTests pass across net8.0/net9.0/net10.0. |
 | **Estimated Time** | 1 hour |
 
 ---

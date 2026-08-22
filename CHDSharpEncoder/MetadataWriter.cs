@@ -41,6 +41,9 @@ public static class MetadataWriter
     /// <summary>'AVLD' laserdisc VBI metadata tag (big-endian), MAME's <c>AV_LD_METADATA_TAG</c>.</summary>
     public const uint AvLdMetadataTag = 0x41564C44;
 
+    /// <summary>'CIS ' PCMCIA Card Information Structure metadata tag (big-endian).</summary>
+    public const uint PcmciaCisMetadataTag = 0x43495320;
+
     /// <summary>CHD_MDFLAGS_CHECKSUM: the entry is covered by the combined SHA-1 verification.</summary>
     public const byte ChdMdflagsChecksum = 0x01;
 

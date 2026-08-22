@@ -105,6 +105,97 @@ public static class ChdEncoder
     }
 
     /// <summary>
+    /// Creates a blank, zero-filled CHD v5 file without reading from an input stream.
+    /// Equivalent to chdman <c>createhd --size</c>. All hunks are written as zero-filled
+    /// data, and the file is verifiable by <c>chdman verify</c> or <see cref="ChdFile.Verify"/>.
+    /// </summary>
+    /// <param name="chdPath">Path of the output .chd file (created/overwritten).</param>
+    /// <param name="totalBytes">Total size of the blank disk in bytes.</param>
+    /// <param name="hunkBytes">Hunk size in bytes (default 4096).</param>
+    /// <param name="unitBytes">Unit size in bytes (default 512).</param>
+    /// <param name="codecTags">The codec tags to use (default zlib; <see cref="CodecTags.None"/> for uncompressed).</param>
+    /// <param name="options">Optional encoding configuration (see <see cref="ChdEncodeOptions"/>).</param>
+    /// <param name="cancellationToken">Cancels the encode; <see cref="OperationCanceledException"/>
+    /// is thrown when cancellation is requested.</param>
+    /// <exception cref="ArgumentException"><paramref name="totalBytes"/> is zero, or
+    /// <paramref name="hunkBytes"/> is not a multiple of <paramref name="unitBytes"/>.</exception>
+    public static void CreateBlank(string chdPath, ulong totalBytes, uint hunkBytes = DefaultHunkBytes, uint unitBytes = DefaultUnitBytes,
+        IReadOnlyList<uint>? codecTags = null, ChdEncodeOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        if (totalBytes == 0)
+            throw new ArgumentException("totalBytes must be greater than zero", nameof(totalBytes));
+        if (hunkBytes == 0 || unitBytes == 0 || hunkBytes % unitBytes != 0)
+            throw new ArgumentException($"hunkBytes ({hunkBytes}) must be a multiple of unitBytes ({unitBytes})");
+
+        codecTags ??= [CodecTags.Zlib];
+
+        // Build hard disk metadata from the total size (matching chdman createhd behavior)
+        var metadataEntries = new List<MetadataEntry>();
+        if (options?.Metadata is { Count: > 0 } userMetadata)
+            metadataEntries.AddRange(userMetadata);
+
+        // Auto-generate GDDD metadata if not explicitly provided
+        if (!metadataEntries.Any(e => e.Tag == MetadataWriter.HardDiskMetadataTag))
+        {
+            metadataEntries.Add(MetadataWriter.BuildHardDiskMetadata(totalBytes, unitBytes));
+        }
+
+        // Zero-filled hunk reader: every hunk reads as all zeros
+        var zeroHunk = new byte[hunkBytes];
+        int ReadZeroHunk(uint hunkIndex, byte[] buffer)
+        {
+            Array.Clear(buffer, 0, buffer.Length);
+            return (int)Math.Min(hunkBytes, totalBytes - (ulong)hunkIndex * hunkBytes);
+        }
+
+        EncodeCore(chdPath, hunkBytes, unitBytes, codecTags, options, totalBytes, metadataEntries,
+            ReadZeroHunk, cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates a blank, zero-filled CHD v5 file with explicit CHS geometry metadata.
+    /// Equivalent to chdman <c>createhd --size --chs</c>.
+    /// </summary>
+    /// <param name="chdPath">Path of the output .chd file (created/overwritten).</param>
+    /// <param name="cylinders">Number of cylinders.</param>
+    /// <param name="heads">Number of heads.</param>
+    /// <param name="sectors">Sectors per track.</param>
+    /// <param name="sectorSize">Bytes per sector (default 512).</param>
+    /// <param name="hunkBytes">Hunk size in bytes (default 4096).</param>
+    /// <param name="codecTags">The codec tags to use (default zlib).</param>
+    /// <param name="options">Optional encoding configuration (see <see cref="ChdEncodeOptions"/>).</param>
+    /// <param name="cancellationToken">Cancels the encode.</param>
+    public static void CreateBlankWithChs(string chdPath, uint cylinders, uint heads, uint sectors,
+        uint sectorSize = DefaultUnitBytes, uint hunkBytes = DefaultHunkBytes,
+        IReadOnlyList<uint>? codecTags = null, ChdEncodeOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        if (cylinders == 0 || heads == 0 || sectors == 0 || sectorSize == 0)
+            throw new ArgumentException("CHS geometry values must be greater than zero");
+        if (hunkBytes == 0 || hunkBytes % sectorSize != 0)
+            throw new ArgumentException($"hunkBytes ({hunkBytes}) must be a multiple of sectorSize ({sectorSize})");
+
+        var totalBytes = (ulong)cylinders * heads * sectors * sectorSize;
+
+        // Build metadata with explicit CHS geometry
+        var metadataEntries = new List<MetadataEntry>();
+        metadataEntries.Add(MetadataWriter.BuildHardDiskMetadata(cylinders, heads, sectors, sectorSize));
+        if (options?.Metadata is { Count: > 0 } userMetadata)
+            metadataEntries.AddRange(userMetadata);
+
+        // Zero-filled hunk reader
+        var zeroHunk = new byte[hunkBytes];
+        int ReadZeroHunk(uint hunkIndex, byte[] buffer)
+        {
+            Array.Clear(buffer, 0, buffer.Length);
+            return (int)Math.Min(hunkBytes, totalBytes - (ulong)hunkIndex * hunkBytes);
+        }
+
+        codecTags ??= [CodecTags.Zlib];
+        EncodeCore(chdPath, hunkBytes, sectorSize, codecTags, options, totalBytes, metadataEntries,
+            ReadZeroHunk, cancellationToken);
+    }
+
+    /// <summary>
     /// Encodes a laserdisc CHD from an AVI file (chdman <c>createld</c> parity). Each output
     /// hunk holds one or more whole video frames; every frame is assembled into MAME's raw
     /// 'chav' layout and compressed with the 'avhu' codec (delta-RLE Huffman video + per-channel
@@ -794,6 +885,13 @@ public static class ChdEncoder
     /// <see cref="EncodeRaw(Stream, string, uint, uint, IReadOnlyList{uint}?, ChdEncodeOptions?, System.Threading.CancellationToken)"/>,
     /// so output is byte-identical regardless of the worker count.
     /// </summary>
+    /// <remarks>
+    /// Legacy CD/GD-ROM metadata tags (<c>CHCD</c>, <c>CHTR</c>, <c>CHGT</c>) are automatically
+    /// upgraded to their modern equivalents (<c>CHT2</c>, <c>CHGD</c>) during the copy, matching
+    /// MAME chdman's <c>copy</c> command behavior. For legacy GD-ROMs (<c>CHGT</c>), CDDA audio
+    /// tracks are byte-swapped from little-endian to big-endian during the copy. Set
+    /// <see cref="ChdEncodeOptions.NoMetadataUpgrade"/> to <c>true</c> to preserve legacy tags.
+    /// </remarks>
     /// <param name="sourcePath">Path of the source CHD file (V1-V5, standalone or child).</param>
     /// <param name="chdPath">Path of the output .chd file (created/overwritten).</param>
     /// <param name="codecTags">The codec tags for the output, tried per hunk in order (default
@@ -821,17 +919,103 @@ public static class ChdEncoder
             var unitBytes = source.UnitBytes;
             var logicalBytes = source.TotalBytes;
 
-            // clone all metadata from the source (chdman copy parity)
+            // Clone metadata from the source, upgrading legacy CD/GD-ROM tags unless opted out.
+            // chdman's copy command skips legacy CHCD/CHTR/CHGT entries and re-writes the TOC
+            // in modern CHT2/CHGD format using the parsed track information.
             var metadataEntries = new List<MetadataEntry>();
+            var upgradeMetadata = !options.NoMetadataUpgrade;
+            var hasLegacyCdMetadata = false;
+            var isLegacyGdRom = false;
+
             foreach (var m in source.Metadata)
-                metadataEntries.Add(new MetadataEntry { Tag = MetadataWriter.TagFromString(m.Tag), Flags = m.Flags, Payload = m.Data });
+            {
+                var tag = MetadataWriter.TagFromString(m.Tag);
+
+                if (upgradeMetadata && MetadataWriter.IsLegacyCdMetadata(tag))
+                {
+                    // Detect legacy CD/GD metadata tags and schedule for upgrade
+                    hasLegacyCdMetadata = true;
+                    if (MetadataWriter.IsLegacyGdRomMetadata(tag))
+                        isLegacyGdRom = true;
+
+                    continue; // skip - do NOT clone legacy tag
+                }
+
+                // Clone everything else verbatim
+                metadataEntries.Add(new MetadataEntry { Tag = tag, Flags = m.Flags, Payload = m.Data });
+            }
+
+            // If legacy CD/GD metadata was found, re-write in modern format using parsed tracks
+            if (hasLegacyCdMetadata && source.Tracks is { Count: > 0 } tracks)
+            {
+                var toc = BuildTocFromTracks(tracks, source.IsGdRom);
+                var modernEntries = MetadataWriter.BuildCdMetadataEntries(toc);
+                metadataEntries.InsertRange(0, modernEntries);
+            }
+
             if (options.Metadata is { Count: > 0 } userMetadata)
                 metadataEntries.AddRange(userMetadata);
 
+            // For legacy GD-ROMs, create a reader that byte-swaps CDDA audio hunks
+            Func<uint, byte[], int> readHunk;
+            if (isLegacyGdRom)
+            {
+                readHunk = (hunkIndex, buffer) =>
+                {
+                    var valid = ReadSourceHunk(source, hunkIndex, buffer, logicalBytes, hunkBytes);
+                    if (valid > 0)
+                    {
+                        // Byte-swap the 2352-byte sector-data portion of each 2448-byte frame
+                        // for CDDA audio tracks (matching MAME's cdrom.cpp:402 behavior)
+                        SwapCdda16(buffer, valid, CdMaxSectorData, CdFrameSize);
+                    }
+                    return valid;
+                };
+            }
+            else
+            {
+                readHunk = CreateSourceReader(source, logicalBytes, hunkBytes);
+            }
+
             EncodeCore(chdPath, hunkBytes, unitBytes, codecTags, options, logicalBytes, metadataEntries,
-                CreateSourceReader(source, logicalBytes, hunkBytes),
+                readHunk,
                 cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// Builds a <see cref="CdToc"/> from parsed <see cref="ChdTrackInfo"/> records, converting
+    /// the CHDSharpLib track model to the CHDSharpEncoder track model for metadata generation.
+    /// </summary>
+    private static CdToc BuildTocFromTracks(IReadOnlyList<CHDSharp.Models.ChdTrackInfo> tracks, bool isGdRom)
+    {
+        var toc = new CdToc();
+        if (isGdRom)
+            toc.Flags |= CdTocFlags.GdRom;
+
+        foreach (var src in tracks)
+        {
+            var track = new CdTrack
+            {
+                Number = src.TrackNumber,
+                TrackType = (int)src.TrackType,
+                SubType = (int)src.SubType,
+                DataSize = src.DataSize,
+                SubSize = src.SubSize,
+                Frames = src.Frames,
+                Pregap = src.PreGap,
+                Postgap = src.PostGap,
+                PgType = (int)src.PreGapType,
+                PgSub = (int)src.PreGapSubType,
+                PgDataSize = src.PreGapDataSize,
+                PadFrames = src.PadFrames,
+                LogicalFrameStart = (long)src.StartFrame,
+                PaddedFrames = src.Frames + src.ExtraFrames
+            };
+            toc.Tracks.Add(track);
+        }
+
+        return toc;
     }
 
     /// <summary>
@@ -1254,6 +1438,36 @@ public static class ChdEncoder
         for (var i = 0; i < length; i += 2)
         {
             (buffer[offset + i], buffer[offset + i + 1]) = (buffer[offset + i + 1], buffer[offset + i]);
+        }
+    }
+
+    /// <summary>CD sector data bytes per frame (2352).</summary>
+    private const int CdMaxSectorData = 2352;
+
+    /// <summary>CD subcode bytes per frame (96).</summary>
+    private const int CdMaxSubcodeData = 96;
+
+    /// <summary>Full CD frame size including subcode (2448).</summary>
+    private const int CdFrameSize = CdMaxSectorData + CdMaxSubcodeData;
+
+    /// <summary>
+    /// Byte-swaps (little-endian) the 16-bit CDDA audio samples of a data chunk. For legacy
+    /// GD-ROMs (<c>CD_FLAG_GDROMLE</c>) whose AUDIO track data is stored little-endian, each
+    /// 16-bit sample byte pair must be reversed. Only the first <paramref name="sectorBytes"/>
+    /// bytes of each frame are swapped, leaving subcode intact.
+    /// </summary>
+    private static void SwapCdda16(byte[] buffer, int bufferLength, int sectorBytes, int frameBytes)
+    {
+        if (sectorBytes <= 0 || frameBytes < sectorBytes)
+            return;
+
+        for (var frameStart = 0; frameStart + sectorBytes <= bufferLength; frameStart += frameBytes)
+        {
+            var end = frameStart + sectorBytes;
+            for (var i = frameStart; i < end; i += 2)
+            {
+                (buffer[i], buffer[i + 1]) = (buffer[i + 1], buffer[i]);
+            }
         }
     }
 

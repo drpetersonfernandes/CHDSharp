@@ -48,10 +48,11 @@ internal static class Program
             serilogLogger.Information("  CHDSharpCli --classify <file.chd>              Classify CHD type (cd/dvd/hdd/gd-rom)");
             serilogLogger.Information("  CHDSharpCli --create <in.bin> <out.chd>        Create CHD from raw binary [-c zlib,zstd,lzma,none] [-hs N] [-us N] [-t N] [-ip parent.chd] [-d] [-tp id] [-v]");
             serilogLogger.Information("  CHDSharpCli --createcd <in.cue> <out.chd>      Create CD CHD from CUE/BIN [-c zlib,zstd,lzma,none] [-hs N] [-us N] [-t N] [-ip parent.chd] [-v]");
+            serilogLogger.Information("  CHDSharpCli --createhd <out.chd> --size N       Create blank HD CHD [-c zlib,zstd,lzma,none] [-hs N] [-us N] [-chs C,H,S] [-ss N] [-t N] [-v]");
             serilogLogger.Information("  CHDSharpCli --createld <in.avi> <out.chd>      Create laserdisc CHD from AVI [-c avhu] [-isf N] [-if N] [-t N] [-v]");
             serilogLogger.Information("  CHDSharpCli --extractld <in.chd> <out.avi>     Extract laserdisc CHD to AVI [-isf N] [-if N]");
             serilogLogger.Information("  CHDSharpCli --listtemplates                    List built-in hard disk geometry templates");
-            serilogLogger.Information("  CHDSharpCli --copy <in.chd> <out.chd>          Re-compress a CHD [-c zlib,zstd,lzma,none] [-t N] [-ip parent.chd] [-op parent.chd] [-v]");
+            serilogLogger.Information("  CHDSharpCli --copy <in.chd> <out.chd>          Re-compress a CHD [-c zlib,zstd,lzma,none] [-t N] [-ip parent.chd] [-op parent.chd] [--no-upgrade] [-v]");
             serilogLogger.Information("  CHDSharpCli --verify <file.chd> [--fix]        Verify a CHD; --fix repairs mismatched SHA-1 header fields");
             serilogLogger.Information("  CHDSharpCli --info <file.chd>                  Print full header/map info (codecs, CRC-16, parent)");
             serilogLogger.Information("  CHDSharpCli --detect <file>                    Detect game platform (.chd/.iso/.bin/.cue/.gdi/.nrg)");
@@ -119,6 +120,13 @@ internal static class Program
                 return;
             case "--createcd":
                 CreateCdTest(args[1].Replace("\"", ""), args[2].Replace("\"", ""), args.Skip(3).ToArray());
+                serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
+            case "--createhd" when args.Length < 2:
+                serilogLogger.Warning("--createhd requires <output.chd> --size N");
+                return;
+            case "--createhd":
+                CreateHdTest(args[1].Replace("\"", ""), args.Skip(2).ToArray());
                 serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
                 return;
             case "--createld" when args.Length < 3:
@@ -731,6 +739,169 @@ internal static class Program
     }
 
     /// <summary>
+    /// Creates a blank, zero-filled hard disk CHD without reading from an input file.
+    /// Equivalent to chdman <c>createhd --size</c>.
+    /// </summary>
+    /// <param name="outputPath">Path of the output .chd file.</param>
+    /// <param name="options">Command-line options: <c>--size N</c> (required), <c>-chs C,H,S</c>,
+    /// <c>-ss N</c> sector size, <c>-c</c> codecs, <c>-hs</c> hunk size, <c>-us</c> unit size,
+    /// <c>-t</c> task count, <c>-v</c> verbose.</param>
+    private static void CreateHdTest(string outputPath, string[] options)
+    {
+        var log = Log.Logger;
+
+        // Parse --createhd-specific options
+        ulong? sizeBytes = null;
+        uint? chsCylinders = null;
+        uint? chsHeads = null;
+        uint? chsSectors = null;
+        uint hunkBytes = 4096;
+        uint unitBytes = 512;
+        string? codecs = null;
+        var verbose = false;
+        int? taskCount = null;
+
+        for (var i = 0; i < options.Length; i++)
+        {
+            switch (options[i])
+            {
+                case "--size" when i + 1 < options.Length:
+                    if (!TryParseSizeWithSuffix(options[++i], out long sz) || sz <= 0)
+                    {
+                        log.Warning("--createhd: invalid size: {Value}", options[i]);
+                        return;
+                    }
+
+                    sizeBytes = (ulong)sz;
+                    break;
+                case "-chs" when i + 1 < options.Length:
+                    var chsParts = options[++i].Split(',');
+                    if (chsParts.Length != 3 ||
+                        !uint.TryParse(chsParts[0], out var c) || c == 0 ||
+                        !uint.TryParse(chsParts[1], out var h) || h == 0 ||
+                        !uint.TryParse(chsParts[2], out var s) || s == 0)
+                    {
+                        log.Warning("--createhd: invalid CHS geometry (expected C,H,S): {Value}", options[i]);
+                        return;
+                    }
+
+                    chsCylinders = c;
+                    chsHeads = h;
+                    chsSectors = s;
+                    break;
+                case "-ss" or "--sector-size" when i + 1 < options.Length:
+                    if (!TryParseSizeWithSuffix(options[++i], out uint ss) || ss == 0)
+                    {
+                        log.Warning("--createhd: invalid sector size: {Value}", options[i]);
+                        return;
+                    }
+
+                    unitBytes = ss;
+                    break;
+                case "-c" or "--codecs" when i + 1 < options.Length:
+                    codecs = options[++i];
+                    break;
+                case "-hs" or "--hunk-size" when i + 1 < options.Length:
+                    if (!TryParseSizeWithSuffix(options[++i], out uint hs) || hs == 0)
+                    {
+                        log.Warning("--createhd: invalid hunk size: {Value}", options[i]);
+                        return;
+                    }
+
+                    hunkBytes = hs;
+                    break;
+                case "-us" or "--unit-size" when i + 1 < options.Length:
+                    if (!TryParseSizeWithSuffix(options[++i], out uint us) || us == 0)
+                    {
+                        log.Warning("--createhd: invalid unit size: {Value}", options[i]);
+                        return;
+                    }
+
+                    unitBytes = us;
+                    break;
+                case "-t" or "--tasks" when i + 1 < options.Length:
+                    if (!int.TryParse(options[++i], out var t) || t < 1 || t > 64)
+                    {
+                        log.Warning("--createhd: invalid task count (1-64): {Value}", options[i]);
+                        return;
+                    }
+
+                    taskCount = t;
+                    break;
+                case "-v" or "--verbose":
+                    verbose = true;
+                    break;
+                default:
+                    log.Warning("--createhd: unknown option: {Option}", options[i]);
+                    return;
+            }
+        }
+
+        // Validate required options
+        if (!sizeBytes.HasValue && !chsCylinders.HasValue)
+        {
+            log.Warning("--createhd: requires --size N or -chs C,H,S");
+            return;
+        }
+
+        // Calculate size from CHS if provided
+        if (chsCylinders.HasValue && chsHeads.HasValue && chsSectors.HasValue)
+        {
+            var chsSize = (ulong)chsCylinders.Value * chsHeads.Value * chsSectors.Value * unitBytes;
+            if (sizeBytes.HasValue && sizeBytes.Value != chsSize)
+            {
+                log.Warning("--createhd: --size ({Size}) conflicts with -chs geometry ({ChsSize}); use one or the other",
+                    sizeBytes.Value, chsSize);
+                return;
+            }
+
+            sizeBytes = chsSize;
+        }
+
+        codecs ??= "zlib";
+
+        try
+        {
+            var codecTags = ChdCodecs.ParseCodecTags(codecs);
+            log.Information("Creating blank HD CHD: {Output}  (size {Size:N0}B, hunk {Hunk}B, unit {Unit}B, codecs {Codecs}{Chs}{Tasks})",
+                outputPath, sizeBytes!.Value, hunkBytes, unitBytes,
+                string.Join(",", codecTags.Select(CodecTags.ToString)),
+                chsCylinders.HasValue ? $", CHS {chsCylinders},{chsHeads},{chsSectors}" : "",
+                taskCount.HasValue ? $", {taskCount} tasks" : "");
+
+            var logger = verbose ? new VerboseHunkLogger() : null;
+            var encodeOptions = logger?.Options;
+            if (encodeOptions == null && taskCount.HasValue)
+            {
+                encodeOptions = new ChdEncodeOptions();
+            }
+
+            if (encodeOptions != null && taskCount.HasValue)
+            {
+                encodeOptions.TaskCount = taskCount;
+            }
+
+            if (chsCylinders.HasValue && chsHeads.HasValue && chsSectors.HasValue)
+            {
+                ChdEncoder.CreateBlankWithChs(outputPath, chsCylinders.Value, chsHeads.Value, chsSectors.Value,
+                    unitBytes, hunkBytes, codecTags, encodeOptions);
+            }
+            else
+            {
+                ChdEncoder.CreateBlank(outputPath, sizeBytes!.Value, hunkBytes, unitBytes, codecTags, encodeOptions);
+            }
+
+            logger?.LogSummary();
+            log.Information("  Created {Size:N0} bytes", new FileInfo(outputPath).Length);
+            VerifyResultChd(outputPath, null);
+        }
+        catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
+        {
+            log.Warning("--createhd failed: {Message}", ex.Message);
+        }
+    }
+
+    /// <summary>
     /// Creates a CD CHD from a CUE sheet using the CHDSharpEncoder, then verifies
     /// the file with a deep CHDSharpLib check.
     /// </summary>
@@ -1053,7 +1224,8 @@ internal static class Program
     /// <param name="inputPath">Path of the source CHD file.</param>
     /// <param name="outputPath">Path of the output .chd file.</param>
     /// <param name="options">Optional <c>-c</c> codec list, <c>-t</c> task count, <c>-ip</c> source
-    /// parent, <c>-op</c> output parent, and <c>-v</c> verbose arguments.</param>
+    /// parent, <c>-op</c> output parent, <c>--no-upgrade</c> to preserve legacy metadata, and
+    /// <c>-v</c> verbose arguments.</param>
     private static void CopyTest(string inputPath, string outputPath, string[] options)
     {
         var log = Log.Logger;
@@ -1068,6 +1240,7 @@ internal static class Program
         string? outputParentPath = null;
         var verbose = false;
         int? taskCount = null;
+        var noUpgrade = false;
         for (var i = 0; i < options.Length; i++)
         {
             switch (options[i])
@@ -1090,6 +1263,9 @@ internal static class Program
 
                     taskCount = t;
                     break;
+                case "--no-upgrade":
+                    noUpgrade = true;
+                    break;
                 case "-v" or "--verbose":
                     verbose = true;
                     break;
@@ -1102,18 +1278,20 @@ internal static class Program
         try
         {
             var codecTags = ChdCodecs.ParseCodecTags(codecs);
-            log.Information("Copying CHD: {Input} -> {Output}  (codecs {Codecs}{SourceParent}{OutputParent}{Tasks})",
+            log.Information("Copying CHD: {Input} -> {Output}  (codecs {Codecs}{SourceParent}{OutputParent}{Tasks}{Upgrade})",
                 Path.GetFileName(inputPath), outputPath,
                 string.Join(",", codecTags.Select(CodecTags.ToString)),
                 sourceParentPath != null ? $", source parent {Path.GetFileName(sourceParentPath)}" : "",
                 outputParentPath != null ? $", output parent {Path.GetFileName(outputParentPath)}" : "",
-                taskCount.HasValue ? $", {taskCount} tasks" : "");
+                taskCount.HasValue ? $", {taskCount} tasks" : "",
+                noUpgrade ? ", no metadata upgrade" : "");
 
             var encodeOptions = new ChdEncodeOptions
             {
                 SourceParentPath = sourceParentPath,
                 ParentPath = outputParentPath,
-                TaskCount = taskCount
+                TaskCount = taskCount,
+                NoMetadataUpgrade = noUpgrade
             };
             var logger = verbose ? new VerboseHunkLogger() : null;
             encodeOptions.HunkCompleted = logger?.Options.HunkCompleted;

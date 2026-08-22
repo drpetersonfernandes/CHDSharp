@@ -21,6 +21,7 @@
 - **Embedded debug symbols** — Easier NuGet debugging with `<DebugType>embedded</DebugType>`
 - **Companion library** — `CHDSharpEncoder` with CRC16, SHA1, and Deflate support
 - **Code refactoring** — Consistent code style across the entire codebase
+- **Metadata upgrade during copy** — Legacy CD/GD-ROM metadata (`CHCD`, `CHTR`, `CHGT`) is automatically upgraded to modern equivalents (`CHT2`, `CHGD`) during `Copy`, matching MAME chdman behavior. Use `--no-upgrade` to preserve legacy tags.
 
 ---
 
@@ -112,9 +113,10 @@ CHDSharpCli --cue game.chd
 CHDSharpCli --classify game.chd
 
 # Create CHDs (raw, CD, or re-compress an existing CHD; -c none for uncompressed)
-CHDSharpCli --create in.bin out.chd [-c zlib,zstd,lzma,none] [-hs 65536] [-us 4096] [-t 8] [-ip parent.chd] [-v]
+CHDSharpCli --create in.bin out.chd [-c zlib,zstd,lzma,none] [-hs 65536] [-us 4096] [-t 8] [-ip parent.chd] [-d] [-tp id] [-v]
 CHDSharpCli --createcd in.cue out.chd [-c zlib,zstd,lzma,none] [-t 8] [-ip parent.chd] [-v]
-CHDSharpCli --copy in.chd out.chd [-c zlib,zstd,lzma,none] [-t 8] [-ip parent.chd] [-op parent.chd] [-v]
+CHDSharpCli --createhd out.chd --size N [-c zlib,zstd,lzma,none] [-hs N] [-us N] [-chs C,H,S] [-ss N] [-t 8] [-v]
+CHDSharpCli --copy in.chd out.chd [-c zlib,zstd,lzma,none] [-t 8] [-ip parent.chd] [-op parent.chd] [--no-upgrade] [-v]
 ```
 
 ---

@@ -18,6 +18,7 @@ a parent, and write **uncompressed CHDs** (`-c none`).
 |------------|--------|
 | Raw binary → CHD (`EncodeRaw`) | ✅ |
 | CD images → CHD (`EncodeCd`) via CUE, GDI, ISO, TOC | ✅ |
+| Blank HD CHD creation (`CreateBlank` / `CreateBlankWithChs`) | ✅ |
 | CHD → CHD copy / re-compression (`Copy`) | ✅ |
 | Codecs | every codec chdman can produce via `createraw`/`createhd`/`createcd`/`createdvd`/`copy`: `zlib`, `zstd`, `lzma`, `huff`, `flac`, `cdzl`, `cdlz`, `cdzs`, `cdfl`, plus `none`; up to 4 per file, best-per-hunk. (`avhu` is decode-only — chdman writes it solely via skipped `createld`) |
 | SELF-hunk deduplication (COMPRESSION_SELF, with SELF_0/SELF_1 map promotion) | ✅ |
@@ -25,6 +26,7 @@ a parent, and write **uncompressed CHDs** (`-c none`).
 | Uncompressed CHD (`-c none`, V5 raw map, chdman byte-identical) | ✅ |
 | CHT2 / CHGD / GDDD / DVD metadata (linked list, checksummed, combined SHA-1) | ✅ |
 | Metadata cloning on copy (all source entries preserved) | ✅ |
+| Metadata upgrade on copy (legacy CHCD/CHTR/CHGT → modern CHT2/CHGD, matching chdman) | ✅ |
 | Audio byte-swap (little-endian BIN → big-endian CHD, like chdman) | ✅ |
 | Per-hunk compression-ratio logging (`ChdEncodeOptions.HunkCompleted`) | ✅ |
 | Parallel hunk compression (producer→worker→consumer pipeline, `TaskCount` 1–64) | ✅ |
@@ -49,12 +51,22 @@ ChdEncoder.EncodeRaw("game.bin", "game.chd");
 // CD image → CHD from a CUE sheet (8 frames per hunk, 2448 B frames)
 ChdEncoder.EncodeCd("game.cue", "game.chd");
 
+// Blank HD CHD (zero-filled, no input file, with auto-derived CHS geometry)
+ChdEncoder.CreateBlank("blank.chd", 100 * 1024 * 1024UL); // 100 MB
+
+// Blank HD CHD with explicit CHS geometry
+ChdEncoder.CreateBlankWithChs("blank.chd", cylinders: 1024, heads: 16, sectors: 63, sectorSize: 512);
+
 // More codecs (tried per hunk; smallest output wins)
 ChdEncoder.EncodeRaw("game.bin", "game.chd", 4096, 512,
     codecTags: ChdCodecs.ParseCodecTags("zlib,zstd,lzma"));
 
-// Re-compress an existing CHD (any version, metadata preserved)
+// Re-compress an existing CHD (any version, metadata preserved, legacy tags upgraded)
 ChdEncoder.Copy("old.chd", "new.chd", codecTags: [CodecTags.Zstd]);
+
+// Re-compress with legacy metadata preserved (no upgrade)
+ChdEncoder.Copy("old.chd", "new.chd", codecTags: [CodecTags.Zstd],
+    options: new ChdEncodeOptions { NoMetadataUpgrade = true });
 
 // Delta child: hunks already in the parent become COMPRESSION_PARENT references
 ChdEncoder.EncodeRaw("game.bin", "game.chd", 4096, 512,

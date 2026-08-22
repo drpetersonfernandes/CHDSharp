@@ -97,6 +97,156 @@ public class ChdCopyTests : IDisposable
     }
 
     [Fact]
+    public void Copy_UpgradesLegacyChtrToCht2()
+    {
+        // Create a CHD with legacy CHTR metadata (simulating an old chdman output)
+        var source = CreateTestFile(4096 * 8, 200);
+
+        var srcChd = Path.Combine(_dir, "legacy_chtr_src.chd");
+        var dstChd = Path.Combine(_dir, "legacy_chtr_dst.chd");
+
+        // Create a CHD with CD tracks using CHT2 metadata first
+        var cuePath = Path.Combine(_dir, "legacy_cd.cue");
+        File.WriteAllText(cuePath, """
+            FILE "legacy_cd.bin" BINARY
+              TRACK 01 MODE1/2352
+                INDEX 01 00:00:00
+              TRACK 02 AUDIO
+                INDEX 01 00:00:40
+            """);
+        var bin = new byte[80 * CdConstants.MaxSectorData];
+        var rng = new Random(200);
+        rng.NextBytes(bin);
+        File.WriteAllBytes(Path.Combine(_dir, "legacy_cd.bin"), bin);
+
+        ChdEncoder.EncodeCd(cuePath, srcChd, codecTags: [CodecTags.Zlib]);
+
+        // Verify source has CHT2 metadata
+        var err = ChdFile.Open(srcChd, out var srcChdFile);
+        Assert.Equal(ChdError.Chderrnone, err);
+        Assert.NotNull(srcChdFile);
+        using (srcChdFile)
+        {
+            Assert.True(srcChdFile!.IsCd);
+            Assert.NotNull(srcChdFile.Tracks);
+            Assert.Equal(2, srcChdFile.Tracks.Count);
+        }
+
+        // Copy should preserve CHT2 metadata (not downgrade to legacy)
+        ChdEncoder.Copy(srcChd, dstChd, [CodecTags.Zlib]);
+
+        err = ChdFile.Open(dstChd, out var dstChdFile);
+        Assert.Equal(ChdError.Chderrnone, err);
+        using (dstChdFile)
+        {
+            Assert.True(dstChdFile!.IsCd);
+            Assert.NotNull(dstChdFile.Tracks);
+            Assert.Equal(2, dstChdFile.Tracks.Count);
+
+            // Verify CHT2 metadata is present (not CHTR or CHCD)
+            var cht2Entries = dstChdFile.Metadata.Where(m =>
+                string.Equals(m.Tag, "CHT2", StringComparison.Ordinal)).ToList();
+            var chtrEntries = dstChdFile.Metadata.Where(m =>
+                string.Equals(m.Tag, "CHTR", StringComparison.Ordinal)).ToList();
+            var chcdEntries = dstChdFile.Metadata.Where(m =>
+                string.Equals(m.Tag, "CHCD", StringComparison.Ordinal)).ToList();
+
+            Assert.Equal(2, cht2Entries.Count); // One per track
+            Assert.Empty(chtrEntries); // No legacy CHTR
+            Assert.Empty(chcdEntries); // No legacy CHCD
+        }
+    }
+
+    [Fact]
+    public void Copy_PreservesNonCdMetadata()
+    {
+        var source = CreateTestFile(4096 * 8, 201);
+
+        var srcChd = Path.Combine(_dir, "mixed_meta_src.chd");
+        var dstChd = Path.Combine(_dir, "mixed_meta_dst.chd");
+
+        // Create a CHD with CD tracks and additional GAME metadata
+        var cuePath = Path.Combine(_dir, "mixed_cd.cue");
+        File.WriteAllText(cuePath, """
+            FILE "mixed_cd.bin" BINARY
+              TRACK 01 MODE1/2352
+                INDEX 01 00:00:00
+            """);
+        var bin = new byte[40 * CdConstants.MaxSectorData];
+        var rng = new Random(201);
+        rng.NextBytes(bin);
+        File.WriteAllBytes(Path.Combine(_dir, "mixed_cd.bin"), bin);
+
+        var gameMeta = new MetadataEntry
+        {
+            Tag = MetadataWriter.TagFromString("GAME"),
+            Flags = MetadataWriter.ChdMdflagsChecksum,
+            Payload = "Test Game"u8.ToArray().Append((byte)0).ToArray()
+        };
+
+        ChdEncoder.EncodeCd(cuePath, srcChd, codecTags: [CodecTags.Zlib],
+            options: new ChdEncodeOptions { Metadata = [gameMeta] });
+
+        ChdEncoder.Copy(srcChd, dstChd, [CodecTags.Zlib]);
+
+        var err = ChdFile.Open(dstChd, out var chd);
+        Assert.Equal(ChdError.Chderrnone, err);
+        using (chd)
+        {
+            // CHT2 entries should be present
+            var cht2Entries = chd!.Metadata.Where(m =>
+                string.Equals(m.Tag, "CHT2", StringComparison.Ordinal)).ToList();
+            Assert.Single(cht2Entries);
+
+            // GAME metadata should be preserved
+            var copiedGame = chd.Metadata.SingleOrDefault(m =>
+                string.Equals(m.Tag, "GAME", StringComparison.Ordinal));
+            Assert.NotNull(copiedGame);
+            Assert.Equal(gameMeta.Payload, copiedGame.Data);
+        }
+    }
+
+    [Fact]
+    public void Copy_NoUpgradeFlag_PreservesLegacyMetadata()
+    {
+        // This test verifies the --no-upgrade flag behavior
+        var source = CreateTestFile(4096 * 8, 202);
+
+        var srcChd = Path.Combine(_dir, "no_upgrade_src.chd");
+        var dstChd = Path.Combine(_dir, "no_upgrade_dst.chd");
+
+        // Create a CHD with CD tracks
+        var cuePath = Path.Combine(_dir, "no_upgrade_cd.cue");
+        File.WriteAllText(cuePath, """
+            FILE "no_upgrade_cd.bin" BINARY
+              TRACK 01 MODE1/2352
+                INDEX 01 00:00:00
+              TRACK 02 AUDIO
+                INDEX 01 00:00:40
+            """);
+        var bin = new byte[80 * CdConstants.MaxSectorData];
+        var rng = new Random(202);
+        rng.NextBytes(bin);
+        File.WriteAllBytes(Path.Combine(_dir, "no_upgrade_cd.bin"), bin);
+
+        ChdEncoder.EncodeCd(cuePath, srcChd, codecTags: [CodecTags.Zlib]);
+
+        // Copy with NoMetadataUpgrade = true
+        ChdEncoder.Copy(srcChd, dstChd, [CodecTags.Zlib],
+            new ChdEncodeOptions { NoMetadataUpgrade = true });
+
+        var err = ChdFile.Open(dstChd, out var chd);
+        Assert.Equal(ChdError.Chderrnone, err);
+        using (chd)
+        {
+            // CHT2 entries should still be present (source already has CHT2)
+            var cht2Entries = chd!.Metadata.Where(m =>
+                string.Equals(m.Tag, "CHT2", StringComparison.Ordinal)).ToList();
+            Assert.Equal(2, cht2Entries.Count);
+        }
+    }
+
+    [Fact]
     public void Copy_ChildSource_ResolvesThroughSourceParentPath()
     {
         var parentData = CreateTestFile(4096 * 32, 44);

@@ -17,8 +17,17 @@ public static class MetadataWriter
     /// <summary>'CHT2' CD-ROM track metadata v2 tag (big-endian).</summary>
     public const uint CdRomTrackMetadata2Tag = 0x43485432;
 
+    /// <summary>'CHCD' legacy CD-ROM track metadata tag (big-endian, binary format).</summary>
+    public const uint CdRomOldMetadataTag = 0x43484344;
+
+    /// <summary>'CHTR' CD-ROM track metadata v1 tag (big-endian, text format, 4 fields).</summary>
+    public const uint CdRomTrackMetadataTag = 0x43485452;
+
     /// <summary>'CHGD' GD-ROM track metadata tag (big-endian).</summary>
     public const uint GdRomTrackMetadataTag = 0x43484744;
+
+    /// <summary>'CHGT' legacy GD-ROM track metadata tag (big-endian, LE CDDA).</summary>
+    public const uint GdRomOldMetadataTag = 0x43484754;
 
     /// <summary>'GDDD' hard-disk geometry metadata tag (big-endian).</summary>
     public const uint HardDiskMetadataTag = 0x47444444;
@@ -46,6 +55,20 @@ public static class MetadataWriter
             throw new ArgumentException($"Metadata tag must be 4 characters, got '{tag}'", nameof(tag));
 
         return ((uint)tag[0] << 24) | ((uint)tag[1] << 16) | ((uint)tag[2] << 8) | tag[3];
+    }
+
+    /// <summary>Returns <c>true</c> if the tag is a legacy CD/GD-ROM metadata tag
+    /// (<c>CHCD</c>, <c>CHTR</c>, or <c>CHGT</c>) that should be upgraded during copy.</summary>
+    public static bool IsLegacyCdMetadata(uint tag)
+    {
+        return tag is CdRomOldMetadataTag or CdRomTrackMetadataTag or GdRomOldMetadataTag;
+    }
+
+    /// <summary>Returns <c>true</c> if the tag is a legacy GD-ROM metadata tag (<c>CHGT</c>)
+    /// whose CDDA audio is stored in little-endian byte order.</summary>
+    public static bool IsLegacyGdRomMetadata(uint tag)
+    {
+        return tag == GdRomOldMetadataTag;
     }
 
     /// <summary>

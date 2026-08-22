@@ -117,4 +117,12 @@ public sealed class ChdEncodeOptions
     /// split-disc create round-trips. Default: <c>null</c>.
     /// </summary>
     public long? InputLengthBytes { get; set; }
+
+    /// <summary>
+    /// When <c>true</c>, <see cref="ChdEncoder.Copy"/> preserves legacy CD/GD-ROM metadata tags
+    /// (<c>CHCD</c>, <c>CHTR</c>, <c>CHGT</c>) instead of upgrading them to their modern
+    /// equivalents (<c>CHT2</c>, <c>CHGD</c>). Default: <c>false</c> (legacy tags are upgraded,
+    /// matching MAME chdman's <c>copy</c> command behavior).
+    /// </summary>
+    public bool NoMetadataUpgrade { get; set; }
 }

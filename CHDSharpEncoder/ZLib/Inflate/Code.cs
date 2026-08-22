@@ -22,8 +22,8 @@ namespace CHDSharpEncoder.ZLib.Inflate;
 [StructLayout(LayoutKind.Sequential)]
 internal readonly struct Code
 {
-    internal readonly byte op;    // operation, extra bits, table bits
-    internal readonly byte bits;  // bits in this part of the code
+    internal readonly byte op; // operation, extra bits, table bits
+    internal readonly byte bits; // bits in this part of the code
     internal readonly ushort val; // offset in table or code value
 
     internal Code(byte op, byte bits, ushort val)

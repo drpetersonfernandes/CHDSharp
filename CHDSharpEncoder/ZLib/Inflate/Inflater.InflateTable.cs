@@ -139,8 +139,8 @@ internal static partial class Inflater
         var mask = used - 1;       // mask for comparing low
 
         // check available table space
-        if (type == CodeType.Lens && used > EnoughLens ||
-            type == CodeType.Dists && used > EnoughDists)
+        if ((type == CodeType.Lens && used > EnoughLens) ||
+            (type == CodeType.Dists && used > EnoughDists))
             return 1;
 
         uint incr; // for incrementing code, index
@@ -229,8 +229,8 @@ internal static partial class Inflater
 
                 // check for enough space
                 used += 1U << (int)curr;
-                if (type == CodeType.Lens && used > EnoughLens ||
-                    type == CodeType.Dists && used > EnoughDists)
+                if ((type == CodeType.Lens && used > EnoughLens) ||
+                    (type == CodeType.Dists && used > EnoughDists))
                     return 1;
 
                 // point entry in root table to sub-table

@@ -10,15 +10,15 @@ namespace CHDSharpEncoder.ZLib.Deflate;
 
 internal static partial class Deflater
 {
-    private const int InitState = 42;       // zlib header -> BUSY_STATE
-    private const int ExtraState = 69;      // gzip extra block -> NAME_STATE
-    private const int NameState = 73;       // gzip file name -> COMMENT_STATE
-    private const int CommentState = 91;    // gzip comment -> HCRC_STATE
-    private const int HcrcState = 103;      // gzip header CRC -> BUSY_STATE
-    private const int BusyState = 113;      // deflate -> FINISH_STATE
-    private const int FinishState = 666;    // stream complete
-    private const int PresetDict = 0x20;    // preset dictionary flag in zlib header
-    private const int MaxStored = 65535;    // maximum stored block length in deflate format (not including header)
+    private const int InitState = 42; // zlib header -> BUSY_STATE
+    private const int ExtraState = 69; // gzip extra block -> NAME_STATE
+    private const int NameState = 73; // gzip file name -> COMMENT_STATE
+    private const int CommentState = 91; // gzip comment -> HCRC_STATE
+    private const int HcrcState = 103; // gzip header CRC -> BUSY_STATE
+    private const int BusyState = 113; // deflate -> FINISH_STATE
+    private const int FinishState = 666; // stream complete
+    private const int PresetDict = 0x20; // preset dictionary flag in zlib header
+    private const int MaxStored = 65535; // maximum stored block length in deflate format (not including header)
     private const int DistCodeLen = 512;
 
     private const uint MinLookAhead = MaxMatch + MinMatch + 1; // Minimum amount of lookahead, except at the end of the input file.
@@ -32,43 +32,45 @@ internal static partial class Deflater
 
     private const ushort TooFar = 4096;
 
-    private static readonly string[] s_z_errmsg = new string[10]
+    private static readonly string[] SzErrmsg = new string[]
     {
-        "need dictionary",     /* Z_NEED_DICT       2  */
-        "stream end",          /* Z_STREAM_END      1  */
-        "",                    /* Z_OK              0  */
-        "file error",          /* Z_ERRNO         (-1) */
-        "stream error",        /* Z_STREAM_ERROR  (-2) */
-        "data error",          /* Z_DATA_ERROR    (-3) */
+        "need dictionary", /* Z_NEED_DICT       2  */
+        "stream end", /* Z_STREAM_END      1  */
+        "", /* Z_OK              0  */
+        "file error", /* Z_ERRNO         (-1) */
+        "stream error", /* Z_STREAM_ERROR  (-2) */
+        "data error", /* Z_DATA_ERROR    (-3) */
         "insufficient memory", /* Z_MEM_ERROR     (-4) */
-        "buffer error",        /* Z_BUF_ERROR     (-5) */
-        "incompatible version",/* Z_VERSION_ERROR (-6) */
+        "buffer error", /* Z_BUF_ERROR     (-5) */
+        "incompatible version", /* Z_VERSION_ERROR (-6) */
         ""
     };
 
-    internal static readonly Config[] s_configuration_table = new Config[10]
+    internal static readonly Config[] SConfigurationTable = new Config[]
     {
-        new(0, 0, 0, 0, Config.DeflateType.Stored),          // 0: store only
-        new(4, 4, 8, 4, Config.DeflateType.Fast),            // 1: max speed, no lazy matches
-        new(4, 5, 16, 8, Config.DeflateType.Fast),           // 2
-        new(4, 6, 32, 32, Config.DeflateType.Fast),          // 3
-        new(4, 4, 16, 16, Config.DeflateType.Slow),          // 4: lazy matches
-        new(8, 16, 32, 32, Config.DeflateType.Slow),         // 5
-        new(8, 16, 128, 128, Config.DeflateType.Slow),       // 6
-        new(8, 32, 128, 256, Config.DeflateType.Slow),       // 7
-        new(32, 128, 258, 1024, Config.DeflateType.Slow),    // 8
-        new(32, 258, 258, 4096, Config.DeflateType.Slow)     // 9: max compression
+        new(0, 0, 0, 0, Config.DeflateType.Stored), // 0: store only
+        new(4, 4, 8, 4, Config.DeflateType.Fast), // 1: max speed, no lazy matches
+        new(4, 5, 16, 8, Config.DeflateType.Fast), // 2
+        new(4, 6, 32, 32, Config.DeflateType.Fast), // 3
+        new(4, 4, 16, 16, Config.DeflateType.Slow), // 4: lazy matches
+        new(8, 16, 32, 32, Config.DeflateType.Slow), // 5
+        new(8, 16, 128, 128, Config.DeflateType.Slow), // 6
+        new(8, 32, 128, 256, Config.DeflateType.Slow), // 7
+        new(32, 128, 258, 1024, Config.DeflateType.Slow), // 8
+        new(32, 258, 258, 4096, Config.DeflateType.Slow) // 9: max compression
     };
 
-    private static readonly int[] s_base_dist = new int[DCodes] {
-        0,     1,     2,     3,     4,     6,     8,    12,    16,    24,
-        32,    48,    64,    96,   128,   192,   256,   384,   512,   768,
-        1024,  1536,  2048,  3072,  4096,  6144,  8192, 12288, 16384, 24576
+    private static readonly int[] SBaseDist = new int[]
+    {
+        0, 1, 2, 3, 4, 6, 8, 12, 16, 24,
+        32, 48, 64, 96, 128, 192, 256, 384, 512, 768,
+        1024, 1536, 2048, 3072, 4096, 6144, 8192, 12288, 16384, 24576
     };
 
-    private static readonly byte[] s_dist_code = new byte[DistCodeLen] {
-        0,  1,  2,  3,  4,  4,  5,  5,  6,  6,  6,  6,  7,  7,  7,  7,  8,  8,  8,  8,
-        8,  8,  8,  8,  9,  9,  9,  9,  9,  9,  9,  9, 10, 10, 10, 10, 10, 10, 10, 10,
+    private static readonly byte[] SDistCode = new byte[]
+    {
+        0, 1, 2, 3, 4, 4, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 8,
+        8, 8, 8, 8, 9, 9, 9, 9, 9, 9, 9, 9, 10, 10, 10, 10, 10, 10, 10, 10,
         10, 10, 10, 10, 10, 10, 10, 10, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11,
         11, 11, 11, 11, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12,
         12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 13, 13, 13, 13,
@@ -79,7 +81,7 @@ internal static partial class Deflater
         14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 15, 15, 15, 15, 15, 15, 15, 15,
         15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
         15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
-        15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,  0,  0, 16, 17,
+        15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 0, 0, 16, 17,
         18, 18, 19, 19, 20, 20, 20, 20, 21, 21, 21, 21, 22, 22, 22, 22, 22, 22, 22, 22,
         23, 23, 23, 23, 23, 23, 23, 23, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24, 24,
         24, 24, 24, 24, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25, 25,
@@ -95,8 +97,9 @@ internal static partial class Deflater
         29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29, 29
     };
 
-    private static readonly byte[] s_length_code = new byte[MaxMatch - MinMatch + 1] {
-        0,  1,  2,  3,  4,  5,  6,  7,  8,  8,  9,  9, 10, 10, 11, 11, 12, 12, 12, 12,
+    private static readonly byte[] SLengthCode = new byte[]
+    {
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 12, 12,
         13, 13, 13, 13, 14, 14, 14, 14, 15, 15, 15, 15, 16, 16, 16, 16, 16, 16, 16, 16,
         17, 17, 17, 17, 17, 17, 17, 17, 18, 18, 18, 18, 18, 18, 18, 18, 19, 19, 19, 19,
         19, 19, 19, 19, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20,
@@ -111,22 +114,23 @@ internal static partial class Deflater
         27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 28
     };
 
-    private static readonly int[] s_base_length = new int[LenghtCodes] {
+    private static readonly int[] SBaseLength = new int[]
+    {
         0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 12, 14, 16, 20, 24, 28, 32, 40, 48, 56,
         64, 80, 96, 112, 128, 160, 192, 224, 0
     };
 
-    private static readonly ushort[] s_bl_order = // The lengths of the bit length codes are sent in order of decreasing probability, to avoid transmitting the lengths for unused bit length codes.
-        new ushort[BlCodes] { 16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15 };
+    private static readonly ushort[] SBlOrder = // The lengths of the bit length codes are sent in order of decreasing probability, to avoid transmitting the lengths for unused bit length codes.
+        new ushort[] { 16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15 };
 
-    private static readonly int[] s_extra_dbits = // extra bits for each distance code
-        new int[DCodes] { 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13 };
+    private static readonly int[] SExtraDbits = // extra bits for each distance code
+        new int[] { 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13 };
 
-    private static readonly int[] s_extra_lbits = // extra bits for each length code
-        new int[LenghtCodes] { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0 };
+    private static readonly int[] SExtraLbits = // extra bits for each length code
+        new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0 };
 
-    private static readonly int[] s_extra_blbits = // extra bits for each bit length code
-        new int[BlCodes] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 7 };
+    private static readonly int[] SExtraBlbits = // extra bits for each bit length code
+        new int[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 7 };
 
     internal static void Init()
     {
@@ -141,13 +145,13 @@ internal static partial class Deflater
         var s = strm.deflateState;
 
         if (strm._output.IsEmpty
-            || strm.avail_in != 0 && strm._input.IsEmpty
-            || s.Status == FinishState && flush != Z_FINISH)
+            || (strm.avail_in != 0 && strm._input.IsEmpty)
+            || (s.Status == FinishState && flush != Z_FINISH))
             return ReturnWithError(ref strm, Z_STREAM_ERROR);
         if (strm.avail_out == 0)
             return ReturnWithError(ref strm, Z_BUF_ERROR);
 
-        var old_flush = s.LastFlush; // value of flush param for previous deflate call
+        var oldFlush = s.LastFlush; // value of flush param for previous deflate call
         s.LastFlush = flush;
 
         s.SymEnd = (s.LitBufsize - 1) * 3;
@@ -155,13 +159,13 @@ internal static partial class Deflater
 #if NET7_0_OR_GREATER
         ref var refs = ref strm.deflateRefs;
 #endif
-        ref var pending_buf = ref
+        ref var pendingBuf = ref
 #if NET7_0_OR_GREATER
             refs.PendingBuf;
 #else
             MemoryMarshal.GetReference<byte>(s.pending_buf);
 #endif
-        ref var pending_out = ref
+        ref var pendingOut = ref
 #if NET7_0_OR_GREATER
             refs.PendingOut;
 #else
@@ -171,7 +175,7 @@ internal static partial class Deflater
         // Flush as much pending output as possible
         if (s.Pending != 0)
         {
-            FlushPending(ref strm, ref pending_buf, ref pending_out);
+            FlushPending(ref strm, ref pendingBuf, ref pendingOut);
             if (strm.avail_out == 0)
             {
                 /* Since avail_out is 0, deflate will be called again with
@@ -190,46 +194,47 @@ internal static partial class Deflater
              */
         }
         else if (strm.avail_in == 0
-            && Rank(flush) <= Rank(old_flush)
+            && Rank(flush) <= Rank(oldFlush)
             && flush != Z_FINISH)
         {
             return ReturnWithError(ref strm, Z_BUF_ERROR);
         }
 
-        // User must not provide more input after the first FINISH:
-        if (s.Status == FinishState && strm.avail_in != 0)
-            return ReturnWithError(ref strm, Z_BUF_ERROR);
-
-        // Write the header
-        if (s.Status == InitState && s.Wrap == 0)
+        switch (s.Status)
         {
-            s.Status = BusyState;
+            // User must not provide more input after the first FINISH:
+            case FinishState when strm.avail_in != 0:
+                return ReturnWithError(ref strm, Z_BUF_ERROR);
+            // Write the header
+            case InitState when s.Wrap == 0:
+                s.Status = BusyState;
+                break;
         }
 
         if (s.Status == InitState)
         {
             // zlib header
             var header = (Z_DEFLATED + ((s.WBits - 8) << 4)) << 8;
-            uint level_flags;
+            uint levelFlags;
 
             if (s.Strategy >= Z_HUFFMAN_ONLY || s.Level < 2)
             {
-                level_flags = 0;
+                levelFlags = 0;
             }
-            else if (s.Level < 6)
+            else switch (s.Level)
             {
-                level_flags = 1;
-            }
-            else if (s.Level == 6)
-            {
-                level_flags = 2;
-            }
-            else
-            {
-                level_flags = 3;
+                case < 6:
+                    levelFlags = 1;
+                    break;
+                case 6:
+                    levelFlags = 2;
+                    break;
+                default:
+                    levelFlags = 3;
+                    break;
             }
 
-            header |= level_flags << 6;
+            header |= levelFlags << 6;
             if (s.Strstart != 0)
             {
                 header |= PresetDict;
@@ -237,19 +242,20 @@ internal static partial class Deflater
 
             header += 31 - header % 31;
 
-            PutShort(s, header, ref pending_buf);
+            PutShort(s, header, ref pendingBuf);
 
             // Save the adler32 of the preset dictionary:
             if (s.Strstart != 0)
             {
-                PutShort(s, strm.Adler >> 16, ref pending_buf);
-                PutShort(s, strm.Adler & 0xffff, ref pending_buf);
+                PutShort(s, strm.Adler >> 16, ref pendingBuf);
+                PutShort(s, strm.Adler & 0xffff, ref pendingBuf);
             }
+
             strm.Adler = Adler32.Update(0, ref netUnsafe.NullRef<byte>(), 0);
             s.Status = BusyState;
 
             // Compression must start with an empty pending buffer
-            FlushPending(ref strm, ref pending_buf, ref pending_out);
+            FlushPending(ref strm, ref pendingBuf, ref pendingOut);
             if (s.Pending != 0)
             {
                 s.LastFlush = -1;
@@ -260,38 +266,38 @@ internal static partial class Deflater
         // Start a new block or continue the current one.
         if (strm.avail_in != 0
             || s.Lookahead != 0
-            || flush != Z_NO_FLUSH && s.Status != FinishState)
+            || (flush != Z_NO_FLUSH && s.Status != FinishState))
         {
             BlockState bstate;
             if (s.Level == 0)
             {
-                bstate = DeflateStored(ref strm, flush, ref pending_buf, ref pending_out);
+                bstate = DeflateStored(ref strm, flush, ref pendingBuf, ref pendingOut);
             }
             else
             {
                 switch (s.Strategy)
                 {
                     case Z_HUFFMAN_ONLY:
-                        bstate = DeflateHuff(ref strm, flush, ref pending_buf, ref pending_out);
+                        bstate = DeflateHuff(ref strm, flush, ref pendingBuf, ref pendingOut);
                         break;
                     case Z_RLE:
-                        bstate = DeflateRle(ref strm, flush, ref pending_buf, ref pending_out);
+                        bstate = DeflateRle(ref strm, flush, ref pendingBuf, ref pendingOut);
                         break;
                     default:
-                        ref var configuration_table = ref
+                        ref var configurationTable = ref
 #if NET7_0_OR_GREATER
                             refs.ConfigurationTable;
 #else
                             MemoryMarshal.GetReference<Config>(s_configuration_table);
 #endif
-                        var type = Unsafe.Add(ref configuration_table, (uint)s.Level).deflate_type;
+                        var type = Unsafe.Add(ref configurationTable, (uint)s.Level).deflate_type;
                         bstate = type switch
                         {
-                            Config.DeflateType.Stored => DeflateStored(ref strm, flush, ref pending_buf,
-                                ref pending_out),
-                            Config.DeflateType.Fast => DeflateFast(ref strm, flush, ref pending_buf,
-                                ref pending_out),
-                            _ => DeflateSlow(ref strm, flush, ref pending_buf, ref pending_out)
+                            Config.DeflateType.Stored => DeflateStored(ref strm, flush, ref pendingBuf,
+                                ref pendingOut),
+                            Config.DeflateType.Fast => DeflateFast(ref strm, flush, ref pendingBuf,
+                                ref pendingOut),
+                            _ => DeflateSlow(ref strm, flush, ref pendingBuf, ref pendingOut)
                         };
                         break;
                 }
@@ -301,62 +307,69 @@ internal static partial class Deflater
             {
                 s.Status = FinishState;
             }
-            if (bstate is BlockState.NeedMore or BlockState.FinishStarted)
-            {
-                if (strm.avail_out == 0)
-                {
-                    s.LastFlush = -1; // avoid BUF_ERROR next call, see above
-                }
 
-                return Z_OK;
-                /* If flush != Z_NO_FLUSH && avail_out == 0, the next call
+            switch (bstate)
+            {
+                case BlockState.NeedMore or BlockState.FinishStarted:
+                {
+                    if (strm.avail_out == 0)
+                    {
+                        s.LastFlush = -1; // avoid BUF_ERROR next call, see above
+                    }
+
+                    return Z_OK;
+                    /* If flush != Z_NO_FLUSH && avail_out == 0, the next call
                  * of deflate should use the same flush parameter to make sure
                  * that the flush is complete. So we don't have to output an
                  * empty block here, this will be done at next call. This also
                  * ensures that for a very small output buffer, we emit at most
                  * one empty block.
                  */
-            }
-            if (bstate == BlockState.BlockDone)
-            {
-                if (flush == Z_PARTIAL_FLUSH)
+                }
+                case BlockState.BlockDone:
                 {
-#if NET7_0_OR_GREATER
-                    if (netUnsafe.IsNullRef(ref refs.StaLtree))
+                    if (flush == Z_PARTIAL_FLUSH)
                     {
-                        refs.StaLtree = ref MemoryMarshal.GetReference<TreeNode>(Tree.s_ltree);
-                    }
-#endif
-                    Tree.Align(s, ref pending_buf, ref
 #if NET7_0_OR_GREATER
-                        refs.StaLtree
+                        if (netUnsafe.IsNullRef(ref refs.StaLtree))
+                        {
+                            refs.StaLtree = ref MemoryMarshal.GetReference<TreeNode>(Tree.SLtree);
+                        }
+#endif
+                        Tree.Align(s, ref pendingBuf, ref
+#if NET7_0_OR_GREATER
+                            refs.StaLtree
 #else
                         MemoryMarshal.GetReference<TreeNode>(Tree.s_ltree)
 #endif
-                    );
-                }
-                else if (flush != Z_BLOCK) // FULL_FLUSH or SYNC_FLUSH
-                {
-                    Tree.StoredBlock(s, ref netUnsafe.NullRef<byte>(), 0, 0, ref pending_buf);
-                    /* For a full flush, this empty block will be recognized
+                        );
+                    }
+                    else if (flush != Z_BLOCK) // FULL_FLUSH or SYNC_FLUSH
+                    {
+                        Tree.StoredBlock(s, ref netUnsafe.NullRef<byte>(), 0, 0, ref pendingBuf);
+                        /* For a full flush, this empty block will be recognized
                      * as a special marker by InflateSync().
                      */
-                    if (flush == Z_FULL_FLUSH)
-                    {
-                        ClearHash(ref strm);
-                        if (s.Lookahead == 0)
+                        if (flush == Z_FULL_FLUSH)
                         {
-                            s.Strstart = 0;
-                            s.BlockStart = 0;
-                            s.Insert = 0;
+                            ClearHash(ref strm);
+                            if (s.Lookahead == 0)
+                            {
+                                s.Strstart = 0;
+                                s.BlockStart = 0;
+                                s.Insert = 0;
+                            }
                         }
                     }
-                }
-                FlushPending(ref strm, ref pending_buf, ref pending_out);
-                if (strm.avail_out == 0)
-                {
-                    s.LastFlush = -1; // avoid BUF_ERROR at next call, see above
-                    return Z_OK;
+
+                    FlushPending(ref strm, ref pendingBuf, ref pendingOut);
+                    if (strm.avail_out == 0)
+                    {
+                        s.LastFlush = -1; // avoid BUF_ERROR at next call, see above
+                        return Z_OK;
+                    }
+
+                    break;
                 }
             }
         }
@@ -367,10 +380,10 @@ internal static partial class Deflater
             return Z_STREAM_END;
 
         // Write the trailer
-        PutShort(s, strm.Adler >> 16, ref pending_buf);
-        PutShort(s, strm.Adler & 0xffff, ref pending_buf);
+        PutShort(s, strm.Adler >> 16, ref pendingBuf);
+        PutShort(s, strm.Adler & 0xffff, ref pendingBuf);
 
-        FlushPending(ref strm, ref pending_buf, ref pending_out);
+        FlushPending(ref strm, ref pendingBuf, ref pendingOut);
 
         // If avail_out is zero, the application will call deflate again to flush the rest.
         if (s.Wrap > 0)
@@ -385,18 +398,18 @@ internal static partial class Deflater
     {
         var s = strm.deflateState;
         return s == null
-            || s.Status != InitState
+            || (s.Status != InitState
                 && s.Status != ExtraState
                 && s.Status != NameState
                 && s.Status != CommentState
                 && s.Status != HcrcState
                 && s.Status != BusyState
-                && s.Status != FinishState;
+                && s.Status != FinishState);
     }
 
     private static void LongestMatchInit(ref ZStream strm)
     {
-        const byte MinMatch = 3;
+        const byte minMatch = 3;
 
         var s = strm.deflateState;
         s.WindowSize = 2 * s.WSize;
@@ -404,13 +417,13 @@ internal static partial class Deflater
         ClearHash(ref strm);
 
         // set the default configuration parameters
-        ref var configuration_table = ref
+        ref var configurationTable = ref
 #if NET7_0_OR_GREATER
             strm.deflateRefs.ConfigurationTable;
 #else
             MemoryMarshal.GetReference<Config>(s_configuration_table);
 #endif
-        ref var config = ref Unsafe.Add(ref configuration_table, (uint)s.Level);
+        ref var config = ref Unsafe.Add(ref configurationTable, (uint)s.Level);
         s.MaxLazyMatch = config.max_lazy;
         s.GoodMatch = config.good_length;
         s.NiceMatch = config.nice_length;
@@ -420,7 +433,7 @@ internal static partial class Deflater
         s.BlockStart = 0;
         s.Lookahead = 0;
         s.Insert = 0;
-        s.MatchLength = s.PrevLength = MinMatch - 1;
+        s.MatchLength = s.PrevLength = minMatch - 1;
         s.MatchAvailable = false;
         s.InsH = 0;
     }
@@ -428,14 +441,14 @@ internal static partial class Deflater
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int ReturnWithError(ref ZStream strm, int err)
     {
-        strm.msg = s_z_errmsg[err is < -6 or > 2 ? 9 : 2 - err];
+        strm.msg = SzErrmsg[err is < -6 or > 2 ? 9 : 2 - err];
         return err;
     }
 
-    private static void FlushPending(ref ZStream strm, ref byte pending_buf, ref byte pending_out)
+    private static void FlushPending(ref ZStream strm, ref byte pendingBuf, ref byte pendingOut)
     {
         var s = strm.deflateState;
-        Tree.FlushBits(s, ref pending_buf);
+        Tree.FlushBits(s, ref pendingBuf);
         var len = s.Pending;
         if (len > strm.avail_out)
         {
@@ -451,7 +464,7 @@ internal static partial class Deflater
 #else
             MemoryMarshal.GetReference(strm._output.Slice((int)strm.next_out)),
 #endif
-            ref Unsafe.Add(ref pending_out, s.PendingOutOffset),
+            ref Unsafe.Add(ref pendingOut, s.PendingOutOffset),
             len);
 
         strm.next_out += len;
@@ -477,20 +490,20 @@ internal static partial class Deflater
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void PutShort(DeflateState s, uint b, ref byte pending_buf)
+    private static void PutShort(DeflateState s, uint b, ref byte pendingBuf)
     {
-        Unsafe.Add(ref pending_buf, s.Pending++) = (byte)(b >> 8);
-        Unsafe.Add(ref pending_buf, s.Pending++) = (byte)(b & 0xff);
+        Unsafe.Add(ref pendingBuf, s.Pending++) = (byte)(b >> 8);
+        Unsafe.Add(ref pendingBuf, s.Pending++) = (byte)(b & 0xff);
     }
 
-    private static BlockState DeflateStored(ref ZStream strm, int flush, ref byte pending_buf, ref byte pending_out)
+    private static BlockState DeflateStored(ref ZStream strm, int flush, ref byte pendingBuf, ref byte pendingOut)
     {
         var s = strm.deflateState;
         /* Smallest worthy block size when not flushing or finishing. By default
          * this is 32K. This can be as small as 507 bytes for memLevel == 1. For
          * large input and output buffers, the stored block size will be larger.
          */
-        var min_block = Math.Min(s.PendingBufSize - 5, s.WSize);
+        var minBlock = Math.Min(s.PendingBufSize - 5, s.WSize);
 
         /* Copy as many min_block or larger stored blocks directly to next_out as
          * possible. If flushing, copy the remaining available input to next_out as
@@ -512,7 +525,7 @@ internal static partial class Deflater
 #else
             MemoryMarshal.GetReference<byte>(s.window);
 #endif
-        ref var next_out = ref
+        ref var nextOut = ref
 #if NET7_0_OR_GREATER
             strm.output_ptr;
 #else
@@ -546,7 +559,7 @@ internal static partial class Deflater
              * copying to the window and the pending buffer instead. Also don't
              * write an empty block when flushing -- deflate() does that.
              */
-            if (len < min_block && (len == 0 && flush != Z_FINISH ||
+            if (len < minBlock && ((len == 0 && flush != Z_FINISH) ||
                                     flush == Z_NO_FLUSH ||
                                     len != left + strm.avail_in))
                 break;
@@ -555,16 +568,16 @@ internal static partial class Deflater
              * including any pending bits. This also updates the debugging counts.
              */
             last = flush == Z_FINISH && len == left + strm.avail_in ? 1U : 0U;
-            Tree.StoredBlock(s, ref netUnsafe.NullRef<byte>(), 0, last, ref pending_buf);
+            Tree.StoredBlock(s, ref netUnsafe.NullRef<byte>(), 0, last, ref pendingBuf);
 
             // Replace the lengths in the dummy stored block with len.
-            Unsafe.Add(ref pending_buf, s.Pending - 4) = (byte)len;
-            Unsafe.Add(ref pending_buf, s.Pending - 3) = (byte)(len >> 8);
-            Unsafe.Add(ref pending_buf, s.Pending - 2) = (byte)~len;
-            Unsafe.Add(ref pending_buf, s.Pending - 1) = (byte)(~len >> 8);
+            Unsafe.Add(ref pendingBuf, s.Pending - 4) = (byte)len;
+            Unsafe.Add(ref pendingBuf, s.Pending - 3) = (byte)(len >> 8);
+            Unsafe.Add(ref pendingBuf, s.Pending - 2) = (byte)~len;
+            Unsafe.Add(ref pendingBuf, s.Pending - 1) = (byte)(~len >> 8);
 
             // Write the stored block header bytes.
-            FlushPending(ref strm, ref pending_buf, ref pending_out);
+            FlushPending(ref strm, ref pendingBuf, ref pendingOut);
 #if DEBUG
             // Update debugging counts for the data about to be copied.
             s.CompressedLen += len << 3;
@@ -578,7 +591,7 @@ internal static partial class Deflater
                     left = len;
                 }
 
-                netUnsafe.CopyBlockUnaligned(ref Unsafe.Add(ref next_out, strm.next_out),
+                netUnsafe.CopyBlockUnaligned(ref Unsafe.Add(ref nextOut, strm.next_out),
                     ref Unsafe.Add(ref window, (uint)s.BlockStart), left);
                 strm.next_out += left;
                 strm.avail_out -= left;
@@ -590,7 +603,7 @@ internal static partial class Deflater
             // Copy uncompressed bytes directly from next_in to next_out, updating the check value.
             if (len != 0)
             {
-                ReadBuf(ref strm, ref Unsafe.Add(ref next_out, strm.next_out), len);
+                ReadBuf(ref strm, ref Unsafe.Add(ref nextOut, strm.next_out), len);
                 strm.next_out += len;
                 strm.avail_out -= len;
                 strm.total_out += len;
@@ -606,7 +619,7 @@ internal static partial class Deflater
         used -= strm.avail_in; // number of input bytes directly copied
         if (used != 0)
         {
-            ref var next_in = ref
+            ref var nextIn = ref
 #if NET7_0_OR_GREATER
                 Unsafe.Add(ref strm.input_ptr, strm.next_in);
 #else
@@ -618,7 +631,7 @@ internal static partial class Deflater
             if (used >= s.WSize) // supplant the previous history
             {
                 s.Matches = 2; // clear hash
-                netUnsafe.CopyBlockUnaligned(ref window, ref Unsafe.Subtract(ref next_in, s.WSize), s.WSize);
+                netUnsafe.CopyBlockUnaligned(ref window, ref Unsafe.Subtract(ref nextIn, s.WSize), s.WSize);
 
                 s.Strstart = s.WSize;
                 s.Insert = s.Strstart;
@@ -640,7 +653,7 @@ internal static partial class Deflater
                         s.Insert = s.Strstart;
                     }
                 }
-                netUnsafe.CopyBlockUnaligned(ref Unsafe.Add(ref window, s.Strstart), ref Unsafe.Subtract(ref next_in, used), used);
+                netUnsafe.CopyBlockUnaligned(ref Unsafe.Add(ref window, s.Strstart), ref Unsafe.Subtract(ref nextIn, used), used);
                 s.Strstart += used;
                 s.Insert += Math.Min(used, s.WSize - s.Insert);
             }
@@ -704,17 +717,17 @@ internal static partial class Deflater
         have = (uint)((s.BiValid + 42) >> 3); // number of header bytes
         // maximum stored block length that will fit in pending:
         have = Math.Min(s.PendingBufSize - have, MaxStored);
-        min_block = Math.Min(have, s.WSize);
+        minBlock = Math.Min(have, s.WSize);
         left = (uint)(s.Strstart - s.BlockStart);
-        if (left >= min_block ||
-            (left != 0 || flush == Z_FINISH) && flush != Z_NO_FLUSH &&
-             strm.avail_in == 0 && left <= have)
+        if (left >= minBlock ||
+            ((left != 0 || flush == Z_FINISH) && flush != Z_NO_FLUSH &&
+             strm.avail_in == 0 && left <= have))
         {
             len = Math.Min(left, have);
             last = flush == Z_FINISH && strm.avail_in == 0 && len == left ? 1U : 0U;
-            Tree.StoredBlock(s, ref Unsafe.Add(ref window, (uint)s.BlockStart), len, last, ref pending_buf);
+            Tree.StoredBlock(s, ref Unsafe.Add(ref window, (uint)s.BlockStart), len, last, ref pendingBuf);
             s.BlockStart += (int)len;
-            FlushPending(ref strm, ref pending_buf, ref pending_out);
+            FlushPending(ref strm, ref pendingBuf, ref pendingOut);
         }
 
         // We've done all we can with the available input and output.
@@ -753,7 +766,7 @@ internal static partial class Deflater
         return len;
     }
 
-    private static BlockState DeflateHuff(ref ZStream strm, int flush, ref byte pending_buf, ref byte pending_out)
+    private static BlockState DeflateHuff(ref ZStream strm, int flush, ref byte pendingBuf, ref byte pendingOut)
     {
         var s = strm.deflateState;
 #if NET7_0_OR_GREATER
@@ -778,7 +791,7 @@ internal static partial class Deflater
 #else
             MemoryMarshal.GetReference<ushort>(s.head);
 #endif
-        ref var bl_count = ref
+        ref var blCount = ref
 #if NET7_0_OR_GREATER
             refs.BlCount;
 #else
@@ -797,79 +810,79 @@ internal static partial class Deflater
             MemoryMarshal.GetReference<byte>(s.depth);
 #endif
 
-        ref var sta_ltree = ref
+        ref var staLtree = ref
 #if NET7_0_OR_GREATER
             refs.StaLtree;
 #else
             MemoryMarshal.GetReference<TreeNode>(Tree.s_ltree);
 #endif
-        ref var sta_dtree = ref
+        ref var staDtree = ref
 #if NET7_0_OR_GREATER
             refs.StaDtree;
 #else
             MemoryMarshal.GetReference<TreeNode>(Tree.s_dtree);
 #endif
-        ref var dyn_ltree = ref
+        ref var dynLtree = ref
 #if NET7_0_OR_GREATER
             refs.DynLtree;
 #else
             MemoryMarshal.GetReference<TreeNode>(s.dyn_ltree);
 #endif
-        ref var dyn_dtree = ref
+        ref var dynDtree = ref
 #if NET7_0_OR_GREATER
             refs.DynDtree;
 #else
             MemoryMarshal.GetReference<TreeNode>(s.dyn_dtree);
 #endif
-        ref var bl_tree = ref
+        ref var blTree = ref
 #if NET7_0_OR_GREATER
             refs.BlTree;
 #else
             MemoryMarshal.GetReference<TreeNode>(s.bl_tree);
 #endif
-        ref var bl_order = ref
+        ref var blOrder = ref
 #if NET7_0_OR_GREATER
             refs.BlOrder;
 #else
             MemoryMarshal.GetReference<ushort>(s_bl_order);
 #endif
-        ref var dist_code = ref
+        ref var distCode = ref
 #if NET7_0_OR_GREATER
             refs.DistCode;
 #else
             MemoryMarshal.GetReference<byte>(s_dist_code);
 #endif
-        ref var length_code = ref
+        ref var lengthCode = ref
 #if NET7_0_OR_GREATER
             refs.LengthCode;
 #else
             MemoryMarshal.GetReference<byte>(s_length_code);
 #endif
-        ref var base_dist = ref
+        ref var baseDist = ref
 #if NET7_0_OR_GREATER
             refs.BaseDist;
 #else
             MemoryMarshal.GetReference<int>(s_base_dist);
 #endif
-        ref var base_length = ref
+        ref var baseLength = ref
 #if NET7_0_OR_GREATER
             refs.BaseLength;
 #else
             MemoryMarshal.GetReference<int>(s_base_length);
 #endif
-        ref var extra_dbits = ref
+        ref var extraDbits = ref
 #if NET7_0_OR_GREATER
             refs.ExtraDbits;
 #else
             MemoryMarshal.GetReference<int>(s_extra_dbits);
 #endif
-        ref var extra_lbits = ref
+        ref var extraLbits = ref
 #if NET7_0_OR_GREATER
             refs.ExtraLbits;
 #else
             MemoryMarshal.GetReference<int>(s_extra_lbits);
 #endif
-        ref var extra_blbits = ref
+        ref var extraBlbits = ref
 #if NET7_0_OR_GREATER
             refs.ExtraBlbits;
 #else
@@ -897,32 +910,32 @@ internal static partial class Deflater
             s.MatchLength = 0;
             var c = Unsafe.Add(ref window, s.Strstart);
             Trace.Tracevv($"{Convert.ToChar(c)}");
-            TreeTallyLit(s, c, out var bflush, ref pending_buf, ref dyn_ltree, ref dyn_dtree,
-                ref dist_code, ref length_code);
+            TreeTallyLit(s, c, out var bflush, ref pendingBuf, ref dynLtree, ref dynDtree,
+                ref distCode, ref lengthCode);
             s.Lookahead--;
             s.Strstart++;
-            if (bflush && FlushBlock(ref strm, 0, ref window, out state, ref pending_buf, ref pending_out,
-                ref sta_ltree, ref sta_dtree, ref dyn_ltree, ref dyn_dtree, ref bl_tree, ref bl_count,
-                ref heap, ref depth, ref bl_order, ref dist_code, ref length_code, ref base_dist,
-                ref base_length, ref extra_dbits, ref extra_lbits, ref extra_blbits))
+            if (bflush && FlushBlock(ref strm, 0, ref window, out state, ref pendingBuf, ref pendingOut,
+                ref staLtree, ref staDtree, ref dynLtree, ref dynDtree, ref blTree, ref blCount,
+                ref heap, ref depth, ref blOrder, ref distCode, ref lengthCode, ref baseDist,
+                ref baseLength, ref extraDbits, ref extraLbits, ref extraBlbits))
                 return state;
         }
 
         s.Insert = 0;
         if (flush == Z_FINISH)
         {
-            if (FlushBlock(ref strm, 1, ref window, out state, ref pending_buf, ref pending_out,
-                ref sta_ltree, ref sta_dtree, ref dyn_ltree, ref dyn_dtree, ref bl_tree, ref bl_count,
-                ref heap, ref depth, ref bl_order, ref dist_code, ref length_code, ref base_dist,
-                ref base_length, ref extra_dbits, ref extra_lbits, ref extra_blbits))
+            if (FlushBlock(ref strm, 1, ref window, out state, ref pendingBuf, ref pendingOut,
+                ref staLtree, ref staDtree, ref dynLtree, ref dynDtree, ref blTree, ref blCount,
+                ref heap, ref depth, ref blOrder, ref distCode, ref lengthCode, ref baseDist,
+                ref baseLength, ref extraDbits, ref extraLbits, ref extraBlbits))
                 return state;
 
             return BlockState.FinishDone;
         }
-        if (s.SymNext != 0 && FlushBlock(ref strm, 0, ref window, out state, ref pending_buf, ref pending_out,
-            ref sta_ltree, ref sta_dtree, ref dyn_ltree, ref dyn_dtree, ref bl_tree, ref bl_count,
-            ref heap, ref depth, ref bl_order, ref dist_code, ref length_code, ref base_dist,
-            ref base_length, ref extra_dbits, ref extra_lbits, ref extra_blbits))
+        if (s.SymNext != 0 && FlushBlock(ref strm, 0, ref window, out state, ref pendingBuf, ref pendingOut,
+            ref staLtree, ref staDtree, ref dynLtree, ref dynDtree, ref blTree, ref blCount,
+            ref heap, ref depth, ref blOrder, ref distCode, ref lengthCode, ref baseDist,
+            ref baseLength, ref extraDbits, ref extraLbits, ref extraBlbits))
             return state;
 
         return BlockState.BlockDone;
@@ -1089,31 +1102,31 @@ internal static partial class Deflater
         h = (((h) << s.HashShift) ^ c) & s.HashMask;
     }
 
-    private static void FlushBlockOnly(ref ZStream strm, uint last, ref byte pending_buf, ref byte pending_out,
-        ref byte window, ref TreeNode sta_ltree, ref TreeNode sta_dtree, ref TreeNode dyn_ltree, ref TreeNode dyn_dtree,
-        ref TreeNode bl_tree, ref ushort bl_count, ref int heap, ref byte depth, ref ushort bl_order, ref byte dist_code,
-        ref byte length_code, ref int base_dist, ref int base_length, ref int extra_dbits, ref int extra_lbits, ref int extra_blbits)
+    private static void FlushBlockOnly(ref ZStream strm, uint last, ref byte pendingBuf, ref byte pendingOut,
+        ref byte window, ref TreeNode staLtree, ref TreeNode staDtree, ref TreeNode dynLtree, ref TreeNode dynDtree,
+        ref TreeNode blTree, ref ushort blCount, ref int heap, ref byte depth, ref ushort blOrder, ref byte distCode,
+        ref byte lengthCode, ref int baseDist, ref int baseLength, ref int extraDbits, ref int extraLbits, ref int extraBlbits)
     {
         var s = strm.deflateState;
-        var block_start = (uint)s.BlockStart;
-        ref var buf = ref s.BlockStart >= 0L ? ref Unsafe.Add(ref window, block_start) : ref netUnsafe.NullRef<byte>();
-        Tree.FlushBlock(ref strm, ref buf, s.Strstart - block_start, last,
-            ref pending_buf, ref sta_ltree, ref sta_dtree, ref dyn_ltree, ref dyn_dtree, ref bl_tree, ref bl_count, ref heap, ref depth, ref bl_order,
-            ref dist_code, ref length_code, ref base_dist, ref base_length, ref extra_dbits, ref extra_lbits, ref extra_blbits);
+        var blockStart = (uint)s.BlockStart;
+        ref var buf = ref s.BlockStart >= 0L ? ref Unsafe.Add(ref window, blockStart) : ref netUnsafe.NullRef<byte>();
+        Tree.FlushBlock(ref strm, ref buf, s.Strstart - blockStart, last,
+            ref pendingBuf, ref staLtree, ref staDtree, ref dynLtree, ref dynDtree, ref blTree, ref blCount, ref heap, ref depth, ref blOrder,
+            ref distCode, ref lengthCode, ref baseDist, ref baseLength, ref extraDbits, ref extraLbits, ref extraBlbits);
         s.BlockStart = (int)s.Strstart;
-        FlushPending(ref strm, ref pending_buf, ref pending_out);
+        FlushPending(ref strm, ref pendingBuf, ref pendingOut);
         Trace.Tracev("[FLUSH]");
     }
 
     private static bool FlushBlock(ref ZStream strm, uint last, ref byte window, out BlockState state,
-        ref byte pending_buf, ref byte pending_out, ref TreeNode sta_ltree, ref TreeNode sta_dtree,
-        ref TreeNode dyn_ltree, ref TreeNode dyn_dtree, ref TreeNode bl_tree, ref ushort bl_count, ref int heap,
-        ref byte depth, ref ushort bl_order, ref byte dist_code, ref byte length_code, ref int base_dist, ref int base_length,
-        ref int extra_dbits, ref int extra_lbits, ref int extra_blbits)
+        ref byte pendingBuf, ref byte pendingOut, ref TreeNode staLtree, ref TreeNode staDtree,
+        ref TreeNode dynLtree, ref TreeNode dynDtree, ref TreeNode blTree, ref ushort blCount, ref int heap,
+        ref byte depth, ref ushort blOrder, ref byte distCode, ref byte lengthCode, ref int baseDist, ref int baseLength,
+        ref int extraDbits, ref int extraLbits, ref int extraBlbits)
     {
-        FlushBlockOnly(ref strm, last, ref pending_buf, ref pending_out, ref window, ref sta_ltree, ref sta_dtree,
-            ref dyn_ltree, ref dyn_dtree, ref bl_tree, ref bl_count, ref heap, ref depth, ref bl_order, ref dist_code,
-            ref length_code, ref base_dist, ref base_length, ref extra_dbits, ref extra_lbits, ref extra_blbits);
+        FlushBlockOnly(ref strm, last, ref pendingBuf, ref pendingOut, ref window, ref staLtree, ref staDtree,
+            ref dynLtree, ref dynDtree, ref blTree, ref blCount, ref heap, ref depth, ref blOrder, ref distCode,
+            ref lengthCode, ref baseDist, ref baseLength, ref extraDbits, ref extraLbits, ref extraBlbits);
         if (strm.avail_out == 0)
         {
             state = (last != 0) ? BlockState.FinishStarted : BlockState.NeedMore;
@@ -1126,14 +1139,14 @@ internal static partial class Deflater
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TreeTallyLit(DeflateState s, byte c, out bool flush,
-        ref byte pending_buf, ref TreeNode dyn_ltree, ref TreeNode dyn_dtree,
-        ref byte dist_code, ref byte length_code)
+        ref byte pendingBuf, ref TreeNode dynLtree, ref TreeNode dynDtree,
+        ref byte distCode, ref byte lengthCode)
 #if DEBUG
     {
-        Unsafe.Add(ref pending_buf, s.LitBufsize + s.SymNext++) = 0;
-        Unsafe.Add(ref pending_buf, s.LitBufsize + s.SymNext++) = 0;
-        Unsafe.Add(ref pending_buf, s.LitBufsize + s.SymNext++) = c;
-        Unsafe.Add(ref dyn_ltree, c).fc++;
+        Unsafe.Add(ref pendingBuf, s.LitBufsize + s.SymNext++) = 0;
+        Unsafe.Add(ref pendingBuf, s.LitBufsize + s.SymNext++) = 0;
+        Unsafe.Add(ref pendingBuf, s.LitBufsize + s.SymNext++) = c;
+        Unsafe.Add(ref dynLtree, c).fc++;
         flush = s.SymNext == s.SymEnd;
     }
 #else
@@ -1141,7 +1154,7 @@ internal static partial class Deflater
             ref dist_code, ref length_code);
 #endif
 
-    private static BlockState DeflateRle(ref ZStream strm, int flush, ref byte pending_buf, ref byte pending_out)
+    private static BlockState DeflateRle(ref ZStream strm, int flush, ref byte pendingBuf, ref byte pendingOut)
     {
         var s = strm.deflateState;
 #if NET7_0_OR_GREATER
@@ -1166,7 +1179,7 @@ internal static partial class Deflater
 #else
             MemoryMarshal.GetReference<ushort>(s.head);
 #endif
-        ref var bl_count = ref
+        ref var blCount = ref
 #if NET7_0_OR_GREATER
             refs.BlCount;
 #else
@@ -1185,79 +1198,79 @@ internal static partial class Deflater
             MemoryMarshal.GetReference<byte>(s.depth);
 #endif
 
-        ref var sta_ltree = ref
+        ref var staLtree = ref
 #if NET7_0_OR_GREATER
             refs.StaLtree;
 #else
             MemoryMarshal.GetReference<TreeNode>(Tree.s_ltree);
 #endif
-        ref var sta_dtree = ref
+        ref var staDtree = ref
 #if NET7_0_OR_GREATER
             refs.StaDtree;
 #else
             MemoryMarshal.GetReference<TreeNode>(Tree.s_dtree);
 #endif
-        ref var dyn_ltree = ref
+        ref var dynLtree = ref
 #if NET7_0_OR_GREATER
             refs.DynLtree;
 #else
             MemoryMarshal.GetReference<TreeNode>(s.dyn_ltree);
 #endif
-        ref var dyn_dtree = ref
+        ref var dynDtree = ref
 #if NET7_0_OR_GREATER
             refs.DynDtree;
 #else
             MemoryMarshal.GetReference<TreeNode>(s.dyn_dtree);
 #endif
-        ref var bl_tree = ref
+        ref var blTree = ref
 #if NET7_0_OR_GREATER
             refs.BlTree;
 #else
             MemoryMarshal.GetReference<TreeNode>(s.bl_tree);
 #endif
-        ref var bl_order = ref
+        ref var blOrder = ref
 #if NET7_0_OR_GREATER
             refs.BlOrder;
 #else
             MemoryMarshal.GetReference<ushort>(s_bl_order);
 #endif
-        ref var dist_code = ref
+        ref var distCode = ref
 #if NET7_0_OR_GREATER
             refs.DistCode;
 #else
             MemoryMarshal.GetReference<byte>(s_dist_code);
 #endif
-        ref var length_code = ref
+        ref var lengthCode = ref
 #if NET7_0_OR_GREATER
             refs.LengthCode;
 #else
             MemoryMarshal.GetReference<byte>(s_length_code);
 #endif
-        ref var base_dist = ref
+        ref var baseDist = ref
 #if NET7_0_OR_GREATER
             refs.BaseDist;
 #else
             MemoryMarshal.GetReference<int>(s_base_dist);
 #endif
-        ref var base_length = ref
+        ref var baseLength = ref
 #if NET7_0_OR_GREATER
             refs.BaseLength;
 #else
             MemoryMarshal.GetReference<int>(s_base_length);
 #endif
-        ref var extra_dbits = ref
+        ref var extraDbits = ref
 #if NET7_0_OR_GREATER
             refs.ExtraDbits;
 #else
             MemoryMarshal.GetReference<int>(s_extra_dbits);
 #endif
-        ref var extra_lbits = ref
+        ref var extraLbits = ref
 #if NET7_0_OR_GREATER
             refs.ExtraLbits;
 #else
             MemoryMarshal.GetReference<int>(s_extra_lbits);
 #endif
-        ref var extra_blbits = ref
+        ref var extraBlbits = ref
 #if NET7_0_OR_GREATER
             refs.ExtraBlbits;
 #else
@@ -1316,7 +1329,7 @@ internal static partial class Deflater
             if (s.MatchLength >= MinMatch)
             {
                 TreeTallyDist(s, 1, s.MatchLength - MinMatch, out bflush,
-                    ref pending_buf, ref dyn_ltree, ref dyn_dtree, ref dist_code, ref length_code);
+                    ref pendingBuf, ref dynLtree, ref dynDtree, ref distCode, ref lengthCode);
 
                 s.Lookahead -= s.MatchLength;
                 s.Strstart += s.MatchLength;
@@ -1327,33 +1340,33 @@ internal static partial class Deflater
                 // No match, output a literal byte
                 var b = Unsafe.Add(ref window, s.Strstart);
                 Trace.Tracevv($"{Convert.ToChar(b)}");
-                TreeTallyLit(s, b, out bflush, ref pending_buf, ref dyn_ltree, ref dyn_dtree,
-                    ref dist_code, ref length_code);
+                TreeTallyLit(s, b, out bflush, ref pendingBuf, ref dynLtree, ref dynDtree,
+                    ref distCode, ref lengthCode);
                 s.Lookahead--;
                 s.Strstart++;
             }
-            if (bflush && FlushBlock(ref strm, 0, ref window, out state, ref pending_buf, ref pending_out,
-                ref sta_ltree, ref sta_dtree, ref dyn_ltree, ref dyn_dtree, ref bl_tree, ref bl_count,
-                ref heap, ref depth, ref bl_order, ref dist_code, ref length_code, ref base_dist,
-                ref base_length, ref extra_dbits, ref extra_lbits, ref extra_blbits))
+            if (bflush && FlushBlock(ref strm, 0, ref window, out state, ref pendingBuf, ref pendingOut,
+                ref staLtree, ref staDtree, ref dynLtree, ref dynDtree, ref blTree, ref blCount,
+                ref heap, ref depth, ref blOrder, ref distCode, ref lengthCode, ref baseDist,
+                ref baseLength, ref extraDbits, ref extraLbits, ref extraBlbits))
                 return state;
         }
 
         s.Insert = 0;
         if (flush == Z_FINISH)
         {
-            if (FlushBlock(ref strm, 1, ref window, out state, ref pending_buf, ref pending_out,
-                ref sta_ltree, ref sta_dtree, ref dyn_ltree, ref dyn_dtree, ref bl_tree, ref bl_count,
-                ref heap, ref depth, ref bl_order, ref dist_code, ref length_code, ref base_dist,
-                ref base_length, ref extra_dbits, ref extra_lbits, ref extra_blbits))
+            if (FlushBlock(ref strm, 1, ref window, out state, ref pendingBuf, ref pendingOut,
+                ref staLtree, ref staDtree, ref dynLtree, ref dynDtree, ref blTree, ref blCount,
+                ref heap, ref depth, ref blOrder, ref distCode, ref lengthCode, ref baseDist,
+                ref baseLength, ref extraDbits, ref extraLbits, ref extraBlbits))
                 return state;
 
             return BlockState.FinishDone;
         }
-        if (s.SymNext != 0 && FlushBlock(ref strm, 0, ref window, out state, ref pending_buf, ref pending_out,
-                ref sta_ltree, ref sta_dtree, ref dyn_ltree, ref dyn_dtree, ref bl_tree, ref bl_count,
-                ref heap, ref depth, ref bl_order, ref dist_code, ref length_code, ref base_dist,
-                ref base_length, ref extra_dbits, ref extra_lbits, ref extra_blbits))
+        if (s.SymNext != 0 && FlushBlock(ref strm, 0, ref window, out state, ref pendingBuf, ref pendingOut,
+                ref staLtree, ref staDtree, ref dynLtree, ref dynDtree, ref blTree, ref blCount,
+                ref heap, ref depth, ref blOrder, ref distCode, ref lengthCode, ref baseDist,
+                ref baseLength, ref extraDbits, ref extraLbits, ref extraBlbits))
             return state;
 
         return BlockState.BlockDone;
@@ -1361,18 +1374,18 @@ internal static partial class Deflater
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TreeTallyDist(DeflateState s, uint distance, uint length, out bool flush,
-        ref byte pending_buf, ref TreeNode dyn_ltree, ref TreeNode dyn_dtree, ref byte dist_code,
-        ref byte length_code)
+        ref byte pendingBuf, ref TreeNode dynLtree, ref TreeNode dynDtree, ref byte distCode,
+        ref byte lengthCode)
 #if DEBUG
     {
         var len = (byte)length;
         var dist = (ushort)distance;
-        Unsafe.Add(ref pending_buf, s.LitBufsize + s.SymNext++) = (byte)dist;
-        Unsafe.Add(ref pending_buf, s.LitBufsize + s.SymNext++) = (byte)(dist >> 8);
-        Unsafe.Add(ref pending_buf, s.LitBufsize + s.SymNext++) = len;
+        Unsafe.Add(ref pendingBuf, s.LitBufsize + s.SymNext++) = (byte)dist;
+        Unsafe.Add(ref pendingBuf, s.LitBufsize + s.SymNext++) = (byte)(dist >> 8);
+        Unsafe.Add(ref pendingBuf, s.LitBufsize + s.SymNext++) = len;
         dist--;
-        Unsafe.Add(ref dyn_ltree, (uint)(s_length_code[len] + Literals + 1)).fc++;
-        Unsafe.Add(ref dyn_dtree, Tree.DCode(dist, ref dist_code)).fc++;
+        Unsafe.Add(ref dynLtree, (uint)(SLengthCode[len] + Literals + 1)).fc++;
+        Unsafe.Add(ref dynDtree, Tree.DCode(dist, ref distCode)).fc++;
         flush = s.SymNext == s.SymEnd;
     }
 #else
@@ -1380,7 +1393,7 @@ internal static partial class Deflater
          ref dist_code, ref length_code);
 #endif
 
-    private static BlockState DeflateFast(ref ZStream strm, int flush, ref byte pending_buf, ref byte pending_out)
+    private static BlockState DeflateFast(ref ZStream strm, int flush, ref byte pendingBuf, ref byte pendingOut)
     {
         var s = strm.deflateState;
 #if NET7_0_OR_GREATER
@@ -1405,7 +1418,7 @@ internal static partial class Deflater
 #else
             MemoryMarshal.GetReference<ushort>(s.head);
 #endif
-        ref var bl_count = ref
+        ref var blCount = ref
 #if NET7_0_OR_GREATER
             refs.BlCount;
 #else
@@ -1424,79 +1437,79 @@ internal static partial class Deflater
             MemoryMarshal.GetReference<byte>(s.depth);
 #endif
 
-        ref var sta_ltree = ref
+        ref var staLtree = ref
 #if NET7_0_OR_GREATER
             refs.StaLtree;
 #else
             MemoryMarshal.GetReference<TreeNode>(Tree.s_ltree);
 #endif
-        ref var sta_dtree = ref
+        ref var staDtree = ref
 #if NET7_0_OR_GREATER
             refs.StaDtree;
 #else
             MemoryMarshal.GetReference<TreeNode>(Tree.s_dtree);
 #endif
-        ref var dyn_ltree = ref
+        ref var dynLtree = ref
 #if NET7_0_OR_GREATER
             refs.DynLtree;
 #else
             MemoryMarshal.GetReference<TreeNode>(s.dyn_ltree);
 #endif
-        ref var dyn_dtree = ref
+        ref var dynDtree = ref
 #if NET7_0_OR_GREATER
             refs.DynDtree;
 #else
             MemoryMarshal.GetReference<TreeNode>(s.dyn_dtree);
 #endif
-        ref var bl_tree = ref
+        ref var blTree = ref
 #if NET7_0_OR_GREATER
             refs.BlTree;
 #else
             MemoryMarshal.GetReference<TreeNode>(s.bl_tree);
 #endif
-        ref var bl_order = ref
+        ref var blOrder = ref
 #if NET7_0_OR_GREATER
             refs.BlOrder;
 #else
             MemoryMarshal.GetReference<ushort>(s_bl_order);
 #endif
-        ref var dist_code = ref
+        ref var distCode = ref
 #if NET7_0_OR_GREATER
             refs.DistCode;
 #else
             MemoryMarshal.GetReference<byte>(s_dist_code);
 #endif
-        ref var length_code = ref
+        ref var lengthCode = ref
 #if NET7_0_OR_GREATER
             refs.LengthCode;
 #else
             MemoryMarshal.GetReference<byte>(s_length_code);
 #endif
-        ref var base_dist = ref
+        ref var baseDist = ref
 #if NET7_0_OR_GREATER
             refs.BaseDist;
 #else
             MemoryMarshal.GetReference<int>(s_base_dist);
 #endif
-        ref var base_length = ref
+        ref var baseLength = ref
 #if NET7_0_OR_GREATER
             refs.BaseLength;
 #else
             MemoryMarshal.GetReference<int>(s_base_length);
 #endif
-        ref var extra_dbits = ref
+        ref var extraDbits = ref
 #if NET7_0_OR_GREATER
             refs.ExtraDbits;
 #else
             MemoryMarshal.GetReference<int>(s_extra_dbits);
 #endif
-        ref var extra_lbits = ref
+        ref var extraLbits = ref
 #if NET7_0_OR_GREATER
             refs.ExtraLbits;
 #else
             MemoryMarshal.GetReference<int>(s_extra_lbits);
 #endif
-        ref var extra_blbits = ref
+        ref var extraBlbits = ref
 #if NET7_0_OR_GREATER
             refs.ExtraBlbits;
 #else
@@ -1524,26 +1537,26 @@ internal static partial class Deflater
             /* Insert the string window[strstart .. strstart+2] in the
              * dictionary, and set hash_head to the head of the hash chain:
              */
-            uint hash_head = 0; // head of the hash chain
+            uint hashHead = 0; // head of the hash chain
             if (s.Lookahead >= MinMatch)
-                InsertString(s, s.Strstart, ref hash_head, ref window, ref prev, ref head);
+                InsertString(s, s.Strstart, ref hashHead, ref window, ref prev, ref head);
 
             /* Find the longest match, discarding those <= prev_length.
              * At this point we have always match_length < MinMatch
              */
-            if (hash_head != 0 && s.Strstart - hash_head <= MaxDist(s))
+            if (hashHead != 0 && s.Strstart - hashHead <= MaxDist(s))
             {
                 /* To simplify the code, we prevent matches with the string
                  * of window index 0 (in particular we have to avoid a match
                  * of the string with itself at the start of the input file).
                  */
-                s.MatchLength = LongestMatch(s, hash_head, ref window, ref prev);
+                s.MatchLength = LongestMatch(s, hashHead, ref window, ref prev);
                 // LongestMatch() sets match_start
             }
             if (s.MatchLength >= MinMatch)
             {
-                TreeTallyDist(s, s.Strstart - s.MatchStart, s.MatchLength - MinMatch, out bflush, ref pending_buf,
-                    ref dyn_ltree, ref dyn_dtree, ref dist_code, ref length_code);
+                TreeTallyDist(s, s.Strstart - s.MatchStart, s.MatchLength - MinMatch, out bflush, ref pendingBuf,
+                    ref dynLtree, ref dynDtree, ref distCode, ref lengthCode);
 
                 s.Lookahead -= s.MatchLength;
 
@@ -1557,7 +1570,7 @@ internal static partial class Deflater
                     do
                     {
                         s.Strstart++;
-                        InsertString(s, s.Strstart, ref hash_head, ref window, ref prev, ref head);
+                        InsertString(s, s.Strstart, ref hashHead, ref window, ref prev, ref head);
                         /* strstart never exceeds WSize-MaxMatch, so there are
                          * always MinMatch bytes ahead.
                          */
@@ -1581,43 +1594,43 @@ internal static partial class Deflater
                 // No match, output a literal byte
                 var b = Unsafe.Add(ref window, s.Strstart);
                 Trace.Tracevv($"{Convert.ToChar(b)}");
-                TreeTallyLit(s, b, out bflush, ref pending_buf, ref dyn_ltree, ref dyn_dtree,
-                    ref dist_code, ref length_code);
+                TreeTallyLit(s, b, out bflush, ref pendingBuf, ref dynLtree, ref dynDtree,
+                    ref distCode, ref lengthCode);
                 s.Lookahead--;
                 s.Strstart++;
             }
-            if (bflush && FlushBlock(ref strm, 0, ref window, out state, ref pending_buf, ref pending_out,
-                ref sta_ltree, ref sta_dtree, ref dyn_ltree, ref dyn_dtree, ref bl_tree, ref bl_count,
-                ref heap, ref depth, ref bl_order, ref dist_code, ref length_code, ref base_dist,
-                ref base_length, ref extra_dbits, ref extra_lbits, ref extra_blbits))
+            if (bflush && FlushBlock(ref strm, 0, ref window, out state, ref pendingBuf, ref pendingOut,
+                ref staLtree, ref staDtree, ref dynLtree, ref dynDtree, ref blTree, ref blCount,
+                ref heap, ref depth, ref blOrder, ref distCode, ref lengthCode, ref baseDist,
+                ref baseLength, ref extraDbits, ref extraLbits, ref extraBlbits))
                 return state;
         }
         s.Insert = s.Strstart < MinMatch - 1 ? s.Strstart : MinMatch - 1;
         if (flush == Z_FINISH)
         {
-            if (FlushBlock(ref strm, 1, ref window, out state, ref pending_buf, ref pending_out,
-                ref sta_ltree, ref sta_dtree, ref dyn_ltree, ref dyn_dtree, ref bl_tree, ref bl_count,
-                ref heap, ref depth, ref bl_order, ref dist_code, ref length_code, ref base_dist,
-                ref base_length, ref extra_dbits, ref extra_lbits, ref extra_blbits))
+            if (FlushBlock(ref strm, 1, ref window, out state, ref pendingBuf, ref pendingOut,
+                ref staLtree, ref staDtree, ref dynLtree, ref dynDtree, ref blTree, ref blCount,
+                ref heap, ref depth, ref blOrder, ref distCode, ref lengthCode, ref baseDist,
+                ref baseLength, ref extraDbits, ref extraLbits, ref extraBlbits))
                 return state;
 
             return BlockState.FinishDone;
         }
-        if (s.SymNext != 0 && FlushBlock(ref strm, 0, ref window, out state, ref pending_buf, ref pending_out,
-                ref sta_ltree, ref sta_dtree, ref dyn_ltree, ref dyn_dtree, ref bl_tree, ref bl_count,
-                ref heap, ref depth, ref bl_order, ref dist_code, ref length_code, ref base_dist,
-                ref base_length, ref extra_dbits, ref extra_lbits, ref extra_blbits))
+        if (s.SymNext != 0 && FlushBlock(ref strm, 0, ref window, out state, ref pendingBuf, ref pendingOut,
+                ref staLtree, ref staDtree, ref dynLtree, ref dynDtree, ref blTree, ref blCount,
+                ref heap, ref depth, ref blOrder, ref distCode, ref lengthCode, ref baseDist,
+                ref baseLength, ref extraDbits, ref extraLbits, ref extraBlbits))
             return state;
 
         return BlockState.BlockDone;
     }
 
-    private static void InsertString(DeflateState s, uint str, ref uint match_head,
+    private static void InsertString(DeflateState s, uint str, ref uint matchHead,
         ref byte window, ref ushort prev, ref ushort head)
     {
         UpdateHash(s, ref s.InsH, Unsafe.Add(ref window, str + (MinMatch - 1)));
         ref var temp = ref Unsafe.Add(ref head, s.InsH);
-        match_head = Unsafe.Add(ref prev, (str) & s.WMask) = temp;
+        matchHead = Unsafe.Add(ref prev, (str) & s.WMask) = temp;
         temp = (ushort)str;
     }
 
@@ -1627,21 +1640,21 @@ internal static partial class Deflater
         return s.WSize - MinLookAhead;
     }
 
-    private static uint LongestMatch(DeflateState s, uint cur_match, ref byte window, ref ushort prev)
+    private static uint LongestMatch(DeflateState s, uint curMatch, ref byte window, ref ushort prev)
     {
-        var chain_length = s.MaxChainLength; // max hash chain length
+        var chainLength = s.MaxChainLength; // max hash chain length
         ref var scan = ref Unsafe.Add(ref window, s.Strstart); // current string
         int len;                                // length of current match
-        var best_len = (int)s.PrevLength;      // best match length so far
-        var nice_match = s.NiceMatch;          // stop if match long enough
+        var bestLen = (int)s.PrevLength;      // best match length so far
+        var niceMatch = s.NiceMatch;          // stop if match long enough
         var limit = s.Strstart > MaxDist(s) ? s.Strstart - MaxDist(s) : 0;
         /* Stop when cur_match becomes <= limit. To simplify the code,
          * we prevent matches with the string of window index 0.
          */
         var wmask = s.WMask;
         ref var strend = ref Unsafe.Add(ref window, s.Strstart + MaxMatch);
-        var scan_end1 = Unsafe.Add(ref scan, best_len - 1);
-        var scan_end = Unsafe.Add(ref scan, best_len);
+        var scanEnd1 = Unsafe.Add(ref scan, bestLen - 1);
+        var scanEnd = Unsafe.Add(ref scan, bestLen);
 
         /* The code is optimized for HASH_BITS >= 8 and MaxMatch-2 multiple of 16.
          * It is easy to get rid of this optimization if necessary.
@@ -1651,23 +1664,23 @@ internal static partial class Deflater
         // Do not waste too much time if we already have a good match:
         if (s.PrevLength >= s.GoodMatch)
         {
-            chain_length >>= 2;
+            chainLength >>= 2;
         }
 
         /* Do not look for matches beyond the end of the input. This is necessary
          * to make deflate deterministic.
          */
-        if (nice_match > s.Lookahead)
+        if (niceMatch > s.Lookahead)
         {
-            nice_match = (int)s.Lookahead;
+            niceMatch = (int)s.Lookahead;
         }
 
         Debug.Assert(s.Strstart <= s.WindowSize - MinLookAhead, "need lookahead");
 
         do
         {
-            Debug.Assert(cur_match < s.Strstart, "no future");
-            ref var match = ref Unsafe.Add(ref window, cur_match); // matched string
+            Debug.Assert(curMatch < s.Strstart, "no future");
+            ref var match = ref Unsafe.Add(ref window, curMatch); // matched string
 
             /* Skip to next match if the match length cannot increase
              * or if the match length is less than 2.  Note that the checks below
@@ -1678,8 +1691,8 @@ internal static partial class Deflater
              * the output of deflate is not affected by the uninitialized values.
              */
 
-            if (Unsafe.Add(ref match, best_len) != scan_end
-                || Unsafe.Add(ref match, best_len - 1) != scan_end1
+            if (Unsafe.Add(ref match, bestLen) != scanEnd
+                || Unsafe.Add(ref match, bestLen - 1) != scanEnd1
                 || match != scan
                 || (match = ref Unsafe.Add(ref match, 1U)) != Unsafe.Add(ref scan, 1U))
                 continue;
@@ -1715,25 +1728,25 @@ internal static partial class Deflater
             len = MaxMatch - (int)netUnsafe.ByteOffset(ref scan, ref strend);
             scan = ref Unsafe.Subtract(ref strend, (uint)MaxMatch);
 
-            if (len > best_len)
+            if (len > bestLen)
             {
-                s.MatchStart = cur_match;
-                best_len = len;
-                if (len >= nice_match)
+                s.MatchStart = curMatch;
+                bestLen = len;
+                if (len >= niceMatch)
                     break;
 
-                scan_end1 = Unsafe.Add(ref scan, best_len - 1);
-                scan_end = Unsafe.Add(ref scan, best_len);
+                scanEnd1 = Unsafe.Add(ref scan, bestLen - 1);
+                scanEnd = Unsafe.Add(ref scan, bestLen);
             }
-        } while ((cur_match = Unsafe.Add(ref prev, cur_match & wmask)) > limit && --chain_length != 0);
+        } while ((curMatch = Unsafe.Add(ref prev, curMatch & wmask)) > limit && --chainLength != 0);
 
-        if (best_len <= s.Lookahead)
-            return (uint)best_len;
+        if (bestLen <= s.Lookahead)
+            return (uint)bestLen;
 
         return s.Lookahead;
     }
 
-    private static BlockState DeflateSlow(ref ZStream strm, int flush, ref byte pending_buf, ref byte pending_out)
+    private static BlockState DeflateSlow(ref ZStream strm, int flush, ref byte pendingBuf, ref byte pendingOut)
     {
         var s = strm.deflateState;
 #if NET7_0_OR_GREATER
@@ -1758,7 +1771,7 @@ internal static partial class Deflater
 #else
             MemoryMarshal.GetReference<ushort>(s.head);
 #endif
-        ref var bl_count = ref
+        ref var blCount = ref
 #if NET7_0_OR_GREATER
             refs.BlCount;
 #else
@@ -1777,79 +1790,79 @@ internal static partial class Deflater
             MemoryMarshal.GetReference<byte>(s.depth);
 #endif
 
-        ref var sta_ltree = ref
+        ref var staLtree = ref
 #if NET7_0_OR_GREATER
             refs.StaLtree;
 #else
             MemoryMarshal.GetReference<TreeNode>(Tree.s_ltree);
 #endif
-        ref var sta_dtree = ref
+        ref var staDtree = ref
 #if NET7_0_OR_GREATER
             refs.StaDtree;
 #else
             MemoryMarshal.GetReference<TreeNode>(Tree.s_dtree);
 #endif
-        ref var dyn_ltree = ref
+        ref var dynLtree = ref
 #if NET7_0_OR_GREATER
             refs.DynLtree;
 #else
             MemoryMarshal.GetReference<TreeNode>(s.dyn_ltree);
 #endif
-        ref var dyn_dtree = ref
+        ref var dynDtree = ref
 #if NET7_0_OR_GREATER
             refs.DynDtree;
 #else
             MemoryMarshal.GetReference<TreeNode>(s.dyn_dtree);
 #endif
-        ref var bl_tree = ref
+        ref var blTree = ref
 #if NET7_0_OR_GREATER
             refs.BlTree;
 #else
             MemoryMarshal.GetReference<TreeNode>(s.bl_tree);
 #endif
-        ref var bl_order = ref
+        ref var blOrder = ref
 #if NET7_0_OR_GREATER
             refs.BlOrder;
 #else
             MemoryMarshal.GetReference<ushort>(s_bl_order);
 #endif
-        ref var dist_code = ref
+        ref var distCode = ref
 #if NET7_0_OR_GREATER
             refs.DistCode;
 #else
             MemoryMarshal.GetReference<byte>(s_dist_code);
 #endif
-        ref var length_code = ref
+        ref var lengthCode = ref
 #if NET7_0_OR_GREATER
             refs.LengthCode;
 #else
             MemoryMarshal.GetReference<byte>(s_length_code);
 #endif
-        ref var base_dist = ref
+        ref var baseDist = ref
 #if NET7_0_OR_GREATER
             refs.BaseDist;
 #else
             MemoryMarshal.GetReference<int>(s_base_dist);
 #endif
-        ref var base_length = ref
+        ref var baseLength = ref
 #if NET7_0_OR_GREATER
             refs.BaseLength;
 #else
             MemoryMarshal.GetReference<int>(s_base_length);
 #endif
-        ref var extra_dbits = ref
+        ref var extraDbits = ref
 #if NET7_0_OR_GREATER
             refs.ExtraDbits;
 #else
             MemoryMarshal.GetReference<int>(s_extra_dbits);
 #endif
-        ref var extra_lbits = ref
+        ref var extraLbits = ref
 #if NET7_0_OR_GREATER
             refs.ExtraLbits;
 #else
             MemoryMarshal.GetReference<int>(s_extra_lbits);
 #endif
-        ref var extra_blbits = ref
+        ref var extraBlbits = ref
 #if NET7_0_OR_GREATER
             refs.ExtraBlbits;
 #else
@@ -1879,27 +1892,27 @@ internal static partial class Deflater
             /* Insert the string window[strstart .. strstart+2] in the
              * dictionary, and set hash_head to the head of the hash chain:
              */
-            uint hash_head = 0; // head of hash chain
+            uint hashHead = 0; // head of hash chain
             if (s.Lookahead >= MinMatch)
-                InsertString(s, s.Strstart, ref hash_head, ref window, ref prev, ref head);
+                InsertString(s, s.Strstart, ref hashHead, ref window, ref prev, ref head);
 
             // Find the longest match, discarding those <= prev_length.
             s.PrevLength = s.MatchLength;
             s.PrevMatch = s.MatchStart;
             s.MatchLength = MinMatch - 1;
 
-            if (hash_head != 0 && s.PrevLength < s.MaxLazyMatch &&
-                s.Strstart - hash_head <= MaxDist(s))
+            if (hashHead != 0 && s.PrevLength < s.MaxLazyMatch &&
+                s.Strstart - hashHead <= MaxDist(s))
             {
                 /* To simplify the code, we prevent matches with the string
                  * of window index 0 (in particular we have to avoid a match
                  * of the string with itself at the start of the input file).
                  */
-                s.MatchLength = LongestMatch(s, hash_head, ref window, ref prev);
+                s.MatchLength = LongestMatch(s, hashHead, ref window, ref prev);
                 // LongestMatch() sets match_start
 
                 if (s.MatchLength <= 5 && (s.Strategy == Z_FILTERED
-                    || s.MatchLength == MinMatch && s.Strstart - s.MatchStart > TooFar))
+                    || (s.MatchLength == MinMatch && s.Strstart - s.MatchStart > TooFar)))
                 {
 
                     /* If prev_match is also MinMatch, match_start is garbage
@@ -1913,11 +1926,11 @@ internal static partial class Deflater
              */
             if (s.PrevLength >= MinMatch && s.MatchLength <= s.PrevLength)
             {
-                var max_insert = s.Strstart + s.Lookahead - MinMatch;
+                var maxInsert = s.Strstart + s.Lookahead - MinMatch;
                 // Do not insert strings in hash table beyond this.
 
-                TreeTallyDist(s, s.Strstart - 1 - s.PrevMatch, s.PrevLength - MinMatch, out bflush, ref pending_buf,
-                    ref dyn_ltree, ref dyn_dtree, ref dist_code, ref length_code);
+                TreeTallyDist(s, s.Strstart - 1 - s.PrevMatch, s.PrevLength - MinMatch, out bflush, ref pendingBuf,
+                    ref dynLtree, ref dynDtree, ref distCode, ref lengthCode);
 
                 /* Insert in hash table all strings up to the end of the match.
                  * strstart-1 and strstart are already inserted. If there is not
@@ -1928,17 +1941,17 @@ internal static partial class Deflater
                 s.PrevLength -= 2;
                 do
                 {
-                    if (++s.Strstart <= max_insert)
-                        InsertString(s, s.Strstart, ref hash_head, ref window, ref prev, ref head);
+                    if (++s.Strstart <= maxInsert)
+                        InsertString(s, s.Strstart, ref hashHead, ref window, ref prev, ref head);
                 } while (--s.PrevLength != 0);
                 s.MatchAvailable = false;
                 s.MatchLength = MinMatch - 1;
                 s.Strstart++;
 
-                if (bflush && FlushBlock(ref strm, 0, ref window, out state, ref pending_buf, ref pending_out,
-                    ref sta_ltree, ref sta_dtree, ref dyn_ltree, ref dyn_dtree, ref bl_tree, ref bl_count,
-                    ref heap, ref depth, ref bl_order, ref dist_code, ref length_code, ref base_dist,
-                    ref base_length, ref extra_dbits, ref extra_lbits, ref extra_blbits))
+                if (bflush && FlushBlock(ref strm, 0, ref window, out state, ref pendingBuf, ref pendingOut,
+                    ref staLtree, ref staDtree, ref dynLtree, ref dynDtree, ref blTree, ref blCount,
+                    ref heap, ref depth, ref blOrder, ref distCode, ref lengthCode, ref baseDist,
+                    ref baseLength, ref extraDbits, ref extraLbits, ref extraBlbits))
                     return state;
 
             }
@@ -1950,13 +1963,13 @@ internal static partial class Deflater
                  */
                 var c = Unsafe.Add(ref window, s.Strstart - 1);
                 Trace.Tracevv($"{Convert.ToChar(c)}");
-                TreeTallyLit(s, c, out bflush, ref pending_buf, ref dyn_ltree, ref dyn_dtree,
-                    ref dist_code, ref length_code);
+                TreeTallyLit(s, c, out bflush, ref pendingBuf, ref dynLtree, ref dynDtree,
+                    ref distCode, ref lengthCode);
                 if (bflush)
-                    FlushBlockOnly(ref strm, 0, ref pending_buf, ref pending_out, ref window, ref sta_ltree,
-                        ref sta_dtree, ref dyn_ltree, ref dyn_dtree, ref bl_tree, ref bl_count, ref heap,
-                        ref depth, ref bl_order, ref dist_code, ref length_code, ref base_dist, ref base_length,
-                        ref extra_dbits, ref extra_lbits, ref extra_blbits);
+                    FlushBlockOnly(ref strm, 0, ref pendingBuf, ref pendingOut, ref window, ref staLtree,
+                        ref staDtree, ref dynLtree, ref dynDtree, ref blTree, ref blCount, ref heap,
+                        ref depth, ref blOrder, ref distCode, ref lengthCode, ref baseDist, ref baseLength,
+                        ref extraDbits, ref extraLbits, ref extraBlbits);
                 s.Strstart++;
                 s.Lookahead--;
                 if (strm.avail_out == 0)
@@ -1975,25 +1988,25 @@ internal static partial class Deflater
         {
             var b = Unsafe.Add(ref window, s.Strstart - 1);
             Trace.Tracevv($"{Convert.ToChar(b)}");
-            TreeTallyLit(s, b, out _, ref pending_buf, ref dyn_ltree, ref dyn_dtree,
-                ref dist_code, ref length_code);
+            TreeTallyLit(s, b, out _, ref pendingBuf, ref dynLtree, ref dynDtree,
+                ref distCode, ref lengthCode);
             s.MatchAvailable = false;
         }
         s.Insert = s.Strstart < MinMatch - 1 ? s.Strstart : MinMatch - 1;
         if (flush == Z_FINISH)
         {
-            if (FlushBlock(ref strm, 1, ref window, out state, ref pending_buf, ref pending_out,
-                ref sta_ltree, ref sta_dtree, ref dyn_ltree, ref dyn_dtree, ref bl_tree, ref bl_count,
-                ref heap, ref depth, ref bl_order, ref dist_code, ref length_code, ref base_dist,
-                ref base_length, ref extra_dbits, ref extra_lbits, ref extra_blbits))
+            if (FlushBlock(ref strm, 1, ref window, out state, ref pendingBuf, ref pendingOut,
+                ref staLtree, ref staDtree, ref dynLtree, ref dynDtree, ref blTree, ref blCount,
+                ref heap, ref depth, ref blOrder, ref distCode, ref lengthCode, ref baseDist,
+                ref baseLength, ref extraDbits, ref extraLbits, ref extraBlbits))
                 return state;
 
             return BlockState.FinishDone;
         }
-        if (s.SymNext != 0 && FlushBlock(ref strm, 0, ref window, out state, ref pending_buf, ref pending_out,
-            ref sta_ltree, ref sta_dtree, ref dyn_ltree, ref dyn_dtree, ref bl_tree, ref bl_count,
-            ref heap, ref depth, ref bl_order, ref dist_code, ref length_code, ref base_dist,
-            ref base_length, ref extra_dbits, ref extra_lbits, ref extra_blbits))
+        if (s.SymNext != 0 && FlushBlock(ref strm, 0, ref window, out state, ref pendingBuf, ref pendingOut,
+            ref staLtree, ref staDtree, ref dynLtree, ref dynDtree, ref blTree, ref blCount,
+            ref heap, ref depth, ref blOrder, ref distCode, ref lengthCode, ref baseDist,
+            ref baseLength, ref extraDbits, ref extraLbits, ref extraBlbits))
             return state;
 
         return BlockState.BlockDone;
@@ -2009,16 +2022,16 @@ internal static partial class Deflater
             refs.BlCount = ref MemoryMarshal.GetReference<ushort>(s.BlCount);
             refs.Heap = ref MemoryMarshal.GetReference<int>(s.Heap);
             refs.Depth = ref MemoryMarshal.GetReference<byte>(s.Depth);
-            refs.StaLtree = ref MemoryMarshal.GetReference<TreeNode>(Tree.s_ltree);
-            refs.StaDtree = ref MemoryMarshal.GetReference<TreeNode>(Tree.s_dtree);
-            refs.BlOrder = ref MemoryMarshal.GetReference<ushort>(s_bl_order);
-            refs.DistCode = ref MemoryMarshal.GetReference<byte>(s_dist_code);
-            refs.LengthCode = ref MemoryMarshal.GetReference<byte>(s_length_code);
-            refs.BaseDist = ref MemoryMarshal.GetReference<int>(s_base_dist);
-            refs.BaseLength = ref MemoryMarshal.GetReference<int>(s_base_length);
-            refs.ExtraDbits = ref MemoryMarshal.GetReference<int>(s_extra_dbits);
-            refs.ExtraLbits = ref MemoryMarshal.GetReference<int>(s_extra_lbits);
-            refs.ExtraBlbits = ref MemoryMarshal.GetReference<int>(s_extra_blbits);
+            refs.StaLtree = ref MemoryMarshal.GetReference<TreeNode>(Tree.SLtree);
+            refs.StaDtree = ref MemoryMarshal.GetReference<TreeNode>(Tree.SDtree);
+            refs.BlOrder = ref MemoryMarshal.GetReference<ushort>(SBlOrder);
+            refs.DistCode = ref MemoryMarshal.GetReference<byte>(SDistCode);
+            refs.LengthCode = ref MemoryMarshal.GetReference<byte>(SLengthCode);
+            refs.BaseDist = ref MemoryMarshal.GetReference<int>(SBaseDist);
+            refs.BaseLength = ref MemoryMarshal.GetReference<int>(SBaseLength);
+            refs.ExtraDbits = ref MemoryMarshal.GetReference<int>(SExtraDbits);
+            refs.ExtraLbits = ref MemoryMarshal.GetReference<int>(SExtraLbits);
+            refs.ExtraBlbits = ref MemoryMarshal.GetReference<int>(SExtraBlbits);
         }
     }
 #endif

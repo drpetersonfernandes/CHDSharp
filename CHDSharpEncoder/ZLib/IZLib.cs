@@ -5,7 +5,7 @@
 namespace CHDSharpEncoder.ZLib;
 
 /// <summary>
-/// Provides in-memory compression and decompression methods, including integrity checks of the uncompressed data. 
+/// Provides in-memory compression and decompression methods, including integrity checks of the uncompressed data.
 /// <para>The compressed data format used is the zlib format, which is a zlib wrapper documented in RFC 1950, wrapped around a deflate stream, which is itself documented in RFC 1951.</para>
 /// </summary>
 public interface IZLib

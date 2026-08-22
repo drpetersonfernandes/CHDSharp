@@ -14,9 +14,9 @@ internal static partial class Inflater
             return Z_STREAM_ERROR;
 
         var state = strm.inflateState;
-        state.wsize = 0;
-        state.whave = 0;
-        state.wnext = 0;
+        state.Wsize = 0;
+        state.Whave = 0;
+        state.Wnext = 0;
         return InflateResetKeep(ref strm);
     }
 
@@ -45,15 +45,15 @@ internal static partial class Inflater
         if (windowBits != 0 && windowBits is < 8 or > 15)
             return Z_STREAM_ERROR;
 
-        if (state.window != null && state.wbits != (uint)windowBits)
+        if (state.Window != null && state.Wbits != (uint)windowBits)
         {
-            ArrayPool<byte>.Shared.Return(state.window);
-            state.window = null;
+            ArrayPool<byte>.Shared.Return(state.Window);
+            state.Window = null;
         }
 
         // update state and reset the rest of it
-        state.wrap = wrap;
-        state.wbits = (uint)windowBits;
+        state.Wrap = wrap;
+        state.Wbits = (uint)windowBits;
         return InflateReset(ref strm);
     }
 
@@ -63,25 +63,25 @@ internal static partial class Inflater
             return Z_STREAM_ERROR;
 
         var state = strm.inflateState;
-        strm.total_in = strm.total_out = state.total = 0;
+        strm.total_in = strm.total_out = state.Total = 0;
         strm.msg = null;
-        if (state.wrap != 0)
+        if (state.Wrap != 0)
         {
-            strm.Adler = (uint)(state.wrap & 1);
+            strm.Adler = (uint)(state.Wrap & 1);
         }
 
-        state.mode = InflateMode.Head;
-        state.last = 0;
-        state.havedict = 0;
-        state.flags = -1;
-        state.dmax = 32768U;
-        state.hold = 0;
-        state.bits = 0;
-        state.lencode = state.distcode = state.codes;
-        state.next = default;
-        state.diststart = default;
-        state.sane = 1;
-        state.back = -1;
+        state.Mode = InflateMode.Head;
+        state.Last = 0;
+        state.Havedict = 0;
+        state.Flags = -1;
+        state.Dmax = 32768U;
+        state.Hold = 0;
+        state.Bits = 0;
+        state.Lencode = state.Distcode = state.Codes;
+        state.Next = 0;
+        state.Diststart = 0;
+        state.Sane = 1;
+        state.Back = -1;
         Trace.Tracev("inflate: reset\n");
         return Z_OK;
     }

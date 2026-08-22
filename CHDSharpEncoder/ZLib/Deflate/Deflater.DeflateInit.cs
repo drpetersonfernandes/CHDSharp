@@ -44,7 +44,7 @@ internal static partial class Deflater
             || windowBits < 8 || windowBits > 15
             || level < 0 || level > 9
             || strategy < 0 || strategy > Z_FIXED
-            || windowBits == 8 && wrap != 1)
+            || (windowBits == 8 && wrap != 1))
             return Z_STREAM_ERROR;
 
         if (windowBits == 8)
@@ -52,7 +52,7 @@ internal static partial class Deflater
             windowBits = 9;
         }
 
-        DeflateState s = default;
+        DeflateState s = null;
         try
         {
             s = s_objectPool.Get();
@@ -92,26 +92,26 @@ internal static partial class Deflater
         }
         catch (OutOfMemoryException)
         {
-            if (s != default)
+            if (s != null)
             {
                 s.Status = FinishState;
             }
 
-            strm.msg = s_z_errmsg[Z_NEED_DICT - Z_MEM_ERROR];
+            strm.msg = SzErrmsg[Z_NEED_DICT - Z_MEM_ERROR];
             _ = DeflateEnd(ref strm);
             return Z_MEM_ERROR;
         }
         catch (Exception)
         {
-            if (s != default)
+            if (s != null)
             {
-                if (s.Window != default)
+                if (s.Window != null)
                     ArrayPool<byte>.Shared.Return(s.Window);
-                if (s.Prev != default)
+                if (s.Prev != null)
                     ArrayPool<ushort>.Shared.Return(s.Prev);
-                if (s.Head != default)
+                if (s.Head != null)
                     ArrayPool<ushort>.Shared.Return(s.Head);
-                if (s.PendingBuf != default)
+                if (s.PendingBuf != null)
                     ArrayPool<byte>.Shared.Return(s.PendingBuf);
 
                 s_objectPool.Return(s);

@@ -16,13 +16,13 @@ internal static partial class Deflater
         var s = strm.deflateState;
         var status = s.Status;
 
-        if (s.Window != default)
+        if (s.Window != null)
             ArrayPool<byte>.Shared.Return(s.Window);
-        if (s.Prev != default)
+        if (s.Prev != null)
             ArrayPool<ushort>.Shared.Return(s.Prev);
-        if (s.Head != default)
+        if (s.Head != null)
             ArrayPool<ushort>.Shared.Return(s.Head);
-        if (s.PendingBuf != default)
+        if (s.PendingBuf != null)
             ArrayPool<byte>.Shared.Return(s.PendingBuf);
 
         s_objectPool.Return(s);

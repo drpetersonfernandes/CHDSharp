@@ -13,9 +13,9 @@ internal sealed class DeflateState
 {
     private const byte MaxBlBits = 7; // Bit length codes must not exceed MAX_BL_BITS bits
 
-    private static readonly StaticTree SLDesc = new(Tree.s_ltree, Literals + 1, LCodes, MaxBits);
+    private static readonly StaticTree SLDesc = new(Tree.SLtree, Literals + 1, LCodes, MaxBits);
 
-    private static readonly StaticTree SDDesc = new(Tree.s_dtree, 0, DCodes, MaxBits);
+    private static readonly StaticTree SDDesc = new(Tree.SDtree, 0, DCodes, MaxBits);
 
     private static readonly StaticTree SBlDesc = new(null, 0, BlCodes, MaxBlBits);
 

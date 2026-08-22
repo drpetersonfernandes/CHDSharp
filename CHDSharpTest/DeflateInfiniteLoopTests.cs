@@ -78,8 +78,8 @@ public class DeflateInfiniteLoopTests
         MemoryStream chdStream, int timeoutMs = 5000)
     {
         var cts = new CancellationTokenSource(timeoutMs);
-        ChdError openErr = ChdError.Chderrinvaliddata;
-        ChdError readErr = ChdError.Chderrinvaliddata;
+        var openErr = ChdError.Chderrinvaliddata;
+        var readErr = ChdError.Chderrinvaliddata;
         var completed = false;
 
         var thread = new Thread(() =>

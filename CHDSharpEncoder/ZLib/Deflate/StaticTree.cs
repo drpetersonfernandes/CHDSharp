@@ -7,15 +7,15 @@ namespace CHDSharpEncoder.ZLib.Deflate;
 internal sealed class StaticTree
 {
     internal readonly TreeNode[] static_tree; // static tree or null
-    internal readonly uint extra_base;        // base index for extra_bits
-    internal readonly uint elems;             // max number of elements in the tree
-    internal readonly uint max_length;        // max bit length for the codes
+    internal readonly uint ExtraBase; // base index for extra_bits
+    internal readonly uint Elems; // max number of elements in the tree
+    internal readonly uint MaxLength; // max bit length for the codes
 
-    public StaticTree(TreeNode[] static_tree, uint extra_base, uint elems, uint max_length)
+    public StaticTree(TreeNode[] staticTree, uint extraBase, uint elems, uint maxLength)
     {
-        this.static_tree = static_tree;
-        this.extra_base = extra_base;
-        this.elems = elems;
-        this.max_length = max_length;
+        static_tree = staticTree;
+        ExtraBase = extraBase;
+        Elems = elems;
+        MaxLength = maxLength;
     }
 }

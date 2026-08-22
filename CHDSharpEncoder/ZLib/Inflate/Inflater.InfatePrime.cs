@@ -17,16 +17,16 @@ internal static partial class Inflater
         var state = strm.inflateState;
         if (bits < 0)
         {
-            state.hold = 0;
-            state.bits = 0;
+            state.Hold = 0;
+            state.Bits = 0;
             return Z_OK;
         }
-        if (bits > 16 || state.bits + (uint)bits > 32)
+        if (bits > 16 || state.Bits + (uint)bits > 32)
             return Z_STREAM_ERROR;
 
         value &= (1 << bits) - 1;
-        state.hold += (uint)(value << (int)state.bits);
-        state.bits += (uint)bits;
+        state.Hold += (uint)(value << (int)state.Bits);
+        state.Bits += (uint)bits;
         return Z_OK;
     }
 }

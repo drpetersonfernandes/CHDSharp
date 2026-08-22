@@ -12,15 +12,15 @@ internal static partial class Inflater
             return Z_STREAM_ERROR;
 
         var state = strm.inflateState;
-        if (state.wrap != 0 && state.mode != InflateMode.Dict)
+        if (state.Wrap != 0 && state.Mode != InflateMode.Dict)
             return Z_STREAM_ERROR;
 
         // check for correct dictionary identifier
-        if (state.mode == InflateMode.Dict)
+        if (state.Mode == InflateMode.Dict)
         {
             var dictid = Adler32.Update(0, ref netUnsafe.NullRef<byte>(), 0);
             dictid = Adler32.Update(dictid, ref dictionary, dictLength);
-            if (dictid != state.check)
+            if (dictid != state.Check)
                 return Z_DATA_ERROR;
         }
 
@@ -32,11 +32,11 @@ internal static partial class Inflater
         }
         catch (OutOfMemoryException)
         {
-            state.mode = InflateMode.Mem;
+            state.Mode = InflateMode.Mem;
             return Z_MEM_ERROR;
         }
 
-        state.havedict = 1;
+        state.Havedict = 1;
         Trace.Tracev("inflate:   dictionary set\n");
         return Z_OK;
     }

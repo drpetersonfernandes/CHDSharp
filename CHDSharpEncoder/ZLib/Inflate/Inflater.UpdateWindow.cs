@@ -14,58 +14,58 @@ internal static partial class Inflater
         var state = strm.inflateState;
 
         // if it hasn't been done already, allocate space for the window
-        if (state.window == null)
+        if (state.Window == null)
         {
-            state.window = ArrayPool<byte>.Shared.Rent(1 << (int)state.wbits);
-            window = ref MemoryMarshal.GetReference<byte>(state.window);
+            state.Window = ArrayPool<byte>.Shared.Rent(1 << (int)state.Wbits);
+            window = ref MemoryMarshal.GetReference<byte>(state.Window);
         }
         else if (netUnsafe.IsNullRef(ref window))
         {
-            window = ref MemoryMarshal.GetReference<byte>(state.window);
+            window = ref MemoryMarshal.GetReference<byte>(state.Window);
         }
 
         // if window not in use yet, initialize
-        if (state.wsize == 0)
+        if (state.Wsize == 0)
         {
-            state.wsize = 1U << (int)state.wbits;
-            state.wnext = 0;
-            state.whave = 0;
+            state.Wsize = 1U << (int)state.Wbits;
+            state.Wnext = 0;
+            state.Whave = 0;
         }
 
         // copy state.wsize or less output bytes into the circular window
-        if (copy >= state.wsize)
+        if (copy >= state.Wsize)
         {
-            netUnsafe.CopyBlockUnaligned(ref window, ref Unsafe.Subtract(ref end, state.wsize), state.wsize);
-            state.wnext = 0;
-            state.whave = state.wsize;
+            netUnsafe.CopyBlockUnaligned(ref window, ref Unsafe.Subtract(ref end, state.Wsize), state.Wsize);
+            state.Wnext = 0;
+            state.Whave = state.Wsize;
         }
         else
         {
-            var dist = state.wsize - state.wnext;
+            var dist = state.Wsize - state.Wnext;
             if (dist > copy)
             {
                 dist = copy;
             }
 
-            netUnsafe.CopyBlockUnaligned(ref Unsafe.Add(ref window, state.wnext), ref Unsafe.Subtract(ref end, copy), dist);
+            netUnsafe.CopyBlockUnaligned(ref Unsafe.Add(ref window, state.Wnext), ref Unsafe.Subtract(ref end, copy), dist);
             copy -= dist;
             if (copy != 0)
             {
                 netUnsafe.CopyBlockUnaligned(ref window, ref Unsafe.Subtract(ref end, copy), copy);
-                state.wnext = copy;
-                state.whave = state.wsize;
+                state.Wnext = copy;
+                state.Whave = state.Wsize;
             }
             else
             {
-                state.wnext += dist;
-                if (state.wnext == state.wsize)
+                state.Wnext += dist;
+                if (state.Wnext == state.Wsize)
                 {
-                    state.wnext = 0;
+                    state.Wnext = 0;
                 }
 
-                if (state.whave < state.wsize)
+                if (state.Whave < state.Wsize)
                 {
-                    state.whave += dist;
+                    state.Whave += dist;
                 }
             }
         }

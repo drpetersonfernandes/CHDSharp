@@ -50,7 +50,7 @@ internal static class Compressor
     {
         uint left;
         var len = sourceLen;
-        byte[] buf = default; // for detection of incomplete stream when destLen == 0
+        byte[] buf = null; // for detection of incomplete stream when destLen == 0
         if (destLen != 0)
         {
             left = destLen;

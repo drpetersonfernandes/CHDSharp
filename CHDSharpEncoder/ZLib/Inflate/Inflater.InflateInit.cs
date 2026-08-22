@@ -25,7 +25,7 @@ internal static partial class Inflater
 #endif
         Trace.Tracev("inflate: allocated\n");
         strm.inflateState = state;
-        state.mode = InflateMode.Head;
+        state.Mode = InflateMode.Head;
 
         var ret = InflateReset(ref strm, windowBits);
         if (ret != Z_OK)

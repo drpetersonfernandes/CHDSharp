@@ -17,7 +17,7 @@ internal static partial class Deflater
         var s = strm.deflateState;
 
         var wrap = s.Wrap;
-        if (wrap == 2 || wrap == 1 && s.Status != InitState || s.Lookahead != 0)
+        if (wrap == 2 || (wrap == 1 && s.Status != InitState) || s.Lookahead != 0)
             return Z_STREAM_ERROR;
 
         var dictLength = (uint)dictionary.Length;

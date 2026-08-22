@@ -50,7 +50,7 @@ public ref struct ZStream
         set
         {
             _input = value;
-            next_in = default;
+            next_in = 0;
             avail_in = (uint)value.Length;
 #if NET7_0_OR_GREATER
             input_ptr = ref MemoryMarshal.GetReference(_input);
@@ -108,7 +108,7 @@ public ref struct ZStream
         set
         {
             _output = value;
-            next_out = default;
+            next_out = 0;
             avail_out = (uint)value.Length;
 #if NET7_0_OR_GREATER
             output_ptr = ref MemoryMarshal.GetReference(_output);

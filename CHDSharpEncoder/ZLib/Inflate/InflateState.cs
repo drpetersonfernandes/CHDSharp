@@ -11,38 +11,38 @@ internal sealed class InflateState
 {
     private const ushort Enough = Inflater.EnoughLens + Inflater.EnoughDists;
 
-    internal InflateMode mode;      // current inflate mode
-    internal int last;              // true if processing last block
-    internal int wrap;              // bit 0 true for zlib, bit 1 true for gzip, bit 2 true to validate check value
-    internal int havedict;          // true if dictionary provided
-    internal int flags;             // gzip header method and flags, 0 if zlib, or -1 if raw or no header yet
-    internal uint dmax;             // zlib header max distance (INFLATE_STRICT)
-    internal uint check;            // protected copy of check value
-    internal uint total;            // protected copy of output count
-    internal uint wbits;            // log base 2 of requested window size
-    internal uint wsize;            // window size or zero if not using window
-    internal uint whave;            // valid bytes in the window
-    internal uint wnext;            // window write index
-    internal byte[] window;         // allocated sliding window, if needed
-    internal uint hold;             // input bit accumulator
-    internal uint bits;             // number of bits in "in"
-    internal uint length;           // literal or length of data to copy
-    internal uint offset;           // distance back to copy string from
-    internal uint extra;            // extra bits needed
-    internal Code[] lencode;        // starting table for length/literal codes
-    internal Code[] distcode;       // starting table for distance codes
-    internal int lenbits;           // index bits for lencode
-    internal int distbits;          // index bits for distcode
-    internal uint ncode;            // number of code length code lengths
-    internal uint nlen;             // number of length code lengths
-    internal uint ndist;            // number of distance code lengths
-    internal uint have;             // number of code lengths in lens[]
-    internal uint next;             // next available space in codes[]
-    internal uint diststart;        // starting index in codes[] for distance codes
-    internal readonly ushort[] lens = new ushort[320]; // temporary storage for code lengths
-    internal readonly ushort[] work = new ushort[288]; // work area for code table building
-    internal readonly Code[] codes = new Code[Enough]; // space for code tables
-    internal int sane;              // if false, allow invalid distance too far
-    internal int back;              // bits back of last unprocessed length/lit
-    internal uint was;              // initial length of match
+    internal InflateMode Mode; // current inflate mode
+    internal int Last; // true if processing last block
+    internal int Wrap; // bit 0 true for zlib, bit 1 true for gzip, bit 2 true to validate check value
+    internal int Havedict; // true if dictionary provided
+    internal int Flags; // gzip header method and flags, 0 if zlib, or -1 if raw or no header yet
+    internal uint Dmax; // zlib header max distance (INFLATE_STRICT)
+    internal uint Check; // protected copy of check value
+    internal uint Total; // protected copy of output count
+    internal uint Wbits; // log base 2 of requested window size
+    internal uint Wsize; // window size or zero if not using window
+    internal uint Whave; // valid bytes in the window
+    internal uint Wnext; // window write index
+    internal byte[] Window; // allocated sliding window, if needed
+    internal uint Hold; // input bit accumulator
+    internal uint Bits; // number of bits in "in"
+    internal uint Length; // literal or length of data to copy
+    internal uint Offset; // distance back to copy string from
+    internal uint Extra; // extra bits needed
+    internal Code[] Lencode; // starting table for length/literal codes
+    internal Code[] Distcode; // starting table for distance codes
+    internal int Lenbits; // index bits for lencode
+    internal int Distbits; // index bits for distcode
+    internal uint Ncode; // number of code length code lengths
+    internal uint Nlen; // number of length code lengths
+    internal uint Ndist; // number of distance code lengths
+    internal uint Have; // number of code lengths in lens[]
+    internal uint Next; // next available space in codes[]
+    internal uint Diststart; // starting index in codes[] for distance codes
+    internal readonly ushort[] Lens = new ushort[320]; // temporary storage for code lengths
+    internal readonly ushort[] Work = new ushort[288]; // work area for code table building
+    internal readonly Code[] Codes = new Code[Enough]; // space for code tables
+    internal int Sane; // if false, allow invalid distance too far
+    internal int Back; // bits back of last unprocessed length/lit
+    internal uint Was; // initial length of match
 }

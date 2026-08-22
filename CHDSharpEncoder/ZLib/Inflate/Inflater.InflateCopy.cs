@@ -30,16 +30,14 @@ internal static partial class Inflater
             return Z_MEM_ERROR;
         }
 
-        byte[] window = default;
-        int wsize = default;
-        if (state.window != null)
+        byte[] window = null;
+        var wsize = 0;
+        if (state.Window != null)
         {
             try
             {
-                wsize = 1 << (int)state.wbits;
+                wsize = 1 << (int)state.Wbits;
                 window = ArrayPool<byte>.Shared.Rent(wsize);
-                if (window == null)
-                    return Z_MEM_ERROR;
             }
             catch (OutOfMemoryException)
             {
@@ -54,38 +52,38 @@ internal static partial class Inflater
         dest.total_out = source.total_out;
         dest.msg = source.msg;
         dest.inflateState = copy;
-        dest.deflateState = default;
+        dest.deflateState = null;
         dest.next_in = source.next_in;
         dest.next_out = source.next_out;
         dest.data_type = source.data_type;
         dest.Adler = source.Adler;
 
-        copy.mode = state.mode;
-        copy.last = state.last;
-        copy.wrap = state.wrap;
-        copy.havedict = state.havedict;
-        copy.flags = state.flags;
-        copy.dmax = state.dmax;
-        copy.check = state.check;
-        copy.total = state.total;
-        copy.wbits = state.wbits;
-        copy.wsize = state.wsize;
-        copy.whave = state.whave;
-        copy.wnext = state.wnext;
-        copy.hold = state.hold;
-        copy.bits = state.bits;
-        copy.length = state.length;
-        copy.offset = state.offset;
-        copy.extra = state.extra;
-        copy.lenbits = state.lenbits;
-        copy.distbits = state.distbits;
-        copy.ncode = state.ncode;
-        copy.nlen = state.nlen;
-        copy.ndist = state.ndist;
-        copy.have = state.have;
-        copy.sane = state.sane;
-        copy.back = state.back;
-        copy.was = state.was;
+        copy.Mode = state.Mode;
+        copy.Last = state.Last;
+        copy.Wrap = state.Wrap;
+        copy.Havedict = state.Havedict;
+        copy.Flags = state.Flags;
+        copy.Dmax = state.Dmax;
+        copy.Check = state.Check;
+        copy.Total = state.Total;
+        copy.Wbits = state.Wbits;
+        copy.Wsize = state.Wsize;
+        copy.Whave = state.Whave;
+        copy.Wnext = state.Wnext;
+        copy.Hold = state.Hold;
+        copy.Bits = state.Bits;
+        copy.Length = state.Length;
+        copy.Offset = state.Offset;
+        copy.Extra = state.Extra;
+        copy.Lenbits = state.Lenbits;
+        copy.Distbits = state.Distbits;
+        copy.Ncode = state.Ncode;
+        copy.Nlen = state.Nlen;
+        copy.Ndist = state.Ndist;
+        copy.Have = state.Have;
+        copy.Sane = state.Sane;
+        copy.Back = state.Back;
+        copy.Was = state.Was;
 
 #if NET7_0_OR_GREATER
         ref var sourceRefs = ref source.inflateRefs;
@@ -96,77 +94,77 @@ internal static partial class Inflater
 
         ref var sourceLens = ref
 #if NET7_0_OR_GREATER
-        sourceRefs.lens;
+            sourceRefs.lens;
 #else
         MemoryMarshal.GetReference<ushort>(state.lens);
 #endif
         ref var sourceWork = ref
 #if NET7_0_OR_GREATER
-        sourceRefs.work;
+            sourceRefs.work;
 #else
         MemoryMarshal.GetReference<ushort>(state.work);
 #endif
         ref var sourceCodes = ref
 #if NET7_0_OR_GREATER
-        sourceRefs.codes;
+            sourceRefs.codes;
 #else
         MemoryMarshal.GetReference<Code>(state.codes);
 #endif
 
         ref var destLens = ref
 #if NET7_0_OR_GREATER
-        destRefs.lens;
+            destRefs.lens;
 #else
         MemoryMarshal.GetReference<ushort>(copy.lens);
 #endif
         ref var destWork = ref
 #if NET7_0_OR_GREATER
-        destRefs.work;
+            destRefs.work;
 #else
         MemoryMarshal.GetReference<ushort>(copy.work);
 #endif
         ref var destCodes = ref
 #if NET7_0_OR_GREATER
-        destRefs.codes;
+            destRefs.codes;
 #else
         MemoryMarshal.GetReference<Code>(copy.codes);
 #endif
 
         netUnsafe.CopyBlock(ref netUnsafe.As<ushort, byte>(ref destLens),
-            ref netUnsafe.As<ushort, byte>(ref sourceLens), (uint)(state.lens.Length * sizeof(ushort)));
+            ref netUnsafe.As<ushort, byte>(ref sourceLens), (uint)(state.Lens.Length * sizeof(ushort)));
 
         netUnsafe.CopyBlock(ref netUnsafe.As<ushort, byte>(ref destWork),
-            ref netUnsafe.As<ushort, byte>(ref sourceWork), (uint)(state.work.Length * sizeof(ushort)));
+            ref netUnsafe.As<ushort, byte>(ref sourceWork), (uint)(state.Work.Length * sizeof(ushort)));
 
         netUnsafe.CopyBlock(ref netUnsafe.As<Code, byte>(ref destCodes),
-            ref netUnsafe.As<Code, byte>(ref sourceCodes), (uint)(state.codes.Length * Code.Size));
+            ref netUnsafe.As<Code, byte>(ref sourceCodes), (uint)(state.Codes.Length * Code.Size));
 
-        if (state.lencode == s_lenfix)
+        if (state.Lencode == SLenfix)
         {
-            copy.lencode = s_lenfix;
+            copy.Lencode = SLenfix;
         }
-        else if (state.lencode == state.codes)
+        else if (state.Lencode == state.Codes)
         {
-            copy.lencode = copy.codes;
-        }
-
-        if (state.distcode == s_distfix)
-        {
-            copy.distcode = s_distfix;
-        }
-        else if (state.distcode == state.codes)
-        {
-            copy.distcode = copy.codes;
+            copy.Lencode = copy.Codes;
         }
 
-        copy.next = state.next;
-        copy.diststart = state.diststart;
+        if (state.Distcode == SDistfix)
+        {
+            copy.Distcode = SDistfix;
+        }
+        else if (state.Distcode == state.Codes)
+        {
+            copy.Distcode = copy.Codes;
+        }
 
-        if (window != default)
+        copy.Next = state.Next;
+        copy.Diststart = state.Diststart;
+
+        if (window != null)
             netUnsafe.CopyBlock(ref MemoryMarshal.GetReference<byte>(window),
-                ref MemoryMarshal.GetReference<byte>(state.window), (uint)wsize);
+                ref MemoryMarshal.GetReference<byte>(state.Window), (uint)wsize);
 
-        copy.window = window;
+        copy.Window = window;
         return Z_OK;
     }
 
@@ -175,13 +173,13 @@ internal static partial class Inflater
     {
         if (netUnsafe.IsNullRef(ref refs.lens))
         {
-            refs.lens = ref MemoryMarshal.GetReference<ushort>(s.lens);
+            refs.lens = ref MemoryMarshal.GetReference<ushort>(s.Lens);
         }
 
         if (netUnsafe.IsNullRef(ref refs.codes))
         {
-            refs.codes = ref MemoryMarshal.GetReference<Code>(s.codes);
-            refs.work = ref MemoryMarshal.GetReference<ushort>(s.work);
+            refs.codes = ref MemoryMarshal.GetReference<Code>(s.Codes);
+            refs.work = ref MemoryMarshal.GetReference<ushort>(s.Work);
         }
     }
 #endif

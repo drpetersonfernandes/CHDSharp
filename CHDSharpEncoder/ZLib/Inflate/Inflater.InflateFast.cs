@@ -16,13 +16,13 @@ internal static partial class Inflater
         var last = strm.next_in + (strm.avail_in - 5);      // have enough input while in < last
         var beg = strm.next_out - (start - strm.avail_out); // inflate()'s initial strm.next_out
         var end = strm.next_out + (strm.avail_out - 257);   // while out < end, enough space available
-        var wsize = state.wsize;
-        var whave = state.whave;
-        var wnext = state.wnext;
-        var hold = state.hold;
-        var bits = state.bits;
-        var lmask = (1U << state.lenbits) - 1;
-        var dmask = (1U << state.distbits) - 1;
+        var wsize = state.Wsize;
+        var whave = state.Whave;
+        var wnext = state.Wnext;
+        var hold = state.Hold;
+        var bits = state.Bits;
+        var lmask = (1U << state.Lenbits) - 1;
+        var dmask = (1U << state.Distbits) - 1;
         uint len;   // match length, unused bytes
 
         ref var @in = ref
@@ -57,7 +57,7 @@ internal static partial class Inflater
             if (op == 0)
             {
                 strm.msg = "invalid literal/length code";
-                state.mode = InflateMode.Bad;
+                state.Mode = InflateMode.Bad;
                 break;
             }
             hold >>= (int)op;
@@ -106,7 +106,7 @@ internal static partial class Inflater
                 if (op == 0)
                 {
                     strm.msg = "invalid distance code";
-                    state.mode = InflateMode.Bad;
+                    state.Mode = InflateMode.Bad;
                     break;
                 }
                 hold >>= (int)op;
@@ -140,10 +140,10 @@ internal static partial class Inflater
                         op = dist - op; // distance back in window
                         if (op > whave)
                         {
-                            if (state.sane != 0)
+                            if (state.Sane != 0)
                             {
                                 strm.msg = "invalid distance too far back";
-                                state.mode = InflateMode.Bad;
+                                state.Mode = InflateMode.Bad;
                                 break;
                             }
                         }
@@ -285,7 +285,7 @@ internal static partial class Inflater
                 else
                 {
                     strm.msg = "invalid distance code";
-                    state.mode = InflateMode.Bad;
+                    state.Mode = InflateMode.Bad;
                     break;
                 }
             }
@@ -297,13 +297,13 @@ internal static partial class Inflater
             else if ((op & 32) != 0) // end-of-block
             {
                 Trace.Tracevv("inflate:         end of block\n");
-                state.mode = InflateMode.Type;
+                state.Mode = InflateMode.Type;
                 break;
             }
             else
             {
                 strm.msg = "invalid literal/length code";
-                state.mode = InflateMode.Bad;
+                state.Mode = InflateMode.Bad;
                 break;
             }
         } while (strm.next_in < last && strm.next_out < end);
@@ -319,7 +319,7 @@ internal static partial class Inflater
         strm.avail_in = strm.next_in < last ? 5 + (last - strm.next_in) : 5 - (strm.next_in - last);
         strm.avail_out = strm.next_out < end ? 257 + (end - strm.next_out) : 257 - (strm.next_out - end);
 
-        state.hold = hold;
-        state.bits = bits;
+        state.Hold = hold;
+        state.Bits = bits;
     }
 }

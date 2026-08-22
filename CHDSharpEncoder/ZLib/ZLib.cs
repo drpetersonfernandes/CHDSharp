@@ -312,7 +312,7 @@ public partial class ZLib : IZLib
     {
         if (source == null || dest == null || sourceLen < 0 || sourceLen > source.Length)
         {
-            destLen = default;
+            destLen = 0;
             return Z_STREAM_ERROR;
         }
 
@@ -372,7 +372,7 @@ public partial class ZLib : IZLib
     {
         if (dest == null || source == null || sourceLen < 0 || sourceLen > source.Length)
         {
-            destLen = default;
+            destLen = 0;
             return Z_STREAM_ERROR;
         }
 
@@ -392,8 +392,8 @@ public partial class ZLib : IZLib
     {
         if (dest == null || source == null)
         {
-            destLen = default;
-            sourceLen = default;
+            destLen = 0;
+            sourceLen = 0;
             return Z_STREAM_ERROR;
         }
 

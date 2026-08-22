@@ -14,32 +14,32 @@ internal static partial class Inflater
             return Z_STREAM_ERROR;
 
         var state = strm.inflateState;
-        if (strm.avail_in == 0 && state.bits < 8)
+        if (strm.avail_in == 0 && state.Bits < 8)
             return Z_BUF_ERROR;
 
         uint len = 0;
         // if first time, start search in bit buffer
-        if (state.mode != InflateMode.Sync)
+        if (state.Mode != InflateMode.Sync)
         {
-            state.mode = InflateMode.Sync;
-            var temp = state.bits & 7;
-            state.hold >>= (int)temp;
-            state.bits -= temp;
+            state.Mode = InflateMode.Sync;
+            var temp = state.Bits & 7;
+            state.Hold >>= (int)temp;
+            state.Bits -= temp;
             Span<byte> span = stackalloc byte[4];
             ref var buf = ref MemoryMarshal.GetReference(span);
-            while (state.bits >= 8)
+            while (state.Bits >= 8)
             {
-                Unsafe.Add(ref buf, len) = (byte)state.hold;
+                Unsafe.Add(ref buf, len) = (byte)state.Hold;
                 len++;
-                state.hold >>= 8;
-                state.bits -= 8;
+                state.Hold >>= 8;
+                state.Bits -= 8;
             }
-            state.have = 0;
-            _ = SyncSearch(ref state.have, ref buf, len);
+            state.Have = 0;
+            _ = SyncSearch(ref state.Have, ref buf, len);
         }
 
         // search available input
-        var @in = SyncSearch(ref state.have, ref
+        var @in = SyncSearch(ref state.Have, ref
 #if NET7_0_OR_GREATER
             Unsafe.Add(ref strm.input_ptr, strm.next_in),
 #else
@@ -51,27 +51,27 @@ internal static partial class Inflater
         strm.total_in += @in;
 
         // return no joy or set up to restart Inflate on a new block
-        if (state.have != 4)
+        if (state.Have != 4)
             return Z_DATA_ERROR;
 
-        if (state.flags == -1)
+        if (state.Flags == -1)
         {
-            state.wrap = 0;     // if no header yet, treat as raw
+            state.Wrap = 0;     // if no header yet, treat as raw
         }
         else
         {
-            state.wrap &= ~4;   // no point in computing a check value now */
+            state.Wrap &= ~4;   // no point in computing a check value now */
         }
 
-        var flags = state.flags; // temporary to save header status
+        var flags = state.Flags; // temporary to save header status
 
         @in = strm.total_in;
         var @out = strm.total_out; // temporary to total_out
         _ = InflateReset(ref strm);
         strm.total_in = @in;
         strm.total_out = @out;
-        state.flags = flags;
-        state.mode = InflateMode.Type;
+        state.Flags = flags;
+        state.Mode = InflateMode.Type;
         return Z_OK;
     }
 

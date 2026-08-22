@@ -326,8 +326,9 @@ Legend — issue references: `#NN` = [rtissera/libchdr issue](https://github.com
 | Field | Value |
 |-------|-------|
 | **Missing Feature** | chdman `createhd -id <ident.bin>` reads an ATA IDENTIFY DEVICE response (512 bytes) from a file and stores it as `IDNT` metadata. This preserves the original drive's model, serial, CHS geometry, and firmware revision — needed by some emulators (e.g. OG Xbox HDD emulation). CHDSharp's `createhd` command and `HardDiskMetadata` class do not read or write `IDNT` entries. |
-| **Implementation Status** | Not planned |
-| **Proposed Logic** | (1) Add `IdentMetadataTag = 0x494E5452` ("IDNT") constant and `BuildIdentMetadata(byte[] identData)` in `MetadataWriter`. (2) In `createhd`, accept `--ident <path>` CLI flag; read the 512-byte file and write it as an `IDNT` metadata entry. (3) In `ChdFile`, expose `IdentData` property that returns the raw `IDNT` bytes (or null). (4) In `ReadHeader`, include `IDNT` in the DTO if present. (5) During `copy`, clone `IDNT` entries. |
+| **Implementation Status** | Finished |
+| **Proposed Logic** | (1) Add `IdentMetadataTag = 0x49444E54` ("IDNT") constant and `BuildIdentMetadata(byte[] identData)` in `MetadataWriter`. (2) In `createhd`, accept `--ident <path>` CLI flag; read the 512-byte file and write it as an `IDNT` metadata entry. (3) In `ChdFile`, expose `IdentData` property that returns the raw `IDNT` bytes (or null). (4) In `ReadHeader`, include `IDNT` in the DTO if present. (5) During `copy`, clone `IDNT` entries. |
+| **Implemented As** | Added `IdentMetadataTag = 0x49444E54` constant to `MetadataWriter`. Added `BuildIdentMetadata(byte[] identData)` method that validates the512-byte size and creates an `IDNT` metadata entry. Added `IdentData` property to `ChdFile` that returns the raw ATA IDENTIFY DEVICE bytes (or null if absent). Added `--ident <path>` CLI flag to `createhd` command that reads a512-byte file and stores it as IDNT metadata. IDNT metadata is automatically cloned during `ChdEncoder.Copy()`. Added9 unit tests: read/write, absent returns null, preserved during copy, set/delete, coexistence with other metadata, coexistence with KEY and CIS, invalid size throws, null input throws, and in blank HD CHD. All27 IdentMetadataTests pass across net8.0/net9.0/net10.0. |
 | **Estimated Time** | 2–3 hours |
 
 ---

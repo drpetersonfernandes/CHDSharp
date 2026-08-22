@@ -12,6 +12,7 @@
 
 ## What's New in v1.2.0
 
+- **Hard disk ident metadata (`IDNT`)** — Read/write `IDNT` metadata (ATA IDENTIFY DEVICE response, 512 bytes) preserving original drive model, serial, CHS geometry, and firmware revision. Access via `ChdFile.IdentData` property. `--ident <path>` flag on `createhd` CLI. Automatically preserved during `ChdEncoder.Copy()`.
 - **Hard disk encryption key metadata** — Read/write `KEY ` metadata (encryption key) used by OG Xbox and other platforms with encrypted HDD contents. Access via `ChdFile.KeyData` property. Automatically preserved during `ChdEncoder.Copy()`.
 - **PCMCIA CIS metadata** — Read/write `CIS ` metadata (Card Information Structure) used by PC Engine CD and other PCMCIA platforms. Access via `ChdFile.PcmciaCisData` property. Automatically preserved during `ChdEncoder.Copy()`.
 - **Lazy parent resolution (`ParentResolver`)** — Open child CHDs without providing the parent path upfront. Supply a `ParentResolver` callback that resolves the parent by SHA1/MD5 hash on first read. The resolved parent is cached. Also available on `Chd.CheckFileWithParent`.

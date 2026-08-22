@@ -36,7 +36,7 @@ CHDSharpCli --create in.bin out.chd [-c zlib,zstd,lzma,none] [-hs 65536] [-us 40
 CHDSharpCli --createcd in.cue out.chd [-c zlib,zstd,lzma,none] [-hs N] [-us N] [-t 8] [-ip parent.chd] [-v]
 
 # Create a blank HD CHD (zero-filled, no input file required)
-CHDSharpCli --createhd out.chd --size N [-c zlib,zstd,lzma,none] [-hs N] [-us N] [-chs C,H,S] [-ss N] [-t 8] [-v]
+CHDSharpCli --createhd out.chd --size N [-c zlib,zstd,lzma,none] [-hs N] [-us N] [-chs C,H,S] [-ss N] [--ident ident.bin] [-t 8] [-v]
 
 # Re-compress an existing CHD (V1-V5, child sources via -ip)
 CHDSharpCli --copy in.chd out.chd [-c zlib,zstd,lzma,none] [-t 8] [-ip parent.chd] [-op parent.chd] [--no-upgrade] [-v]
@@ -55,7 +55,7 @@ CHDSharpCli --copy in.chd out.chd [-c zlib,zstd,lzma,none] [-t 8] [-ip parent.ch
 | `--classify <file.chd>` | Detects and prints the CHD media type: CD-ROM, DVD-ROM, HDD, GD-ROM, or unknown/raw. |
 | `--create <in.bin> <out.chd>` | Creates a CHD v5 from a raw binary via `CHDSharpEncoder`. Options: `-c <codecs>` (comma-separated `zlib,zstd,lzma,cdfl,none`), `-hs <bytes>`, `-us <bytes>`, `-t <n>` (parallel workers), `-ip <parent.chd>` (output delta child), `-v` (per-hunk ratio logging). Deep-verifies the result before exiting. |
 | `--createcd <in.cue> <out.chd>` | Creates a CD CHD from a CUE/GDI/ISO/TOC image via `CHDSharpEncoder` (CHT2 metadata, audio byte-swap, 4-frame track padding). Same options as `--create`. |
-| `--createhd <out.chd> --size N` | Creates a blank, zero-filled hard disk CHD without reading from an input file. Options: `--size N` (total size, supports K/M/G suffixes), `-chs C,H,S` (explicit CHS geometry), `-ss N` (sector size), `-c <codecs>`, `-hs <bytes>`, `-us <bytes>`, `-t <n>`, `-v`. Writes GDDD hard disk metadata with auto-derived or explicit CHS geometry. Deep-verifies the result before exiting. |
+| `--createhd <out.chd> --size N` | Creates a blank, zero-filled hard disk CHD without reading from an input file. Options: `--size N` (total size, supports K/M/G suffixes), `-chs C,H,S` (explicit CHS geometry), `-ss N` (sector size), `--ident <path>` (512-byte ATA IDENTIFY DEVICE file for IDNT metadata), `-c <codecs>`, `-hs <bytes>`, `-us <bytes>`, `-t <n>`, `-v`. Writes GDDD hard disk metadata with auto-derived or explicit CHS geometry. Deep-verifies the result before exiting. |
 | `--copy <in.chd> <out.chd>` | Re-compresses an existing CHD via `ChdEncoder.Copy`: every hunk is re-encoded with the target codecs and all source metadata is cloned. `-ip <parent.chd>` resolves a child source; `-op <parent.chd>` makes the output a delta child of a different parent. Legacy CD/GD-ROM metadata (`CHCD`, `CHTR`, `CHGT`) is automatically upgraded to modern equivalents (`CHT2`, `CHGD`); use `--no-upgrade` to preserve legacy tags. Deep-verifies the result before exiting. |
 
 ---

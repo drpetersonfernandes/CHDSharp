@@ -47,6 +47,9 @@ public static class MetadataWriter
     /// <summary>'KEY ' hard disk encryption key metadata tag (big-endian).</summary>
     public const uint KeyMetadataTag = 0x4B455920;
 
+    /// <summary>'IDNT' hard disk ATA IDENTIFY DEVICE metadata tag (big-endian).</summary>
+    public const uint IdentMetadataTag = 0x49444E54;
+
     /// <summary>CHD_MDFLAGS_CHECKSUM: the entry is covered by the combined SHA-1 verification.</summary>
     public const byte ChdMdflagsChecksum = 0x01;
 
@@ -122,6 +125,28 @@ public static class MetadataWriter
             Tag = HardDiskMetadataTag,
             Flags = ChdMdflagsChecksum,
             Payload = Encoding.ASCII.GetBytes(text + '\0')
+        };
+    }
+
+    /// <summary>
+    /// Builds the 'IDNT' metadata entry for an ATA IDENTIFY DEVICE response (512 bytes).
+    /// Used by OG Xbox and other platforms that need to preserve the original drive's
+    /// model, serial, CHS geometry, and firmware revision.
+    /// </summary>
+    /// <param name="identData">The 512-byte ATA IDENTIFY DEVICE response data.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="identData"/> is null.</exception>
+    /// <exception cref="ArgumentException"><paramref name="identData"/> is not exactly 512 bytes.</exception>
+    public static MetadataEntry BuildIdentMetadata(byte[] identData)
+    {
+        ArgumentNullException.ThrowIfNull(identData);
+        if (identData.Length != 512)
+            throw new ArgumentException($"ATA IDENTIFY DEVICE data must be exactly 512 bytes, got {identData.Length}", nameof(identData));
+
+        return new MetadataEntry
+        {
+            Tag = IdentMetadataTag,
+            Flags = ChdMdflagsChecksum,
+            Payload = identData
         };
     }
 

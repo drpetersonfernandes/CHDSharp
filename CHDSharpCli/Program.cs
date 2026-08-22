@@ -760,6 +760,7 @@ internal static class Program
         string? codecs = null;
         var verbose = false;
         int? taskCount = null;
+        string? identPath = null;
 
         for (var i = 0; i < options.Length; i++)
         {
@@ -828,6 +829,9 @@ internal static class Program
 
                     taskCount = t;
                     break;
+                case "--ident" when i + 1 < options.Length:
+                    identPath = options[++i];
+                    break;
                 case "-v" or "--verbose":
                     verbose = true;
                     break;
@@ -860,6 +864,32 @@ internal static class Program
 
         codecs ??= "zlib";
 
+        // Read ident file if provided
+        byte[]? identData = null;
+        if (identPath != null)
+        {
+            if (!File.Exists(identPath))
+            {
+                log.Warning("--createhd: ident file not found: {Path}", identPath);
+                return;
+            }
+
+            try
+            {
+                identData = File.ReadAllBytes(identPath);
+                if (identData.Length != 512)
+                {
+                    log.Warning("--createhd: ident file must be exactly 512 bytes, got {Size}", identData.Length);
+                    return;
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                log.Warning("--createhd: cannot read ident file: {Message}", ex.Message);
+                return;
+            }
+        }
+
         try
         {
             var codecTags = ChdCodecs.ParseCodecTags(codecs);
@@ -879,6 +909,14 @@ internal static class Program
             if (encodeOptions != null && taskCount.HasValue)
             {
                 encodeOptions.TaskCount = taskCount;
+            }
+
+            // Add ident metadata if provided
+            if (identData != null)
+            {
+                encodeOptions ??= new ChdEncodeOptions();
+                encodeOptions.Metadata ??= new List<MetadataEntry>();
+                ((List<MetadataEntry>)encodeOptions.Metadata).Add(MetadataWriter.BuildIdentMetadata(identData));
             }
 
             if (chsCylinders.HasValue && chsHeads.HasValue && chsSectors.HasValue)

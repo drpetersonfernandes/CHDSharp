@@ -355,6 +355,27 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
+    /// Gets the ATA IDENTIFY DEVICE response metadata bytes (512 bytes), or <c>null</c>
+    /// if this CHD does not contain an <c>IDNT</c> metadata entry. Preserves the original
+    /// drive's model, serial, CHS geometry, and firmware revision — needed by some emulators
+    /// (e.g. OG Xbox HDD emulation).
+    /// </summary>
+    public byte[]? IdentData
+    {
+        get
+        {
+            EnsureMetadataLoaded();
+            if (_metadata == null) return null;
+            foreach (var entry in _metadata)
+            {
+                if (string.Equals(entry.Tag, "IDNT", StringComparison.Ordinal))
+                    return entry.Data;
+            }
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Gets the list of metadata entries from the CHD header (game name,
     /// disc info, etc.). Lazy-loaded on first access; empty list if the CHD
     /// has no metadata or an error occurs. For V1/V2 CHDs (which have no

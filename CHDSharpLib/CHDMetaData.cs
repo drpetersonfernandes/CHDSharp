@@ -21,7 +21,7 @@ internal static class ChdMetaData
 
     private const uint ChdMdflagsChecksum = 0x01;
 
-    private const uint MaxMetadataEntryBytes = 1024 * 1024;
+    private const uint MaxMetadataEntryBytes = 64 * 1024;
 
     internal static ChdError ReadMetaData(Stream file, ChdHeader chd)
     {

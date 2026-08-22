@@ -16,7 +16,12 @@ internal static partial class ChdTocParser
 
     private const int TrackPadding = 4;
 
-    private const int MaxKeyValueTextLength = 64 * 1024;
+    private const int MaxKeyValueTextLength = 4 * 1024;
+
+    /// <summary>Maximum length of a parsed track field value (TYPE, SUBTYPE, PGTYPE, PGSUB).
+    /// Matches the proposed <c>%15s</c> fix in libchdr #165 (MAME uses 16-byte stack buffers
+    /// for these fields; 15 chars + null terminator = 16 bytes).</summary>
+    private const int MaxTrackFieldLength = 15;
 
     private static readonly Regex KeyValueRegex = MyRegex();
 
@@ -85,7 +90,14 @@ internal static partial class ChdTocParser
 
         foreach (var entry in entries)
         {
-            var fields = ParseKeyValueFields(entry.GetText());
+            var text = entry.GetText();
+            if (text.Length > MaxKeyValueTextLength) continue;
+
+            // Trim trailing null padding (common in some writers); embedded NULs are malformed.
+            text = text.TrimEnd('\0');
+            if (text.Contains('\0')) continue;
+
+            var fields = ParseKeyValueFields(text);
             if (fields.Count == 0) continue;
 
             if (!fields.TryGetValue("TRACK", out var trackNumStr)) continue;
@@ -95,6 +107,10 @@ internal static partial class ChdTocParser
             if (!fields.TryGetValue("TYPE", out var typeStr)) continue;
             if (!fields.TryGetValue("SUBTYPE", out var subStr)) continue;
             if (!fields.TryGetValue("FRAMES", out var framesStr)) continue;
+
+            // Cap field lengths to match MAME's16-byte stack buffers (%15s fix, libchdr #165).
+            if (typeStr.Length > MaxTrackFieldLength || subStr.Length > MaxTrackFieldLength)
+                continue;
 
             var (trackType, dataSize) = ParseTypeString(typeStr);
             var (subType, subSize) = ParseSubTypeString(subStr);
@@ -112,6 +128,9 @@ internal static partial class ChdTocParser
 
                 if (fields.TryGetValue("PGTYPE", out var pgTypeStr))
                 {
+                    if (pgTypeStr.Length > MaxTrackFieldLength)
+                        continue;
+
                     var pgHasData = pgTypeStr.StartsWith('V');
                     if (pgHasData)
                     {
@@ -127,6 +146,9 @@ internal static partial class ChdTocParser
 
                 if (fields.TryGetValue("PGSUB", out var pgSubStr))
                 {
+                    if (pgSubStr.Length > MaxTrackFieldLength)
+                        continue;
+
                     (pgSub, pgSubSize) = ParseSubTypeString(pgSubStr);
                 }
 

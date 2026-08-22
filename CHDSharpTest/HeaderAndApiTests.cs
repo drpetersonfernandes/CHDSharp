@@ -347,6 +347,38 @@ public class HeaderAndApiTests
     }
 
     [Fact]
+    public void ReadMetaDataEntries_rejects_entry_exceeding_64k()
+    {
+        // 65537 bytes (just over the 64 KiB limit) → rejected.
+        var ms = new MemoryStream();
+        ms.Write(new byte[16], 0, 16);
+        ms.Write(EndianHelpers.Be(0x47414D45), 0, 4); // "GAME"
+        ms.Write(EndianHelpers.Be(0x00010001u), 0, 4); // length = 65537 (flags=0)
+        ms.Write(EndianHelpers.Be64(0), 0, 8); // next = 0
+        ms.Position = 0;
+
+        var chd = new ChdHeader
+        {
+            Metaoffset = 16,
+            Compression = [ChdCodec.Zlib],
+            Rawsha1 = new byte[20],
+            Sha1 = new byte[20],
+            Md5 = new byte[16],
+            Parentmd5 = new byte[16],
+            Parentsha1 = new byte[20],
+            Map = [],
+            Totalbytes = 0,
+            Blocksize = 1024,
+            Totalblocks = 0,
+            UncompressedMap = false
+        };
+
+        var err = ChdMetaData.ReadMetaDataEntries(ms, chd, out var entries);
+        Assert.Equal(ChdError.Chderrinvaliddata, err);
+        Assert.Empty(entries);
+    }
+
+    [Fact]
     public void ChdFile_open_leaveOpen_false_closes_stream()
     {
         var testDataDir = Path.Combine(AppContext.BaseDirectory, "TestData");

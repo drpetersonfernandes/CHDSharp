@@ -292,4 +292,129 @@ public class ChdTocParserTests
         Assert.Equal(expectedSub, result[0].SubType);
         Assert.Equal(expectedSize, result[0].SubSize);
     }
+
+    // ── Bounded field parsing (libchdr #165) ──
+
+    [Fact]
+    public void ParseTracks_oversized_type_field_skips_track()
+    {
+        // TYPE field is 16 chars (> MaxTrackFieldLength of 15) → track is skipped.
+        const string text = "TRACK: 1 TYPE: AAAAAAAAAAAAAAAA SUBTYPE: NONE FRAMES: 100";
+        var entry = new ChdMetadataEntry("CHT2", System.Text.Encoding.ASCII.GetBytes(text));
+        var result = ChdTocParser.ParseTracks([entry], out _);
+
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void ParseTracks_oversized_subtype_field_skips_track()
+    {
+        const string text = "TRACK: 1 TYPE: MODE1/2048 SUBTYPE: BBBBBBBBBBBBBBBB FRAMES: 100";
+        var entry = new ChdMetadataEntry("CHT2", System.Text.Encoding.ASCII.GetBytes(text));
+        var result = ChdTocParser.ParseTracks([entry], out _);
+
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void ParseTracks_oversized_pgtype_field_skips_track()
+    {
+        const string text = "TRACK: 1 TYPE: MODE1/2048 SUBTYPE: NONE FRAMES: 100 PREGAP: 150 PGTYPE: AAAAAAAAAAAAAAAA PGSUB: NONE";
+        var entry = new ChdMetadataEntry("CHT2", System.Text.Encoding.ASCII.GetBytes(text));
+        var result = ChdTocParser.ParseTracks([entry], out _);
+
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void ParseTracks_oversized_pgsub_field_skips_track()
+    {
+        const string text = "TRACK: 1 TYPE: MODE1/2048 SUBTYPE: NONE FRAMES: 100 PREGAP: 150 PGTYPE: MODE1/2048 PGSUB: BBBBBBBBBBBBBBBB";
+        var entry = new ChdMetadataEntry("CHT2", System.Text.Encoding.ASCII.GetBytes(text));
+        var result = ChdTocParser.ParseTracks([entry], out _);
+
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void ParseTracks_exact_15_char_type_field_accepted()
+    {
+        // Exactly 15 chars should be accepted.
+        const string text = "TRACK: 1 TYPE: AAAAAAAAAAAAAAA SUBTYPE: NONE FRAMES: 100";
+        var entry = new ChdMetadataEntry("CHT2", System.Text.Encoding.ASCII.GetBytes(text));
+        var result = ChdTocParser.ParseTracks([entry], out _);
+
+        Assert.NotNull(result);
+        Assert.Single(result);
+    }
+
+    [Fact]
+    public void ParseTracks_embedded_null_bytes_skips_track()
+    {
+        // Payload with embedded null byte between TYPE and SUBTYPE → malformed, skipped.
+        var text = "TRACK: 1 TYPE: MODE1\0FAKE SUBTYPE: NONE FRAMES: 100"u8.ToArray();
+        var entry = new ChdMetadataEntry("CHT2", text);
+        var result = ChdTocParser.ParseTracks([entry], out _);
+
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void ParseTracks_trailing_null_padding_accepted()
+    {
+        // Trailing null padding (common in some writers) should be tolerated.
+        var text = "TRACK: 1 TYPE: MODE1/2048 SUBTYPE: NONE FRAMES: 100\0\0\0\0\0"u8.ToArray();
+        var entry = new ChdMetadataEntry("CHT2", text);
+        var result = ChdTocParser.ParseTracks([entry], out _);
+
+        Assert.NotNull(result);
+        Assert.Single(result);
+        Assert.Equal(ChdTrackType.Mode1, result[0].TrackType);
+    }
+
+    [Fact]
+    public void ParseTracks_oversized_payload_skips_track()
+    {
+        // Payload > 4 KiB (MaxKeyValueTextLength) → rejected.
+        var sb = new System.Text.StringBuilder(5000);
+        sb.Append("TRACK: 1 TYPE: MODE1/2048 SUBTYPE: NONE FRAMES: 100");
+        while (sb.Length < 4097)
+            sb.Append(' ');
+        sb.Append("PAD:0");
+        var entry = new ChdMetadataEntry("CHT2", System.Text.Encoding.ASCII.GetBytes(sb.ToString()));
+        var result = ChdTocParser.ParseTracks([entry], out _);
+
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void ParseTracks_oversized_value_in_kv_skips_entry()
+    {
+        // A value > 15 chars is dropped by ParseKeyValueFields → missing TYPE → track skipped.
+        const string text = "TRACK: 1 TYPE: AAAAAAAAAAAAAAAA SUBTYPE: NONE FRAMES: 100";
+        var entry = new ChdMetadataEntry("CHT2", System.Text.Encoding.ASCII.GetBytes(text));
+        var result = ChdTocParser.ParseTracks([entry], out _);
+
+        Assert.NotNull(result);
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public void ParseTracks_gdrom_oversized_type_skips_track()
+    {
+        // Same protection for GDROM metadata format.
+        const string text = "TRACK: 1 TYPE: AAAAAAAAAAAAAAAA SUBTYPE: NONE FRAMES: 100 PAD: 0 PREGAP: 0 PGTYPE: NONE PGSUB: NONE POSTGAP: 0";
+        var entry = new ChdMetadataEntry("CHGD", System.Text.Encoding.ASCII.GetBytes(text));
+        var result = ChdTocParser.ParseTracks([entry], out var isGdRom);
+
+        Assert.NotNull(result);
+        Assert.True(isGdRom);
+        Assert.Empty(result);
+    }
 }

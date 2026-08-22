@@ -159,14 +159,8 @@ public sealed class BattleHarness
         sb.AppendLine($"CHDSharp battle test report  ({_chdman.VersionBanner()})");
         sb.AppendLine($"seed={_seed} quick={_quick}  {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
         sb.AppendLine();
-        var failed = 0;
         foreach (var c in _checks.OrderBy(c => c.Suite, StringComparer.Ordinal).ThenBy(c => c.Name, StringComparer.Ordinal))
         {
-            if (!c.Passed)
-            {
-                failed++;
-            }
-
             var status = c.Skipped ? "SKIP" : c.Passed ? "PASS" : "FAIL";
             sb.AppendLine($"[{status}] {c.Suite} | {c.Name} | {c.Detail} | {c.Seconds:N1}s");
         }

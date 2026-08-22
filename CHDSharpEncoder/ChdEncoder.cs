@@ -27,7 +27,7 @@ namespace CHDSharpEncoder;
 /// parameters and output geometry (mirrors chdman <c>createld</c>'s console report).
 /// </summary>
 public sealed record LaserDiscEncodingInfo(
-    ulong FpsTimes1million,
+    ulong FpsTimes1Million,
     uint Width,
     uint Height,
     bool Interlaced,
@@ -140,9 +140,6 @@ public static class ChdEncoder
             metadataEntries.Add(MetadataWriter.BuildHardDiskMetadata(totalBytes, unitBytes));
         }
 
-        // Zero-filled hunk reader: every hunk reads as all zeros
-        var zeroHunk = new byte[hunkBytes];
-
         EncodeCore(chdPath, hunkBytes, unitBytes, codecTags, options, totalBytes, metadataEntries,
             ReadZeroHunk, cancellationToken);
         return;
@@ -183,9 +180,6 @@ public static class ChdEncoder
         metadataEntries.Add(MetadataWriter.BuildHardDiskMetadata(cylinders, heads, sectors, sectorSize));
         if (options?.Metadata is { Count: > 0 } userMetadata)
             metadataEntries.AddRange(userMetadata);
-
-        // Zero-filled hunk reader
-        var zeroHunk = new byte[hunkBytes];
 
         codecTags ??= [CodecTags.Zlib];
         EncodeCore(chdPath, hunkBytes, sectorSize, codecTags, options, totalBytes, metadataEntries,
@@ -240,10 +234,10 @@ public static class ChdEncoder
             throw new InvalidDataException("AVI file has no valid video timing");
 
         // determine parameters of the incoming video stream (do_create_ld)
-        var fpsTimes1million = (ulong)aviInfo.VideoTimescale * 1000000 / aviInfo.VideoSampletime;
+        var fpsTimes1Million = (ulong)aviInfo.VideoTimescale * 1000000 / aviInfo.VideoSampletime;
         var width = (uint)aviInfo.Width;
         var height = (uint)aviInfo.Height;
-        var interlaced = fpsTimes1million / 1000000 <= 30 && height % 2 == 0 && height > 288;
+        var interlaced = fpsTimes1Million / 1000000 <= 30 && height % 2 == 0 && height > 288;
 
         // process input start/end in source frames, then adjust for interlacing
         ulong totalFrames = aviInfo.VideoNumsamples;
@@ -259,7 +253,7 @@ public static class ChdEncoder
 
         if (interlaced)
         {
-            fpsTimes1million *= 2;
+            fpsTimes1Million *= 2;
             height /= 2;
             start *= 2;
             end *= 2;
@@ -269,7 +263,7 @@ public static class ChdEncoder
         var rate = aviInfo.AudioSamplerate;
 
         // bytes per frame: worst-case raw 'chav' block (max samples via ceil-div)
-        var maxSamplesPerFrameLong = rate > 0 ? ((ulong)rate * 1000000 + fpsTimes1million - 1) / fpsTimes1million : 0;
+        var maxSamplesPerFrameLong = rate > 0 ? ((ulong)rate * 1000000 + fpsTimes1Million - 1) / fpsTimes1Million : 0;
         if (maxSamplesPerFrameLong > ushort.MaxValue)
             throw new InvalidDataException($"Audio samples per frame ({maxSamplesPerFrameLong}) exceeds the AVHuff limit (65535)");
 
@@ -308,7 +302,7 @@ public static class ChdEncoder
         // metadata written before compression ('AVAV', checksummed), like chdman createld
         var metadataEntries = new List<MetadataEntry>
         {
-            MetadataWriter.BuildAvMetadata(fpsTimes1million, width, height, interlaced, channels, rate)
+            MetadataWriter.BuildAvMetadata(fpsTimes1Million, width, height, interlaced, channels, rate)
         };
         if (options?.Metadata is { Count: > 0 } userMetadata)
             metadataEntries.AddRange(userMetadata);
@@ -331,7 +325,7 @@ public static class ChdEncoder
         using var parentMap = options?.ParentPath is { Length: > 0 } parentPath
             ? new ParentMap(parentPath, hunkBytes, bytesPerFrame)
             : null;
-        var processor = new HunkProcessor(hunkBytes, codecTags, options?.TaskCount ?? CHDSharp.Chd.TaskCount);
+        var processor = new HunkProcessor(hunkBytes, codecTags, options?.TaskCount ?? Chd.TaskCount);
 
         using (var fs = new FileStream(chdPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None))
         {
@@ -390,7 +384,7 @@ public static class ChdEncoder
             fs.Write(combinedSha1, 0, 20);
         }
 
-        return new LaserDiscEncodingInfo(fpsTimes1million, width, height, interlaced, channels, rate,
+        return new LaserDiscEncodingInfo(fpsTimes1Million, width, height, interlaced, channels, rate,
             maxSamplesPerFrame, bytesPerFrame, hunkBytes, start, frames);
 
         // producer: assemble each hunk from whole frames of the AVI
@@ -404,7 +398,7 @@ public static class ChdEncoder
                     break;
 
                 var frameSamples = AssembleAvFrame(avi, frameNum + start, interlaceFactor, width, height, channels,
-                    rate, fpsTimes1million, maxSamplesPerFrame, fullFrame, fieldFrame, audioPlanes,
+                    rate, fpsTimes1Million, maxSamplesPerFrame, fullFrame, fieldFrame, audioPlanes,
                     ldFrameData, frameNum);
 
                 // assemble into an exact-size region (the frame's own sample count), then copy
@@ -470,13 +464,13 @@ public static class ChdEncoder
             fpsfrac = 0;
         }
 
-        var width = int.Parse(parts[1].AsSpan(6));   // "WIDTH:N"
-        var height = int.Parse(parts[2].AsSpan(7));   // "HEIGHT:N"
+        var width = int.Parse(parts[1].AsSpan(6)); // "WIDTH:N"
+        var height = int.Parse(parts[2].AsSpan(7)); // "HEIGHT:N"
         var interlaced = int.Parse(parts[3].AsSpan(11)); // "INTERLACED:N"
-        var channels = int.Parse(parts[4].AsSpan(9));    // "CHANNELS:N"
-        var rate = int.Parse(parts[5].AsSpan(11));       // "SAMPLERATE:N"
+        var channels = int.Parse(parts[4].AsSpan(9)); // "CHANNELS:N"
+        var rate = int.Parse(parts[5].AsSpan(11)); // "SAMPLERATE:N"
 
-        var fpsTimes1million = (ulong)fps * 1000000 + (ulong)fpsfrac;
+        var fpsTimes1Million = (ulong)fps * 1000000 + (ulong)fpsfrac;
         var interlaceFactor = interlaced != 0 ? 2 : 1;
         var w = (uint)width;
         var h = (uint)height;
@@ -485,7 +479,7 @@ public static class ChdEncoder
 
         // max samples per frame (ceil-div, matching MAME)
         var maxSamplesPerFrame = sampleRate > 0
-            ? (uint)(((ulong)sampleRate * 1000000 + fpsTimes1million - 1) / fpsTimes1million)
+            ? (uint)(((ulong)sampleRate * 1000000 + fpsTimes1Million - 1) / fpsTimes1Million)
             : 0;
 
         ulong totalHunks = chd.HunkCount;
@@ -506,7 +500,7 @@ public static class ChdEncoder
             throw new ArgumentException("Start frame is beyond end of CHD");
 
         // AVI video timing (MAME: video_timescale = fps_times_1million / interlace_factor)
-        var videoTimescale = (uint)(fpsTimes1million / (uint)interlaceFactor);
+        var videoTimescale = (uint)(fpsTimes1Million / (uint)interlaceFactor);
         uint videoSampletime = 1000000;
 
         using var avi = AviWriter.Create(aviPath, w, h * (uint)interlaceFactor,
@@ -613,15 +607,15 @@ public static class ChdEncoder
     /// when <paramref name="ldFrameData"/> is non-null. Returns the frame's sample count.
     /// </summary>
     private static int AssembleAvFrame(AviReader avi, ulong effFrame, int interlaceFactor, uint width, uint height,
-        uint channels, uint rate, ulong fpsTimes1million, uint maxSamplesPerFrame,
+        uint channels, uint rate, ulong fpsTimes1Million, uint maxSamplesPerFrame,
         byte[] fullFrame, byte[] fieldFrame, short[][] audioPlanes, byte[]? ldFrameData, ulong frameIndex)
     {
         // determine effective frame number and first/last samples (chd_avi_compressor::read_data)
         var firstSample = rate > 0
-            ? (rate * effFrame * 1000000 + fpsTimes1million - 1) / fpsTimes1million
+            ? (rate * effFrame * 1000000 + fpsTimes1Million - 1) / fpsTimes1Million
             : 0;
         var endSample = rate > 0
-            ? (rate * (effFrame + 1) * 1000000 + fpsTimes1million - 1) / fpsTimes1million
+            ? (rate * (effFrame + 1) * 1000000 + fpsTimes1Million - 1) / fpsTimes1Million
             : 0;
         var samples = (int)Math.Min(endSample - firstSample, maxSamplesPerFrame);
 
@@ -1009,7 +1003,7 @@ public static class ChdEncoder
     /// Builds a <see cref="CdToc"/> from parsed <see cref="ChdTrackInfo"/> records, converting
     /// the CHDSharpLib track model to the CHDSharpEncoder track model for metadata generation.
     /// </summary>
-    private static CdToc BuildTocFromTracks(IReadOnlyList<CHDSharp.Models.ChdTrackInfo> tracks, bool isGdRom)
+    private static CdToc BuildTocFromTracks(IReadOnlyList<ChdTrackInfo> tracks, bool isGdRom)
     {
         var toc = new CdToc();
         if (isGdRom)

@@ -316,7 +316,7 @@ internal class Encoder : ICoder, ISetCoderProperties, IWriteCoderProperties
             var a1 = _choice.GetPrice1();
             var b0 = a1 + _choice2.GetPrice0();
             var b1 = a1 + _choice2.GetPrice1();
-            uint i = 0;
+            uint i;
             for (i = 0; i < Base.KNumLowLenSymbols; i++)
             {
                 if (i >= numSymbols)
@@ -1471,15 +1471,14 @@ internal class Encoder : ICoder, ISetCoderProperties, IWriteCoderProperties
 
         if (_nowPos64 == 0)
         {
-            uint numPairs;
             if (_matchFinder!.GetNumAvailableBytes() == 0)
             {
                 Flush(nowPos);
                 return;
             }
 
-            ReadMatchDistances(out numPairs);
-            _isMatch[(KStateStart << Base.KNumPosStatesBitsMax) + 0].Encode(_rangeEncoder, 0);
+            ReadMatchDistances(out _);
+            _isMatch[0].Encode(_rangeEncoder, 0);
             var curByte = _matchFinder.GetIndexByte((int)(0 - _additionalOffset));
             _literalEncoder.GetSubCoder(0, _previousByte).Encode(_rangeEncoder, curByte);
             _previousByte = curByte;
@@ -1675,8 +1674,7 @@ internal class Encoder : ICoder, ISetCoderProperties, IWriteCoderProperties
         ReleaseOutStream();
     }
 
-    private void SetStreams(Stream inStream, Stream outStream,
-        long inSize, long outSize)
+    private void SetStreams(Stream inStream, Stream outStream)
     {
         _inStream = inStream;
         _finished = false;
@@ -1694,7 +1692,7 @@ internal class Encoder : ICoder, ISetCoderProperties, IWriteCoderProperties
         _needReleaseMfStream = false;
         try
         {
-            SetStreams(inStream, outStream, inSize, outSize);
+            SetStreams(inStream, outStream);
             while (true)
             {
                 CodeOneBlock(out var processedInSize, out var processedOutSize, out var finished);
@@ -1905,12 +1903,12 @@ internal class Encoder : ICoder, ISetCoderProperties, IWriteCoderProperties
 
                 case CoderPropId.EndMarker:
                 {
-                    if (prop is not bool)
+                    if (prop is not bool b)
                     {
                         throw new InvalidParamException();
                     }
 
-                    SetWriteEndMarkerMode((bool)prop);
+                    SetWriteEndMarkerMode(b);
                     break;
                 }
 

@@ -123,7 +123,9 @@ public class BitStreamOut
         if (_fixedLimit.HasValue)
         {
             if (ByteLength < _fixedLimit.Value)
+            {
                 _buffer[_baseOffset + ByteLength] = b;
+            }
         }
         else
         {

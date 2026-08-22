@@ -22,10 +22,16 @@ internal static class Adler32
         {
             adler += buf;
             if (adler >= Base)
+            {
                 adler -= Base;
+            }
+
             sum2 += adler;
             if (sum2 >= Base)
+            {
                 sum2 -= Base;
+            }
+
             return adler | (sum2 << 16);
         }
 
@@ -43,7 +49,10 @@ internal static class Adler32
                 sum2 += adler;
             }
             if (adler >= Base)
+            {
                 adler -= Base;
+            }
+
             sum2 %= Base; // only added so many BASE's
             return adler | (sum2 << 16);
         }

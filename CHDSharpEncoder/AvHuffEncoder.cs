@@ -21,8 +21,10 @@ internal sealed class AvHuffEncoder
     private readonly DeltaRleEncoder _crContext = new();
 
     /// <summary>Raw ('chav') data size for one frame: header + metadata + audio + video.</summary>
-    public static uint RawDataSize(uint width, uint height, uint channels, uint numSamples) =>
-        12 + channels * numSamples * 2 + width * height * 2;
+    public static uint RawDataSize(uint width, uint height, uint channels, uint numSamples)
+    {
+        return 12 + channels * numSamples * 2 + width * height * 2;
+    }
 
     /// <summary>
     /// Assembles a raw 'chav' datastream from decoded pieces (MAME's
@@ -49,21 +51,21 @@ internal sealed class AvHuffEncoder
         buffer[3] = (byte)'v';
         buffer[4] = 0; // metasize (createld never stores inline metadata)
         buffer[5] = (byte)channels;
-        PutU16Be(buffer.Slice(6), (ushort)numSamples);
-        PutU16Be(buffer.Slice(8), (ushort)width);
-        PutU16Be(buffer.Slice(10), (ushort)height);
+        PutU16Be(buffer[6..], (ushort)numSamples);
+        PutU16Be(buffer[8..], (ushort)width);
+        PutU16Be(buffer[10..], (ushort)height);
 
-        var dest = buffer.Slice(12);
+        var dest = buffer[12..];
 
         // copy the audio streams, channel-planar, big-endian
-        for (int ch = 0; ch < channels; ch++)
+        for (var ch = 0; ch < channels; ch++)
         {
             var plane = samples[ch];
-            for (int i = 0; i < numSamples; i++)
+            for (var i = 0; i < numSamples; i++)
             {
                 dest[0] = (byte)((ushort)plane[i] >> 8);
                 dest[1] = (byte)plane[i];
-                dest = dest.Slice(2);
+                dest = dest[2..];
             }
         }
 
@@ -82,24 +84,24 @@ internal sealed class AvHuffEncoder
 
         uint metaSize = source[4];
         uint channels = source[5];
-        uint samples = ReadU16Be(source.Slice(6));
-        uint width = ReadU16Be(source.Slice(8));
-        uint height = ReadU16Be(source.Slice(10));
-        var body = source.Slice(12);
+        uint samples = ReadU16Be(source[6..]);
+        uint width = ReadU16Be(source[8..]);
+        uint height = ReadU16Be(source[10..]);
+        var body = source[12..];
 
         dest[0] = (byte)metaSize;
         dest[1] = (byte)channels;
-        PutU16Be(dest.Slice(2), (ushort)samples);
-        PutU16Be(dest.Slice(4), (ushort)width);
-        PutU16Be(dest.Slice(6), (ushort)height);
+        PutU16Be(dest[2..], (ushort)samples);
+        PutU16Be(dest[4..], (ushort)width);
+        PutU16Be(dest[6..], (ushort)height);
 
-        int dstOffs = 10 + 2 * (int)channels;
+        var dstOffs = 10 + 2 * (int)channels;
 
         // copy the metadata first
         if (metaSize > 0)
         {
-            body.Slice(0, (int)metaSize).CopyTo(dest.Slice(dstOffs));
-            body = body.Slice((int)metaSize);
+            body[..(int)metaSize].CopyTo(dest[dstOffs..]);
+            body = body[(int)metaSize..];
             dstOffs += (int)metaSize;
         }
 
@@ -109,11 +111,16 @@ internal sealed class AvHuffEncoder
             EncodeAudio(body, (int)channels, (int)samples, dest, dstOffs);
 
             // advance past the audio data (tree size 0xFFFF means FLAC: no tree bytes stored)
-            uint treeSize = ReadU16Be(dest.Slice(8));
+            uint treeSize = ReadU16Be(dest[8..]);
             if (treeSize != 0xFFFF)
+            {
                 dstOffs += (int)treeSize;
-            for (int ch = 0; ch < channels; ch++)
-                dstOffs += ReadU16Be(dest.Slice(10 + 2 * ch));
+            }
+
+            for (var ch = 0; ch < channels; ch++)
+            {
+                dstOffs += ReadU16Be(dest[(10 + 2 * ch)..]);
+            }
         }
         else
         {
@@ -124,7 +131,7 @@ internal sealed class AvHuffEncoder
         // encode the video data
         if (width > 0 && height > 0)
         {
-            body = body.Slice((int)(channels * samples * 2));
+            body = body[(int)(channels * samples * 2)..];
             dstOffs += EncodeVideoLossless(body, (int)width, (int)height, dest, dstOffs);
         }
 
@@ -148,33 +155,33 @@ internal sealed class AvHuffEncoder
         var flacOut = new byte[samples * 2 + 64];
         var pcm = new short[samples];
 
-        for (int ch = 0; ch < channels; ch++)
+        for (var ch = 0; ch < channels; ch++)
         {
             // read this channel's planar big-endian samples
-            for (int i = 0; i < samples; i++)
+            for (var i = 0; i < samples; i++)
             {
-                int off = (ch * samples + i) * 2;
+                var off = (ch * samples + i) * 2;
                 pcm[i] = (short)((source[off] << 8) | source[off + 1]);
             }
 
             var encoder = new Flac.LibFlacEncoder(samples, channels: 1, sampleRate: 48000);
-            int length = encoder.Encode(flacOut, pcm.AsSpan(0, samples));
+            var length = encoder.Encode(flacOut, pcm.AsSpan(0, samples));
 
             // record the size of this channel's stream (full logical length, even when the
             // tail was dropped by the cap — matching MAME's m_compressed_offset accounting)
-            int cursize = Math.Min(length, ushort.MaxValue);
-            PutU16Be(dest.Slice(10 + 2 * ch), (ushort)cursize);
+            var cursize = Math.Min(length, ushort.MaxValue);
+            PutU16Be(dest[(10 + 2 * ch)..], (ushort)cursize);
 
             // copy into the destination, dropping bytes beyond the samples*2 cap
-            int cap = samples * 2;
-            int store = Math.Min(length, cap);
+            var cap = samples * 2;
+            var store = Math.Min(length, cap);
             if (dstOffs + store <= dest.Length)
             {
-                flacOut.AsSpan(0, store).CopyTo(dest.Slice(dstOffs));
+                flacOut.AsSpan(0, store).CopyTo(dest[dstOffs..]);
             }
             else if (dstOffs < dest.Length)
             {
-                flacOut.AsSpan(0, Math.Min(store, dest.Length - dstOffs)).CopyTo(dest.Slice(dstOffs));
+                flacOut.AsSpan(0, Math.Min(store, dest.Length - dstOffs)).CopyTo(dest[dstOffs..]);
             }
 
             dstOffs += cursize;
@@ -190,7 +197,7 @@ internal sealed class AvHuffEncoder
     /// </summary>
     private int EncodeVideoLossless(ReadOnlySpan<byte> source, int width, int height, Span<byte> dest, int dstOffs)
     {
-        int videoRegionSize = width * height * 2;
+        var videoRegionSize = width * height * 2;
 
         // set up the output; first byte is 0x80 to indicate lossless encoding
         var scratch = new byte[videoRegionSize];
@@ -212,12 +219,12 @@ internal sealed class AvHuffEncoder
 
         // encode the data using the trees (Y,Cb,Y,Cr per pixel pair)
         int yPos = 0, cbPos = 0, crPos = 0;
-        for (int sy = 0; sy < height; sy++)
+        for (var sy = 0; sy < height; sy++)
         {
             _yContext.FlushRle();
             _cbContext.FlushRle();
             _crContext.FlushRle();
-            for (int sx = 0; sx < width / 2; sx++)
+            for (var sx = 0; sx < width / 2; sx++)
             {
                 _yContext.EncodeOne(bitbuf, ref yPos);
                 _cbContext.EncodeOne(bitbuf, ref cbPos);
@@ -226,13 +233,16 @@ internal sealed class AvHuffEncoder
             }
         }
 
-        int compLength = bitbuf.Flush();
-        int store = Math.Min(compLength, Math.Min(scratch.Length, Math.Max(dest.Length - dstOffs, 0)));
-        scratch.AsSpan(0, store).CopyTo(dest.Slice(dstOffs));
+        var compLength = bitbuf.Flush();
+        var store = Math.Min(compLength, Math.Min(scratch.Length, Math.Max(dest.Length - dstOffs, 0)));
+        scratch.AsSpan(0, store).CopyTo(dest[dstOffs..]);
         return compLength;
     }
 
-    private static ushort ReadU16Be(ReadOnlySpan<byte> data) => (ushort)((data[0] << 8) | data[1]);
+    private static ushort ReadU16Be(ReadOnlySpan<byte> data)
+    {
+        return (ushort)((data[0] << 8) | data[1]);
+    }
 
     private static void PutU16Be(Span<byte> dest, ushort value)
     {
@@ -243,35 +253,43 @@ internal sealed class AvHuffEncoder
     /// <summary>Number of RLE repetitions encoded by a given symbol code (avhuff.cpp:82).</summary>
     internal static int CodeToRleCount(int code)
     {
-        if (code == 0x00)
-            return 1;
-        if (code <= 0x107)
-            return 8 + (code - 0x100);
-        return 16 << (code - 0x108);
+        switch (code)
+        {
+            case 0x00:
+                return 1;
+            case <= 0x107:
+                return 8 + (code - 0x100);
+            default:
+                return 16 << (code - 0x108);
+        }
     }
 
     /// <summary>Largest RLE count ≤ <paramref name="rleCount"/>, as a symbol code (avhuff.cpp:98).</summary>
     internal static int RleCountToCode(int rleCount)
     {
-        if (rleCount >= 2048)
-            return 0x10f;
-        if (rleCount >= 1024)
-            return 0x10e;
-        if (rleCount >= 512)
-            return 0x10d;
-        if (rleCount >= 256)
-            return 0x10c;
-        if (rleCount >= 128)
-            return 0x10b;
-        if (rleCount >= 64)
-            return 0x10a;
-        if (rleCount >= 32)
-            return 0x109;
-        if (rleCount >= 16)
-            return 0x108;
-        if (rleCount >= 8)
-            return 0x100 + (rleCount - 8);
-        return 0x00;
+        switch (rleCount)
+        {
+            case >= 2048:
+                return 0x10f;
+            case >= 1024:
+                return 0x10e;
+            case >= 512:
+                return 0x10d;
+            case >= 256:
+                return 0x10c;
+            case >= 128:
+                return 0x10b;
+            case >= 64:
+                return 0x10a;
+            case >= 32:
+                return 0x109;
+            case >= 16:
+                return 0x108;
+            case >= 8:
+                return 0x100 + (rleCount - 8);
+            default:
+                return 0x00;
+        }
     }
 
     /// <summary>
@@ -299,29 +317,31 @@ internal sealed class AvHuffEncoder
         public void RleAndHistoBitmap(ReadOnlySpan<byte> source, int start, int itemsPerRow, int itemAdvance, int rowCount)
         {
             if (_rleBuffer.Length < itemsPerRow * rowCount)
+            {
                 _rleBuffer = new ushort[itemsPerRow * rowCount];
+            }
 
             _rleLength = itemsPerRow * rowCount;
-            int destPos = 0;
+            var destPos = 0;
 
             _encoder.ResetHistogram();
-            int prevData = 0;
-            int rowStart = start;
-            for (int row = 0; row < rowCount; row++)
+            var prevData = 0;
+            var rowStart = start;
+            for (var row = 0; row < rowCount; row++)
             {
-                int srcPos = rowStart;
-                int end = rowStart + itemsPerRow * itemAdvance;
+                var srcPos = rowStart;
+                var end = rowStart + itemsPerRow * itemAdvance;
                 while (srcPos < end)
                 {
                     // fetch current data (uint8 wrap-around delta)
-                    int curDelta = (source[srcPos] - prevData) & 0xFF;
+                    var curDelta = (source[srcPos] - prevData) & 0xFF;
                     prevData = source[srcPos];
 
                     if (curDelta == 0)
                     {
                         // 0 deltas scan forward for a count
-                        int zeroCount = 1;
-                        int scan = srcPos + itemAdvance;
+                        var zeroCount = 1;
+                        var scan = srcPos + itemAdvance;
                         while (scan < end && source[scan] == prevData)
                         {
                             zeroCount++;
@@ -330,10 +350,12 @@ internal sealed class AvHuffEncoder
 
                         // if we hit the end of a row, maximize the count
                         if (scan >= end && zeroCount >= 8)
+                        {
                             zeroCount = 100000;
+                        }
 
                         // encode the maximal count we can
-                        int rleCode = RleCountToCode(zeroCount);
+                        var rleCode = RleCountToCode(zeroCount);
                         _rleBuffer[destPos++] = (ushort)rleCode;
                         _encoder.CountSymbol((uint)rleCode);
 
@@ -357,7 +379,10 @@ internal sealed class AvHuffEncoder
         }
 
         /// <summary>Clears a pending run so the next <see cref="EncodeOne"/> reads a fresh symbol.</summary>
-        public void FlushRle() => _rleCount = 0;
+        public void FlushRle()
+        {
+            _rleCount = 0;
+        }
 
         /// <summary>Emits the next symbol, silently consuming an active RLE run.</summary>
         public void EncodeOne(BitStreamOut bitbuf, ref int rlePos)
@@ -368,13 +393,18 @@ internal sealed class AvHuffEncoder
                 return;
             }
 
-            ushort data = _rleBuffer[rlePos++];
+            var data = _rleBuffer[rlePos++];
             _encoder.Encode(bitbuf, data);
             if (data >= 0x100)
+            {
                 _rleCount = CodeToRleCount(data) - 1;
+            }
         }
 
         /// <summary>Writes the Huffman tree in RLE form (MAME's <c>export_tree_rle</c>).</summary>
-        public void ExportTreeRle(BitStreamOut bitbuf) => _encoder.ExportTreeRle(bitbuf);
+        public void ExportTreeRle(BitStreamOut bitbuf)
+        {
+            _encoder.ExportTreeRle(bitbuf);
+        }
     }
 }

@@ -33,7 +33,10 @@ public partial class ZLib : IZLib
     /// <param name="level">The compression level. It must be <see cref="Z_DEFAULT_COMPRESSION" />, or between 0 and 9: 1 gives best speed, 9 gives best compression, 0 gives no compression at all (the input data is simply copied a block at a time). <see cref="Z_DEFAULT_COMPRESSION" /> requests a default compromise between speed and compression (equivalent to level 6).</param>
     /// <returns><see cref="Z_OK"/> if success, <see cref="Z_MEM_ERROR"/> if there was not enough memory, or <see cref="Z_STREAM_ERROR"/> if level is not a valid compression level.</returns>
     /// <remarks>This method does not perform any compression. Actual compression will be done by <see cref="Deflate(ref ZStream, int)"/>.</remarks>
-    public int DeflateInit(ref ZStream strm, int level) => Deflater.DeflateInit(ref strm, level);
+    public int DeflateInit(ref ZStream strm, int level)
+    {
+        return Deflater.DeflateInit(ref strm, level);
+    }
 
     /// <summary>
     /// Initializes the internal stream state for compression.
@@ -46,8 +49,10 @@ public partial class ZLib : IZLib
     /// <param name="strategy">Used to tune the compression algorithm. Use the value <see cref="Z_DEFAULT_STRATEGY"/> for normal data, <see cref="Z_FILTERED"/> for data produced by a filter(or predictor), <see cref="Z_HUFFMAN_ONLY"/> to force Huffman encoding only (no string match), or <see cref="Z_RLE"/> to limit match distances to one (run-length encoding).</param>
     /// <returns><see cref="Z_OK"/> if success, <see cref="Z_MEM_ERROR"/> if there was not enough memory, or <see cref="Z_STREAM_ERROR"/> if any parameter is invalid (such as an invalid method).</returns>
     /// <remarks>This method does not perform any compression. Actual compression will be done by <see cref="Deflate(ref ZStream, int)"/>.</remarks>
-    public int DeflateInit(ref ZStream strm, int level, int method, int windowBits, int memLevel, int strategy) =>
-        Deflater.DeflateInit(ref strm, level, method, windowBits, memLevel, strategy);
+    public int DeflateInit(ref ZStream strm, int level, int method, int windowBits, int memLevel, int strategy)
+    {
+        return Deflater.DeflateInit(ref strm, level, method, windowBits, memLevel, strategy);
+    }
 
     /// <summary>
     /// Compresses as much data as possible, and stops when the input buffer becomes empty or the output buffer becomes full. It may introduce some output latency(reading input without producing any output) except when forced to flush.
@@ -60,7 +65,10 @@ public partial class ZLib : IZLib
     /// <param name="strm">The stream to be compressed.</param>
     /// <param name="flush">The flush parameter. Should be set to <see cref="Z_NO_FLUSH" />, <see cref="Z_SYNC_FLUSH" />, <see cref="Z_PARTIAL_FLUSH" />, <see cref="Z_BLOCK" />, <see cref="Z_FULL_FLUSH" />, or <see cref="Z_FINISH" />.</param>
     /// <returns><see cref="Z_OK"/> if some progress has been made (more input processed or more output produced), <see cref="Z_STREAM_END" /> if all input has been consumed and all output has been produced (only when <param ref="flush" /> is set to <see cref="Z_FINISH" />), <see cref="Z_STREAM_ERROR" /> if the stream state was inconsistent (for example if <see cref="ZStream.Input"/> or <see cref="ZStream.Output"/> of <paramref name="strm"/> was not set or the state was inadvertently written over by the application), or <see cref="Z_BUF_ERROR" /> if no progress is possible (for example <see cref="ZStream.AvailableIn"/> or <see cref="ZStream.AvailableOut"/> of <paramref name="strm"/> was zero).</returns>
-    public int Deflate(ref ZStream strm, int flush) => Deflater.Deflate(ref strm, flush);
+    public int Deflate(ref ZStream strm, int flush)
+    {
+        return Deflater.Deflate(ref strm, flush);
+    }
 
     /// <summary>
     /// Resets the state of a stream. Any dynamically allocated resources for the stream are freed.
@@ -68,7 +76,10 @@ public partial class ZLib : IZLib
     /// <param name="strm">The stream to be reset.</param>
     /// <returns><see cref="Z_OK"/> if success, <see cref="Z_STREAM_ERROR"/> if the stream state was inconsistent, or <see cref="Z_DATA_ERROR"/> if some input or output was discarded.</returns>
     /// <remarks>This method discards any unprocessed input and does not flush any pending output.</remarks>
-    public int DeflateEnd(ref ZStream strm) => Deflater.DeflateEnd(ref strm);
+    public int DeflateEnd(ref ZStream strm)
+    {
+        return Deflater.DeflateEnd(ref strm);
+    }
 
     /// <summary>
     /// Initializes the internal stream state for decompression.
@@ -76,7 +87,10 @@ public partial class ZLib : IZLib
     /// <param name="strm">The stream to be initialized for decompression.</param>
     /// <returns><see cref="Z_OK"/> on success or <see cref="Z_MEM_ERROR"/> if there was not enough memory.</returns>
     /// <remarks>This method does not perform any decompression. Actual decompression will be done by <see cref="Inflate(ref ZStream, int)"/>.</remarks>
-    public int InflateInit(ref ZStream strm) => Inflater.InflateInit(ref strm, DefaultWindowBits);
+    public int InflateInit(ref ZStream strm)
+    {
+        return Inflater.InflateInit(ref strm, DefaultWindowBits);
+    }
 
     /// <summary>
     /// Initializes the internal stream state for decompression.
@@ -85,7 +99,10 @@ public partial class ZLib : IZLib
     /// <param name="windowBits">The base two logarithm of the window size (the size of the history buffer). It should be in the range 8..15 or -8..-15 for raw deflate. Larger values of this parameter result in better compression at the expense of memory usage. The default value is 15 if the <see cref="InflateInit(ref ZStream)"/> overload is used instead.</param>
     /// <returns><see cref="Z_OK"/> on success, <see cref="Z_MEM_ERROR"/> if there was not enough memory, or <see cref="Z_STREAM_ERROR"/> if the parameters are invalid.</returns>
     /// <remarks>This method does not perform any decompression apart from possibly reading the zlib header if present: actual decompression will be done by <see cref="Inflate(ref ZStream, int)"/>.</remarks>
-    public int InflateInit(ref ZStream strm, int windowBits) => Inflater.InflateInit(ref strm, windowBits);
+    public int InflateInit(ref ZStream strm, int windowBits)
+    {
+        return Inflater.InflateInit(ref strm, windowBits);
+    }
 
     /// <summary>
     /// Decompresses as much data as possible, and stops when the input buffer becomes empty or the output buffer becomes full. It may introduce some output latency (reading input without producing any output) except when forced to flush.
@@ -100,7 +117,10 @@ public partial class ZLib : IZLib
     /// <param name="strm">The stream to be decompressed.</param>
     /// <param name="flush">The flush parameter. Should be set to <see cref="Z_NO_FLUSH" />, <see cref="Z_SYNC_FLUSH" />, <see cref="Z_FINISH" />, <see cref="Z_BLOCK" />, or <see cref="Z_TREES" />.</param>
     /// <returns><see cref="Z_OK"/> if some progress has been made (more input processed or more output produced), <see cref="Z_STREAM_END" /> if the end of the compressed data has been reached and all uncompressed output has been produced, <see cref="Z_NEED_DICT" /> if a preset dictionary is needed at this point, <see cref="Z_DATA_ERROR" /> if the input data was corrupted (input stream not conforming to the zlib format or incorrect check value, in which case the <see cref="ZStream.Message"/> property of the <paramref name="strm"/> returns a <see cref="string" /> with a more specific error), <see cref="Z_STREAM_ERROR" /> if the stream structure was inconsistent (for example if <see cref="ZStream.Input"/> or <see cref="ZStream.Output"/> of <paramref name="strm"/> was not set, or the state was inadvertently written over by the application), <see cref="Z_MEM_ERROR" /> if there was not enough memory, <see cref="Z_BUF_ERROR" /> if no progress was possible or if there was not enough room in the output buffer when <see cref="Z_FINISH" /> is used.</returns>
-    public int Inflate(ref ZStream strm, int flush) => Inflater.Inflate(ref strm, flush);
+    public int Inflate(ref ZStream strm, int flush)
+    {
+        return Inflater.Inflate(ref strm, flush);
+    }
 
     /// <summary>
     /// Discards any unprocessed input and resets the state of a stream.
@@ -108,7 +128,10 @@ public partial class ZLib : IZLib
     /// <param name="strm">The stream to be reset.</param>
     /// <returns><see cref="Z_OK"/> on success, or <see cref="Z_STREAM_ERROR"/> if the stream state was inconsistent.</returns>
     /// <remarks>This method does not flush any pending output.</remarks>
-    public int InflateEnd(ref ZStream strm) => Inflater.InflateEnd(ref strm);
+    public int InflateEnd(ref ZStream strm)
+    {
+        return Inflater.InflateEnd(ref strm);
+    }
 
     /// <summary>
     /// Dynamically updates the compression level and compression strategy of a stream.
@@ -117,7 +140,10 @@ public partial class ZLib : IZLib
     /// <param name="level">The compression level. It must be <see cref="Z_DEFAULT_COMPRESSION" />, or between 0 and 9: 1 gives best speed, 9 gives best compression, 0 gives no compression at all (the input data is simply copied a block at a time). <see cref="Z_DEFAULT_COMPRESSION" /> requests a default compromise between speed and compression (equivalent to level 6).</param>
     /// <param name="strategy">The strategy. Used to tune the compression algorithm. Use the value <see cref="Z_DEFAULT_STRATEGY" /> for normal data, <see cref="Z_FILTERED" /> for data produced by a filter (or predictor), <see cref="Z_HUFFMAN_ONLY" /> to force Huffman encoding only (no string match), or <see cref="Z_RLE" /> to limit match distances to one (run-length encoding).</param>
     /// <returns><see cref="Z_OK"/> on success, <see cref="Z_STREAM_ERROR"/> if the source stream state was inconsistent or if a parameter was invalid, or <see cref="Z_BUF_ERROR"/> if there was not enough output space to complete the compression of the available input data before a change in the strategy or approach.</returns>
-    public int DeflateParams(ref ZStream strm, int level, int strategy) => Deflater.DeflateParams(ref strm, level, strategy);
+    public int DeflateParams(ref ZStream strm, int level, int strategy)
+    {
+        return Deflater.DeflateParams(ref strm, level, strategy);
+    }
 
     /// <summary>
     /// Initializes the compression dictionary from the given byte array without producing any compressed output.
@@ -126,7 +152,10 @@ public partial class ZLib : IZLib
     /// <param name="dictionary">The compression dictionary.</param>
     /// <returns><see cref="Z_OK"/> if success, or <see cref="Z_STREAM_ERROR"/> if a parameter is invalid (e.g. <paramref name="dictionary"/> being <see langword="null"/>) or the stream state is inconsistent (for example if <see cref="Deflate(ref ZStream, int)"/> has already been called for this stream or if not at a block boundary for raw deflate).</returns>
     /// <remarks>Upon return of this method, the <see cref="ZStream.Adler"/> property of the <paramref name="strm"/> is set to the Adler-32 value of the dictionary; the decompressor may later use this value to determine which dictionary has been used by the compressor.</remarks>
-    public int DeflateSetDictionary(ref ZStream strm, byte[] dictionary) => DeflateSetDictionary(ref strm, dictionary, dictionary?.Length ?? -1);
+    public int DeflateSetDictionary(ref ZStream strm, byte[] dictionary)
+    {
+        return DeflateSetDictionary(ref strm, dictionary, dictionary?.Length ?? -1);
+    }
 
     /// <summary>
     /// Initializes the compression dictionary from the given byte array without producing any compressed output.
@@ -150,8 +179,10 @@ public partial class ZLib : IZLib
     /// <param name="strm">An initialized compression stream.</param>
     /// <param name="dictionary">The compression dictionary.</param>
     /// <returns><see cref="Z_OK"/> if success, or <see cref="Z_STREAM_ERROR"/> if the stream state is inconsistent (for example if <see cref="Deflate(ref ZStream, int)"/> has already been called for this stream or if not at a block boundary for raw deflate).</returns>
-    public int DeflateSetDictionary(ref ZStream strm, ReadOnlySpan<byte> dictionary) =>
-        Deflater.DeflateSetDictionary(ref strm, dictionary);
+    public int DeflateSetDictionary(ref ZStream strm, ReadOnlySpan<byte> dictionary)
+    {
+        return Deflater.DeflateSetDictionary(ref strm, dictionary);
+    }
 
     /// <summary>
     /// Initializes the decompression dictionary from the given uncompressed byte sequence.
@@ -161,7 +192,10 @@ public partial class ZLib : IZLib
     /// <param name="dictionary">The decompression dictionary.</param>
     /// <returns><see cref="Z_OK"/> if success, <see cref="Z_STREAM_ERROR"/> if a parameter is invalid (e.g. <paramref name="dictionary"/> being <see langword="null"/>) or the stream state is inconsistent, <see cref="Z_DATA_ERROR"/> if the given dictionary doesn't match the expected one (incorrect Adler-32 value).</returns>
     /// <remarks>This method does not perform any decompression: this will be done by subsequent calls of <see cref="Inflate(ref ZStream, int)"/>.</remarks>
-    public int InflateSetDictionary(ref ZStream strm, byte[] dictionary) => InflateSetDictionary(ref strm, dictionary, dictionary?.Length ?? -1);
+    public int InflateSetDictionary(ref ZStream strm, byte[] dictionary)
+    {
+        return InflateSetDictionary(ref strm, dictionary, dictionary?.Length ?? -1);
+    }
 
     /// <summary>
     /// Initializes the decompression dictionary from the given uncompressed byte sequence.
@@ -188,8 +222,10 @@ public partial class ZLib : IZLib
     /// <param name="dictionary">The decompression dictionary.</param>
     /// <returns><see cref="Z_OK"/> if success, <see cref="Z_STREAM_ERROR"/> if a parameter is invalid (e.g. the stream state is inconsistent), <see cref="Z_DATA_ERROR"/> if the given dictionary doesn't match the expected one (incorrect Adler-32 value).</returns>
     /// <remarks>This method does not perform any decompression: this will be done by subsequent calls of <see cref="Inflate(ref ZStream, int)"/>.</remarks>
-    public int InflateSetDictionary(ref ZStream strm, ReadOnlySpan<byte> dictionary) =>
-        Inflater.InflateSetDictionary(ref strm, ref MemoryMarshal.GetReference(dictionary), (uint)dictionary.Length);
+    public int InflateSetDictionary(ref ZStream strm, ReadOnlySpan<byte> dictionary)
+    {
+        return Inflater.InflateSetDictionary(ref strm, ref MemoryMarshal.GetReference(dictionary), (uint)dictionary.Length);
+    }
 
     /// <summary>
     /// Skips invalid compressed data until a possible full flush point can be found, or until all available input is skipped. No output is provided.
@@ -197,7 +233,10 @@ public partial class ZLib : IZLib
     /// </summary>
     /// <param name="strm">The compressed data stream.</param>
     /// <returns><see cref="Z_OK"/> if a possible full flush point has been found, <see cref="Z_BUF_ERROR"/> if no more input was provided, <see cref="Z_DATA_ERROR"/> if no flush point has been found, or <see cref="Z_STREAM_ERROR"/> if the stream structure was inconsistent.</returns>
-    public int InflateSync(ref ZStream strm) => Inflater.InflateSync(ref strm);
+    public int InflateSync(ref ZStream strm)
+    {
+        return Inflater.InflateSync(ref strm);
+    }
 
     /// <summary>
     /// Sets the destination stream as a complete copy of the source stream.
@@ -217,7 +256,10 @@ public partial class ZLib : IZLib
     /// </summary>
     /// <param name="strm">A decompression stream to be reset.</param>
     /// <returns><see cref="Z_OK"/> if success, or <see cref="Z_STREAM_ERROR"/> if the source stream state was inconsistent.</returns>
-    public int InflateReset(ref ZStream strm) => Inflater.InflateReset(ref strm);
+    public int InflateReset(ref ZStream strm)
+    {
+        return Inflater.InflateReset(ref strm);
+    }
 
     /// <summary>
     /// This method is the same as <see cref="InflateReset(ref ZStream)"/>, but it also permits changing the wrap and window size requests.
@@ -225,7 +267,10 @@ public partial class ZLib : IZLib
     /// <param name="strm">A decompression stream to be reset.</param>
     /// <param name="windowBits">The base two logarithm of the window size (the size of the history buffer). It should be in the range 8..15 or -8..-15 for raw deflate.</param>
     /// <returns><see cref="Z_OK"/> if success, or <see cref="Z_STREAM_ERROR"/> if the source stream state was inconsistent, or if the <paramref name="windowBits"/> parameter is invalid.</returns>
-    public int InflateReset(ref ZStream strm, int windowBits) => Inflater.InflateReset(ref strm, windowBits);
+    public int InflateReset(ref ZStream strm, int windowBits)
+    {
+        return Inflater.InflateReset(ref strm, windowBits);
+    }
 
     /// <summary>
     /// Inserts bits in the inflate input stream. The intent is that this method is used to start inflating at a bit position in the middle of a byte.
@@ -235,7 +280,10 @@ public partial class ZLib : IZLib
     /// <param name="value">A value whose <paramref name="bits"/> least significant bits will be inserted in the input.</param>
     /// <returns><see cref="Z_OK"/> if success, or <see cref="Z_STREAM_ERROR"/> if the source stream state was inconsistent.</returns>
     /// <remarks>This mehtod should only be used with raw inflate, and should be used before the first <see cref="Inflate(ref ZStream, int)"/> call after <see cref="InflateInit(ref ZStream, int)"/> or <see cref="InflateReset(ref ZStream)"/>().</remarks>
-    public int InflatePrime(ref ZStream strm, int bits, int value) => Inflater.InflatePrime(ref strm, bits, value);
+    public int InflatePrime(ref ZStream strm, int bits, int value)
+    {
+        return Inflater.InflatePrime(ref strm, bits, value);
+    }
 
     /// <summary>
     /// Compresses the source buffer into the destination buffer.
@@ -246,7 +294,10 @@ public partial class ZLib : IZLib
     /// <param name="sourceLen">The byte length of the source buffer.</param>
     /// <returns><see cref="Z_OK"/> if success, <see cref="Z_MEM_ERROR"/> if there was not enough memory, <see cref="Z_BUF_ERROR"/> if there was not enough room in the output buffer, or Z_STREAM_ERROR if any of the level parameters are invalid.</returns>
     /// <remarks><see cref="Compress(byte[], out int, byte[], int)"/> is equivalent to <see cref="Compress(byte[], out int, byte[], int, int)"/> with a level parameter of <see cref="Z_DEFAULT_COMPRESSION"/>.</remarks>
-    public int Compress(byte[] dest, out int destLen, byte[] source, int sourceLen) => Compress(dest, out destLen, source, sourceLen, Z_DEFAULT_COMPRESSION);
+    public int Compress(byte[] dest, out int destLen, byte[] source, int sourceLen)
+    {
+        return Compress(dest, out destLen, source, sourceLen, Z_DEFAULT_COMPRESSION);
+    }
 
     /// <summary>
     /// Compresses the source buffer into the destination buffer.
@@ -276,8 +327,10 @@ public partial class ZLib : IZLib
     /// <param name="source">The source buffer.</param>
     /// <returns><see cref="Z_OK"/> if success, <see cref="Z_MEM_ERROR"/> if there was not enough memory, <see cref="Z_BUF_ERROR"/> if there was not enough room in the output buffer, or Z_STREAM_ERROR if any of the level parameters are invalid.</returns>
     /// <remarks><see cref="Compress(Span{byte}, out int, ReadOnlySpan{byte})"/> is equivalent to <see cref="Compress(Span{byte}, out int, ReadOnlySpan{byte}, int)"/> with a level parameter of <see cref="Z_DEFAULT_COMPRESSION"/>.</remarks>
-    public int Compress(Span<byte> dest, out int destLen, ReadOnlySpan<byte> source) =>
-        Compress(dest, out destLen, source, Z_DEFAULT_COMPRESSION);
+    public int Compress(Span<byte> dest, out int destLen, ReadOnlySpan<byte> source)
+    {
+        return Compress(dest, out destLen, source, Z_DEFAULT_COMPRESSION);
+    }
 
     /// <summary>
     /// Compresses the source buffer into the destination buffer.
@@ -301,7 +354,10 @@ public partial class ZLib : IZLib
     /// <param name="sourceLen">The number of bytes to be compressed.</param>
     /// <returns>An upper bound on the compressed size after compressing <paramref name="sourceLen"/> bytes.</returns>
     /// <remarks>It would be used before a <see cref="Compress(byte[], out int, byte[], int)"/> or <see cref="Compress(byte[], out int, byte[], int, int)"/> call to allocate the destination buffer.</remarks>
-    public uint CompressBound(uint sourceLen) => Compressor.CompressBound(sourceLen);
+    public uint CompressBound(uint sourceLen)
+    {
+        return Compressor.CompressBound(sourceLen);
+    }
 
     /// <summary>
     /// Decompresses the source buffer into the destination buffer.
@@ -352,7 +408,10 @@ public partial class ZLib : IZLib
     /// <param name="source">The source buffer.</param>
     /// <returns><see cref="Z_OK"/> if success, <see cref="Z_MEM_ERROR"/> if there was not enough memory, <see cref="Z_BUF_ERROR"/> if there was not enough room in the output buffer, or <see cref="Z_DATA_ERROR"/> if the input data was corrupted or incomplete.</returns>
     /// <remarks>In the case where there is not enough room, the method will fill the destination buffer with the uncompressed data up to that point.</remarks>
-    public int Uncompress(Span<byte> dest, out int destLen, ReadOnlySpan<byte> source) => Uncompress(dest, out destLen, source, out _);
+    public int Uncompress(Span<byte> dest, out int destLen, ReadOnlySpan<byte> source)
+    {
+        return Uncompress(dest, out destLen, source, out _);
+    }
 
     /// <summary>
     /// Decompresses the source buffer into the destination buffer.
@@ -397,7 +456,9 @@ public partial class ZLib : IZLib
     /// <param name="adler">The checksum to be updated.</param>
     /// <param name="buf">The bytes of data to be added to the checksum.</param>
     /// <returns>An Adler-32 checksum.</returns>
-    public uint Adler32(uint adler, ReadOnlySpan<byte> buf) =>
-        Adler.Update(adler, ref MemoryMarshal.GetReference(buf), (uint)buf.Length);
+    public uint Adler32(uint adler, ReadOnlySpan<byte> buf)
+    {
+        return Adler.Update(adler, ref MemoryMarshal.GetReference(buf), (uint)buf.Length);
+    }
 }
 #pragma warning restore CA1062

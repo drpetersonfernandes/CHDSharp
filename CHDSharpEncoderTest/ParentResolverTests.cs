@@ -65,7 +65,7 @@ public class ParentResolverTests : IDisposable
 
             // Read hunks until we hit a parent-referenced one.
             // Hunks 0..19 should be parent-referenced (identical to parent).
-            var buffer = new byte[chd!.HunkBytes];
+            var buffer = new byte[chd.HunkBytes];
             var readErr = chd.ReadHunk(0, buffer);
             Assert.Equal(ChdError.Chderrnone, readErr);
             Assert.True(resolverCalled, "Resolver should be called on first parent hunk read");
@@ -114,7 +114,7 @@ public class ParentResolverTests : IDisposable
         using (chd)
         {
             // Read multiple parent hunks (0..19 are parent-referenced).
-            var buffer = new byte[chd!.HunkBytes];
+            var buffer = new byte[chd.HunkBytes];
             for (uint i = 0; i < 10; i++)
             {
                 chd.ReadHunk(i, buffer);
@@ -151,7 +151,7 @@ public class ParentResolverTests : IDisposable
 
         using (chd)
         {
-            var buffer = new byte[chd!.HunkBytes];
+            var buffer = new byte[chd.HunkBytes];
             var readErr = chd.ReadHunk(0, buffer);
             Assert.Equal(ChdError.Chderrrequiresparent, readErr);
         }
@@ -200,7 +200,7 @@ public class ParentResolverTests : IDisposable
 
         using (chd)
         {
-            var buffer = new byte[chd!.HunkBytes];
+            var buffer = new byte[chd.HunkBytes];
             var readErr = chd.ReadHunk(0, buffer);
             Assert.Equal(ChdError.Chderrinvalidparent, readErr);
         }
@@ -302,7 +302,7 @@ public class ParentResolverTests : IDisposable
 
         using (chd)
         {
-            var buffer = new byte[chd!.HunkBytes];
+            var buffer = new byte[chd.HunkBytes];
             chd.ReadHunk(0, buffer);
 
             Assert.NotNull(capturedSha1);

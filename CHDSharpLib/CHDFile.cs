@@ -328,6 +328,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         {
             EnsureMetadataLoaded();
             if (_metadata == null) return null;
+
             foreach (var entry in _metadata)
             {
                 if (string.Equals(entry.Tag, "CIS ", StringComparison.Ordinal))
@@ -348,6 +349,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         {
             EnsureMetadataLoaded();
             if (_metadata == null) return null;
+
             foreach (var entry in _metadata)
             {
                 if (string.Equals(entry.Tag, "KEY ", StringComparison.Ordinal))
@@ -369,6 +371,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         {
             EnsureMetadataLoaded();
             if (_metadata == null) return null;
+
             foreach (var entry in _metadata)
             {
                 if (string.Equals(entry.Tag, "IDNT", StringComparison.Ordinal))
@@ -1878,6 +1881,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         var (error, chd) = await OpenAsync(filename, cancellationToken).ConfigureAwait(false);
         if (error != ChdError.Chderrnone || chd == null)
             return (error, null);
+
         return (ChdError.Chderrnone, new ChdImageStream(chd, ownsChd: true));
     }
 
@@ -1895,6 +1899,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         var (error, chd) = await OpenAsync(filename, parentFilename, cancellationToken).ConfigureAwait(false);
         if (error != ChdError.Chderrnone || chd == null)
             return (error, null);
+
         return (ChdError.Chderrnone, new ChdImageStream(chd, ownsChd: true));
     }
 

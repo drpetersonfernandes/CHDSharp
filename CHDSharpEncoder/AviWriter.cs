@@ -62,6 +62,7 @@ internal sealed class AviWriter : IDisposable
     {
         if (!stream.CanSeek)
             throw new ArgumentException("Stream must be seekable", nameof(stream));
+
         var writer = new AviWriter(stream, width, height, videoTimescale, videoSampletime, audioChannels, audioSampleRate);
         writer.WriteHeaders();
         return writer;
@@ -101,29 +102,29 @@ internal sealed class AviWriter : IDisposable
 
         // LIST 'hdrl'
         WriteFourCc("LIST");
-        long hdrlSizePos = _stream.Position;
+        var hdrlSizePos = _stream.Position;
         WriteU32(0); // patched below
         WriteFourCc("hdrl");
 
         // avih
-        long avihStart = _stream.Position;
+        var avihStart = _stream.Position;
         WriteFourCc("avih");
         WriteU32(56);
-        uint usecPerFrame = _videoTimescale > 0 ? (uint)((ulong)_videoSampletime * 1000000 / _videoTimescale) : 0;
+        var usecPerFrame = _videoTimescale > 0 ? (uint)((ulong)_videoSampletime * 1000000 / _videoTimescale) : 0;
         WriteAvih(usecPerFrame);
         // avih has a fixed size of 56 bytes, frame count at offset 16
         _avihFrameCountPos = avihStart + 4 + 4 + 16; // fourcc + size + 16
 
         // video LIST 'strl'
         WriteFourCc("LIST");
-        long videoStrlSizePos = _stream.Position;
+        var videoStrlSizePos = _stream.Position;
         WriteU32(0); // patched below
         WriteFourCc("strl");
 
         // video strh
         WriteFourCc("strh");
         WriteU32(56);
-        long videoStrhStart = _stream.Position;
+        var videoStrhStart = _stream.Position;
         WriteVideoStrh();
         _videoStrhLengthPos = videoStrhStart + 32; // dwLength at offset 32 in strh
 
@@ -137,14 +138,14 @@ internal sealed class AviWriter : IDisposable
 
         // audio LIST 'strl'
         WriteFourCc("LIST");
-        long audioStrlSizePos = _stream.Position;
+        var audioStrlSizePos = _stream.Position;
         WriteU32(0); // patched below
         WriteFourCc("strl");
 
         // audio strh
         WriteFourCc("strh");
         WriteU32(56);
-        long audioStrhStart = _stream.Position;
+        var audioStrhStart = _stream.Position;
         WriteAudioStrh();
         _audioStrhLengthPos = audioStrhStart + 32; // dwLength at offset 32 in strh
 
@@ -169,6 +170,7 @@ internal sealed class AviWriter : IDisposable
     private void FinalizeFile()
     {
         if (_finalized) return;
+
         _finalized = true;
 
         // close movi LIST
@@ -278,7 +280,7 @@ internal sealed class AviWriter : IDisposable
 
     private void PatchLength(long pos, uint length)
     {
-        long cur = _stream.Position;
+        var cur = _stream.Position;
         _stream.Position = pos;
         WriteU32(length);
         _stream.Position = cur;
@@ -286,7 +288,7 @@ internal sealed class AviWriter : IDisposable
 
     private void PatchU32(long pos, uint value)
     {
-        long cur = _stream.Position;
+        var cur = _stream.Position;
         _stream.Position = pos;
         WriteU32(value);
         _stream.Position = cur;

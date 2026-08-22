@@ -20,8 +20,6 @@ public class ChdImageStreamTests
 
         var ms = new MemoryStream();
 
-        void Write(byte[] b) => ms.Write(b, 0, b.Length);
-
         // V5 header (124 bytes)
         Write("MComprHD"u8.ToArray());
         Write(EndianHelpers.Be(124));
@@ -40,7 +38,10 @@ public class ChdImageStreamTests
             ms.Seek((long)(dataStart + h * Blocksize), SeekOrigin.Begin);
             var data = new byte[Blocksize];
             for (var i = 0; i < data.Length; i++)
+            {
                 data[i] = (byte)((h * Blocksize + (ulong)i) & 0xFF);
+            }
+
             Write(data);
         }
 
@@ -51,6 +52,11 @@ public class ChdImageStreamTests
 
         ms.Position = 0;
         return ms;
+
+        void Write(byte[] b)
+        {
+            ms.Write(b, 0, b.Length);
+        }
     }
 
     private static string DataPath(string name)
@@ -69,7 +75,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
             Assert.True(stream.CanRead);
     }
 
@@ -81,7 +87,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
             Assert.True(stream.CanSeek);
     }
 
@@ -93,7 +99,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
             Assert.False(stream.CanWrite);
     }
 
@@ -105,7 +111,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
             Assert.Equal((long)TotalBytes, stream.Length);
     }
 
@@ -117,7 +123,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
             Assert.Equal(0L, stream.Position);
     }
 
@@ -131,7 +137,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
         {
             var all = new byte[TotalBytes];
             var totalRead = 0;
@@ -139,6 +145,7 @@ public class ChdImageStreamTests
             {
                 var n = stream.Read(all, totalRead, all.Length - totalRead);
                 if (n == 0) break;
+
                 totalRead += n;
             }
             Assert.Equal((int)TotalBytes, totalRead);
@@ -157,7 +164,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
         {
             // Read 100 bytes starting at buffer offset 50
             var buf = new byte[200];
@@ -176,7 +183,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
         {
             stream.Position = (long)TotalBytes;
             var buf = new byte[10];
@@ -192,7 +199,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
         {
             var buf = new byte[10];
             Assert.Equal(0, stream.Read(buf, 0, 0));
@@ -209,7 +216,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
         {
             var pos = stream.Seek(100, SeekOrigin.Begin);
             Assert.Equal(100L, pos);
@@ -230,7 +237,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
         {
             stream.Position = 100;
             var pos = stream.Seek(50, SeekOrigin.Current);
@@ -246,7 +253,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
         {
             var pos = stream.Seek(-10, SeekOrigin.End);
             Assert.Equal((long)TotalBytes - 10, pos);
@@ -261,7 +268,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
             Assert.Throws<ArgumentOutOfRangeException>(() => stream.Seek(-1, SeekOrigin.Begin));
     }
 
@@ -273,7 +280,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
             Assert.Throws<ArgumentOutOfRangeException>(() => stream.Seek(1, SeekOrigin.End));
     }
 
@@ -287,7 +294,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
         {
             stream.Position = 256;
             Assert.Equal(256L, stream.Position);
@@ -307,7 +314,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
             Assert.Throws<ArgumentOutOfRangeException>(() => stream.Position = -1);
     }
 
@@ -321,7 +328,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
             Assert.Throws<NotSupportedException>(() => stream.Write(new byte[1], 0, 1));
     }
 
@@ -333,7 +340,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
             Assert.Throws<NotSupportedException>(() => stream.SetLength(100));
     }
 
@@ -347,7 +354,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
             stream.Flush(); // no-op, should not throw
     }
 
@@ -361,7 +368,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        stream!.Dispose();
+        stream.Dispose();
 
         Assert.False(stream.CanRead);
         Assert.False(stream.CanSeek);
@@ -379,7 +386,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, ownsChd: true, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        stream!.Dispose();
+        stream.Dispose();
 
         // After disposing, the ChdFile is also disposed; reading from it should fail.
         // (The exact behavior depends on ChdFile internals, but at minimum the stream is closed.)
@@ -395,7 +402,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
         {
             // Read spanning hunk boundary (hunk 0 = 512 bytes, so bytes 500-600 cross into hunk 1)
             stream.Position = 500;
@@ -415,7 +422,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
         {
             stream.Position = (long)TotalBytes - 10;
             var buf = new byte[100];
@@ -434,7 +441,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
         {
             stream.Position = 100;
             var buf = new byte[50];
@@ -453,7 +460,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
         {
             stream.Position = (long)TotalBytes;
             var buf = new byte[10];
@@ -474,7 +481,7 @@ public class ChdImageStreamTests
         var err = ChdFile.OpenAsStream(path, out var stream);
         Assert.Equal(ChdError.Chderrnone, err);
         Assert.NotNull(stream);
-        using (stream!)
+        using (stream)
         {
             Assert.True(stream.Length > 0);
             Assert.True(stream.CanRead);
@@ -490,7 +497,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
         {
             Assert.True(stream.Length > 0);
         }
@@ -520,7 +527,7 @@ public class ChdImageStreamTests
         Assert.Equal(ChdError.Chderrnone, err);
         var streamErr = ChdFile.OpenAsStream(chd!, false, out var stream);
         Assert.Equal(ChdError.Chderrnone, streamErr);
-        using (stream!)
+        using (stream)
         {
             // Read from different positions
             var offsets = new long[] { 0, 511, 512, 1023, 1024, 1536, 2047 };
@@ -565,6 +572,7 @@ public class ChdImageStreamTests
             {
                 var n = stream.Read(streamData, totalRead, streamData.Length - totalRead);
                 if (n == 0) break;
+
                 totalRead += n;
             }
             Assert.Equal(directData.Length, totalRead);

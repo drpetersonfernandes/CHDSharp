@@ -13,6 +13,7 @@ internal static partial class Deflater
     {
         if (DeflateStateCheck(ref strm))
             return Z_STREAM_ERROR;
+
         var s = strm.deflateState;
 
         var wrap = s.wrap;
@@ -22,7 +23,10 @@ internal static partial class Deflater
         var dictLength = (uint)dictionary.Length;
         // when using zlib wrappers, compute Adler-32 for provided dictionary
         if (wrap == 1)
+        {
             strm.Adler = Adler32.Update(strm.Adler, ref MemoryMarshal.GetReference(dictionary), dictLength);
+        }
+
         s.wrap = 0; // avoid computing Adler-32 in ReadBuf
 
         uint next_in = 0;
@@ -49,9 +53,14 @@ internal static partial class Deflater
         strm.Input = dictionary;
         ref var refs = ref strm.deflateRefs;
         if (netUnsafe.IsNullRef(ref refs.window))
+        {
             refs.window = ref MemoryMarshal.GetReference<byte>(s.window);
+        }
+
         if (netUnsafe.IsNullRef(ref refs.prev))
+        {
             refs.prev = ref MemoryMarshal.GetReference<ushort>(s.prev);
+        }
 #else
         strm.avail_in = dictLength;
         strm._input = dictionary;

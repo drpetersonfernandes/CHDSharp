@@ -1032,7 +1032,7 @@ public sealed class BattleHarness
     {
         var err = Chd.ReadHeader(chdPath, out var header);
         Assert(err == ChdError.Chderrnone && header != null, $"ReadHeader: {err}");
-        return header!;
+        return header;
     }
 
     private void InfoParity(string ourChd, string refChd)

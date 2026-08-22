@@ -54,26 +54,38 @@ public static class VbiParse
 
         // parse line 16
         if (ParseManchesterCode(source, 16 * sourceRowPixels * 2, sourceWidth, sourceShift, 24, bits0) == 24)
-            for (int bitNum = 0; bitNum < 24; bitNum++)
+            for (var bitNum = 0; bitNum < 24; bitNum++)
+            {
                 vbi.Line16 = (vbi.Line16 << 1) | (bits0[bitNum] & 1);
+            }
 
         // parse line 17
         if (ParseManchesterCode(source, 17 * sourceRowPixels * 2, sourceWidth, sourceShift, 24, bits0) == 24)
-            for (int bitNum = 0; bitNum < 24; bitNum++)
+            for (var bitNum = 0; bitNum < 24; bitNum++)
+            {
                 vbi.Line17 = (vbi.Line17 << 1) | (bits0[bitNum] & 1);
+            }
 
         // parse line 18
         if (ParseManchesterCode(source, 18 * sourceRowPixels * 2, sourceWidth, sourceShift, 24, bits1) == 24)
-            for (int bitNum = 0; bitNum < 24; bitNum++)
+            for (var bitNum = 0; bitNum < 24; bitNum++)
+            {
                 vbi.Line18 = (vbi.Line18 << 1) | (bits1[bitNum] & 1);
+            }
 
         // pick the best out of lines 17/18
         if (vbi.Line17 == 0)
+        {
             vbi.Line1718 = vbi.Line18;
+        }
         else if (vbi.Line18 == 0)
+        {
             vbi.Line1718 = vbi.Line17;
+        }
         else if (vbi.Line17 == vbi.Line18)
+        {
             vbi.Line1718 = vbi.Line17;
+        }
         else
         {
             // if both are frame numbers, and one is not valid BCD, pick the other
@@ -81,15 +93,21 @@ public static class VbiParse
             if ((vbi.Line17 & cavMask) == cavCode && (vbi.Line18 & cavMask) == cavCode)
             {
                 if ((vbi.Line17 & 0xf000) > 0x9000 || (vbi.Line17 & 0xf00) > 0x900 || (vbi.Line17 & 0xf0) > 0x90 || (vbi.Line17 & 0xf) > 0x9)
+                {
                     vbi.Line1718 = vbi.Line18;
+                }
                 else if ((vbi.Line18 & 0xf000) > 0x9000 || (vbi.Line18 & 0xf00) > 0x900 || (vbi.Line18 & 0xf0) > 0x90 || (vbi.Line18 & 0xf) > 0x9)
+                {
                     vbi.Line1718 = vbi.Line17;
+                }
             }
 
             // if still nothing, scan through the bits and pick the ones with the most confidence
             if (vbi.Line1718 == 0)
-                for (int bitNum = 0; bitNum < 24; bitNum++)
+                for (var bitNum = 0; bitNum < 24; bitNum++)
+                {
                     vbi.Line1718 = (vbi.Line1718 << 1) | (bits0[bitNum] > bits1[bitNum] ? (bits0[bitNum] & 1) : (bits1[bitNum] & 1));
+                }
         }
 
         return vbi;
@@ -101,12 +119,12 @@ public static class VbiParse
     /// </summary>
     public static void MetadataPack(Span<byte> dest, uint frameNum, in VbiMetadata vbi)
     {
-        PutU24Be(dest.Slice(0), frameNum);
+        PutU24Be(dest[..], frameNum);
         dest[3] = (byte)vbi.White;
-        PutU24Be(dest.Slice(4), vbi.Line16);
-        PutU24Be(dest.Slice(7), vbi.Line17);
-        PutU24Be(dest.Slice(10), vbi.Line18);
-        PutU24Be(dest.Slice(13), vbi.Line1718);
+        PutU24Be(dest[4..], vbi.Line16);
+        PutU24Be(dest[7..], vbi.Line17);
+        PutU24Be(dest[10..], vbi.Line18);
+        PutU24Be(dest[13..], vbi.Line1718);
     }
 
     /// <summary>
@@ -124,9 +142,9 @@ public static class VbiParse
 
         // find highs and lows in the line
         int min = 0xff, max = 0x00;
-        for (int x = 0; x < sourceWidth; x++)
+        for (var x = 0; x < sourceWidth; x++)
         {
-            int rawSrc = Sample(source, sourceOffsetBytes, x, sourceShift);
+            var rawSrc = Sample(source, sourceOffsetBytes, x, sourceShift);
             min = Math.Min(min, rawSrc);
             max = Math.Max(max, rawSrc);
         }
@@ -136,25 +154,30 @@ public static class VbiParse
             return 0;
 
         // determine the midpoint and then set the thresholds to be halfway
-        int mid = (min + max) / 2;
+        var mid = (min + max) / 2;
         min = mid - (mid - min) / 2;
         max = mid + (max - mid) / 2;
 
         // convert the source into absolute high/low
-        int srcAbsVal = Sample(source, sourceOffsetBytes, 0, sourceShift) > mid ? 1 : 0;
-        for (int x = 0; x < sourceWidth; x++)
+        var srcAbsVal = Sample(source, sourceOffsetBytes, 0, sourceShift) > mid ? 1 : 0;
+        for (var x = 0; x < sourceWidth; x++)
         {
-            int rawSrc = Sample(source, sourceOffsetBytes, x, sourceShift);
+            var rawSrc = Sample(source, sourceOffsetBytes, x, sourceShift);
             if (rawSrc >= max)
+            {
                 srcAbsVal = 1;
+            }
             else if (rawSrc <= min)
+            {
                 srcAbsVal = 0;
+            }
+
             srcAbs[x] = (byte)srcAbsVal;
         }
 
         // find the first transition; this is assumed to be the middle of the first bit
-        int firstEdge = -1;
-        for (int x = 0; x < sourceWidth - 1; x++)
+        var firstEdge = -1;
+        for (var x = 0; x < sourceWidth - 1; x++)
         {
             if (srcAbs[x] != srcAbs[x + 1])
             {
@@ -168,16 +191,16 @@ public static class VbiParse
 
         // now scan to find a clock that has a nearby transition on each beat
         double bestClock = 0;
-        int bestErr = 1000;
-        for (double clock = (double)sourceWidth / (double)expectedBits; clock >= 2.0; clock -= 1.0 / (double)expectedBits)
+        var bestErr = 1000;
+        for (var clock = (double)sourceWidth / (double)expectedBits; clock >= 2.0; clock -= 1.0 / (double)expectedBits)
         {
-            int error = 0;
+            var error = 0;
 
             // scan for all the expected bits
             int x2;
             for (x2 = 1; x2 < expectedBits; x2++)
             {
-                int curBit = firstEdge + (int)((double)x2 * clock);
+                var curBit = firstEdge + (int)((double)x2 * clock);
                 int offBy;
 
                 // look for a match that is off by an amount up to the maximum
@@ -208,24 +231,30 @@ public static class VbiParse
             return 0;
 
         // now extract the bits
-        for (int x = 0; x < expectedBits; x++)
+        for (var x = 0; x < expectedBits; x++)
         {
-            int leftStart = firstEdge + (int)Math.Ceiling(((double)x - 0.5) * bestClock);
-            int leftEnd = firstEdge + (int)Math.Floor((double)x * bestClock);
-            int rightStart = firstEdge + (int)Math.Ceiling((double)x * bestClock);
-            int rightEnd = firstEdge + (int)Math.Floor(((double)x + 0.5) * bestClock);
+            var leftStart = firstEdge + (int)Math.Ceiling(((double)x - 0.5) * bestClock);
+            var leftEnd = firstEdge + (int)Math.Floor((double)x * bestClock);
+            var rightStart = firstEdge + (int)Math.Ceiling((double)x * bestClock);
+            var rightEnd = firstEdge + (int)Math.Floor(((double)x + 0.5) * bestClock);
 
             // compute left and right average values
-            int leftAvg = 0;
-            for (int tx = leftStart; tx <= leftEnd; tx++)
+            var leftAvg = 0;
+            for (var tx = leftStart; tx <= leftEnd; tx++)
+            {
                 leftAvg += Sample(source, sourceOffsetBytes, tx, sourceShift) - mid;
-            int leftAbs = leftAvg >= 0 ? 1 : 0;
+            }
+
+            var leftAbs = leftAvg >= 0 ? 1 : 0;
             leftAvg = Math.Abs(leftAvg);
 
-            int rightAvg = 0;
-            for (int tx = rightStart; tx <= rightEnd; tx++)
+            var rightAvg = 0;
+            for (var tx = rightStart; tx <= rightEnd; tx++)
+            {
                 rightAvg += Sample(source, sourceOffsetBytes, tx, sourceShift) - mid;
-            int rightAbs = rightAvg >= 0 ? 1 : 0;
+            }
+
+            var rightAbs = rightAvg >= 0 ? 1 : 0;
             rightAvg = Math.Abs(rightAvg);
 
             // all bits should be marked by transitions; fail if we don't get one
@@ -233,7 +262,7 @@ public static class VbiParse
                 return 0;
 
             // store the bit and its confidence level
-            int confidence = leftAvg + rightAvg;
+            var confidence = leftAvg + rightAvg;
             result[x] = (uint)((leftAbs < rightAbs ? 1 : 0) | (confidence << 1));
         }
 
@@ -250,11 +279,13 @@ public static class VbiParse
         var histo = new int[256];
 
         // compute a histogram of values
-        for (int x = 0; x < sourceWidth; x++)
+        for (var x = 0; x < sourceWidth; x++)
+        {
             histo[Sample(source, sourceOffsetBytes, x, sourceShift)]++;
+        }
 
         // remove the lowest 1% of the values to account for noise and determine the minimum
-        int subtract = sourceWidth / 100;
+        var subtract = sourceWidth / 100;
         int minVal;
         for (minVal = 0; minVal < 255; minVal++)
             if ((subtract -= histo[minVal]) < 0)
@@ -272,10 +303,12 @@ public static class VbiParse
             return false;
 
         // determine where the peak is
-        int peakVal = 0;
-        for (int x = 1; x < 256; x++)
+        var peakVal = 0;
+        for (var x = 1; x < 256; x++)
             if (histo[x] > histo[peakVal])
+            {
                 peakVal = x;
+            }
 
         // return true if it is above the 90% mark
         return peakVal > minVal + 9 * (maxVal - minVal) / 10;
@@ -283,8 +316,8 @@ public static class VbiParse
 
     private static int Sample(byte[] source, int baseOffset, int pixelIndex, int shift)
     {
-        int off = baseOffset + pixelIndex * 2;
-        int value = source[off] | (source[off + 1] << 8);
+        var off = baseOffset + pixelIndex * 2;
+        var value = source[off] | (source[off + 1] << 8);
         return value >> shift;
     }
 

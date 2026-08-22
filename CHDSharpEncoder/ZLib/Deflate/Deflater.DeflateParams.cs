@@ -12,10 +12,14 @@ internal static partial class Deflater
     {
         if (DeflateStateCheck(ref strm))
             return Z_STREAM_ERROR;
+
         var s = strm.deflateState;
 
         if (level == Z_DEFAULT_COMPRESSION)
+        {
             level = 6;
+        }
+
         if (level < 0 || level > 9 || strategy < 0 || strategy > Z_FIXED)
             return Z_STREAM_ERROR;
 
@@ -46,7 +50,9 @@ internal static partial class Deflater
 #if NET7_0_OR_GREATER
                     ref var refs = ref strm.deflateRefs;
                     if (netUnsafe.IsNullRef(ref refs.prev))
+                    {
                         refs.prev = ref MemoryMarshal.GetReference<ushort>(s.prev);
+                    }
 #endif
                     ref var prev = ref
 #if NET7_0_OR_GREATER

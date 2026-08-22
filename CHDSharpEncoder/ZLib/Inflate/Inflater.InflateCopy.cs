@@ -14,6 +14,7 @@ internal static partial class Inflater
         // check input
         if (InflateStateCheck(ref source))
             return Z_STREAM_ERROR;
+
         var state = source.inflateState;
 
         // allocate space
@@ -141,14 +142,22 @@ internal static partial class Inflater
             ref netUnsafe.As<Code, byte>(ref sourceCodes), (uint)(state.codes.Length * Code.Size));
 
         if (state.lencode == s_lenfix)
+        {
             copy.lencode = s_lenfix;
+        }
         else if (state.lencode == state.codes)
+        {
             copy.lencode = copy.codes;
+        }
 
         if (state.distcode == s_distfix)
+        {
             copy.distcode = s_distfix;
+        }
         else if (state.distcode == state.codes)
+        {
             copy.distcode = copy.codes;
+        }
 
         copy.next = state.next;
         copy.diststart = state.diststart;
@@ -165,7 +174,10 @@ internal static partial class Inflater
     private static void InitRefFields(InflateState s, ref InflateRefs refs)
     {
         if (netUnsafe.IsNullRef(ref refs.lens))
+        {
             refs.lens = ref MemoryMarshal.GetReference<ushort>(s.lens);
+        }
+
         if (netUnsafe.IsNullRef(ref refs.codes))
         {
             refs.codes = ref MemoryMarshal.GetReference<Code>(s.codes);

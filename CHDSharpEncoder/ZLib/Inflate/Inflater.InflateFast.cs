@@ -65,7 +65,7 @@ internal static partial class Inflater
             op = here.op;
             if (op == 0) // literal
             {
-                Trace.Tracevv(here.val >= 0x20 && here.val < 0x7f ?
+                Trace.Tracevv(here.val is >= 0x20 and < 0x7f ?
                     $"inflate:         literal '{Convert.ToChar(here.val)}'\n" :
                     $"inflate:         literal 0x{here.val:X2}\n");
                 @out = (byte)here.val;

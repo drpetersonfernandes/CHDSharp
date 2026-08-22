@@ -26,8 +26,11 @@ internal class ObjectPool<T> where T : class, new()
     /// Creates an instance of <see cref="ObjectPool{T}"/>.
     /// </summary>
     /// <param name="maximumRetained">The maximum number of objects to retain in the pool.</param>
-    public ObjectPool(int maximumRetained) =>
-         _maxCapacity = maximumRetained - 1;  // -1 to account for _fastItem
+    public ObjectPool(int maximumRetained)
+    {
+        _maxCapacity = maximumRetained - 1;
+        // -1 to account for _fastItem
+    }
 
     /// <summary>
     /// Gets an object from the pool if one is available, otherwise creates one.

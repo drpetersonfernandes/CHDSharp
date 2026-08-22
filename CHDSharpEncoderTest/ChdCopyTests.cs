@@ -127,7 +127,7 @@ public class ChdCopyTests : IDisposable
         Assert.NotNull(srcChdFile);
         using (srcChdFile)
         {
-            Assert.True(srcChdFile!.IsCd);
+            Assert.True(srcChdFile.IsCd);
             Assert.NotNull(srcChdFile.Tracks);
             Assert.Equal(2, srcChdFile.Tracks.Count);
         }

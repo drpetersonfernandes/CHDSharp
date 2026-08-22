@@ -165,7 +165,9 @@ internal static class Tree
         {
             // Check if the file is binary or text
             if (strm.data_type == Z_UNKNOWN)
+            {
                 strm.data_type = DetectDataType(ref dyn_ltree);
+            }
 
             // Construct the literal and distance trees
             BuildTree(s, s.l_desc, ref dyn_ltree, ref sta_ltree, ref extra_lbits, ref bl_count, ref heap, ref depth);
@@ -190,7 +192,9 @@ internal static class Tree
             Trace.Tracev($"\nopt {opt_lenb}({s.opt_len}) stat {static_lenb}({s.static_len}) stored {stored_len} lit {s.sym_next / 3} ");
 
             if (static_lenb <= opt_lenb || s.strategy == Z_FIXED)
+            {
                 opt_lenb = static_lenb;
+            }
         }
         else
         {
@@ -276,11 +280,19 @@ internal static class Tree
         // Initialize the trees.
         uint n = 0;
         for (; n < LCodes; n++)
+        {
             Unsafe.Add(ref dyn_ltree, n).fc = 0;
+        }
+
         for (n = 0; n < DCodes; n++)
+        {
             Unsafe.Add(ref dyn_dtree, n).fc = 0;
+        }
+
         for (n = 0; n < BlCodes; n++)
+        {
             Unsafe.Add(ref bl_tree, n).fc = 0;
+        }
 
         Unsafe.Add(ref dyn_ltree, EndBlock).fc = 1;
 
@@ -302,7 +314,7 @@ internal static class Tree
     {
 #if DEBUG
         Trace.Tracevv($" l {length,2} v {value,4:x} ");
-        Debug.Assert(length > 0 && length <= 15, "invalid length");
+        Debug.Assert(length is > 0 and <= 15, "invalid length");
         s.bits_sent += (uint)length;
 
         /* If not enough room in bi_buf, use (valid) bits from bi_buf and
@@ -338,8 +350,10 @@ internal static class Tree
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void SendCode(DeflateState s, ref TreeNode treeNode, ref byte pending_buf) =>
+    private static void SendCode(DeflateState s, ref TreeNode treeNode, ref byte pending_buf)
+    {
         SendBits(s, treeNode.fc, treeNode.dl, ref pending_buf);
+    }
 
     /// <summary>
     /// Flushes the bit buffer and align the output on a byte boundary.
@@ -349,7 +363,10 @@ internal static class Tree
         if (s.bi_valid > 8)
             PutShort(s, s.bi_buf, ref pending_buf);
         else if (s.bi_valid > 0)
+        {
             Unsafe.Add(ref pending_buf, s.pending++) = (byte)s.bi_buf;
+        }
+
         s.bi_buf = 0;
         s.bi_valid = 0;
 #if DEBUG
@@ -375,6 +392,7 @@ internal static class Tree
         if (Unsafe.Add(ref dyn_ltree, 9U).fc != 0 || Unsafe.Add(ref dyn_ltree, 10U).fc != 0
                 || Unsafe.Add(ref dyn_ltree, 13U).fc != 0)
             return Z_TEXT;
+
         for (n = 32; n < Literals; n++)
             if (Unsafe.Add(ref dyn_ltree, n).fc != 0)
                 return Z_TEXT;
@@ -426,7 +444,9 @@ internal static class Tree
             Unsafe.Add(ref depth, node) = 0;
             s.opt_len--;
             if (desc.stat_desc.static_tree != null)
+            {
                 s.static_len -= Unsafe.Add(ref stree, node).dl;
+            }
             // node is 0 or 1 so it does not have extra bits
         }
         desc.max_code = max_code;
@@ -488,7 +508,10 @@ internal static class Tree
             // Set j to the smallest of the two sons:
             if (j < s.heap_len &&
                 Smaller(ref tree, (uint)Unsafe.Add(ref heap, j + 1), (uint)Unsafe.Add(ref heap, j), ref depth))
+            {
                 j++;
+            }
+
             // Exit if v is smaller than both sons
             if (Smaller(ref tree, v, (uint)Unsafe.Add(ref heap, j), ref depth))
                 break;
@@ -561,11 +584,16 @@ internal static class Tree
             Unsafe.Add(ref bl_count, bits)++;
             var xbits = 0; // extra bits
             if (n >= @base)
+            {
                 xbits = Unsafe.Add(ref extra, n - @base);
+            }
+
             var f = Unsafe.Add(ref tree, n).fc; // frequency
             s.opt_len += f * (uint)(bits + xbits);
             if (desc.stat_desc.static_tree != null)
+            {
                 s.static_len += f * (uint)(Unsafe.Add(ref stree, n).dl + xbits);
+            }
         }
         if (overflow == 0)
             return;
@@ -578,7 +606,10 @@ internal static class Tree
         {
             bits = max_length - 1;
             while (Unsafe.Add(ref bl_count, bits) == 0)
+            {
                 bits--;
+            }
+
             Unsafe.Add(ref bl_count, bits)--; // move one leaf down the tree
             Unsafe.Add(ref bl_count, bits + 1) += 2; // move one overflow item as its brother
             Unsafe.Add(ref bl_count, max_length)--;
@@ -601,6 +632,7 @@ internal static class Tree
                 var m = Unsafe.Add(ref heap, --h);
                 if (m > max_code)
                     continue;
+
                 ref var tm = ref Unsafe.Add(ref tree, (uint)m);
                 if (tm.dl != bits)
                 {
@@ -728,7 +760,10 @@ internal static class Tree
             else if (curlen != 0)
             {
                 if (curlen != prevlen)
+                {
                     Unsafe.Add(ref bl_tree, curlen).fc++;
+                }
+
                 Unsafe.Add(ref bl_tree, Rep_3_6).fc++;
             }
             else if (count <= 10)
@@ -846,8 +881,10 @@ internal static class Tree
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static uint DCode(uint dist, ref byte dist_code) =>
-        dist < 256 ? Unsafe.Add(ref dist_code, dist) : Unsafe.Add(ref dist_code, 256 + ((dist) >> 7));
+    internal static uint DCode(uint dist, ref byte dist_code)
+    {
+        return dist < 256 ? Unsafe.Add(ref dist_code, dist) : Unsafe.Add(ref dist_code, 256 + ((dist) >> 7));
+    }
 
     /// <summary>
     /// Sends the header for a block using dynamic Huffman trees: the counts, the lengths of the bit length codes, the literal tree and the distance tree.
@@ -921,7 +958,7 @@ internal static class Tree
                     SendCode(s, ref Unsafe.Add(ref bl_tree, curlen), ref pending_buf);
                     count--;
                 }
-                Debug.Assert(count >= 3 && count <= 6, " 3_6?");
+                Debug.Assert(count is >= 3 and <= 6, " 3_6?");
                 SendCode(s, ref Unsafe.Add(ref bl_tree, Rep_3_6), ref pending_buf);
                 SendBits(s, count - 3, 2, ref pending_buf);
 
@@ -956,6 +993,9 @@ internal static class Tree
         }
     }
 #if DEBUG
-    private static bool IsGraph(uint ch) => ch > 32 && ch < 127;
+    private static bool IsGraph(uint ch)
+    {
+        return ch is > 32 and < 127;
+    }
 #endif
 }

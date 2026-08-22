@@ -33,7 +33,10 @@ public sealed class CdflCodec : IChdCodec
         _subcodeBytes = _framesPerHunk * CdConstants.MaxSubcodeData;
         _blockSize = _dataBytes / 4;
         while (_blockSize > CdConstants.MaxSectorData)
+        {
             _blockSize /= 2;
+        }
+
         _leBuffer = new byte[_dataBytes];
         // worst case: verbatim subframes; add room for frame headers
         _flacBuffer = new byte[_dataBytes + _framesPerHunk * 64];

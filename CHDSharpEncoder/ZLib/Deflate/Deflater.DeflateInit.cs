@@ -12,8 +12,10 @@ internal static partial class Deflater
     private const int DefaultMemLevel = 8;
     private static readonly ObjectPool<DeflateState> s_objectPool = new();
 
-    internal static int DeflateInit(ref ZStream strm, int level) =>
-        DeflateInit(ref strm, level, Z_DEFLATED, MaxWindowBits, DefaultMemLevel, Z_DEFAULT_STRATEGY);
+    internal static int DeflateInit(ref ZStream strm, int level)
+    {
+        return DeflateInit(ref strm, level, Z_DEFLATED, MaxWindowBits, DefaultMemLevel, Z_DEFAULT_STRATEGY);
+    }
 
     internal static int DeflateInit(ref ZStream strm, int level, int method, int windowBits, int memLevel, int strategy)
     {
@@ -23,7 +25,9 @@ internal static partial class Deflater
         strm.msg = null;
 
         if (level == Z_DEFAULT_COMPRESSION)
+        {
             level = 6;
+        }
 
         var wrap = 1;
         if (windowBits < 0) // suppress zlib wrapper
@@ -31,6 +35,7 @@ internal static partial class Deflater
             wrap = 0;
             if (windowBits < -15)
                 return Z_STREAM_ERROR;
+
             windowBits = -windowBits;
         }
 
@@ -43,7 +48,9 @@ internal static partial class Deflater
             return Z_STREAM_ERROR;
 
         if (windowBits == 8)
+        {
             windowBits = 9;
+        }
 
         DeflateState s = default;
         try
@@ -86,7 +93,10 @@ internal static partial class Deflater
         catch (OutOfMemoryException)
         {
             if (s != default)
+            {
                 s.status = FinishState;
+            }
+
             strm.msg = s_z_errmsg[Z_NEED_DICT - Z_MEM_ERROR];
             _ = DeflateEnd(ref strm);
             return Z_MEM_ERROR;

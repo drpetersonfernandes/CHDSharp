@@ -30,14 +30,20 @@ internal sealed class LibFlacBitWriter
     {
         var neededBytes = (_bitCount + bitsToAdd + 7) / 8;
         if (neededBytes <= _buffer.Length) return;
+
         var newSize = _buffer.Length;
-        while (newSize < neededBytes) newSize = Math.Max(newSize * 2, 64);
+        while (newSize < neededBytes)
+        {
+            newSize = Math.Max(newSize * 2, 64);
+        }
+
         Array.Resize(ref _buffer, newSize);
     }
 
     public void WriteZeroes(int bits)
     {
         if (bits == 0) return;
+
         EnsureCapacity(bits);
         _bitCount += bits;
     }
@@ -45,6 +51,7 @@ internal sealed class LibFlacBitWriter
     public void WriteRawUInt32(uint value, int bits)
     {
         if (bits == 0) return;
+
         EnsureCapacity(bits);
         var shift = 32 - bits;
         var v = bits < 32 ? value & (0xFFFFFFFFu >> shift) : value;
@@ -52,7 +59,11 @@ internal sealed class LibFlacBitWriter
         {
             var bytePos = _bitCount >> 3;
             var bitPos = 7 - (_bitCount & 7);
-            if (((v >> i) & 1) != 0) _buffer[bytePos] |= (byte)(1 << bitPos);
+            if (((v >> i) & 1) != 0)
+            {
+                _buffer[bytePos] |= (byte)(1 << bitPos);
+            }
+
             _bitCount++;
         }
     }

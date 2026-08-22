@@ -37,14 +37,20 @@ public class LaserDiscEncodeTests : IDisposable
     }
 
     /// <summary>Small progressive clip: 64x64 @ 25 fps, stereo 48 kHz PCM16.</summary>
-    private string WriteSmallAvi() => AviTestWriter.WriteAvi(
-        Path.Combine(_testDataDir, "small.avi"), width: 64, height: 64, frames: 10,
-        timescale: 25, sampletime: 1, audioRate: 48000, audioChannels: 2).Path;
+    private string WriteSmallAvi()
+    {
+        return AviTestWriter.WriteAvi(
+            Path.Combine(_testDataDir, "small.avi"), width: 64, height: 64, frames: 10,
+            timescale: 25, sampletime: 1, audioRate: 48000, audioChannels: 2).Path;
+    }
 
     /// <summary>Laserdisc-like clip: 320x524 @ 29.97 fps → interlaced, field height 262, VBI captured.</summary>
-    private string WriteLdAvi() => AviTestWriter.WriteAvi(
-        Path.Combine(_testDataDir, "ld.avi"), width: 320, height: 524, frames: 12,
-        timescale: 30000, sampletime: 1001, audioRate: 48000, audioChannels: 2).Path;
+    private string WriteLdAvi()
+    {
+        return AviTestWriter.WriteAvi(
+            Path.Combine(_testDataDir, "ld.avi"), width: 320, height: 524, frames: 12,
+            timescale: 30000, sampletime: 1001, audioRate: 48000, audioChannels: 2).Path;
+    }
 
     [Fact]
     public void SmallAvi_RoundTripsThroughChdReader()
@@ -62,7 +68,7 @@ public class LaserDiscEncodeTests : IDisposable
         Assert.Equal(48000u, info.SampleRate);
         Assert.Equal(10ul, info.Frames);
 
-        uint expectedFrameBytes = AvHuffEncoder.RawDataSize(64, 64, 2, info.MaxSamplesPerFrame);
+        var expectedFrameBytes = AvHuffEncoder.RawDataSize(64, 64, 2, info.MaxSamplesPerFrame);
         Assert.Equal(expectedFrameBytes, info.BytesPerFrame);
         Assert.Equal(expectedFrameBytes, info.HunkBytes);
 
@@ -200,7 +206,7 @@ public class LaserDiscEncodeTests : IDisposable
         var probePath = Path.Combine(_testDataDir, "probe.chd");
 
         var probe = ChdEncoder.EncodeLaserDisc(aviPath, probePath);
-        uint frameBytes = probe.BytesPerFrame;
+        var frameBytes = probe.BytesPerFrame;
 
         // two frames per hunk
         var info = ChdEncoder.EncodeLaserDisc(aviPath, Path.Combine(_testDataDir, "multi.chd"), hunkBytes: frameBytes * 2);
@@ -244,7 +250,7 @@ public class LaserDiscEncodeTests : IDisposable
             var ours = File.ReadAllBytes(ourPath);
             if (!reference.SequenceEqual(ours))
             {
-                int diff = reference.Length != ours.Length
+                var diff = reference.Length != ours.Length
                     ? -1
                     : reference.Select((b, i) => (b, i)).First(t => t.b != ours[t.i]).i;
                 Assert.Fail(
@@ -262,7 +268,7 @@ public class LaserDiscEncodeTests : IDisposable
     {
         Assert.Equal(ChdError.Chderrnone, ChdFile.Open(path, out var chd));
         Assert.NotNull(chd);
-        return chd!;
+        return chd;
     }
 
     /// <summary>
@@ -276,12 +282,12 @@ public class LaserDiscEncodeTests : IDisposable
         var fullFrame = new byte[(int)(avi.Info.Width * avi.Info.Height * 2)];
         avi.ReadVideoFrame((uint)frameInImage, fullFrame);
 
-        ulong firstSample = rate > 0 ? (rate * frameInImage * 1000000 + fpsTimes1million - 1) / fpsTimes1million : 0;
-        ulong endSample = rate > 0 ? (rate * (frameInImage + 1) * 1000000 + fpsTimes1million - 1) / fpsTimes1million : 0;
-        int samples = (int)Math.Min(endSample - firstSample, maxSamplesPerFrame);
+        var firstSample = rate > 0 ? (rate * frameInImage * 1000000 + fpsTimes1million - 1) / fpsTimes1million : 0;
+        var endSample = rate > 0 ? (rate * (frameInImage + 1) * 1000000 + fpsTimes1million - 1) / fpsTimes1million : 0;
+        var samples = (int)Math.Min(endSample - firstSample, maxSamplesPerFrame);
 
         var planes = new short[channels][];
-        for (int ch = 0; ch < channels; ch++)
+        for (var ch = 0; ch < channels; ch++)
         {
             planes[ch] = new short[samples];
             try
@@ -453,10 +459,10 @@ internal static class AviTestWriter
     public static (string Path, int Frames, int Width, int Height) WriteAvi(string path, int width, int height,
         int frames, uint timescale, uint sampletime, uint audioRate, uint audioChannels, string format = "YUY2")
     {
-        uint formatFourcc = FourCc(format);
+        var formatFourcc = FourCc(format);
         var frameBytes = width * height * 2;
 
-        bool isUyvy = string.Equals(format, "UYVY", StringComparison.OrdinalIgnoreCase);
+        var isUyvy = string.Equals(format, "UYVY", StringComparison.OrdinalIgnoreCase);
 
         var videoFrames = new byte[frames][];
         for (var f = 0; f < frames; f++)
@@ -467,10 +473,10 @@ internal static class AviTestWriter
                 for (var x = 0; x < width; x += 2)
                 {
                     var off = (y * width + x) * 2;
-                    byte cb = (byte)((x * 4 + f * 11) & 0xFF);
-                    byte y0 = (byte)((y * 3 + f * 7) & 0xFF);
-                    byte cr = (byte)(((x + y) * 2 + f * 13) & 0xFF);
-                    byte y1 = (byte)((y * 3 + f * 7 + ((x / 2 + f) % 8)) & 0xFF);
+                    var cb = (byte)((x * 4 + f * 11) & 0xFF);
+                    var y0 = (byte)((y * 3 + f * 7) & 0xFF);
+                    var cr = (byte)(((x + y) * 2 + f * 13) & 0xFF);
+                    var y1 = (byte)((y * 3 + f * 7 + ((x / 2 + f) % 8)) & 0xFF);
 
                     if (isUyvy)
                     {
@@ -494,13 +500,13 @@ internal static class AviTestWriter
             videoFrames[f] = data;
         }
 
-        double fps1m = timescale * 1000000 / (double)sampletime;
+        var fps1m = timescale * 1000000 / (double)sampletime;
         var audioChunks = new List<byte[]>(frames);
         ulong totalSamples = 0;
         for (var f = 0; f < frames; f++)
         {
-            ulong first = (ulong)(audioRate * f * 1000000 / fps1m);
-            ulong end = (ulong)(audioRate * (f + 1) * 1000000 / fps1m);
+            var first = (ulong)(audioRate * f * 1000000 / fps1m);
+            var end = (ulong)(audioRate * (f + 1) * 1000000 / fps1m);
             var count = (int)(end - first);
             var chunk = new byte[count * (int)audioChannels * 2];
             for (var i = 0; i < count; i++)
@@ -518,10 +524,10 @@ internal static class AviTestWriter
 
         using var ms = new MemoryStream();
         WriteFourCc(ms, "RIFF");
-        long riffSizePos = WriteLengthPlaceholder(ms);
+        var riffSizePos = WriteLengthPlaceholder(ms);
         WriteFourCc(ms, "AVI ");
 
-        long hdrlSizePos = StartList(ms, "hdrl");
+        var hdrlSizePos = StartList(ms, "hdrl");
 
         var avih = new byte[56];
         BinaryPrimitives.WriteUInt32LittleEndian(avih.AsSpan(8), 0x10);              // AVIF_HASINDEX
@@ -531,7 +537,7 @@ internal static class AviTestWriter
         BinaryPrimitives.WriteUInt32LittleEndian(avih.AsSpan(36), (uint)height);
         WriteChunk(ms, "avih", avih);
 
-        long videoStrlSizePos = StartList(ms, "strl");
+        var videoStrlSizePos = StartList(ms, "strl");
         var vstrh = new byte[56];
         BinaryPrimitives.WriteUInt32LittleEndian(vstrh.AsSpan(0), FourCc("vids"));
         BinaryPrimitives.WriteUInt32LittleEndian(vstrh.AsSpan(20), sampletime);      // dwScale
@@ -550,7 +556,7 @@ internal static class AviTestWriter
         WriteChunk(ms, "strf", vstrf);
         CloseList(ms, videoStrlSizePos);
 
-        long audioStrlSizePos = StartList(ms, "strl");
+        var audioStrlSizePos = StartList(ms, "strl");
         var astrh = new byte[56];
         BinaryPrimitives.WriteUInt32LittleEndian(astrh.AsSpan(0), FourCc("auds"));
         BinaryPrimitives.WriteUInt32LittleEndian(astrh.AsSpan(20), 1);               // dwScale
@@ -571,7 +577,7 @@ internal static class AviTestWriter
 
         CloseList(ms, hdrlSizePos);
 
-        long moviSizePos = StartList(ms, "movi");
+        var moviSizePos = StartList(ms, "movi");
         var indexEntries = new List<(uint Id, long Offset, uint Size)>();
         for (var f = 0; f < frames; f++)
         {
@@ -602,7 +608,7 @@ internal static class AviTestWriter
     private static long StartList(MemoryStream ms, string listType)
     {
         WriteFourCc(ms, "LIST");
-        long sizePos = WriteLengthPlaceholder(ms);
+        var sizePos = WriteLengthPlaceholder(ms);
         WriteFourCc(ms, listType);
         return sizePos;
     }
@@ -634,14 +640,14 @@ internal static class AviTestWriter
 
     private static long WriteLengthPlaceholder(MemoryStream ms)
     {
-        long pos = ms.Position;
+        var pos = ms.Position;
         ms.Write(stackalloc byte[4]);
         return pos;
     }
 
     private static void PatchLength(MemoryStream ms, long pos, uint length)
     {
-        long current = ms.Position;
+        var current = ms.Position;
         ms.Position = pos;
         Span<byte> buf = stackalloc byte[4];
         BinaryPrimitives.WriteUInt32LittleEndian(buf, length);

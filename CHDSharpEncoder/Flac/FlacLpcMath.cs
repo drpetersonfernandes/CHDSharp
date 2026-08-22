@@ -27,11 +27,26 @@ internal static class FlacLpcMath
         }
 
         uint order;
-        if (e0 <= Math.Min(Math.Min(Math.Min(e1, e2), e3), e4)) order = 0;
-        else if (e1 <= Math.Min(Math.Min(e2, e3), e4)) order = 1;
-        else if (e2 <= Math.Min(e3, e4)) order = 2;
-        else if (e3 <= e4) order = 3;
-        else order = 4;
+        if (e0 <= Math.Min(Math.Min(Math.Min(e1, e2), e3), e4))
+        {
+            order = 0;
+        }
+        else if (e1 <= Math.Min(Math.Min(e2, e3), e4))
+        {
+            order = 1;
+        }
+        else if (e2 <= Math.Min(e3, e4))
+        {
+            order = 2;
+        }
+        else if (e3 <= e4)
+        {
+            order = 3;
+        }
+        else
+        {
+            order = 4;
+        }
 
         residualBitsPerSample[0] = e0 > 0 ? (float)(Math.Log(M_LN2 * (double)e0 / dataLen) / M_LN2) : 0f;
         residualBitsPerSample[1] = e1 > 0 ? (float)(Math.Log(M_LN2 * (double)e1 / dataLen) / M_LN2) : 0f;
@@ -57,11 +72,26 @@ internal static class FlacLpcMath
         }
 
         uint order;
-        if (e0 <= Math.Min(Math.Min(Math.Min(e1, e2), e3), e4)) order = 0;
-        else if (e1 <= Math.Min(Math.Min(e2, e3), e4)) order = 1;
-        else if (e2 <= Math.Min(e3, e4)) order = 2;
-        else if (e3 <= e4) order = 3;
-        else order = 4;
+        if (e0 <= Math.Min(Math.Min(Math.Min(e1, e2), e3), e4))
+        {
+            order = 0;
+        }
+        else if (e1 <= Math.Min(Math.Min(e2, e3), e4))
+        {
+            order = 1;
+        }
+        else if (e2 <= Math.Min(e3, e4))
+        {
+            order = 2;
+        }
+        else if (e3 <= e4)
+        {
+            order = 3;
+        }
+        else
+        {
+            order = 4;
+        }
 
         residualBitsPerSample[0] = e0 > 0 ? (float)(Math.Log(M_LN2 * (double)e0 / dataLen) / M_LN2) : 0f;
         residualBitsPerSample[1] = e1 > 0 ? (float)(Math.Log(M_LN2 * (double)e1 / dataLen) / M_LN2) : 0f;
@@ -113,14 +143,19 @@ internal static class FlacLpcMath
 
     private static void WindowRectangle(Span<float> window, int length)
     {
-        for (var n = 0; n < length; n++) window[n] = 1.0f;
+        for (var n = 0; n < length; n++)
+        {
+            window[n] = 1.0f;
+        }
     }
 
     private static void WindowHann(Span<float> window, int length)
     {
         var nMinus1 = length - 1;
         for (var n = 0; n < length; n++)
+        {
             window[n] = (float)(0.5f - 0.5f * Math.Cos(2.0f * Math.PI * n / nMinus1));
+        }
     }
 
     // ---------------- lpc.c: windowed autocorrelation ----------------
@@ -129,7 +164,9 @@ internal static class FlacLpcMath
     public static void WindowData(ReadOnlySpan<int> input, ReadOnlySpan<float> window, Span<float> output, uint dataLen)
     {
         for (var i = 0; i < (int)dataLen; i++)
+        {
             output[i] = input[i] * window[i];
+        }
     }
 
     /// <summary>FLAC__lpc_window_data_partial for subdivide-tukey sub-blocks.</summary>
@@ -139,12 +176,20 @@ internal static class FlacLpcMath
         if (partSize + dataShift < dataLen)
         {
             for (i = 0; i < (int)partSize; i++)
+            {
                 output[i] = input[(int)(dataShift + i)] * window[i];
+            }
+
             i = Math.Min(i, (int)(dataLen - partSize - dataShift));
             for (var j = (int)(dataLen - partSize); j < (int)dataLen; i++, j++)
+            {
                 output[i] = input[(int)(dataShift + i)] * window[j];
+            }
+
             if (i < (int)dataLen)
+            {
                 output[i] = 0.0f;
+            }
         }
     }
 
@@ -160,18 +205,25 @@ internal static class FlacLpcMath
         const int maxLag = 16;
         var n = (int)dataLen;
 
-        for (var i = 0; i < maxLag; i++) autoc[i] = 0.0;
+        for (var i = 0; i < maxLag; i++)
+        {
+            autoc[i] = 0.0;
+        }
 
         // head: samples 0..15 with the triangular j<=i access pattern
         var head = Math.Min(maxLag, n);
         for (var i = 0; i < head; i++)
             for (var j = 0; j <= i; j++)
-                autoc[j] += (double)data[i] * data[i - j];
+        {
+            autoc[j] += (double)data[i] * data[i - j];
+        }
 
         // tail: every remaining sample contributes to all 16 coefficients
         for (var i = maxLag; i < n; i++)
             for (var j = 0; j < maxLag; j++)
-                autoc[j] += (double)data[i] * data[i - j];
+        {
+            autoc[j] += (double)data[i] * data[i - j];
+        }
     }
 
     // ---------------- lpc.c: LP coefficients (Levinson-Durbin) ----------------
@@ -187,7 +239,10 @@ internal static class FlacLpcMath
         {
             var r = -autoc[i + 1];
             for (j = 0; j < i; j++)
+            {
                 r -= lpc[j] * autoc[i - j];
+            }
+
             r /= err;
 
             lpc[i] = r;
@@ -199,12 +254,16 @@ internal static class FlacLpcMath
             }
 
             if ((i & 1) != 0)
+            {
                 lpc[j] += lpc[j] * r;
+            }
 
             err *= 1.0 - r * r;
 
             for (j = 0; j <= i; j++)
+            {
                 lpCoeff[i, j] = -lpc[j];
+            }
 
             error[i] = err;
 
@@ -263,7 +322,10 @@ internal static class FlacLpcMath
         for (var i = 0; i < (int)order; i++)
         {
             var d = Math.Abs(lpCoeff[i]);
-            if (d > cmax) cmax = d;
+            if (d > cmax)
+            {
+                cmax = d;
+            }
         }
 
         if (cmax <= 0.0)
@@ -284,7 +346,9 @@ internal static class FlacLpcMath
         const int minShiftLimit = -maxShiftLimit - 1;
 
         if (shift > maxShiftLimit)
+        {
             shift = maxShiftLimit;
+        }
         else if (shift < minShiftLimit)
         {
             shift = 0;
@@ -298,8 +362,15 @@ internal static class FlacLpcMath
             {
                 error += lpCoeff[i] * (1 << shift);
                 var q = (int)Math.Round(error, MidpointRounding.AwayFromZero);
-                if (q > qmax) q = qmax;
-                else if (q < qmin) q = qmin;
+                if (q > qmax)
+                {
+                    q = qmax;
+                }
+                else if (q < qmin)
+                {
+                    q = qmin;
+                }
+
                 error -= q;
                 qlpCoeff[i] = q;
             }
@@ -312,8 +383,15 @@ internal static class FlacLpcMath
             {
                 error += lpCoeff[i] / (double)(1 << nshift);
                 var q = (int)Math.Round(error, MidpointRounding.AwayFromZero);
-                if (q > qmax) q = qmax;
-                else if (q < qmin) q = qmin;
+                if (q > qmax)
+                {
+                    q = qmax;
+                }
+                else if (q < qmin)
+                {
+                    q = qmin;
+                }
+
                 error -= q;
                 qlpCoeff[i] = q;
             }
@@ -335,7 +413,10 @@ internal static class FlacLpcMath
             var idx = dataStart + i;
             var sum = 0;
             for (var j = 0; j < (int)order; j++)
+            {
                 sum += qlpCoeff[j] * data[idx - j - 1];
+            }
+
             residual[i] = data[idx] - (sum >> lpQuantization);
         }
     }
@@ -349,7 +430,10 @@ internal static class FlacLpcMath
             var idx = dataStart + i;
             long sum = 0;
             for (var j = 0; j < (int)order; j++)
+            {
                 sum += (long)qlpCoeff[j] * data[idx - j - 1];
+            }
+
             residual[i] = data[idx] - (int)(sum >> lpQuantization);
         }
     }
@@ -363,11 +447,14 @@ internal static class FlacLpcMath
             var idx = dataStart + i;
             long sum = 0;
             for (var j = 0; j < (int)order; j++)
+            {
                 sum += (long)qlpCoeff[j] * data[idx - j - 1];
+            }
 
             var residualToCheck = data[idx] - (sum >> lpQuantization);
-            if (residualToCheck <= int.MinValue || residualToCheck > int.MaxValue)
+            if (residualToCheck is <= int.MinValue or > int.MaxValue)
                 return false;
+
             residual[i] = (int)residualToCheck;
         }
 
@@ -379,8 +466,15 @@ internal static class FlacLpcMath
     {
         long absSum = 0;
         for (var i = 0; i < (int)order; i++)
+        {
             absSum += Math.Abs((long)qlpCoeff[i]);
-        if (absSum == 0) absSum = 1;
+        }
+
+        if (absSum == 0)
+        {
+            absSum = 1;
+        }
+
         return subframeBps + FlacBitMath.Silog2(absSum);
     }
 

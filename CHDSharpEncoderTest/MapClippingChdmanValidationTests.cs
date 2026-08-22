@@ -94,21 +94,24 @@ public class MapClippingChdmanValidationTests : IDisposable
     // Whether chdman's single-hunk clip is benign depends solely on the parity of the
     // hunk's CRC-16 (the dropped byte holds that LSB plus zero padding), so each case pins
     // a corpus seed chosen to exercise the intended side deterministically.
-    private static int SeedFor(uint hunkBytes, bool oddCrc) => (hunkBytes, oddCrc) switch
+    private static int SeedFor(uint hunkBytes, bool oddCrc)
     {
-        (4096u, false) => 1,
-        (4096u, true) => 2,
-        (8192u, false) => 1,
-        (8192u, true) => 2,
-        (18816u, false) => 1,
-        (18816u, true) => 2,
-        (19584u, false) => 2,
-        (19584u, true) => 1,
-        (37632u, false) => 2,
-        (37632u, true) => 1,
-        (65536u, false) => 1,
-        _ => 2
-    };
+        return (hunkBytes, oddCrc) switch
+        {
+            (4096u, false) => 1,
+            (4096u, true) => 2,
+            (8192u, false) => 1,
+            (8192u, true) => 2,
+            (18816u, false) => 1,
+            (18816u, true) => 2,
+            (19584u, false) => 2,
+            (19584u, true) => 1,
+            (37632u, false) => 2,
+            (37632u, true) => 1,
+            (65536u, false) => 1,
+            _ => 2
+        };
+    }
 
     // ----- end-to-end parity against chdman -----
 

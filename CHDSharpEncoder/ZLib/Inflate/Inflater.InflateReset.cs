@@ -32,6 +32,7 @@ internal static partial class Inflater
         {
             if (windowBits < -15)
                 return Z_STREAM_ERROR;
+
             wrap = 0;
             windowBits = -windowBits;
         }
@@ -41,8 +42,9 @@ internal static partial class Inflater
         }
 
         // set number of window bits, free window if different
-        if (windowBits != 0 && (windowBits < 8 || windowBits > 15))
+        if (windowBits != 0 && windowBits is < 8 or > 15)
             return Z_STREAM_ERROR;
+
         if (state.window != null && state.wbits != (uint)windowBits)
         {
             ArrayPool<byte>.Shared.Return(state.window);
@@ -64,7 +66,10 @@ internal static partial class Inflater
         strm.total_in = strm.total_out = state.total = 0;
         strm.msg = null;
         if (state.wrap != 0)
+        {
             strm.Adler = (uint)(state.wrap & 1);
+        }
+
         state.mode = InflateMode.Head;
         state.last = 0;
         state.havedict = 0;

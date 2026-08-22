@@ -25,10 +25,10 @@ public sealed class AvHuffCodec : IChdCodec
         // multiple frames (data.Length > rawFrameSize), store raw — avhuff only
         // compresses single-frame hunks, matching MAME's codec-chain behavior.
         uint channels = data[5];
-        uint samples = (uint)((data[6] << 8) | data[7]);
-        uint width = (uint)((data[8] << 8) | data[9]);
-        uint height = (uint)((data[10] << 8) | data[11]);
-        uint rawFrameSize = AvHuffEncoder.RawDataSize(width, height, channels, samples);
+        var samples = (uint)((data[6] << 8) | data[7]);
+        var width = (uint)((data[8] << 8) | data[9]);
+        var height = (uint)((data[10] << 8) | data[11]);
+        var rawFrameSize = AvHuffEncoder.RawDataSize(width, height, channels, samples);
         if (rawFrameSize > 0 && data.Length > rawFrameSize)
             return null;
 

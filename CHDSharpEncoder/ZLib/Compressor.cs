@@ -93,9 +93,13 @@ internal static class Compressor
 
         sourceLen -= len + stream.avail_in;
         if (dest != buf)
+        {
             destLen = stream.total_out;
+        }
         else if (stream.total_out != 0 && err == Z_BUF_ERROR)
+        {
             left = 1;
+        }
 
         _ = Inflater.InflateEnd(ref stream);
         return err == Z_STREAM_END ? Z_OK :
@@ -104,7 +108,9 @@ internal static class Compressor
                err;
     }
 
-    internal static uint CompressBound(uint sourceLen) =>
-        sourceLen + (sourceLen >> 12) + (sourceLen >> 14) +
-           (sourceLen >> 25) + 13;
+    internal static uint CompressBound(uint sourceLen)
+    {
+        return sourceLen + (sourceLen >> 12) + (sourceLen >> 14) +
+               (sourceLen >> 25) + 13;
+    }
 }

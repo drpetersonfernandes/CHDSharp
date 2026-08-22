@@ -66,7 +66,7 @@ public class CreateBlankTests
             using (chd)
             {
                 var found = false;
-                foreach (var entry in chd!.Metadata)
+                foreach (var entry in chd.Metadata)
                 {
                     if (string.Equals(entry.Tag, "GDDD", StringComparison.Ordinal))
                     {
@@ -126,7 +126,7 @@ public class CreateBlankTests
             using (chd)
             {
                 var expectedSize = (ulong)cylinders * heads * sectors * sectorSize;
-                Assert.Equal(expectedSize, chd!.TotalBytes);
+                Assert.Equal(expectedSize, chd.TotalBytes);
 
                 var found = false;
                 foreach (var entry in chd.Metadata)
@@ -166,7 +166,7 @@ public class CreateBlankTests
 
             using (chd)
             {
-                var buffer = new byte[chd!.HunkBytes];
+                var buffer = new byte[chd.HunkBytes];
 
                 // Read hunk 0
                 var readErr = chd.ReadHunk(0, buffer);
@@ -200,7 +200,7 @@ public class CreateBlankTests
 
             using (chd)
             {
-                Assert.Equal(totalBytes, chd!.TotalBytes);
+                Assert.Equal(totalBytes, chd.TotalBytes);
             }
         }
         finally
@@ -224,7 +224,7 @@ public class CreateBlankTests
 
             using (chd)
             {
-                Assert.Equal(totalBytes, chd!.TotalBytes);
+                Assert.Equal(totalBytes, chd.TotalBytes);
 
                 using var fs = File.OpenRead(chdPath);
                 var verifyResult = Chd.CheckFile(fs, chdPath, true, out _, out _, out _);

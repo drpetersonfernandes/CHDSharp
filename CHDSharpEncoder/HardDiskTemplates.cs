@@ -56,6 +56,7 @@ public static class HardDiskTemplates
         if (id < 0 || id >= Templates.Length)
             throw new ArgumentOutOfRangeException(nameof(id), id,
                 $"Template ID must be between 0 and {Templates.Length - 1}");
+
         return Templates[id];
     }
 }

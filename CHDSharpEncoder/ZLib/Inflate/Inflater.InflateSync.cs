@@ -12,6 +12,7 @@ internal static partial class Inflater
     {
         if (InflateStateCheck(ref strm))
             return Z_STREAM_ERROR;
+
         var state = strm.inflateState;
         if (strm.avail_in == 0 && state.bits < 8)
             return Z_BUF_ERROR;
@@ -55,9 +56,14 @@ internal static partial class Inflater
 
         int flags; // temporary to save header status
         if (state.flags == -1)
+        {
             state.wrap = 0;     // if no header yet, treat as raw
+        }
         else
+        {
             state.wrap &= ~4;   // no point in computing a check value now */
+        }
+
         flags = state.flags;
 
         uint @out; // temporary to total_out
@@ -79,11 +85,18 @@ internal static partial class Inflater
         {
             var b = Unsafe.Add(ref buf, next);
             if (b == (got < 2 ? 0 : 0xff))
+            {
                 got++;
+            }
             else if (b != 0)
+            {
                 got = 0;
+            }
             else
+            {
                 got = 4 - got;
+            }
+
             next++;
         }
         have = got;

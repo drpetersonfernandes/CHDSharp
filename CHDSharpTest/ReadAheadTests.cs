@@ -19,8 +19,6 @@ public class ReadAheadTests
 
         var ms = new MemoryStream();
 
-        void Write(byte[] b) => ms.Write(b, 0, b.Length);
-
         Write("MComprHD"u8.ToArray());
         Write(EndianHelpers.Be(124));
         Write(EndianHelpers.Be(5));
@@ -37,7 +35,10 @@ public class ReadAheadTests
             ms.Seek((long)(dataStart + h * Blocksize), SeekOrigin.Begin);
             var data = new byte[Blocksize];
             for (var i = 0; i < data.Length; i++)
+            {
                 data[i] = (byte)((h * Blocksize + (ulong)i) & 0xFF);
+            }
+
             Write(data);
         }
 
@@ -47,6 +48,11 @@ public class ReadAheadTests
 
         ms.Position = 0;
         return ms;
+
+        void Write(byte[] b)
+        {
+            ms.Write(b, 0, b.Length);
+        }
     }
 
     private static ChdFile OpenTestChd()

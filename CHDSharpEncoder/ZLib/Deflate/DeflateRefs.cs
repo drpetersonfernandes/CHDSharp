@@ -6,8 +6,10 @@ namespace CHDSharpEncoder.ZLib.Deflate;
 
 internal ref struct DeflateRefs
 {
-    public DeflateRefs() =>
+    public DeflateRefs()
+    {
         configuration_table = ref MemoryMarshal.GetReference<Config>(Deflater.s_configuration_table);
+    }
 
     internal ref byte pending_buf;
     internal ref byte pending_out;

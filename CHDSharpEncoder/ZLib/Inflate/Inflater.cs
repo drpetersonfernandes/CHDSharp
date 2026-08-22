@@ -99,7 +99,10 @@ internal static partial class Inflater
     // permutation of code lengths
     private static readonly ushort[] s_order = new ushort[19] { 16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15 };
 
-    internal static void Init() => s_objectPool.Return(new InflateState());
+    internal static void Init()
+    {
+        s_objectPool.Return(new InflateState());
+    }
 
     internal static int Inflate(ref ZStream strm, int flush)
     {
@@ -110,7 +113,9 @@ internal static partial class Inflater
 
         var state = strm.inflateState;
         if (state.mode == InflateMode.Type) // Skip check
+        {
             state.mode = InflateMode.Typedo;
+        }
 
         ref var next = ref // next input
 #if NET7_0_OR_GREATER
@@ -168,6 +173,7 @@ internal static partial class Inflater
                     {
                         if (have == 0)
                             goto inf_leave;
+
                         have--;
                         hold += (uint)next << (int)bits;
                         next = ref Unsafe.Add(ref next, 1U);
@@ -190,7 +196,10 @@ internal static partial class Inflater
                     bits -= 4;
                     len = (hold & ((1U << (4)) - 1)) + 8;
                     if (state.wbits == 0)
+                    {
                         state.wbits = len;
+                    }
+
                     if (len > 15 || len > state.wbits)
                     {
                         strm.msg = "invalid window size";
@@ -210,6 +219,7 @@ internal static partial class Inflater
                     {
                         if (have == 0)
                             goto inf_leave;
+
                         have--;
                         hold += (uint)next << (int)bits;
                         next = ref Unsafe.Add(ref next, 1U);
@@ -236,8 +246,9 @@ internal static partial class Inflater
                     state.mode = InflateMode.Type;
                     goto case InflateMode.Type;
                 case InflateMode.Type:
-                    if (flush == Z_BLOCK || flush == Z_TREES)
+                    if (flush is Z_BLOCK or Z_TREES)
                         goto inf_leave;
+
                     goto case InflateMode.Typedo;
                 case InflateMode.Typedo:
                     if (state.last != 0)
@@ -251,6 +262,7 @@ internal static partial class Inflater
                     {
                         if (have == 0)
                             goto inf_leave;
+
                         have--;
                         hold += (uint)next << (int)bits;
                         next = ref Unsafe.Add(ref next, 1U);
@@ -300,6 +312,7 @@ internal static partial class Inflater
                     {
                         if (have == 0)
                             goto inf_leave;
+
                         have--;
                         hold += (uint)next << (int)bits;
                         next = ref Unsafe.Add(ref next, 1U);
@@ -319,6 +332,7 @@ internal static partial class Inflater
                     state.mode = InflateMode.Copy_;
                     if (flush == Z_TREES)
                         goto inf_leave;
+
                     goto case InflateMode.Copy_;
                 case InflateMode.Copy_:
                     state.mode = InflateMode.Copy;
@@ -328,11 +342,18 @@ internal static partial class Inflater
                     if (copy != 0)
                     {
                         if (copy > have)
+                        {
                             copy = have;
+                        }
+
                         if (copy > left)
+                        {
                             copy = left;
+                        }
+
                         if (copy == 0)
                             goto inf_leave;
+
                         netUnsafe.CopyBlockUnaligned(ref put, ref next, copy);
                         have -= copy;
                         next = ref Unsafe.Add(ref next, copy);
@@ -351,6 +372,7 @@ internal static partial class Inflater
                     {
                         if (have == 0)
                             goto inf_leave;
+
                         have--;
                         hold += (uint)next << (int)bits;
                         next = ref Unsafe.Add(ref next, 1U);
@@ -383,24 +405,31 @@ internal static partial class Inflater
 #endif
                     lens))
 #if NET7_0_OR_GREATER
+                    {
                         refs.
 #endif
-                        lens = ref MemoryMarshal.GetReference<ushort>(state.lens);
+                            lens = ref MemoryMarshal.GetReference<ushort>(state.lens);
+                    }
+
                     if (netUnsafe.IsNullRef(ref
 #if NET7_0_OR_GREATER
-                    refs.
+                            refs.
 #endif
-                    order))
+                                order))
 #if NET7_0_OR_GREATER
+                    {
                         refs.
 #endif
-                        order = ref MemoryMarshal.GetReference<ushort>(s_order);
+                            order = ref MemoryMarshal.GetReference<ushort>(s_order);
+                    }
+
                     while (state.have < state.ncode)
                     {
                         while (bits < 3)
                         {
                             if (have == 0)
                                 goto inf_leave;
+
                             have--;
                             hold += (uint)next << (int)bits;
                             next = ref Unsafe.Add(ref next, 1U);
@@ -420,15 +449,18 @@ internal static partial class Inflater
                         bits -= 3;
                     }
                     while (state.have < 19)
+                    {
                         Unsafe.Add(ref
 #if NET7_0_OR_GREATER
-                        refs.
+                            refs.
 #endif
-                        lens, (uint)Unsafe.Add(ref
+                                lens, (uint)Unsafe.Add(ref
 #if NET7_0_OR_GREATER
-                        refs.
+                                refs.
 #endif
-                        order, state.have++)) = 0;
+                                    order, state.have++)) = 0;
+                    }
+
                     state.next = 0;
                     state.lencode = state.codes;
                     state.lenbits = 7;
@@ -501,9 +533,12 @@ internal static partial class Inflater
 #endif
                     lencode))
 #if NET7_0_OR_GREATER
+                    {
                         refs.
 #endif
-                        lencode = ref MemoryMarshal.GetReference<Code>(state.lencode);
+                            lencode = ref MemoryMarshal.GetReference<Code>(state.lencode);
+                    }
+
                     while (state.have < state.nlen + state.ndist)
                     {
                         for (; ; )
@@ -515,8 +550,10 @@ internal static partial class Inflater
                             lencode, hold & ((1U << (state.lenbits)) - 1));
                             if (here.bits <= bits)
                                 break;
+
                             if (have == 0)
                                 goto inf_leave;
+
                             have--;
                             hold += (uint)next << (int)bits;
                             next = ref Unsafe.Add(ref next, 1U);
@@ -547,6 +584,7 @@ internal static partial class Inflater
                                 {
                                     if (have == 0)
                                         goto inf_leave;
+
                                     have--;
                                     hold += (uint)next << (int)bits;
                                     next = ref Unsafe.Add(ref next, 1U);
@@ -576,6 +614,7 @@ internal static partial class Inflater
                                 {
                                     if (have == 0)
                                         goto inf_leave;
+
                                     have--;
                                     hold += (uint)next << (int)bits;
                                     next = ref Unsafe.Add(ref next, 1U);
@@ -595,6 +634,7 @@ internal static partial class Inflater
                                 {
                                     if (have == 0)
                                         goto inf_leave;
+
                                     have--;
                                     hold += (uint)next << (int)bits;
                                     next = ref Unsafe.Add(ref next, 1U);
@@ -615,11 +655,13 @@ internal static partial class Inflater
                                 break;
                             }
                             while (copy-- != 0)
+                            {
                                 Unsafe.Add(ref
 #if NET7_0_OR_GREATER
-                                refs.
+                                    refs.
 #endif
-                                lens, state.have++) = (ushort)len;
+                                        lens, state.have++) = (ushort)len;
+                            }
                         }
                     }
 
@@ -713,6 +755,7 @@ internal static partial class Inflater
                     state.mode = InflateMode.Len_;
                     if (flush == Z_TREES)
                         goto inf_leave;
+
                     goto case InflateMode.Len_;
                 case InflateMode.Len_:
                     state.mode = InflateMode.Len;
@@ -724,18 +767,24 @@ internal static partial class Inflater
 #endif
                     lencode))
 #if NET7_0_OR_GREATER
+                    {
                         refs.
 #endif
-                        lencode = ref MemoryMarshal.GetReference<Code>(state.lencode);
+                            lencode = ref MemoryMarshal.GetReference<Code>(state.lencode);
+                    }
+
                     if (netUnsafe.IsNullRef(ref
 #if NET7_0_OR_GREATER
-                    refs.
+                            refs.
 #endif
-                    distcode))
+                                distcode))
 #if NET7_0_OR_GREATER
+                    {
                         refs.
 #endif
-                        distcode = ref MemoryMarshal.GetReference<Code>(state.distcode);
+                            distcode = ref MemoryMarshal.GetReference<Code>(state.distcode);
+                    }
+
                     if (have >= 6 && left >= 258)
                     {
                         strm.next_out = next_out;
@@ -750,9 +799,12 @@ internal static partial class Inflater
 #endif
                         window))
 #if NET7_0_OR_GREATER
+                        {
                             refs.
 #endif
-                            window = ref MemoryMarshal.GetReference<byte>(state.window);
+                                window = ref MemoryMarshal.GetReference<byte>(state.window);
+                        }
+
                         InflateFast(ref strm, @out, ref
 #if NET7_0_OR_GREATER
                         refs.
@@ -786,7 +838,9 @@ internal static partial class Inflater
                         bits = strm.inflateState.bits;
 #pragma warning disable CA1508
                         if (state.mode == InflateMode.Type)
+                        {
                             state.back = -1;
+                        }
 #pragma warning restore CA1508
                         break;
                     }
@@ -800,8 +854,10 @@ internal static partial class Inflater
                         lencode, hold & ((1U << (state.lenbits)) - 1));
                         if (here.bits <= bits)
                             break;
+
                         if (have == 0)
                             goto inf_leave;
+
                         have--;
                         hold += (uint)next << (int)bits;
                         next = ref Unsafe.Add(ref next, 1U);
@@ -826,8 +882,10 @@ internal static partial class Inflater
                             lencode, last.val + ((hold & (1U << last.bits + last.op - 1)) >> last.bits));
                             if ((uint)(last.bits + here.bits) <= bits)
                                 break;
+
                             if (have == 0)
                                 goto inf_leave;
+
                             have--;
                             hold += (uint)next << (int)bits;
                             next = ref Unsafe.Add(ref next, 1U);
@@ -850,7 +908,7 @@ internal static partial class Inflater
                     state.length = here.val;
                     if (here.op == 0)
                     {
-                        Trace.Tracevv(here.val >= 0x20 && here.val < 0x7f ?
+                        Trace.Tracevv(here.val is >= 0x20 and < 0x7f ?
                             $"inflate:         literal '{Convert.ToChar(here.val)}'\n" :
                             $"inflate:         literal 0x{here.val:X2}\n");
                         state.mode = InflateMode.Lit;
@@ -879,6 +937,7 @@ internal static partial class Inflater
                         {
                             if (have == 0)
                                 goto inf_leave;
+
                             have--;
                             hold += (uint)next << (int)bits;
                             next = ref Unsafe.Add(ref next, 1U);
@@ -901,9 +960,12 @@ internal static partial class Inflater
 #endif
                     distcode))
 #if NET7_0_OR_GREATER
+                    {
                         refs.
 #endif
-                        distcode = ref MemoryMarshal.GetReference<Code>(state.distcode);
+                            distcode = ref MemoryMarshal.GetReference<Code>(state.distcode);
+                    }
+
                     for (; ; )
                     {
                         here = Unsafe.Add(ref
@@ -913,8 +975,10 @@ internal static partial class Inflater
                         distcode, state.diststart + (hold & ((1U << (state.distbits)) - 1)));
                         if (here.bits <= bits)
                             break;
+
                         if (have == 0)
                             goto inf_leave;
+
                         have--;
                         hold += (uint)next << (int)bits;
                         next = ref Unsafe.Add(ref next, 1U);
@@ -940,8 +1004,10 @@ internal static partial class Inflater
                                 ((hold & ((1U << (last.bits + last.op)) - 1)) >> last.bits));
                             if ((uint)(last.bits + here.bits) <= bits)
                                 break;
+
                             if (have == 0)
                                 goto inf_leave;
+
                             have--;
                             hold += (uint)next << (int)bits;
                             next = ref Unsafe.Add(ref next, 1U);
@@ -978,6 +1044,7 @@ internal static partial class Inflater
                         {
                             if (have == 0)
                                 goto inf_leave;
+
                             have--;
                             hold += (uint)next << (int)bits;
                             next = ref Unsafe.Add(ref next, 1U);
@@ -995,6 +1062,7 @@ internal static partial class Inflater
                 case InflateMode.Match:
                     if (left == 0)
                         goto inf_leave;
+
                     copy = @out - left;
                     if (state.offset > copy) // copy from window
                     {
@@ -1011,9 +1079,12 @@ internal static partial class Inflater
 #endif
                         window))
 #if NET7_0_OR_GREATER
+                        {
                             refs.
 #endif
-                            window = ref MemoryMarshal.GetReference<byte>(state.window);
+                                window = ref MemoryMarshal.GetReference<byte>(state.window);
+                        }
+
                         if (copy > state.wnext)
                         {
                             copy -= state.wnext;
@@ -1024,13 +1095,18 @@ internal static partial class Inflater
                             window, state.wsize - copy);
                         }
                         else
+                        {
                             from = ref Unsafe.Add(ref
 #if NET7_0_OR_GREATER
-                            refs.
+                                refs.
 #endif
-                            window, state.wnext - copy);
+                                    window, state.wnext - copy);
+                        }
+
                         if (copy > state.length)
+                        {
                             copy = state.length;
+                        }
                     }
                     else // copy from output
                     {
@@ -1038,7 +1114,10 @@ internal static partial class Inflater
                         copy = state.length;
                     }
                     if (copy > left)
+                    {
                         copy = left;
+                    }
+
                     left -= copy;
                     state.length -= copy;
                     do
@@ -1049,11 +1128,15 @@ internal static partial class Inflater
                         from = ref Unsafe.Add(ref from, 1U);
                     } while (--copy != 0);
                     if (state.length == 0)
+                    {
                         state.mode = InflateMode.Len;
+                    }
+
                     break;
                 case InflateMode.Lit:
                     if (left == 0)
                         goto inf_leave;
+
                     put = (byte)state.length;
                     put = ref Unsafe.Add(ref put, 1U);
                     next_out++;
@@ -1067,6 +1150,7 @@ internal static partial class Inflater
                         {
                             if (have == 0)
                                 goto inf_leave;
+
                             have--;
                             hold += (uint)next << (int)bits;
                             next = ref Unsafe.Add(ref next, 1U);
@@ -1077,7 +1161,10 @@ internal static partial class Inflater
                         strm.total_out += @out;
                         state.total += @out;
                         if ((state.wrap & 4) != 0 && @out != 0)
+                        {
                             strm.Adler = state.check = Adler32.Update(state.check, ref Unsafe.Subtract(ref put, @out), @out);
+                        }
+
                         @out = left;
                         if ((state.wrap & 4) != 0 && ZSwap32(hold) != state.check)
                         {
@@ -1134,21 +1221,31 @@ internal static partial class Inflater
         strm.total_out += @out;
         state.total += @out;
         if ((state.wrap & 4) != 0 && @out != 0)
+        {
             strm.Adler = state.check = Adler32.Update(state.check, ref Unsafe.Subtract(ref put, @out), @out);
+        }
+
         strm.data_type = (int)state.bits + (state.last != 0 ? 64 : 0) +
-            (state.mode == InflateMode.Type ? 128 : 0) +
-            (state.mode == InflateMode.Len_ || state.mode == InflateMode.Copy_ ? 256 : 0);
+                         (state.mode == InflateMode.Type ? 128 : 0) +
+                         (state.mode is InflateMode.Len_ or InflateMode.Copy_ ? 256 : 0);
         if ((@in == 0 && @out == 0 || flush == Z_FINISH) && ret == Z_OK)
+        {
             ret = Z_BUF_ERROR;
+        }
 
         return ret;
     }
 
-    private static bool InflateStateCheck(ref ZStream strm) =>
-        strm.inflateState == null || strm.inflateState.mode < InflateMode.Head
-        || strm.inflateState.mode > InflateMode.Sync;
+    private static bool InflateStateCheck(ref ZStream strm)
+    {
+        return strm.inflateState == null || strm.inflateState.mode < InflateMode.Head
+                                         || strm.inflateState.mode > InflateMode.Sync;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint ZSwap32(uint q) => (((q) >> 24) & 0xff) + (((q) >> 8) & 0xff00)
-        + (((q) & 0xff00) << 8) + (((q) & 0xff) << 24);
+    private static uint ZSwap32(uint q)
+    {
+        return (((q) >> 24) & 0xff) + (((q) >> 8) & 0xff00)
+                                    + (((q) & 0xff00) << 8) + (((q) & 0xff) << 24);
+    }
 }

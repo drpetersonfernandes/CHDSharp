@@ -12,10 +12,10 @@ public class AvHuffDebugTests
         // encode one synthetic 'chav' frame directly, bypassing the AVI/encode pipeline
         const int width = 64, height = 64, channels = 2, maxSamples = 1920;
         var video = new byte[width * height * 2];
-        for (int y = 0; y < height; y++)
-            for (int x = 0; x < width; x += 2)
+        for (var y = 0; y < height; y++)
+            for (var x = 0; x < width; x += 2)
             {
-                int off = (y * width + x) * 2;
+                var off = (y * width + x) * 2;
                 video[off] = (byte)(x * 4);
                 video[off + 1] = (byte)(y * 3);
                 video[off + 2] = (byte)((x + y) * 2);
@@ -23,20 +23,22 @@ public class AvHuffDebugTests
             }
 
         var planes = new short[channels][];
-        for (int ch = 0; ch < channels; ch++)
+        for (var ch = 0; ch < channels; ch++)
         {
             planes[ch] = new short[maxSamples];
-            for (int i = 0; i < maxSamples; i++)
+            for (var i = 0; i < maxSamples; i++)
+            {
                 planes[ch][i] = (short)(Math.Sin(i * 0.037 + ch) * 9000);
+            }
         }
 
-        uint rawBytes = AvHuffEncoder.RawDataSize(width, height, channels, maxSamples);
+        var rawBytes = AvHuffEncoder.RawDataSize(width, height, channels, maxSamples);
         var raw = new byte[rawBytes];
         AvHuffEncoder.AssembleData(raw, video, width, height, channels, maxSamples, planes);
 
         var encoder = new AvHuffEncoder();
         var compressed = new byte[rawBytes];
-        int compLen = encoder.EncodeData(raw, compressed);
+        var compLen = encoder.EncodeData(raw, compressed);
         Assert.True(compLen < rawBytes, $"compression didn't save space: {compLen} >= {rawBytes}");
 
         // write a 1-hunk CHD via the full pipeline and verify with CHDSharpLib
@@ -50,7 +52,7 @@ public class AvHuffDebugTests
             Assert.NotNull(chd);
             using (chd)
             {
-                var buf = new byte[chd!.HunkBytes];
+                var buf = new byte[chd.HunkBytes];
                 var readErr = chd.ReadHunk(0, buf);
                 Assert.True(readErr == ChdError.Chderrnone,
                     $"ReadHunk(0) returned {readErr}; rawBytes={rawBytes} compLen={compLen}\n" +
@@ -78,23 +80,23 @@ public class AvHuffDebugTests
     {
         const int width = 32, height = 32;
         var video = new byte[width * height * 2];
-        for (int y = 0; y < height; y++)
-            for (int x = 0; x < width; x += 2)
+        for (var y = 0; y < height; y++)
+            for (var x = 0; x < width; x += 2)
             {
-                int off = (y * width + x) * 2;
+                var off = (y * width + x) * 2;
                 video[off] = (byte)(x * 4);
                 video[off + 1] = (byte)(y * 3);
                 video[off + 2] = (byte)((x + y) * 2);
                 video[off + 3] = (byte)(y * 3 + ((x / 2) % 8));
             }
 
-        uint rawBytes = AvHuffEncoder.RawDataSize(width, height, 0, 0);
+        var rawBytes = AvHuffEncoder.RawDataSize(width, height, 0, 0);
         var raw = new byte[rawBytes];
         AvHuffEncoder.AssembleData(raw, video, width, height, 0, 0, Array.Empty<short[]>());
 
         var encoder = new AvHuffEncoder();
         var compressed = new byte[rawBytes];
-        int compLen = encoder.EncodeData(raw, compressed);
+        var compLen = encoder.EncodeData(raw, compressed);
         Assert.True(compLen < rawBytes, $"compression didn't save space: {compLen} >= {rawBytes}");
 
         var chdPath = Path.Combine(Path.GetTempPath(), $"avhuff_vonly_{Guid.NewGuid():N}.chd");
@@ -107,11 +109,11 @@ public class AvHuffDebugTests
             Assert.NotNull(chd);
             using (chd)
             {
-                var buf = new byte[chd!.HunkBytes];
+                var buf = new byte[chd.HunkBytes];
                 var readErr = chd.ReadHunk(0, buf);
                 if (readErr != ChdError.Chderrnone)
                 {
-                    int videoStart = 10;
+                    var videoStart = 10;
                     Assert.Fail($"ReadHunk(0) returned {readErr}; rawBytes={rawBytes} compLen={compLen}\n" +
                         $"compressed header: {string.Join(" ", compressed.Take(14).Select(b => b.ToString("X2")))}\n" +
                         $"video0x80={compressed[videoStart]:X2}");
@@ -134,16 +136,16 @@ public class AvHuffDebugTests
         switch (histogramName)
         {
             case "allZeros":
-                for (int j = 0; j < 100; j++) he.CountSymbol(42);
+                for (var j = 0; j < 100; j++) he.CountSymbol(42);
                 break;
             case "alternating":
-                for (int i = 0; i < 272; i += 2) he.CountSymbol((uint)i);
+                for (var i = 0; i < 272; i += 2) he.CountSymbol((uint)i);
                 break;
             case "dense":
                 var rng = new Random(42);
-                for (int i = 0; i < 10000; i++)
+                for (var i = 0; i < 10000; i++)
                     he.CountSymbol((uint)rng.Next(0, 200));
-                for (int i = 0; i < 100; i++)
+                for (var i = 0; i < 100; i++)
                     he.CountSymbol((uint)(0x100 + rng.Next(0, 16)));
                 break;
         }
@@ -152,10 +154,10 @@ public class AvHuffDebugTests
 
         var bs = new BitStreamOut(4096);
         he.ExportTreeRle(bs);
-        int byteLen = bs.Flush();
+        var byteLen = bs.Flush();
 
         var imported = ImportTreeRle(bs.ToArray(), 0, byteLen, 272);
-        for (int i = 0; i < 272; i++)
+        for (var i = 0; i < 272; i++)
             Assert.True(he.NumBits[i] == imported[i],
                 $"numbits[{i}]: enc={he.NumBits[i]} dec={imported[i]}");
     }
@@ -165,15 +167,15 @@ public class AvHuffDebugTests
     {
         // simulate the exact Y-plane histogram from the64x64 gradient video test
         var he = new HuffmanEncoder(272, 16);
-        for (int i = 0; i < 272; i += 2) he.CountSymbol((uint)i);
+        for (var i = 0; i < 272; i += 2) he.CountSymbol((uint)i);
         he.BuildTree();
 
         var bs = new BitStreamOut(2048);
         he.ExportTreeRle(bs);
-        int byteLen = bs.Flush();
+        var byteLen = bs.Flush();
 
         var imported = ImportTreeRle(bs.ToArray(), 0, byteLen, 272);
-        for (int i = 0; i < 272; i++)
+        for (var i = 0; i < 272; i++)
             Assert.True(he.NumBits[i] == imported[i],
                 $"numbits[{i}]: enc={he.NumBits[i]} dec={imported[i]}");
     }
@@ -184,17 +186,17 @@ public class AvHuffDebugTests
     /// </summary>
     private static int[] ImportTreeRle(byte[] data, int offset, int length, int numCodes)
     {
-        int bitPos = offset * 8;
-        int endBit = (offset + length) * 8;
+        var bitPos = offset * 8;
+        var endBit = (offset + length) * 8;
         var result = new int[numCodes];
-        int curnode = 0;
+        var curnode = 0;
 
         while (curnode < numCodes)
         {
             if (bitPos + 5 > endBit)
                 throw new InvalidDataException($"tree import underflow at node {curnode}, bit {bitPos}");
 
-            int nodebits = ReadBits5(data, ref bitPos);
+            var nodebits = ReadBits5(data, ref bitPos);
             if (nodebits != 1)
             {
                 result[curnode++] = nodebits;
@@ -214,13 +216,15 @@ public class AvHuffDebugTests
                     if (bitPos + 5 > endBit)
                         throw new InvalidDataException($"tree import underflow in repcount at node {curnode}");
 
-                    int repcount = ReadBits5(data, ref bitPos) + 3;
+                    var repcount = ReadBits5(data, ref bitPos) + 3;
                     if (curnode + repcount > numCodes)
                         throw new InvalidDataException(
                             $"tree import overflow at node {curnode}: {repcount} would exceed {numCodes} (bit {bitPos})");
 
                     while (repcount-- > 0)
+                    {
                         result[curnode++] = nodebits;
+                    }
                 }
             }
         }
@@ -230,14 +234,19 @@ public class AvHuffDebugTests
 
     private static int ReadBits5(byte[] data, ref int bitPos)
     {
-        int value = 0;
-        for (int i = 0; i < 5; i++)
+        var value = 0;
+        for (var i = 0; i < 5; i++)
         {
-            int byteIndex = bitPos >> 3;
+            var byteIndex = bitPos >> 3;
             if (byteIndex < data.Length)
+            {
                 value = (value << 1) | ((data[byteIndex] >> (7 - (bitPos & 7))) & 1);
+            }
             else
+            {
                 value <<= 1;
+            }
+
             bitPos++;
         }
 

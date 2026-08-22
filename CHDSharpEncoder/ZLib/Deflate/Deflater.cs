@@ -128,12 +128,16 @@ internal static partial class Deflater
     private static readonly int[] s_extra_blbits = // extra bits for each bit length code
         new int[BlCodes] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 7 };
 
-    internal static void Init() => s_objectPool.Return(new DeflateState());
+    internal static void Init()
+    {
+        s_objectPool.Return(new DeflateState());
+    }
 
     internal static int Deflate(ref ZStream strm, int flush)
     {
         if (DeflateStateCheck(ref strm) || flush > Z_BLOCK || flush < 0)
             return Z_STREAM_ERROR;
+
         var s = strm.deflateState;
 
         if (strm._output.IsEmpty
@@ -198,7 +202,10 @@ internal static partial class Deflater
 
         // Write the header
         if (s.status == InitState && s.wrap == 0)
+        {
             s.status = BusyState;
+        }
+
         if (s.status == InitState)
         {
             // zlib header
@@ -206,16 +213,28 @@ internal static partial class Deflater
             uint level_flags;
 
             if (s.strategy >= Z_HUFFMAN_ONLY || s.level < 2)
+            {
                 level_flags = 0;
+            }
             else if (s.level < 6)
+            {
                 level_flags = 1;
+            }
             else if (s.level == 6)
+            {
                 level_flags = 2;
+            }
             else
+            {
                 level_flags = 3;
+            }
+
             header |= level_flags << 6;
             if (s.strstart != 0)
+            {
                 header |= PresetDict;
+            }
+
             header += 31 - header % 31;
 
             PutShort(s, header, ref pending_buf);
@@ -278,14 +297,17 @@ internal static partial class Deflater
                 }
             }
 
-            if (bstate == BlockState.FinishStarted || bstate == BlockState.FinishDone)
+            if (bstate is BlockState.FinishStarted or BlockState.FinishDone)
             {
                 s.status = FinishState;
             }
-            if (bstate == BlockState.NeedMore || bstate == BlockState.FinishStarted)
+            if (bstate is BlockState.NeedMore or BlockState.FinishStarted)
             {
                 if (strm.avail_out == 0)
+                {
                     s.last_flush = -1; // avoid BUF_ERROR next call, see above
+                }
+
                 return Z_OK;
                 /* If flush != Z_NO_FLUSH && avail_out == 0, the next call
                  * of deflate should use the same flush parameter to make sure
@@ -301,7 +323,9 @@ internal static partial class Deflater
                 {
 #if NET7_0_OR_GREATER
                     if (netUnsafe.IsNullRef(ref refs.sta_ltree))
+                    {
                         refs.sta_ltree = ref MemoryMarshal.GetReference<TreeNode>(Tree.s_ltree);
+                    }
 #endif
                     Tree.Align(s, ref pending_buf, ref
 #if NET7_0_OR_GREATER
@@ -350,7 +374,9 @@ internal static partial class Deflater
 
         // If avail_out is zero, the application will call deflate again to flush the rest.
         if (s.wrap > 0)
+        {
             s.wrap = -s.wrap; // write the trailer only once!
+        }
 
         return s.pending != 0 ? Z_OK : Z_STREAM_END;
     }
@@ -402,7 +428,7 @@ internal static partial class Deflater
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int ReturnWithError(ref ZStream strm, int err)
     {
-        strm.msg = s_z_errmsg[err < -6 || err > 2 ? 9 : 2 - err];
+        strm.msg = s_z_errmsg[err is < -6 or > 2 ? 9 : 2 - err];
         return err;
     }
 
@@ -412,7 +438,10 @@ internal static partial class Deflater
         Tree.FlushBits(s, ref pending_buf);
         var len = s.pending;
         if (len > strm.avail_out)
+        {
             len = strm.avail_out;
+        }
+
         if (len == 0)
             return;
 
@@ -442,7 +471,10 @@ internal static partial class Deflater
     /// Rank Z_BLOCK between Z_NO_FLUSH and Z_PARTIAL_FLUSH.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int Rank(int f) => f * 2 - (f > 4 ? 9 : 0);
+    private static int Rank(int f)
+    {
+        return f * 2 - (f > 4 ? 9 : 0);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void PutShort(DeflateState s, uint b, ref byte pending_buf)
@@ -470,7 +502,9 @@ internal static partial class Deflater
 #if NET7_0_OR_GREATER
         ref var refs = ref strm.deflateRefs;
         if (netUnsafe.IsNullRef(ref refs.window))
+        {
             refs.window = ref MemoryMarshal.GetReference<byte>(s.window);
+        }
 #endif
         ref var window = ref
 #if NET7_0_OR_GREATER
@@ -498,9 +532,14 @@ internal static partial class Deflater
             have = strm.avail_out - have;
             left = (uint)(s.strstart - s.block_start); // bytes left in window
             if (len > left + strm.avail_in)
+            {
                 len = left + strm.avail_in;  // limit len to the input
+            }
+
             if (len > have)
+            {
                 len = have; // limit len to the output
+            }
 
             /* If the stored block would be less than min_block in length, or if
              * unable to copy all of the available input when flushing, then try
@@ -535,7 +574,10 @@ internal static partial class Deflater
             if (left != 0)
             {
                 if (left > len)
+                {
                     left = len;
+                }
+
                 netUnsafe.CopyBlockUnaligned(ref Unsafe.Add(ref next_out, strm.next_out),
                     ref Unsafe.Add(ref window, (uint)s.block_start), left);
                 strm.next_out += left;
@@ -589,9 +631,14 @@ internal static partial class Deflater
                     s.strstart -= s.w_size;
                     netUnsafe.CopyBlockUnaligned(ref window, ref Unsafe.Add(ref window, s.w_size), s.strstart);
                     if (s.matches < 2)
+                    {
                         s.matches++; // add a pending SlideHash()
+                    }
+
                     if (s.insert > s.strstart)
+                    {
                         s.insert = s.strstart;
+                    }
                 }
                 netUnsafe.CopyBlockUnaligned(ref Unsafe.Add(ref window, s.strstart), ref Unsafe.Subtract(ref next_in, used), used);
                 s.strstart += used;
@@ -601,7 +648,9 @@ internal static partial class Deflater
         }
 
         if (s.high_water < s.strstart)
+        {
             s.high_water = s.strstart;
+        }
 
         // If the last block was written to next_out, then done.
         if (last != 0)
@@ -621,13 +670,21 @@ internal static partial class Deflater
             s.strstart -= s.w_size;
             netUnsafe.CopyBlockUnaligned(ref window, ref Unsafe.Add(ref window, s.w_size), s.strstart);
             if (s.matches < 2)
+            {
                 s.matches++;    // add a pending SlideHash()
+            }
+
             have += s.w_size;   // more space now
             if (s.insert > s.strstart)
+            {
                 s.insert = s.strstart;
+            }
         }
         if (have > strm.avail_in)
+        {
             have = strm.avail_in;
+        }
+
         if (have != 0)
         {
             ReadBuf(ref strm, ref Unsafe.Add(ref window, s.strstart), have);
@@ -635,7 +692,9 @@ internal static partial class Deflater
             s.insert += Math.Min(have, s.w_size - s.insert);
         }
         if (s.high_water < s.strstart)
+        {
             s.high_water = s.strstart;
+        }
 
         /* There was not enough avail_out to write a complete worthy or flushed
          * stored block to next_out. Write a stored block to pending instead, if we
@@ -667,7 +726,10 @@ internal static partial class Deflater
         var len = strm.avail_in;
 
         if (len > size)
+        {
             len = size;
+        }
+
         if (len == 0)
             return 0;
 
@@ -681,7 +743,9 @@ internal static partial class Deflater
 #endif
                 len);
         if (strm.deflateState.wrap == 1)
+        {
             strm.Adler = Adler32.Update(strm.Adler, ref buf, len);
+        }
 
         strm.next_in += len;
         strm.total_in += len;
@@ -824,6 +888,7 @@ internal static partial class Deflater
                 {
                     if (flush == Z_NO_FLUSH)
                         return BlockState.NeedMore;
+
                     break; // flush the current block
                 }
             }
@@ -851,6 +916,7 @@ internal static partial class Deflater
                 ref heap, ref depth, ref bl_order, ref dist_code, ref length_code, ref base_dist,
                 ref base_length, ref extra_dbits, ref extra_lbits, ref extra_blbits))
                 return state;
+
             return BlockState.FinishDone;
         }
         if (s.sym_next != 0 && FlushBlock(ref strm, 0, ref window, out state, ref pending_buf, ref pending_out,
@@ -884,7 +950,10 @@ internal static partial class Deflater
                 s.strstart -= wsize; // we now have strstart >= MaxDist
                 s.block_start -= (int)wsize;
                 if (s.insert > s.strstart)
+                {
                     s.insert = s.strstart;
+                }
+
                 SlideHash(s, ref prev, ref head);
                 more += wsize;
             }
@@ -950,7 +1019,10 @@ internal static partial class Deflater
                  */
                 init = s.window_size - curr;
                 if (init > WinInit)
+                {
                     init = WinInit;
+                }
+
                 netUnsafe.InitBlockUnaligned(ref Unsafe.Add(ref window, curr), 0, init);
                 s.high_water = curr + init;
             }
@@ -962,7 +1034,10 @@ internal static partial class Deflater
                  */
                 init = curr + WinInit - s.high_water;
                 if (init > s.window_size - s.high_water)
+                {
                     init = s.window_size - s.high_water;
+                }
+
                 netUnsafe.InitBlockUnaligned(ref Unsafe.Add(ref window, s.high_water), 0, init);
                 s.high_water += init;
             }
@@ -1009,8 +1084,10 @@ internal static partial class Deflater
     /// Updates a hash value with the given input byte
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void UpdateHash(DeflateState s, ref uint h, byte c) =>
+    private static void UpdateHash(DeflateState s, ref uint h, byte c)
+    {
         h = (((h) << s.hash_shift) ^ c) & s.hash_mask;
+    }
 
     private static void FlushBlockOnly(ref ZStream strm, uint last, ref byte pending_buf, ref byte pending_out,
         ref byte window, ref TreeNode sta_ltree, ref TreeNode sta_dtree, ref TreeNode dyn_ltree, ref TreeNode dyn_dtree,
@@ -1199,6 +1276,7 @@ internal static partial class Deflater
                 FillWindow(ref strm, ref window, ref sprev, ref head);
                 if (s.lookahead <= MaxMatch && flush == Z_NO_FLUSH)
                     return BlockState.NeedMore;
+
                 if (s.lookahead == 0)
                     break; // flush the current block
             }
@@ -1227,7 +1305,9 @@ internal static partial class Deflater
                         && netUnsafe.IsAddressLessThan(ref scan, ref strend));
                     s.match_length = MaxMatch - (uint)netUnsafe.ByteOffset(ref scan, ref strend);
                     if (s.match_length > s.lookahead)
+                    {
                         s.match_length = s.lookahead;
+                    }
                 }
                 Debug.Assert(netUnsafe.IsAddressGreaterThan(ref Unsafe.Add(ref window, s.window_size - 1), ref scan), "wild scan");
             }
@@ -1267,6 +1347,7 @@ internal static partial class Deflater
                 ref heap, ref depth, ref bl_order, ref dist_code, ref length_code, ref base_dist,
                 ref base_length, ref extra_dbits, ref extra_lbits, ref extra_blbits))
                 return state;
+
             return BlockState.FinishDone;
         }
         if (s.sym_next != 0 && FlushBlock(ref strm, 0, ref window, out state, ref pending_buf, ref pending_out,
@@ -1435,6 +1516,7 @@ internal static partial class Deflater
                 FillWindow(ref strm, ref window, ref prev, ref head);
                 if (s.lookahead < MinLookAhead && flush == Z_NO_FLUSH)
                     return BlockState.NeedMore;
+
                 if (s.lookahead == 0)
                     break; // flush the current block
             }
@@ -1518,6 +1600,7 @@ internal static partial class Deflater
                 ref heap, ref depth, ref bl_order, ref dist_code, ref length_code, ref base_dist,
                 ref base_length, ref extra_dbits, ref extra_lbits, ref extra_blbits))
                 return state;
+
             return BlockState.FinishDone;
         }
         if (s.sym_next != 0 && FlushBlock(ref strm, 0, ref window, out state, ref pending_buf, ref pending_out,
@@ -1525,6 +1608,7 @@ internal static partial class Deflater
                 ref heap, ref depth, ref bl_order, ref dist_code, ref length_code, ref base_dist,
                 ref base_length, ref extra_dbits, ref extra_lbits, ref extra_blbits))
             return state;
+
         return BlockState.BlockDone;
     }
 
@@ -1538,7 +1622,10 @@ internal static partial class Deflater
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static uint MaxDist(DeflateState s) => s.w_size - MinLookAhead;
+    internal static uint MaxDist(DeflateState s)
+    {
+        return s.w_size - MinLookAhead;
+    }
 
     private static uint LongestMatch(DeflateState s, uint cur_match, ref byte window, ref ushort prev)
     {
@@ -1563,13 +1650,17 @@ internal static partial class Deflater
 
         // Do not waste too much time if we already have a good match:
         if (s.prev_length >= s.good_match)
+        {
             chain_length >>= 2;
+        }
 
         /* Do not look for matches beyond the end of the input. This is necessary
          * to make deflate deterministic.
          */
         if (nice_match > s.lookahead)
+        {
             nice_match = (int)s.lookahead;
+        }
 
         Debug.Assert(s.strstart <= s.window_size - MinLookAhead, "need lookahead");
 
@@ -1630,6 +1721,7 @@ internal static partial class Deflater
                 best_len = len;
                 if (len >= nice_match)
                     break;
+
                 scan_end1 = Unsafe.Add(ref scan, best_len - 1);
                 scan_end = Unsafe.Add(ref scan, best_len);
             }
@@ -1895,6 +1987,7 @@ internal static partial class Deflater
                 ref heap, ref depth, ref bl_order, ref dist_code, ref length_code, ref base_dist,
                 ref base_length, ref extra_dbits, ref extra_lbits, ref extra_blbits))
                 return state;
+
             return BlockState.FinishDone;
         }
         if (s.sym_next != 0 && FlushBlock(ref strm, 0, ref window, out state, ref pending_buf, ref pending_out,

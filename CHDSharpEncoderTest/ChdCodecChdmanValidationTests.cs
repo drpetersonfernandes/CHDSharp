@@ -156,7 +156,9 @@ public class ChdCodecChdmanValidationTests : IDisposable
         for (var f = 0; f < dataFrames; f++)
         {
             for (var i = 0; i < CdConstants.MaxSectorData; i++, pos++)
+            {
                 bin[pos] = (byte)("the quick brown fox jumps over the lazy dog "[i % 40] + (f % 7));
+            }
         }
 
         for (var f = 0; f < audioFrames; f++)

@@ -62,6 +62,7 @@ public sealed class ChdImageStream : Stream
             ThrowIfDisposed();
             if (value < 0)
                 throw new ArgumentOutOfRangeException(nameof(value), "Position cannot be negative.");
+
             _position = (ulong)value;
         }
     }
@@ -157,7 +158,7 @@ public sealed class ChdImageStream : Stream
     {
         ThrowIfDisposed();
 
-        ulong newPos = origin switch
+        var newPos = origin switch
         {
             SeekOrigin.Begin => offset < 0
                 ? throw new ArgumentOutOfRangeException(nameof(offset), "Seek offset cannot be negative from beginning.")
@@ -176,10 +177,16 @@ public sealed class ChdImageStream : Stream
     }
 
     /// <inheritdoc/>
-    public override void SetLength(long value) => throw new NotSupportedException("ChdImageStream is read-only.");
+    public override void SetLength(long value)
+    {
+        throw new NotSupportedException("ChdImageStream is read-only.");
+    }
 
     /// <inheritdoc/>
-    public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException("ChdImageStream is read-only.");
+    public override void Write(byte[] buffer, int offset, int count)
+    {
+        throw new NotSupportedException("ChdImageStream is read-only.");
+    }
 
     /// <inheritdoc/>
     protected override void Dispose(bool disposing)

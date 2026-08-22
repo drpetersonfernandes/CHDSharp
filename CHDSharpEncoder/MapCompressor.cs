@@ -94,6 +94,24 @@ public static class MapCompressor
             Array.Copy(bs.ToArray(), 0, compressed, 16, compressedDataLen);
         }
 
+        var rawMap = new byte[hunkCount * 12];
+        for (uint i = 0; i < hunkCount; i++)
+            MapEntry.WriteRawMapEntry(rawMap, (int)i, entries[i]);
+        var mapCrc = Crc16.Compute(rawMap);
+
+        // map header: complen, firstoffs, mapcrc, lengthbits/selfbits/parentbits/reserved
+        var headerW = new BigEndianWriter(16);
+        headerW.WriteU32((uint)compressedDataLen);
+        headerW.WriteU48(firstOffset);
+        headerW.WriteU16(mapCrc);
+        headerW.WriteU8(lengthBits);
+        headerW.WriteU8(selfBits);
+        headerW.WriteU8(parentBits);
+        headerW.WriteU8(0);
+
+        Array.Copy(headerW.ToArray(), 0, compressed, 0, 16);
+        return compressed.AsSpan(0, Math.Min(16 + compressedDataLen, compressed.Length)).ToArray();
+
         // writes tree + RLE symbols + per-entry auxiliary data; returns the first nonzero
         // stored offset for the map header
         ulong WriteMapPayload(BitStreamOut stream)
@@ -181,24 +199,6 @@ public static class MapCompressor
 
             return first;
         }
-
-        var rawMap = new byte[hunkCount * 12];
-        for (uint i = 0; i < hunkCount; i++)
-            MapEntry.WriteRawMapEntry(rawMap, (int)i, entries[i]);
-        var mapCrc = Crc16.Compute(rawMap);
-
-        // map header: complen, firstoffs, mapcrc, lengthbits/selfbits/parentbits/reserved
-        var headerW = new BigEndianWriter(16);
-        headerW.WriteU32((uint)compressedDataLen);
-        headerW.WriteU48(firstOffset);
-        headerW.WriteU16(mapCrc);
-        headerW.WriteU8(lengthBits);
-        headerW.WriteU8(selfBits);
-        headerW.WriteU8(parentBits);
-        headerW.WriteU8(0);
-
-        Array.Copy(headerW.ToArray(), 0, compressed, 0, 16);
-        return compressed.AsSpan(0, Math.Min(16 + compressedDataLen, compressed.Length)).ToArray();
     }
 
     /// <summary>

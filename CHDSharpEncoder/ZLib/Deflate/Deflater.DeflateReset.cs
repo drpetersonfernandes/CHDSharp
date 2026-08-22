@@ -34,7 +34,9 @@ internal static partial class Deflater
 #endif
 
         if (s.wrap < 0)
+        {
             s.wrap = -s.wrap; // was made negative by deflate(..., Z_FINISH);
+        }
 
         s.status = InitState;
 

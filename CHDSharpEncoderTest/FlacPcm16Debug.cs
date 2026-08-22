@@ -22,7 +22,10 @@ public class FlacPcm16Debug : IDisposable
     private static readonly string? ChdmanPath = ResolveChdmanPath();
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "flac_dbg_" + Guid.NewGuid().ToString("N"));
 
-    public FlacPcm16Debug() => Directory.CreateDirectory(_dir);
+    public FlacPcm16Debug()
+    {
+        Directory.CreateDirectory(_dir);
+    }
 
     public void Dispose()
     {
@@ -55,6 +58,7 @@ public class FlacPcm16Debug : IDisposable
             var oRaw = oFile.ReadRawHunk(h);
             var rRaw = rFile!.ReadRawHunk(h);
             if (oRaw == null || rRaw == null) continue;
+
             if (!oRaw.AsSpan().SequenceEqual(rRaw))
             {
                 firstDiff = (int)h;
@@ -73,7 +77,11 @@ public class FlacPcm16Debug : IDisposable
         double phase = 0;
         for (var i = 0; i < samples; i++)
         {
-            if (i % 4096 == 0) freq = 180 + rng.NextDouble() * 1200;
+            if (i % 4096 == 0)
+            {
+                freq = 180 + rng.NextDouble() * 1200;
+            }
+
             phase += 2 * Math.PI * freq / 44100.0;
             var sample = (short)(Math.Sin(phase) * 11000 + (rng.NextDouble() - 0.5) * 400);
             b[i * 2] = (byte)sample;
@@ -107,8 +115,10 @@ public class FlacPcm16Debug : IDisposable
         var baseDir = AppContext.BaseDirectory;
         var candidate = Path.Combine(baseDir, exeName);
         if (File.Exists(candidate)) return candidate;
+
         candidate = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "CHDSharpTester", exeName));
         if (File.Exists(candidate)) return candidate;
+
         return null;
     }
 }

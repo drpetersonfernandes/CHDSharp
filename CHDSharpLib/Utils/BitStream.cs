@@ -134,7 +134,9 @@ internal class BitStream
         }
 
         if (_dbitoffs > _bits)
+        {
             _doffset++;
+        }
 
         _bits = 0;
         _buffer = 0;

@@ -926,7 +926,7 @@ internal static class Program
             }
             else
             {
-                ChdEncoder.CreateBlank(outputPath, sizeBytes!.Value, hunkBytes, unitBytes, codecTags, encodeOptions);
+                ChdEncoder.CreateBlank(outputPath, sizeBytes.Value, hunkBytes, unitBytes, codecTags, encodeOptions);
             }
 
             logger?.LogSummary();
@@ -1037,7 +1037,7 @@ internal static class Program
         long? lengthFrames = null;
         var verbose = false;
         int? taskCount = null;
-        for (int i = 0; i < options.Length; i++)
+        for (var i = 0; i < options.Length; i++)
         {
             switch (options[i])
             {
@@ -1094,9 +1094,14 @@ internal static class Program
             var codecTags = ChdCodecs.ParseCodecTags(codecs ?? "avhu");
             var encodeOptions = verbose ? new VerboseHunkLogger().Options : null;
             if (encodeOptions == null && taskCount.HasValue)
+            {
                 encodeOptions = new ChdEncodeOptions();
+            }
+
             if (encodeOptions != null && taskCount.HasValue)
+            {
                 encodeOptions.TaskCount = taskCount;
+            }
 
             log.Information("Creating laserdisc CHD: {Input} -> {Output}  (codecs {Codecs}{Tasks})",
                 Path.GetFileName(inputPath), outputPath,
@@ -1146,6 +1151,7 @@ internal static class Program
                         log.Warning("Invalid input start frame: {Value}", options[i]);
                         return;
                     }
+
                     startFrame = sf;
                     break;
                 case "-if" or "--input-frames" when i + 1 < options.Length:
@@ -1154,6 +1160,7 @@ internal static class Program
                         log.Warning("Invalid input frames: {Value}", options[i]);
                         return;
                     }
+
                     lengthFrames = ifr;
                     break;
                 default:
@@ -1957,7 +1964,7 @@ internal static class Program
     /// </summary>
     private static bool TryParseSizeWithSuffix(string s, out uint result)
     {
-        if (TryParseSizeWithSuffix(s, out long r) && r >= 0 && r <= uint.MaxValue)
+        if (TryParseSizeWithSuffix(s, out long r) && r is >= 0 and <= uint.MaxValue)
         {
             result = (uint)r;
             return true;

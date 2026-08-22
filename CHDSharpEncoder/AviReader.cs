@@ -143,7 +143,7 @@ public sealed class AviReader : IDisposable
         // skip the8-byte RIFF chunk header (fourcc + size), matching ReadSoundSamples
         // which offsets by 8: data.AsSpan(8 + baseIndex * 2)
         const int chunkHeaderSize = 8;
-        int payloadLen = data.Length - chunkHeaderSize;
+        var payloadLen = data.Length - chunkHeaderSize;
         if (payloadLen <= 0)
             return;
 
@@ -151,11 +151,11 @@ public sealed class AviReader : IDisposable
         // YUY2/VYUY copies verbatim. MAME's bitmap_yuy16 stores (Y<<8)|Cb natively;
         // put_u16be then writes [Y,Cb] which is the CHD video byte order. Our byte-based
         // reader achieves the same result: UYVY swaps, YUY2/VYUY pass through.
-        int count = Math.Min(payloadLen, dest.Length);
+        var count = Math.Min(payloadLen, dest.Length);
         var src = data.AsSpan(chunkHeaderSize, count);
         if (stream.Format == FormatUyvy)
         {
-            for (int i = 0; i + 1 < count; i += 2)
+            for (var i = 0; i + 1 < count; i += 2)
             {
                 dest[i] = src[i + 1];
                 dest[i + 1] = src[i];
@@ -179,19 +179,22 @@ public sealed class AviReader : IDisposable
     /// <exception cref="NotSupportedException">The audio format is not 8/16-bit PCM.</exception>
     public void ReadSoundSamples(int channel, uint firstSample, uint numSamples, Span<short> output)
     {
-        var stream = GetAudioStream(channel, out int offset)
+        var stream = GetAudioStream(channel, out var offset)
             ?? throw new ArgumentOutOfRangeException(nameof(channel), $"AVI file has no audio channel {channel}");
         if (stream.Format != 0 || (stream.SampleBits != 8 && stream.SampleBits != 16))
             throw new NotSupportedException($"Unsupported AVI audio format (PCM 8/16-bit required, got {stream.SampleBits}-bit)");
 
-        uint totalSamples = (uint)stream.Chunks.Count > 0 ? PerChannelSampleCount(stream) : 0;
+        var totalSamples = (uint)stream.Chunks.Count > 0 ? PerChannelSampleCount(stream) : 0;
         if (firstSample >= totalSamples)
             throw new ArgumentOutOfRangeException(nameof(firstSample), $"AVI sample {firstSample} is out of range (0..{totalSamples - 1})");
-        if (firstSample + numSamples > totalSamples)
-            numSamples = totalSamples - firstSample;
 
-        uint bytesPerSample = (uint)(stream.SampleBits / 8) * stream.Channels;
-        int outPos = 0;
+        if (firstSample + numSamples > totalSamples)
+        {
+            numSamples = totalSamples - firstSample;
+        }
+
+        var bytesPerSample = (uint)(stream.SampleBits / 8) * stream.Channels;
+        var outPos = 0;
 
         while (numSamples > 0)
         {
@@ -203,6 +206,7 @@ public sealed class AviReader : IDisposable
                 chunkEnd = chunkBase + (uint)(stream.Chunks[chunkNum].Length - 8) / bytesPerSample;
                 if (firstSample < chunkEnd)
                     break;
+
                 chunkBase = chunkEnd;
             }
 
@@ -214,18 +218,22 @@ public sealed class AviReader : IDisposable
             }
 
             var data = ReadChunkData(stream.Chunks[chunkNum].Offset, stream.Chunks[chunkNum].Length);
-            uint samplesThisChunk = Math.Min(chunkEnd - firstSample, numSamples);
+            var samplesThisChunk = Math.Min(chunkEnd - firstSample, numSamples);
 
-            int baseIndex = (int)(stream.Channels * (firstSample - chunkBase) + offset);
+            var baseIndex = (int)(stream.Channels * (firstSample - chunkBase) + offset);
             if (stream.SampleBits == 16)
             {
-                for (int i = 0; i < samplesThisChunk; i++, baseIndex += stream.Channels)
+                for (var i = 0; i < samplesThisChunk; i++, baseIndex += stream.Channels)
+                {
                     output[outPos++] = BinaryPrimitives.ReadInt16LittleEndian(data.AsSpan(8 + baseIndex * 2));
+                }
             }
             else
             {
-                for (int i = 0; i < samplesThisChunk; i++, baseIndex += stream.Channels)
+                for (var i = 0; i < samplesThisChunk; i++, baseIndex += stream.Channels)
+                {
                     output[outPos++] = (short)((data[8 + baseIndex] << 8) - 0x8000);
+                }
             }
 
             firstSample += samplesThisChunk;
@@ -238,18 +246,21 @@ public sealed class AviReader : IDisposable
     {
         ulong total = 0;
         foreach (var (_, length) in stream.Chunks)
+        {
             total += (ulong)((length - 8) / ((stream.SampleBits / 8) * stream.Channels));
+        }
+
         return (uint)Math.Min(total, uint.MaxValue);
     }
 
     /// <summary>Parses the whole file: headers, streams, and chunk indexes.</summary>
     private void ReadMovieData()
     {
-        long fileLength = _file.Length;
+        var fileLength = _file.Length;
 
         // walk root-level RIFF chunks (a second RIFF/'AVIX' extends files past 4 GB)
         long pos = 0;
-        bool anyAvi = false;
+        var anyAvi = false;
         long firstMoviData = -1;
         while (pos + 12 <= fileLength)
         {
@@ -257,28 +268,28 @@ public sealed class AviReader : IDisposable
             if (BinaryPrimitives.ReadUInt32LittleEndian(header) != ChunkTypeRiff)
                 break;
 
-            uint riffSize = BinaryPrimitives.ReadUInt32LittleEndian(header.Slice(4));
-            uint listType = BinaryPrimitives.ReadUInt32LittleEndian(header.Slice(8));
+            var riffSize = BinaryPrimitives.ReadUInt32LittleEndian(header[4..]);
+            var listType = BinaryPrimitives.ReadUInt32LittleEndian(header[8..]);
             if (listType is not (ListTypeAvi or ListTypeAvix))
                 throw new InvalidDataException("Not an AVI file (RIFF type is not 'AVI ')");
 
             anyAvi = true;
-            long bodyEnd = Math.Min(pos + 8 + riffSize, fileLength);
+            var bodyEnd = Math.Min(pos + 8 + riffSize, fileLength);
 
             // walk the chunks inside this RIFF
-            long chunkPos = pos + 12;
+            var chunkPos = pos + 12;
             while (chunkPos + 8 <= bodyEnd)
             {
                 ReadOnlySpan<byte> chunkHeader = ReadAt(chunkPos, 8);
-                uint type = BinaryPrimitives.ReadUInt32LittleEndian(chunkHeader);
-                uint size = BinaryPrimitives.ReadUInt32LittleEndian(chunkHeader.Slice(4));
-                long dataPos = chunkPos + 8;
-                long nextPos = dataPos + size + (size & 1);
+                var type = BinaryPrimitives.ReadUInt32LittleEndian(chunkHeader);
+                var size = BinaryPrimitives.ReadUInt32LittleEndian(chunkHeader[4..]);
+                var dataPos = chunkPos + 8;
+                var nextPos = dataPos + size + (size & 1);
 
                 if (type == ChunkTypeList)
                 {
                     ReadOnlySpan<byte> listHeader = ReadAt(dataPos, 4);
-                    uint listType2 = BinaryPrimitives.ReadUInt32LittleEndian(listHeader);
+                    var listType2 = BinaryPrimitives.ReadUInt32LittleEndian(listHeader);
                     switch (listType2)
                     {
                         case ListTypeHdrl:
@@ -286,7 +297,10 @@ public sealed class AviReader : IDisposable
                             break;
                         case ListTypeMovi:
                             if (firstMoviData < 0)
+                            {
                                 firstMoviData = dataPos + 4;
+                            }
+
                             ScanMoviList(dataPos + 4, size - 4);
                             break;
                     }
@@ -298,6 +312,7 @@ public sealed class AviReader : IDisposable
 
                 if (nextPos <= chunkPos)
                     break;
+
                 chunkPos = nextPos;
             }
 
@@ -306,25 +321,26 @@ public sealed class AviReader : IDisposable
 
         if (!anyAvi)
             throw new InvalidDataException("Not an AVI file (missing RIFF/'AVI ' header)");
+
         ExtractMovieInfo();
     }
 
     /// <summary>Parses 'hdrl': the 'avih' stream count plus one 'strl' list per stream.</summary>
     private void ParseHeaderList(long pos, long size)
     {
-        long end = pos + size;
+        var end = pos + size;
         while (pos + 8 <= end)
         {
             ReadOnlySpan<byte> header = ReadAt(pos, 8);
-            uint type = BinaryPrimitives.ReadUInt32LittleEndian(header);
-            uint chunkSize = BinaryPrimitives.ReadUInt32LittleEndian(header.Slice(4));
-            long dataPos = pos + 8;
+            var type = BinaryPrimitives.ReadUInt32LittleEndian(header);
+            var chunkSize = BinaryPrimitives.ReadUInt32LittleEndian(header[4..]);
+            var dataPos = pos + 8;
 
             if (type == ChunkAvih && chunkSize >= 28)
             {
                 ReadOnlySpan<byte> data = ReadAt(dataPos, (int)Math.Min(chunkSize, 64));
-                uint streamCount = BinaryPrimitives.ReadUInt32LittleEndian(data.Slice(24));
-                for (int i = 0; i < streamCount && i < 16; i++)
+                var streamCount = BinaryPrimitives.ReadUInt32LittleEndian(data[24..]);
+                for (var i = 0; i < streamCount && i < 16; i++)
                     _streams.Add(new AviStream());
             }
             else if (type == ChunkTypeList)
@@ -346,37 +362,37 @@ public sealed class AviReader : IDisposable
         if (stream == null)
             return;
 
-        long end = pos + size;
+        var end = pos + size;
         while (pos + 8 <= end)
         {
             ReadOnlySpan<byte> header = ReadAt(pos, 8);
-            uint type = BinaryPrimitives.ReadUInt32LittleEndian(header);
-            uint chunkSize = BinaryPrimitives.ReadUInt32LittleEndian(header.Slice(4));
-            long dataPos = pos + 8;
+            var type = BinaryPrimitives.ReadUInt32LittleEndian(header);
+            var chunkSize = BinaryPrimitives.ReadUInt32LittleEndian(header[4..]);
+            var dataPos = pos + 8;
 
             if (type == ChunkStrh && chunkSize >= 36)
             {
                 ReadOnlySpan<byte> data = ReadAt(dataPos, 40);
                 stream.Type = BinaryPrimitives.ReadUInt32LittleEndian(data);
-                stream.Scale = BinaryPrimitives.ReadUInt32LittleEndian(data.Slice(20));
-                stream.Rate = BinaryPrimitives.ReadUInt32LittleEndian(data.Slice(24));
-                stream.SamplesFromHeader = BinaryPrimitives.ReadUInt32LittleEndian(data.Slice(32));
+                stream.Scale = BinaryPrimitives.ReadUInt32LittleEndian(data[20..]);
+                stream.Rate = BinaryPrimitives.ReadUInt32LittleEndian(data[24..]);
+                stream.SamplesFromHeader = BinaryPrimitives.ReadUInt32LittleEndian(data[32..]);
             }
             else if (type == ChunkStrf && chunkSize >= 16)
             {
                 ReadOnlySpan<byte> data = ReadAt(dataPos, (int)Math.Min(chunkSize, 64));
                 if (stream.Type == StreamTypeVids)
                 {
-                    stream.Width = (int)BinaryPrimitives.ReadUInt32LittleEndian(data.Slice(4));
-                    stream.Height = (int)BinaryPrimitives.ReadUInt32LittleEndian(data.Slice(8));
-                    stream.Depth = BinaryPrimitives.ReadUInt16LittleEndian(data.Slice(14));
-                    stream.Format = BinaryPrimitives.ReadUInt32LittleEndian(data.Slice(16));
+                    stream.Width = (int)BinaryPrimitives.ReadUInt32LittleEndian(data[4..]);
+                    stream.Height = (int)BinaryPrimitives.ReadUInt32LittleEndian(data[8..]);
+                    stream.Depth = BinaryPrimitives.ReadUInt16LittleEndian(data[14..]);
+                    stream.Format = BinaryPrimitives.ReadUInt32LittleEndian(data[16..]);
                 }
                 else if (stream.Type == StreamTypeAuds)
                 {
-                    stream.Channels = BinaryPrimitives.ReadUInt16LittleEndian(data.Slice(2));
-                    stream.SampleRate = BinaryPrimitives.ReadUInt32LittleEndian(data.Slice(4));
-                    stream.SampleBits = BinaryPrimitives.ReadUInt16LittleEndian(data.Slice(14));
+                    stream.Channels = BinaryPrimitives.ReadUInt16LittleEndian(data[2..]);
+                    stream.SampleRate = BinaryPrimitives.ReadUInt32LittleEndian(data[4..]);
+                    stream.SampleBits = BinaryPrimitives.ReadUInt16LittleEndian(data[14..]);
                 }
             }
 
@@ -388,15 +404,15 @@ public sealed class AviReader : IDisposable
     private void ParseIdx1(long pos, long size, long moviDataBase)
     {
         ReadOnlySpan<byte> data = ReadAt(pos, (int)size);
-        int entries = data.Length / 16;
-        for (int e = 0; e < entries; e++)
+        var entries = data.Length / 16;
+        for (var e = 0; e < entries; e++)
         {
-            int baseIdx = e * 16;
-            uint chunkId = BinaryPrimitives.ReadUInt32LittleEndian(data.Slice(baseIdx));
-            uint offset = BinaryPrimitives.ReadUInt32LittleEndian(data.Slice(baseIdx + 8));
-            uint chunkSize = BinaryPrimitives.ReadUInt32LittleEndian(data.Slice(baseIdx + 12));
+            var baseIdx = e * 16;
+            var chunkId = BinaryPrimitives.ReadUInt32LittleEndian(data[baseIdx..]);
+            var offset = BinaryPrimitives.ReadUInt32LittleEndian(data[(baseIdx + 8)..]);
+            var chunkSize = BinaryPrimitives.ReadUInt32LittleEndian(data[(baseIdx + 12)..]);
 
-            int streamNum = (int)(((chunkId >> 8) & 0xff) - '0') + 10 * (int)((chunkId & 0xff) - '0');
+            var streamNum = (int)(((chunkId >> 8) & 0xff) - '0') + 10 * (int)((chunkId & 0xff) - '0');
             if (streamNum < 0 || streamNum >= _streams.Count)
                 continue;
 
@@ -410,15 +426,15 @@ public sealed class AviReader : IDisposable
     /// </summary>
     private void ScanMoviList(long pos, long size)
     {
-        long end = pos + size;
+        var end = pos + size;
         while (pos + 8 <= end)
         {
             ReadOnlySpan<byte> header = ReadAt(pos, 8);
-            uint chunkId = BinaryPrimitives.ReadUInt32LittleEndian(header);
-            uint chunkSize = BinaryPrimitives.ReadUInt32LittleEndian(header.Slice(4));
+            var chunkId = BinaryPrimitives.ReadUInt32LittleEndian(header);
+            var chunkSize = BinaryPrimitives.ReadUInt32LittleEndian(header[4..]);
 
-            int streamNum = (int)(((chunkId >> 8) & 0xff) - '0') + 10 * (int)((chunkId & 0xff) - '0');
-            char kind = (char)((chunkId >> 24) & 0xff); // 'dc'/'db' video, 'wb' audio
+            var streamNum = (int)(((chunkId >> 8) & 0xff) - '0') + 10 * (int)((chunkId & 0xff) - '0');
+            var kind = (char)((chunkId >> 24) & 0xff); // 'dc'/'db' video, 'wb' audio
             if (streamNum >= 0 && streamNum < _streams.Count && kind is 'd' or 'c' or 'w')
             {
                 _streams[streamNum].Chunks.Add((pos, (int)(chunkSize + 8)));
@@ -467,6 +483,7 @@ public sealed class AviReader : IDisposable
         foreach (var s in _streams)
             if (s.Type == StreamTypeVids)
                 return s;
+
         return null;
     }
 
@@ -477,6 +494,7 @@ public sealed class AviReader : IDisposable
         {
             if (s.Type != StreamTypeAuds || s.Channels == 0)
                 continue;
+
             if (channel < s.Channels)
             {
                 offset = channel;
@@ -494,6 +512,7 @@ public sealed class AviReader : IDisposable
     {
         if (offset < 0 || length < 8 || offset + length > _file.Length)
             throw new InvalidDataException($"AVI chunk at {offset} (length {length}) is out of bounds");
+
         return ReadAt(offset, length);
     }
 
@@ -501,12 +520,13 @@ public sealed class AviReader : IDisposable
     {
         var buffer = new byte[count];
         _file.Position = offset;
-        int read = 0;
+        var read = 0;
         while (read < count)
         {
-            int n = _file.Read(buffer, read, count - read);
+            var n = _file.Read(buffer, read, count - read);
             if (n == 0)
                 throw new EndOfStreamException($"Unexpected end of AVI file at offset {offset}");
+
             read += n;
         }
 
@@ -526,5 +546,8 @@ public sealed class AviReader : IDisposable
     }
 
     /// <inheritdoc/>
-    public void Dispose() => _file.Dispose();
+    public void Dispose()
+    {
+        _file.Dispose();
+    }
 }

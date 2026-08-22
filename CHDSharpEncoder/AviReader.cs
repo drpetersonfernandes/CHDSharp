@@ -10,7 +10,10 @@ namespace CHDSharpEncoder;
 /// and serves YUY-family video frames and PCM sound samples.
 ///
 /// Supported video: uncompressed YUY2/VYUY (bytes pass through unchanged) and UYVY
-/// (byte-swapped per pixel pair), matching MAME's conversion to its native YUY16 bitmap.
+/// (byte-swapped per pixel pair to YUY2 order), matching MAME's <c>yuv_decompress_to_yuy16</c>
+/// output stored via <c>put_u16be</c> into the CHD video bitstream. On entry the encoder
+/// expects YUY2 byte order [Y0,Cb,Y1,Cr] per pixel pair so that Y occupies even byte
+/// offsets and Cb/Cr occupy the interleaved odd offsets.
 /// Supported audio: uncompressed PCM, 8 or 16 bits per sample.
 /// </summary>
 public sealed class AviReader : IDisposable
@@ -137,19 +140,30 @@ public sealed class AviReader : IDisposable
         var chunk = stream.Chunks[(int)frameNum];
         var data = ReadChunkData(chunk.Offset, chunk.Length);
 
-        // yuv_decompress_to_yuy16: YUY2/VYUY copy verbatim, UYVY swaps each pixel pair
-        int count = Math.Min(data.Length, dest.Length);
+        // skip the8-byte RIFF chunk header (fourcc + size), matching ReadSoundSamples
+        // which offsets by 8: data.AsSpan(8 + baseIndex * 2)
+        const int chunkHeaderSize = 8;
+        int payloadLen = data.Length - chunkHeaderSize;
+        if (payloadLen <= 0)
+            return;
+
+        // yuv_decompress_to_yuy16: UYVY byte-swaps each pixel pair to YUY2 order,
+        // YUY2/VYUY copies verbatim. MAME's bitmap_yuy16 stores (Y<<8)|Cb natively;
+        // put_u16be then writes [Y,Cb] which is the CHD video byte order. Our byte-based
+        // reader achieves the same result: UYVY swaps, YUY2/VYUY pass through.
+        int count = Math.Min(payloadLen, dest.Length);
+        var src = data.AsSpan(chunkHeaderSize, count);
         if (stream.Format == FormatUyvy)
         {
             for (int i = 0; i + 1 < count; i += 2)
             {
-                dest[i] = data[i + 1];
-                dest[i + 1] = data[i];
+                dest[i] = src[i + 1];
+                dest[i + 1] = src[i];
             }
         }
         else
         {
-            data.AsSpan(0, count).CopyTo(dest);
+            src.CopyTo(dest);
         }
     }
 

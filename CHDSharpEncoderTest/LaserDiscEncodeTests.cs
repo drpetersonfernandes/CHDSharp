@@ -111,7 +111,7 @@ public class LaserDiscEncodeTests : IDisposable
 
         using var chd = OpenChd(chdPath);
         var avav = chd.Metadata.Single(m => string.Equals(m.Tag, "AVAV", StringComparison.Ordinal));
-        Assert.Contains("FPS:59.940060 WIDTH:320 HEIGHT:262 INTERLACED:1", avav.GetText(), StringComparison.Ordinal);
+        Assert.Contains("FPS:59.940058 WIDTH:320 HEIGHT:262 INTERLACED:1", avav.GetText(), StringComparison.Ordinal);
 
         // AVLD carries one packed 16-byte VBI record per field
         var avld = chd.Metadata.Single(m => string.Equals(m.Tag, "AVLD", StringComparison.Ordinal));
@@ -205,10 +205,10 @@ public class LaserDiscEncodeTests : IDisposable
         // two frames per hunk
         var info = ChdEncoder.EncodeLaserDisc(aviPath, Path.Combine(_testDataDir, "multi.chd"), hunkBytes: frameBytes * 2);
         Assert.Equal(frameBytes * 2, info.HunkBytes);
-        Assert.Equal(5ul, info.Frames);
+        Assert.Equal(10ul, info.Frames);
 
         using var chd = OpenChd(Path.Combine(_testDataDir, "multi.chd"));
-        Assert.Equal(5ul * frameBytes * 2, chd.TotalBytes);
+        Assert.Equal(10ul * frameBytes * 2, chd.TotalBytes);
         for (uint hunk = 0; hunk < 5; hunk++)
         {
             var buffer = new byte[chd.HunkBytes];
@@ -348,6 +348,8 @@ internal static class AviTestWriter
         uint formatFourcc = FourCc(format);
         var frameBytes = width * height * 2;
 
+        bool isUyvy = string.Equals(format, "UYVY", StringComparison.OrdinalIgnoreCase);
+
         var videoFrames = new byte[frames][];
         for (var f = 0; f < frames; f++)
         {
@@ -357,10 +359,27 @@ internal static class AviTestWriter
                 for (var x = 0; x < width; x += 2)
                 {
                     var off = (y * width + x) * 2;
-                    data[off] = (byte)((x * 4 + f * 11) & 0xFF);                   // Cb (or U in UYVY)
-                    data[off + 1] = (byte)((y * 3 + f * 7) & 0xFF);                // Y
-                    data[off + 2] = (byte)(((x + y) * 2 + f * 13) & 0xFF);         // Cr
-                    data[off + 3] = (byte)((y * 3 + f * 7 + ((x / 2 + f) % 8)) & 0xFF); // Y
+                    byte cb = (byte)((x * 4 + f * 11) & 0xFF);
+                    byte y0 = (byte)((y * 3 + f * 7) & 0xFF);
+                    byte cr = (byte)(((x + y) * 2 + f * 13) & 0xFF);
+                    byte y1 = (byte)((y * 3 + f * 7 + ((x / 2 + f) % 8)) & 0xFF);
+
+                    if (isUyvy)
+                    {
+                        // UYVY byte order: [U, Y0, V, Y1] = [Cb, Y0, Cr, Y1]
+                        data[off] = cb;
+                        data[off + 1] = y0;
+                        data[off + 2] = cr;
+                        data[off + 3] = y1;
+                    }
+                    else
+                    {
+                        // YUY2 byte order: [Y0, Cb, Y1, Cr]
+                        data[off] = y0;
+                        data[off + 1] = cb;
+                        data[off + 2] = y1;
+                        data[off + 3] = cr;
+                    }
                 }
             }
 

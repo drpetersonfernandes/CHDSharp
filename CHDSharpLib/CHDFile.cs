@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 using System.Security.Cryptography;
@@ -99,6 +100,8 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     private uint? _unitBytes;
 
     private byte[]? _precache;
+
+    private ReadAheadManager? _readAhead;
 
     // Optional memory-mapped view of the whole file (Phase 7.1): when present, hunk data is
     // copied straight out of mapped memory, avoiding syscalls entirely. The backing FileStream
@@ -846,6 +849,58 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             var hunks = value / HunkBytes;
             ConfigureCache(hunks > 0 ? (int)Math.Min(hunks, int.MaxValue) : 1);
         }
+    }
+
+    /// <summary>
+    /// Number of hunks that the read-ahead manager pre-decompresses in the background after
+    /// each <see cref="ReadHunk"/> call. Defaults to 0 (disabled). Setting this to a value
+    /// &gt; 0 enables background read-ahead. The read-ahead cache is an L2 layer checked
+    /// before the LRU cache in <see cref="ReadHunk"/>. Background tasks use
+    /// <see cref="ReadHunkConcurrent"/> and are capped at <see cref="ReadAheadHunkCount"/>
+    /// concurrent decompressions via a semaphore.
+    /// </summary>
+    /// <remarks>
+    /// Read-ahead is most beneficial for sequential access patterns (streaming, verification).
+    /// For purely random access, the LRU <see cref="CacheSize"/> is more effective. The two
+    /// caches are complementary: read-ahead fills upcoming hunks proactively, while the LRU
+    /// retains recently accessed hunks.
+    /// </remarks>
+    public int ReadAheadHunkCount
+    {
+        get => _readAhead != null ? _readAhead._lookAhead : 0;
+        set => ConfigureReadAhead(value);
+    }
+
+    /// <summary>
+    /// Enables or disables background read-ahead decompression. When enabled, each
+    /// <see cref="ReadHunk"/> call triggers background pre-decompression of the next
+    /// <paramref name="lookAhead"/> hunks (default 4). Set to 0 or negative to disable.
+    /// </summary>
+    /// <param name="lookAhead">Number of hunks to read ahead. Default is 4.</param>
+    public void ConfigureReadAhead(int lookAhead)
+    {
+        if (lookAhead <= 0)
+        {
+            _readAhead?.Dispose();
+            _readAhead = null;
+            return;
+        }
+
+        if (_readAhead != null)
+        {
+            _readAhead.Dispose();
+        }
+
+        _readAhead = new ReadAheadManager(this, lookAhead);
+    }
+
+    /// <summary>
+    /// Clears the read-ahead cache, discarding any pre-decompressed hunks. Useful after
+    /// a seek that invalidates the sequential read pattern.
+    /// </summary>
+    public void FlushReadAhead()
+    {
+        _readAhead?.Clear();
     }
 
     /// <summary>
@@ -1920,6 +1975,15 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 
         var me = _chd.Map[hunknum];
 
+        // Read-ahead L2 cache: check if a background task already decompressed this hunk.
+        if (_readAhead != null && _readAhead.TryGet(hunknum, buffer))
+        {
+            // Also seed the LRU cache so random revisits benefit.
+            if (_cacheSize > 1)
+                AddToCache(hunknum, buffer);
+            return ChdError.Chderrnone;
+        }
+
         // Multi-hunk LRU cache: serve the cached decompressed hunk directly if present.
         if (_cacheSize > 1 && TryGetCachedHunk(hunknum, buffer))
             return ChdError.Chderrnone;
@@ -1930,6 +1994,8 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             var err = ReadParentHunk(me, buffer);
             if (err == ChdError.Chderrnone && _cacheSize > 1)
                 AddToCache(hunknum, buffer);
+            if (err == ChdError.Chderrnone)
+                _readAhead?.SubmitReadAhead(hunknum);
             return err;
         }
 
@@ -1970,6 +2036,10 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
             var rbErr = ChdBlockRead.ReadBlock(me, new ArrayPool(_chd.Blocksize), _chd.ChdReader, _codec, buffer, (int)_chd.Blocksize);
             if (rbErr == ChdError.Chderrnone && _cacheSize > 1)
                 AddToCache(hunknum, buffer);
+
+            if (rbErr == ChdError.Chderrnone)
+                _readAhead?.SubmitReadAhead(hunknum);
+
             return rbErr;
         }
         catch (Exception ex)
@@ -2605,6 +2675,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <summary>Asynchronously releases the underlying stream (unless opened with <c>leaveOpen: true</c>) and any internally-owned parent instance.</summary>
     public async ValueTask DisposeAsync()
     {
+        _readAhead?.Dispose();
         _codec.Dispose();
         _concurrentCodec.Dispose();
         _mmfView?.Dispose();
@@ -2629,6 +2700,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <summary>Releases the underlying stream (unless opened with <c>leaveOpen: true</c>), the parent reference if owned, and codec resources.</summary>
     public void Dispose()
     {
+        _readAhead?.Dispose();
         _codec.Dispose();
         _concurrentCodec.Dispose();
         _mmfView?.Dispose();
@@ -3007,5 +3079,110 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 
         /// <summary>The cached decompressed hunk data (always <see cref="HunkBytes"/> long).</summary>
         internal byte[] Data { get; }
+    }
+
+    /// <summary>
+    /// Background read-ahead manager: pre-decompresses upcoming hunks into a concurrent
+    /// cache so that sequential <see cref="ReadHunk"/> calls hit memory instead of
+    /// decompressing synchronously. Uses <see cref="ReadHunkConcurrent"/> for thread-safe
+    /// decompression and a <see cref="SemaphoreSlim"/> to cap concurrency.
+    /// </summary>
+    private sealed class ReadAheadManager : IDisposable
+    {
+        private readonly ChdFile _chd;
+        internal readonly int _lookAhead;
+        private readonly ConcurrentDictionary<uint, byte[]> _cache = new();
+        private readonly SemaphoreSlim _semaphore;
+        private readonly ThreadLocal<ChdCodecState> _codec = new(() => new ChdCodecState());
+        private readonly CancellationTokenSource _cts = new();
+        private readonly object _submitLock = new();
+
+        internal ReadAheadManager(ChdFile chd, int lookAhead)
+        {
+            _chd = chd;
+            _lookAhead = lookAhead;
+            _semaphore = new SemaphoreSlim(lookAhead, lookAhead);
+        }
+
+        /// <summary>Tries to retrieve a pre-decompressed hunk from the cache.</summary>
+        internal bool TryGet(uint hunknum, byte[] buffer)
+        {
+            if (!_cache.TryRemove(hunknum, out var data))
+                return false;
+
+            Array.Copy(data, 0, buffer, 0, _chd._chd.Blocksize);
+            _semaphore.Release();
+            return true;
+        }
+
+        /// <summary>Submits background read-ahead tasks for hunks after <paramref name="currentHunk"/>.</summary>
+        internal void SubmitReadAhead(uint currentHunk)
+        {
+            var total = _chd._chd.Totalblocks;
+            var token = _cts.Token;
+
+            lock (_submitLock)
+            {
+                for (var i = 1; i <= _lookAhead; i++)
+                {
+                    var next = currentHunk + (uint)i;
+                    if (next >= total)
+                        break;
+
+                    if (_cache.ContainsKey(next))
+                        continue;
+
+                    if (!_semaphore.Wait(0))
+                        break;
+
+                    _ = Task.Run(() => DecompressHunk(next, token), token);
+                }
+            }
+        }
+
+        private void DecompressHunk(uint hunknum, CancellationToken token)
+        {
+            try
+            {
+                if (token.IsCancellationRequested)
+                    return;
+
+                var data = new byte[_chd._chd.Blocksize];
+                var err = _chd.ReadHunkConcurrent(hunknum, data, token);
+                if (err == ChdError.Chderrnone)
+                {
+                    _cache[hunknum] = data;
+                }
+                else
+                {
+                    _semaphore.Release();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                _semaphore.Release();
+            }
+            catch
+            {
+                _semaphore.Release();
+            }
+        }
+
+        internal int CacheCount => _cache.Count;
+
+        internal void Clear()
+        {
+            _cache.Clear();
+            _semaphore.Release(_lookAhead - _semaphore.CurrentCount);
+        }
+
+        public void Dispose()
+        {
+            _cts.Cancel();
+            _cts.Dispose();
+            _codec.Dispose();
+            _semaphore.Dispose();
+            _cache.Clear();
+        }
     }
 }

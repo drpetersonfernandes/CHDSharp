@@ -54,6 +54,12 @@ internal static partial class Inflater
             ref var here = ref Unsafe.Add(ref lcode, hold & lmask); // retrieved table entry
         dolen:
             uint op = here.bits; // code bits, operation, extra bits, or window position, window bytes to copy
+            if (op == 0)
+            {
+                strm.msg = "invalid literal/length code";
+                state.mode = InflateMode.Bad;
+                break;
+            }
             hold >>= (int)op;
             bits -= op;
             op = here.op;
@@ -97,6 +103,12 @@ internal static partial class Inflater
                 here = ref Unsafe.Add(ref dcode, hold & dmask);
             dodist:
                 op = here.bits;
+                if (op == 0)
+                {
+                    strm.msg = "invalid distance code";
+                    state.mode = InflateMode.Bad;
+                    break;
+                }
                 hold >>= (int)op;
                 bits -= op;
                 op = here.op;

@@ -523,6 +523,12 @@ internal static partial class Inflater
                             next_in++;
                             bits += 8;
                         }
+                        if (here.bits == 0)
+                        {
+                            strm.msg = "invalid code lengths set";
+                            state.mode = InflateMode.Bad;
+                            break;
+                        }
                         if (here.val < 16)
                         {
                             hold >>= here.bits;
@@ -802,6 +808,12 @@ internal static partial class Inflater
                         next_in++;
                         bits += 8;
                     }
+                    if (here.bits == 0)
+                    {
+                        strm.msg = "invalid code length";
+                        state.mode = InflateMode.Bad;
+                        break;
+                    }
                     if (here.op > 0 && (here.op & 0xf0) == 0)
                     {
                         last = here;
@@ -821,6 +833,12 @@ internal static partial class Inflater
                             next = ref Unsafe.Add(ref next, 1U);
                             next_in++;
                             bits += 8;
+                        }
+                        if (here.bits == 0)
+                        {
+                            strm.msg = "invalid literal/length code";
+                            state.mode = InflateMode.Bad;
+                            break;
                         }
                         hold >>= last.bits;
                         bits -= last.bits;
@@ -903,6 +921,12 @@ internal static partial class Inflater
                         next_in++;
                         bits += 8;
                     }
+                    if (here.bits == 0)
+                    {
+                        strm.msg = "invalid distance code";
+                        state.mode = InflateMode.Bad;
+                        break;
+                    }
                     if ((here.op & 0xf0) == 0)
                     {
                         last = here;
@@ -923,6 +947,12 @@ internal static partial class Inflater
                             next = ref Unsafe.Add(ref next, 1U);
                             next_in++;
                             bits += 8;
+                        }
+                        if (here.bits == 0)
+                        {
+                            strm.msg = "invalid distance code";
+                            state.mode = InflateMode.Bad;
+                            break;
                         }
                         hold >>= last.bits;
                         bits -= last.bits;

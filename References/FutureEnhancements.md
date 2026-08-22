@@ -65,8 +65,9 @@ Legend — issue references: `#NN` = [rtissera/libchdr issue](https://github.com
 | Field | Value |
 |-------|-------|
 | **Missing Feature** | libchdr's bundled miniz 3.1.1 has an infinite-loop vulnerability in `tinfl_decompress` when `code_len==0` is reached during Huffman decoding (fixed in miniz 3.1.2). A crafted zlib/deflate hunk can hang `chd_read` indefinitely — denial of service via untrusted CHD input. CHDSharp's vendored zlib 1.3.1 port (`CHDSharpEncoder/ZLib/`) and the managed ZstdSharp decoder should be audited for the same class of bug. |
-| **Implementation Status** | Not planned |
+| **Implementation Status** | Finished |
 | **Proposed Logic** | (1) Audit the vendored zlib 1.3.1 port's inflate path (`CHDSharpEncoder/ZLib/`) for the `code_len==0` guard in the Huffman decode loop — add `if (code_len == 0) return Z_DATA_ERROR` if missing. (2) Audit ZstdSharp's managed inflate for equivalent bounds. (3) Add a fuzz test that feeds crafted deflate streams to `ChdFile.Open` + `ReadHunk` and asserts no hang (timeout-based). (4) Verify the encoder's deflate output does not trigger the bug in other decoders. |
+| **Implemented As** | (1) Added `here.bits == 0` guards in `Inflater.Inflate` (`Len`, `Dist`, and `CodeLens` states) and `InflateFast` (`dolen` and `dodist` paths). When a Huffman table entry has `bits=0`, the decoder transitions to `InflateMode.Bad` and returns `Z_DATA_ERROR` instead of looping indefinitely. (2) Added guards for both first-level and second-level table lookups — all paths that follow sub-table references now validate `here.bits > 0` before proceeding. (3) Audited ZstdSharp (managed zstd port) — zstd uses a different compression format (FSE + Huffman) that does not have the same `code_len==0` code pattern; no changes needed. (4) Verified encoder output does not trigger the guards — 457 encode/round-trip tests pass. (5) Added 9 fuzz tests in `DeflateInfiniteLoopTests` that feed crafted deflate streams (empty, random, truncated, all-zero, dynamic blocks with zero lengths, single code lengths) to `ReadHunk` with 5-second timeouts and assert no hang. |
 | **Estimated Time** | 2–3 hours |
 
 ---

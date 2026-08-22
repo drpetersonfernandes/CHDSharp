@@ -1,7 +1,9 @@
 # Future Enhancements
 
 Ordered by importance, driven by the [libchdr issue tracker](https://github.com/rtissera/libchdr/issues)
-(open and closed) and by what consumers of a CHD decoding library actually ask for.
+(open and closed), by what consumers of a CHD decoding library actually ask for,
+and by feature parity comparison against [chd-rs](https://github.com/SnowflakePowered/chd-rs),
+[CHDlite](https://github.com/rtissera/CHDlite), and MAME 0.288 chdman.
 Optional enhancements are at the bottom.
 
 Legend — issue references: `#NN` = [rtissera/libchdr issue](https://github.com/rtissera/libchdr/issues/NN),
@@ -319,11 +321,88 @@ Legend — issue references: `#NN` = [rtissera/libchdr issue](https://github.com
 
 ---
 
+### 26. Hard Disk Ident Metadata (IDNT)
+
+| Field | Value |
+|-------|-------|
+| **Missing Feature** | chdman `createhd -id <ident.bin>` reads an ATA IDENTIFY DEVICE response (512 bytes) from a file and stores it as `IDNT` metadata. This preserves the original drive's model, serial, CHS geometry, and firmware revision — needed by some emulators (e.g. OG Xbox HDD emulation). CHDSharp's `createhd` command and `HardDiskMetadata` class do not read or write `IDNT` entries. |
+| **Implementation Status** | Not planned |
+| **Proposed Logic** | (1) Add `IdentMetadataTag = 0x494E5452` ("IDNT") constant and `BuildIdentMetadata(byte[] identData)` in `MetadataWriter`. (2) In `createhd`, accept `--ident <path>` CLI flag; read the 512-byte file and write it as an `IDNT` metadata entry. (3) In `ChdFile`, expose `IdentData` property that returns the raw `IDNT` bytes (or null). (4) In `ReadHeader`, include `IDNT` in the DTO if present. (5) During `copy`, clone `IDNT` entries. |
+| **Estimated Time** | 2–3 hours |
+
+---
+
+### 27. Hard Disk Key Metadata (KEY)
+
+| Field | Value |
+|-------|-------|
+| **Missing Feature** | chdman stores hard disk encryption keys as `KEY ` metadata (binary blob). Used by OG Xbox and other platforms that encrypt HDD contents. CHDSharp has no read/write support for this tag. |
+| **Implementation Status** | Not planned |
+| **Proposed Logic** | (1) Add `KeyMetadataTag = 0x4B455920` ("KEY ") constant. (2) Expose `KeyData` property on `ChdFile` returning the raw bytes. (3) In `ChdHeaderInfo` DTO, include the key if present. (4) During `copy`, clone `KEY ` entries. (5) In CLI, support `--key <path>` for `createhd`. |
+| **Estimated Time** | 1–2 hours |
+
+---
+
+### 28. PCMCIA CIS Metadata (CIS)
+
+| Field | Value |
+|-------|-------|
+| **Missing Feature** | chdman stores PCMCIA Card Information Structure as `CIS ` metadata (binary blob). Used by PC Engine CD and other platforms with PCMCIA interfaces. CHDSharp has no read/write support for this tag. |
+| **Implementation Status** | Not planned |
+| **Proposed Logic** | (1) Add `PcmciaCisMetadataTag = 0x43495320` ("CIS ") constant. (2) Expose `PcmciaCisData` property on `ChdFile`. (3) During `copy`, clone `CIS ` entries. |
+| **Estimated Time** | 1 hour |
+
+---
+
+### 29. Open Parent Callback (Lazy Parent Resolution)
+
+| Field | Value |
+|-------|-------|
+| **Missing Feature** | MAME's `chd_file::open()` accepts an `open_parent_func` callback that resolves a parent CHD by SHA-1 hash at read time, rather than requiring an explicit file path upfront. This enables libraries and frontends (RetroArch, MAME) to implement their own parent search logic (database lookup, ROM set scanning) without the CHD library needing to know the file location. CHDSharp currently requires an explicit `parentPath` or pre-opened `ChdFile` instance. |
+| **Implementation Status** | Not planned |
+| **Proposed Logic** | (1) Define `Func<HashInfo, ChdFile?>?` delegate type for parent resolution (takes a record with `Sha1` and optional `Md5`, returns a parent `ChdFile` or null). (2) Add `ChdFile.Open(Stream, Func<HashInfo, ChdFile?> parentResolver, ...)` overload. During `ReadHunk`, when a parent-referencing hunk is encountered, call the resolver if no parent is set. Cache the resolved parent. (3) Add `Chd.CheckFileWithParent(path, Func<...> resolver)` variant. (4) Keep existing explicit-parent overloads unchanged. |
+| **Estimated Time** | 3–4 hours |
+
+---
+
+### 30. Blank HD CHD Creation Without Input
+
+| Field | Value |
+|-------|-------|
+| **Missing Feature** | chdman `createhd` can create a zero-filled hard disk CHD without reading from an input file (using `--size` flag). Useful for creating virtual hard drives for emulators. CHDSharp's `EncodeRaw`/`EncodeHardDisk` require a source stream. |
+| **Implementation Status** | Not planned |
+| **Proposed Logic** | (1) Add `ChdEncoder.CreateBlank(string outputPath, long totalBytes, int hunkSize, int unitSize, string compression, ChsGeometry? chs, int sectorSize)` static method. (2) Implementation: create a zero-filled hunk buffer, write `totalHunks` hunks of all-zeros using `COMPRESSION_NONE` (or self-references for dedup). (3) Write hard disk metadata from CHS if provided. (4) CLI: `createhd --size 500M --chs 1024,16,63 -o blank.chd`. (5) `CreateBlankAsync` variant with `IProgress<ChdProgress>`. |
+| **Estimated Time** | 2–3 hours |
+
+---
+
+### 31. Metadata Upgrade During Copy/Recompress
+
+| Field | Value |
+|-------|-------|
+| **Missing Feature** | chdman's `copy` command upgrades legacy metadata tags to their current equivalents: `CHCD` → `CHT2`, `CHGT` → `CHGD` (with CDDA byte-swap flag fix). CHDSharp's `Copy` method clones metadata verbatim without upgrading. Old CHDs created with pre-V5 chdman may carry legacy tags that newer tools don't handle optimally. |
+| **Implementation Status** | Not planned |
+| **Proposed Logic** | In `ChdEncoder.Copy`, after cloning metadata entries, scan for legacy tags: (1) If `CHCD` is found, parse its binary track data, convert to `CHT2` text format (adding pregap/postgap fields), and replace the entry. (2) If `CHGT` is found, parse its binary track data, convert to `CHGD` text format, and replace. (3) Remove the old entries. (4) Add a `--no-upgrade` CLI flag to preserve legacy tags if the user explicitly wants them. |
+| **Estimated Time** | 2–3 hours |
+
+---
+
+### 32. K/M/G Size Suffix Parsing in CLI
+
+| Field | Value |
+|-------|-------|
+| **Missing Feature** | chdman accepts human-readable size suffixes: `10M` = 10485760, `2G` = 2147483648, `512K` = 524288. CHDSharp's CLI parses only plain numeric values for `--hunksize`, `--unitsize`, `--size`, `--inputbytes` etc. |
+| **Implementation Status** | Not planned |
+| **Proposed Logic** | Add `ParseSizeWithSuffix(string s)` utility that: (1) strips trailing K/M/G/T suffix, (2) parses the numeric part, (3) multiplies by 1024/1048576/1073741824/1099511627776. Apply to all CLI options that accept byte sizes. |
+| **Estimated Time** | 30 minutes |
+
+---
+
 ## Optional Enhancements
 
 ---
 
-### 26. Precache — Full File In-Memory Cache
+### 33. Precache — Full File In-Memory Cache
 
 | Field | Value |
 |-------|-------|

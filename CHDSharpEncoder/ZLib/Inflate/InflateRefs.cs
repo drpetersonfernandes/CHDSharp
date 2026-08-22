@@ -4,15 +4,15 @@ namespace CHDSharpEncoder.ZLib.Inflate;
 
 internal ref struct InflateRefs
 {
-    internal ref Code codes;
-    internal ref ushort lens;
-    internal ref ushort work;
-    internal ref byte window;
-    internal ref Code lencode;
-    internal ref Code distcode;
-    internal ref ushort order;
-    internal ref ushort lbase;
-    internal ref ushort lext;
-    internal ref ushort dbase;
-    internal ref ushort dext;
+    internal ref Code Codes;
+    internal ref ushort Lens;
+    internal ref ushort Work;
+    internal ref byte Window;
+    internal ref Code Lencode;
+    internal ref Code Distcode;
+    internal ref ushort Order;
+    internal ref ushort Lbase;
+    internal ref ushort Lext;
+    internal ref ushort Dbase;
+    internal ref ushort Dext;
 }

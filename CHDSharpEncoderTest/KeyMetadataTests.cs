@@ -153,13 +153,13 @@ public class KeyMetadataTests : IDisposable
 
         var entries = new List<MetadataEntry>
         {
-            new MetadataEntry
+            new()
             {
                 Tag = MetadataWriter.KeyMetadataTag,
                 Flags = MetadataWriter.ChdMdflagsChecksum,
                 Payload = keyData
             },
-            new MetadataEntry
+            new()
             {
                 Tag = 0x54455354, // 'TEST'
                 Flags = MetadataWriter.ChdMdflagsChecksum,
@@ -192,13 +192,13 @@ public class KeyMetadataTests : IDisposable
 
         var entries = new List<MetadataEntry>
         {
-            new MetadataEntry
+            new()
             {
                 Tag = MetadataWriter.KeyMetadataTag,
                 Flags = MetadataWriter.ChdMdflagsChecksum,
                 Payload = keyData
             },
-            new MetadataEntry
+            new()
             {
                 Tag = MetadataWriter.PcmciaCisMetadataTag,
                 Flags = MetadataWriter.ChdMdflagsChecksum,

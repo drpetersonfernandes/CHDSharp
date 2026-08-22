@@ -140,7 +140,7 @@ public class IdentMetadataTests : IDisposable
         var entries = new List<MetadataEntry>
         {
             MetadataWriter.BuildIdentMetadata(identData),
-            new MetadataEntry
+            new()
             {
                 Tag = 0x54455354, // 'TEST'
                 Flags = MetadataWriter.ChdMdflagsChecksum,
@@ -175,13 +175,13 @@ public class IdentMetadataTests : IDisposable
         var entries = new List<MetadataEntry>
         {
             MetadataWriter.BuildIdentMetadata(identData),
-            new MetadataEntry
+            new()
             {
                 Tag = MetadataWriter.KeyMetadataTag,
                 Flags = MetadataWriter.ChdMdflagsChecksum,
                 Payload = keyData
             },
-            new MetadataEntry
+            new()
             {
                 Tag = MetadataWriter.PcmciaCisMetadataTag,
                 Flags = MetadataWriter.ChdMdflagsChecksum,

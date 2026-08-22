@@ -29,8 +29,8 @@ public delegate ChdFile? ParentResolver(byte[]? parentSha1, byte[]? parentMd5);
     /// child (differential) CHD, supply its parent with
     /// <see cref="Open(string, string, out ChdFile, System.Threading.CancellationToken)"/> or
     /// <see cref="Open(string, ChdFile, out ChdFile, System.Threading.CancellationToken)"/>. Then decompress individual
-    /// hunks with <see cref="ReadHunk"/>, read arbitrary byte ranges with
-    /// <see cref="Read"/>, or iterate the whole image with <see cref="EnumerateHunks"/>.
+    /// hunks with <see cref="ReadHunk(uint, byte[], CancellationToken)"/>, read arbitrary byte ranges with
+    /// <see cref="Read(ulong, byte[], int, int, CancellationToken)"/>, or iterate the whole image with <see cref="EnumerateHunks"/>.
     /// Async variants of every operation are available (<see cref="OpenAsync(string, System.Threading.CancellationToken)"/>,
     /// <see cref="ReadHunkAsync"/>, <see cref="ReadAsync"/>).
 /// </para>
@@ -153,7 +153,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <summary>
     /// Number of decompressed hunks retained by the multi-hunk LRU cache (libchdr #36).
     /// Defaults to 1, which keeps the same behaviour as the single-hunk <c>_cachedHunk</c> slot
-    /// (one hunk held between reads). Setting it to a value &gt; 1 makes <see cref="ReadHunk"/>
+    /// (one hunk held between reads). Setting it to a value &gt; 1 makes <see cref="ReadHunk(uint, byte[], CancellationToken)"/>
     /// keep the last <see cref="CacheSize"/> distinct hunks decompressed, so random reads that
     /// revisit hunks avoid re-decompression. Memory is capped at <c>CacheSize * HunkBytes</c>.
     /// Set to 0 or 1 to disable the multi-hunk cache (back to single-slot behaviour).
@@ -334,6 +334,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                 if (string.Equals(entry.Tag, "CIS ", StringComparison.Ordinal))
                     return entry.Data;
             }
+
             return null;
         }
     }
@@ -355,6 +356,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                 if (string.Equals(entry.Tag, "KEY ", StringComparison.Ordinal))
                     return entry.Data;
             }
+
             return null;
         }
     }
@@ -377,6 +379,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
                 if (string.Equals(entry.Tag, "IDNT", StringComparison.Ordinal))
                     return entry.Data;
             }
+
             return null;
         }
     }
@@ -856,9 +859,9 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 
     /// <summary>
     /// Number of hunks that the read-ahead manager pre-decompresses in the background after
-    /// each <see cref="ReadHunk"/> call. Defaults to 0 (disabled). Setting this to a value
+    /// each <see cref="ReadHunk(uint, byte[], CancellationToken)"/> call. Defaults to 0 (disabled). Setting this to a value
     /// &gt; 0 enables background read-ahead. The read-ahead cache is an L2 layer checked
-    /// before the LRU cache in <see cref="ReadHunk"/>. Background tasks use
+    /// before the LRU cache in <see cref="ReadHunk(uint, byte[], CancellationToken)"/>. Background tasks use
     /// <see cref="ReadHunkConcurrent"/> and are capped at <see cref="ReadAheadHunkCount"/>
     /// concurrent decompressions via a semaphore.
     /// </summary>
@@ -870,13 +873,13 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// </remarks>
     public int ReadAheadHunkCount
     {
-        get => _readAhead != null ? _readAhead._lookAhead : 0;
+        get => _readAhead?.LookAhead ?? 0;
         set => ConfigureReadAhead(value);
     }
 
     /// <summary>
     /// Enables or disables background read-ahead decompression. When enabled, each
-    /// <see cref="ReadHunk"/> call triggers background pre-decompression of the next
+    /// <see cref="ReadHunk(uint, byte[], CancellationToken)"/> call triggers background pre-decompression of the next
     /// <paramref name="lookAhead"/> hunks (default 4). Set to 0 or negative to disable.
     /// </summary>
     /// <param name="lookAhead">Number of hunks to read ahead. Default is 4.</param>
@@ -1152,7 +1155,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         }, cancellationToken);
     }
 
-    /// <summary>Asynchronously decompresses a single hunk into <paramref name="buffer"/> (see <see cref="ReadHunk"/>).
+    /// <summary>Asynchronously decompresses a single hunk into <paramref name="buffer"/> (see <see cref="ReadHunk(uint, byte[], CancellationToken)"/>).
     /// The compressed data is read with real asynchronous I/O (<c>RandomAccess.ReadAsync</c> for
     /// file-backed instances, <c>Stream.ReadExactlyAsync</c> otherwise); decompression itself is
     /// CPU-bound and runs on the calling thread. Does not touch the shared per-hunk cache.</summary>
@@ -1231,7 +1234,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         var directIndex = Version < 5 || _chd.UncompressedMap;
         if (directIndex || unitbytes == 0 || unitbytes == hunkbytes)
         {
-            if (me.Offset >= _parent.HunkCount)
+            if (me.Offset >= _parent!.HunkCount)
                 return ChdError.Chderrinvalidparent;
 
             return await _parent.ReadHunkAsync((uint)me.Offset, buffer, cancellationToken).ConfigureAwait(false);
@@ -1244,13 +1247,13 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 
         if (unitInHunk == 0)
         {
-            if (parentHunk >= _parent.HunkCount)
+            if (parentHunk >= _parent!.HunkCount)
                 return ChdError.Chderrinvalidparent;
 
             return await _parent.ReadHunkAsync((uint)parentHunk, buffer, cancellationToken).ConfigureAwait(false);
         }
 
-        if (parentHunk + 1 >= _parent.HunkCount)
+        if (parentHunk + 1 >= _parent!.HunkCount)
             return ChdError.Chderrinvalidparent;
 
         var scratch = new byte[hunkbytes];
@@ -1309,7 +1312,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         await _stream.ReadExactlyAsync(buffer, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>Asynchronously reads a byte range from the decompressed image (see <see cref="Read"/>).
+    /// <summary>Asynchronously reads a byte range from the decompressed image (see <see cref="Read(ulong, byte[], int, int, CancellationToken)"/>).
     /// Uses genuine async I/O via <see cref="ReadHunkAsync"/>.</summary>
     /// <param name="byteOffset">Byte offset into the decompressed image (0 to <see cref="TotalBytes"/> - 1).</param>
     /// <param name="destination">Destination buffer.</param>
@@ -1356,7 +1359,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// is thrown if cancellation is requested before a hunk is decompressed.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success; <see cref="ChdError.Chderroutofmemory"/>
     /// if the image is larger than 2 GiB (<see cref="int.MaxValue"/> bytes); otherwise a read/decompression error code.</returns>
-    /// <remarks>Be cautious: CHD images can be tens of gigabytes. Prefer <see cref="EnumerateHunks"/> or <see cref="Read"/> for large images.</remarks>
+    /// <remarks>Be cautious: CHD images can be tens of gigabytes. Prefer <see cref="EnumerateHunks"/> or <see cref="Read(ulong, byte[], int, int, CancellationToken)"/> for large images.</remarks>
     public ChdError ReadAllBytes(out byte[] data, IProgress<ChdProgress>? progress = null, CancellationToken cancellationToken = default)
     {
         data = [];
@@ -2090,7 +2093,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <summary>
     /// Decompresses a single hunk into <paramref name="buffer"/> in a way that is safe for
     /// concurrent use on the same <see cref="ChdFile"/> instance from multiple threads
-    /// (emulator-style parallel sector loaders). Unlike <see cref="ReadHunk"/>, this method:
+    /// (emulator-style parallel sector loaders). Unlike <see cref="ReadHunk(uint, byte[], CancellationToken)"/>, this method:
     /// never uses the shared per-hunk/compressed-buffer caches, gives each calling thread its
     /// own codec state, and reads compressed data without sharing stream position
     /// (<c>RandomAccess</c> for file-backed instances). The existing single-threaded API is
@@ -2099,7 +2102,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <param name="hunknum">Zero-based hunk index (0 to <see cref="HunkCount"/> - 1).</param>
     /// <param name="buffer">Destination buffer of at least <see cref="HunkBytes"/> bytes.</param>
     /// <param name="cancellationToken">A token to cancel the decompression.</param>
-    /// <returns>The same result codes as <see cref="ReadHunk"/>.</returns>
+    /// <returns>The same result codes as <see cref="ReadHunk(uint, byte[], CancellationToken)"/>.</returns>
     public ChdError ReadHunkConcurrent(uint hunknum, byte[] buffer, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -2218,7 +2221,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         var directIndex = Version < 5 || _chd.UncompressedMap;
         if (directIndex || unitbytes == 0 || unitbytes == hunkbytes)
         {
-            if (me.Offset >= _parent.HunkCount)
+            if (me.Offset >= _parent!.HunkCount)
                 return ChdError.Chderrinvalidparent;
 
             lock (_parent)
@@ -2232,7 +2235,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         var parentHunk = blockoffs / unitsInHunk;
         var unitInHunk = (uint)(blockoffs % unitsInHunk);
 
-        lock (_parent)
+        lock (_parent!)
         {
             if (unitInHunk == 0)
             {
@@ -2419,7 +2422,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         var directIndex = Version < 5 || _chd.UncompressedMap;
         if (directIndex || unitbytes == 0 || unitbytes == hunkbytes)
         {
-            if (me.Offset >= _parent.HunkCount)
+            if (me.Offset >= _parent!.HunkCount)
                 return ChdError.Chderrinvalidparent;
 
             return _parent.ReadHunk((uint)me.Offset, buffer);
@@ -2433,14 +2436,14 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 
         if (unitInHunk == 0)
         {
-            if (parentHunk >= _parent.HunkCount)
+            if (parentHunk >= _parent!.HunkCount)
                 return ChdError.Chderrinvalidparent;
 
             return _parent.ReadHunk((uint)parentHunk, buffer);
         }
 
         // Unaligned: stitch two adjacent parent hunks at the unit boundary.
-        if (parentHunk + 1 >= _parent.HunkCount)
+        if (parentHunk + 1 >= _parent!.HunkCount)
             return ChdError.Chderrinvalidparent;
 
         _parentScratch ??= new byte[hunkbytes];
@@ -3088,24 +3091,28 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 
     /// <summary>
     /// Background read-ahead manager: pre-decompresses upcoming hunks into a concurrent
-    /// cache so that sequential <see cref="ReadHunk"/> calls hit memory instead of
+    /// cache so that sequential <see cref="ReadHunk(uint, byte[], CancellationToken)"/> calls hit memory instead of
     /// decompressing synchronously. Uses <see cref="ReadHunkConcurrent"/> for thread-safe
     /// decompression and a <see cref="SemaphoreSlim"/> to cap concurrency.
     /// </summary>
     private sealed class ReadAheadManager : IDisposable
     {
         private readonly ChdFile _chd;
-        internal readonly int _lookAhead;
+        internal readonly int LookAhead;
         private readonly ConcurrentDictionary<uint, byte[]> _cache = new();
         private readonly SemaphoreSlim _semaphore;
         private readonly ThreadLocal<ChdCodecState> _codec = new(() => new ChdCodecState());
         private readonly CancellationTokenSource _cts = new();
+#if NET9_0_OR_GREATER
+        private readonly Lock _submitLock = new();
+#else
         private readonly object _submitLock = new();
+#endif
 
         internal ReadAheadManager(ChdFile chd, int lookAhead)
         {
             _chd = chd;
-            _lookAhead = lookAhead;
+            LookAhead = lookAhead;
             _semaphore = new SemaphoreSlim(lookAhead, lookAhead);
         }
 
@@ -3128,7 +3135,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 
             lock (_submitLock)
             {
-                for (var i = 1; i <= _lookAhead; i++)
+                for (var i = 1; i <= LookAhead; i++)
                 {
                     var next = currentHunk + (uint)i;
                     if (next >= total)
@@ -3178,7 +3185,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         internal void Clear()
         {
             _cache.Clear();
-            _semaphore.Release(_lookAhead - _semaphore.CurrentCount);
+            _semaphore.Release(LookAhead - _semaphore.CurrentCount);
         }
 
         public void Dispose()

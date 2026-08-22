@@ -18,32 +18,34 @@ internal static class Compressor
 
         ZStream stream = new();
         var err = Deflater.DeflateInit(ref stream, level);
-        if (err != Z_OK)
+        if (err != ZOk)
             return err;
 
         stream.Output = dest;
-        stream.avail_out = 0;
+        stream.AvailOut = 0;
         stream.Input = source;
-        stream.avail_in = 0;
+        stream.AvailIn = 0;
 
         do
         {
-            if (stream.avail_out == 0)
+            if (stream.AvailOut == 0)
             {
-                stream.avail_out = left; // left > Max ? Max : left;
-                left -= stream.avail_out;
+                stream.AvailOut = left; // left > Max ? Max : left;
+                left -= stream.AvailOut;
             }
-            if (stream.avail_in == 0)
+
+            if (stream.AvailIn == 0)
             {
-                stream.avail_in = sourceLen; //sourceLen > Max ? Max : sourceLen;
-                sourceLen -= stream.avail_in;
+                stream.AvailIn = sourceLen; //sourceLen > Max ? Max : sourceLen;
+                sourceLen -= stream.AvailIn;
             }
-            err = Deflater.Deflate(ref stream, sourceLen != 0 ? Z_NO_FLUSH : Z_FINISH);
-        } while (err == Z_OK);
+
+            err = Deflater.Deflate(ref stream, sourceLen != 0 ? ZNoFlush : ZFinish);
+        } while (err == ZOk);
 
         destLen = stream.total_out;
         _ = Deflater.DeflateEnd(ref stream);
-        return err == Z_STREAM_END ? Z_OK : err;
+        return err == ZStreamEnd ? ZOk : err;
     }
 
     internal static int Uncompress(Span<byte> dest, ref uint destLen, ReadOnlySpan<byte> source, ref uint sourceLen)
@@ -66,45 +68,47 @@ internal static class Compressor
         ZStream stream = new()
         {
             Input = source,
-            avail_in = 0
+            AvailIn = 0
         };
 
         var err = Inflater.InflateInit(ref stream, DefaultWindowBits);
-        if (err != Z_OK)
+        if (err != ZOk)
             return err;
 
         stream.Output = dest;
-        stream.avail_out = 0;
+        stream.AvailOut = 0;
 
         do
         {
-            if (stream.avail_out == 0)
+            if (stream.AvailOut == 0)
             {
-                stream.avail_out = left; // left > Max ? Max : left;
-                left -= stream.avail_out;
+                stream.AvailOut = left; // left > Max ? Max : left;
+                left -= stream.AvailOut;
             }
-            if (stream.avail_in == 0)
-            {
-                stream.avail_in = len; // len > Max ? Max : len;
-                len -= stream.avail_in;
-            }
-            err = Inflater.Inflate(ref stream, Z_NO_FLUSH);
-        } while (err == Z_OK);
 
-        sourceLen -= len + stream.avail_in;
+            if (stream.AvailIn == 0)
+            {
+                stream.AvailIn = len; // len > Max ? Max : len;
+                len -= stream.AvailIn;
+            }
+
+            err = Inflater.Inflate(ref stream, ZNoFlush);
+        } while (err == ZOk);
+
+        sourceLen -= len + stream.AvailIn;
         if (dest != buf)
         {
             destLen = stream.total_out;
         }
-        else if (stream.total_out != 0 && err == Z_BUF_ERROR)
+        else if (stream.total_out != 0 && err == ZBufError)
         {
             left = 1;
         }
 
         _ = Inflater.InflateEnd(ref stream);
-        return err == Z_STREAM_END ? Z_OK :
-               err == Z_NEED_DICT ? Z_DATA_ERROR :
-               err == Z_BUF_ERROR && left + stream.avail_out != 0 ? Z_DATA_ERROR :
+        return err == ZStreamEnd ? ZOk :
+               err == ZNeedDict ? ZDataError :
+               err == ZBufError && left + stream.AvailOut != 0 ? ZDataError :
                err;
     }
 

@@ -11,7 +11,7 @@ internal static partial class Inflater
 {
     private static void UpdateWindow(ref ZStream strm, ref byte end, uint copy, ref byte window)
     {
-        var state = strm.inflateState;
+        var state = strm.InflateState;
 
         // if it hasn't been done already, allocate space for the window
         if (state.Window == null)

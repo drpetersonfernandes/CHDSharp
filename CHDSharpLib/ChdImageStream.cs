@@ -8,7 +8,7 @@ namespace CHDSharp;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Use <see cref="ChdFile.OpenAsStream"/> or <see cref="ChdFile.OpenAsStreamAsync"/> to create
+/// Use <see cref="ChdFile.OpenAsStream(string, out ChdImageStream?, CancellationToken)"/> or <see cref="ChdFile.OpenAsStreamAsync(string, CancellationToken)"/> to create
 /// an instance. The stream decompresses hunks on demand via the underlying <see cref="ChdFile"/>;
 /// a single hunk is cached, so sequential reads within the same hunk avoid re-decoding.
 /// </para>

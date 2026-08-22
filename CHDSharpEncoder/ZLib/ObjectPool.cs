@@ -13,14 +13,15 @@ internal class ObjectPool<T> where T : class, new()
     private readonly int _maxCapacity;
     private int _numItems;
 
-    private protected readonly ConcurrentQueue<T> _items = new();
-    private protected T _fastItem;
+    private protected readonly ConcurrentQueue<T> Items = new();
+    private protected T FastItem;
 
     /// <summary>
     /// Creates an instance of <see cref="ObjectPool{T}"/>.
     /// </summary>
     public ObjectPool() : this(Environment.ProcessorCount * 2)
-    { }
+    {
+    }
 
     /// <summary>
     /// Creates an instance of <see cref="ObjectPool{T}"/>.
@@ -38,10 +39,10 @@ internal class ObjectPool<T> where T : class, new()
     /// <returns>A <typeparamref name="T"/>.</returns>
     public T Get()
     {
-        var item = _fastItem;
-        if (item == null || Interlocked.CompareExchange(ref _fastItem, null, item) != item)
+        var item = FastItem;
+        if (item == null || Interlocked.CompareExchange(ref FastItem, null, item) != item)
         {
-            if (_items.TryDequeue(out item))
+            if (Items.TryDequeue(out item))
             {
                 _ = Interlocked.Decrement(ref _numItems);
                 return item;
@@ -60,10 +61,10 @@ internal class ObjectPool<T> where T : class, new()
     /// <param name="obj">The object to add to the pool.</param>
     public void Return(T obj)
     {
-        if (_fastItem != null || Interlocked.CompareExchange(ref _fastItem, obj, null) != null)
+        if (FastItem != null || Interlocked.CompareExchange(ref FastItem, obj, null) != null)
         {
             if (Interlocked.Increment(ref _numItems) <= _maxCapacity)
-                _items.Enqueue(obj);
+                Items.Enqueue(obj);
 
             // no room, clean up the count and drop the object on the floor
             _ = Interlocked.Decrement(ref _numItems);

@@ -42,8 +42,8 @@ public sealed record ChdHashResult(int? TrackNumber, ulong StartOffset, long Len
         {
             ChdHashType.Sha1 => Sha1 is null ? null : Convert.ToHexString(Sha1).ToLowerInvariant(),
             ChdHashType.Sha256 => Sha256 is null ? null : Convert.ToHexString(Sha256).ToLowerInvariant(),
-            ChdHashType.Crc32 => Crc32 is null ? null : Crc32.Value.ToString("X8").ToLowerInvariant(),
-            ChdHashType.Xxh3 => Xxh3 is null ? null : Xxh3.Value.ToString("X16").ToLowerInvariant(),
+            ChdHashType.Crc32 => Crc32?.ToString("X8").ToLowerInvariant(),
+            ChdHashType.Xxh3 => Xxh3?.ToString("X16").ToLowerInvariant(),
             _ => null
         };
     }

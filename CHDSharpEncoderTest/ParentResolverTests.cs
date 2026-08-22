@@ -17,7 +17,11 @@ public class ParentResolverTests : IDisposable
 
     public void Dispose()
     {
-        try { Directory.Delete(_dir, recursive: true); } catch { }
+        try { Directory.Delete(_dir, recursive: true); }
+        catch
+        {
+            // ignored
+        }
     }
 
     [Fact]
@@ -48,14 +52,8 @@ public class ParentResolverTests : IDisposable
 
         // Open the child with a resolver.
         var resolverCalled = false;
-        ParentResolver resolver = (sha1, md5) =>
-        {
-            resolverCalled = true;
-            var perr = ChdFile.Open(parentPath, out var parentChd);
-            return perr == ChdError.Chderrnone ? parentChd : null;
-        };
 
-        var err = ChdFile.Open(childPath, resolver, out var chd);
+        var err = ChdFile.Open(childPath, (ParentResolver)Resolver, out var chd);
         Assert.Equal(ChdError.Chderrnone, err);
         Assert.NotNull(chd);
 
@@ -72,6 +70,15 @@ public class ParentResolverTests : IDisposable
 
             // Verify data round-trips correctly.
             Assert.Equal(parentData.AsSpan(0, 4096).ToArray(), buffer);
+        }
+
+        return;
+
+        ChdFile? Resolver(byte[]? sha1, byte[]? md5)
+        {
+            resolverCalled = true;
+            var perr = ChdFile.Open(parentPath, out var parentChd);
+            return perr == ChdError.Chderrnone ? parentChd : null;
         }
     }
 
@@ -100,14 +107,8 @@ public class ParentResolverTests : IDisposable
         }
 
         var resolverCallCount = 0;
-        ParentResolver resolver = (sha1, md5) =>
-        {
-            resolverCallCount++;
-            var perr = ChdFile.Open(parentPath, out var parentChd);
-            return perr == ChdError.Chderrnone ? parentChd : null;
-        };
 
-        var err = ChdFile.Open(childPath, resolver, out var chd);
+        var err = ChdFile.Open(childPath, (ParentResolver)Resolver, out var chd);
         Assert.Equal(ChdError.Chderrnone, err);
         Assert.NotNull(chd);
 
@@ -121,6 +122,15 @@ public class ParentResolverTests : IDisposable
             }
 
             Assert.True(resolverCallCount == 1, "Resolver should be called only once (cached)");
+        }
+
+        return;
+
+        ChdFile? Resolver(byte[]? sha1, byte[]? md5)
+        {
+            resolverCallCount++;
+            var perr = ChdFile.Open(parentPath, out var parentChd);
+            return perr == ChdError.Chderrnone ? parentChd : null;
         }
     }
 
@@ -143,9 +153,7 @@ public class ParentResolverTests : IDisposable
             ChdEncoder.EncodeRaw(ms, childPath, 4096, 512, null, new ChdEncodeOptions { ParentPath = parentPath });
         }
 
-        ParentResolver resolver = (sha1, md5) => null;
-
-        var err = ChdFile.Open(childPath, resolver, out var chd);
+        var err = ChdFile.Open(childPath, (ParentResolver)Resolver, out var chd);
         Assert.Equal(ChdError.Chderrnone, err);
         Assert.NotNull(chd);
 
@@ -154,6 +162,13 @@ public class ParentResolverTests : IDisposable
             var buffer = new byte[chd.HunkBytes];
             var readErr = chd.ReadHunk(0, buffer);
             Assert.Equal(ChdError.Chderrrequiresparent, readErr);
+        }
+
+        return;
+
+        static ChdFile? Resolver(byte[]? sha1, byte[]? md5)
+        {
+            return null;
         }
     }
 
@@ -188,13 +203,7 @@ public class ParentResolverTests : IDisposable
             ChdEncoder.EncodeRaw(ms, childPath, 4096, 512, null, new ChdEncodeOptions { ParentPath = parentPath });
         }
 
-        ParentResolver resolver = (sha1, md5) =>
-        {
-            var perr = ChdFile.Open(wrongParentPath, out var parentChd);
-            return perr == ChdError.Chderrnone ? parentChd : null;
-        };
-
-        var err = ChdFile.Open(childPath, resolver, out var chd);
+        var err = ChdFile.Open(childPath, (ParentResolver)Resolver, out var chd);
         Assert.Equal(ChdError.Chderrnone, err);
         Assert.NotNull(chd);
 
@@ -203,6 +212,14 @@ public class ParentResolverTests : IDisposable
             var buffer = new byte[chd.HunkBytes];
             var readErr = chd.ReadHunk(0, buffer);
             Assert.Equal(ChdError.Chderrinvalidparent, readErr);
+        }
+
+        return;
+
+        ChdFile? Resolver(byte[]? sha1, byte[]? md5)
+        {
+            var perr = ChdFile.Open(wrongParentPath, out var parentChd);
+            return perr == ChdError.Chderrnone ? parentChd : null;
         }
     }
 
@@ -254,14 +271,15 @@ public class ParentResolverTests : IDisposable
             ChdEncoder.EncodeRaw(ms, childPath, 4096, 512, null, new ChdEncodeOptions { ParentPath = parentPath });
         }
 
-        ParentResolver resolver = (sha1, md5) =>
+        var result = Chd.CheckFileWithParent(childPath, (ParentResolver)Resolver);
+        Assert.Equal(ChdError.Chderrnone, result.Error);
+        return;
+
+        ChdFile? Resolver(byte[]? sha1, byte[]? md5)
         {
             var perr = ChdFile.Open(parentPath, out var parentChd);
             return perr == ChdError.Chderrnone ? parentChd : null;
-        };
-
-        var result = Chd.CheckFileWithParent(childPath, resolver);
-        Assert.Equal(ChdError.Chderrnone, result.Error);
+        }
     }
 
     [Fact]
@@ -289,14 +307,8 @@ public class ParentResolverTests : IDisposable
         }
 
         byte[]? capturedSha1 = null;
-        ParentResolver resolver = (sha1, md5) =>
-        {
-            capturedSha1 = sha1;
-            var perr = ChdFile.Open(parentPath, out var parentChd);
-            return perr == ChdError.Chderrnone ? parentChd : null;
-        };
 
-        var err = ChdFile.Open(childPath, resolver, out var chd);
+        var err = ChdFile.Open(childPath, (ParentResolver)Resolver, out var chd);
         Assert.Equal(ChdError.Chderrnone, err);
         Assert.NotNull(chd);
 
@@ -307,6 +319,15 @@ public class ParentResolverTests : IDisposable
 
             Assert.NotNull(capturedSha1);
             Assert.Contains(capturedSha1, b => b != 0);
+        }
+
+        return;
+
+        ChdFile? Resolver(byte[]? sha1, byte[]? md5)
+        {
+            capturedSha1 = sha1;
+            var perr = ChdFile.Open(parentPath, out var parentChd);
+            return perr == ChdError.Chderrnone ? parentChd : null;
         }
     }
 

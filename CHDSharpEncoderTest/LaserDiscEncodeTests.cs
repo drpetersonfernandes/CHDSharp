@@ -4,7 +4,6 @@ using System.Text;
 using CHDSharp;
 using CHDSharp.Models;
 using CHDSharpEncoder;
-using CHDSharpEncoder.Models;
 
 namespace CHDSharpEncoderTest;
 
@@ -276,14 +275,14 @@ public class LaserDiscEncodeTests : IDisposable
     /// (mirrors <see cref="ChdEncoder.EncodeLaserDisc"/>'s producer math from the AVI's own timing).
     /// </summary>
     private static byte[] BuildExpectedRawFrame(ulong frameInImage, string aviPath, uint channels, uint rate,
-        ulong fpsTimes1million, uint maxSamplesPerFrame)
+        ulong fpsTimes1Million, uint maxSamplesPerFrame)
     {
         using var avi = AviReader.Open(aviPath);
         var fullFrame = new byte[(int)(avi.Info.Width * avi.Info.Height * 2)];
         avi.ReadVideoFrame((uint)frameInImage, fullFrame);
 
-        var firstSample = rate > 0 ? (rate * frameInImage * 1000000 + fpsTimes1million - 1) / fpsTimes1million : 0;
-        var endSample = rate > 0 ? (rate * (frameInImage + 1) * 1000000 + fpsTimes1million - 1) / fpsTimes1million : 0;
+        var firstSample = rate > 0 ? (rate * frameInImage * 1000000 + fpsTimes1Million - 1) / fpsTimes1Million : 0;
+        var endSample = rate > 0 ? (rate * (frameInImage + 1) * 1000000 + fpsTimes1Million - 1) / fpsTimes1Million : 0;
         var samples = (int)Math.Min(endSample - firstSample, maxSamplesPerFrame);
 
         var planes = new short[channels][];
@@ -500,13 +499,13 @@ internal static class AviTestWriter
             videoFrames[f] = data;
         }
 
-        var fps1m = timescale * 1000000 / (double)sampletime;
+        var fps1M = timescale * 1000000 / (double)sampletime;
         var audioChunks = new List<byte[]>(frames);
         ulong totalSamples = 0;
         for (var f = 0; f < frames; f++)
         {
-            var first = (ulong)(audioRate * f * 1000000 / fps1m);
-            var end = (ulong)(audioRate * (f + 1) * 1000000 / fps1m);
+            var first = (ulong)(audioRate * f * 1000000 / fps1M);
+            var end = (ulong)(audioRate * (f + 1) * 1000000 / fps1M);
             var count = (int)(end - first);
             var chunk = new byte[count * (int)audioChannels * 2];
             for (var i = 0; i < count; i++)
@@ -530,9 +529,9 @@ internal static class AviTestWriter
         var hdrlSizePos = StartList(ms, "hdrl");
 
         var avih = new byte[56];
-        BinaryPrimitives.WriteUInt32LittleEndian(avih.AsSpan(8), 0x10);              // AVIF_HASINDEX
-        BinaryPrimitives.WriteUInt32LittleEndian(avih.AsSpan(16), (uint)frames);     // dwTotalFrames
-        BinaryPrimitives.WriteUInt32LittleEndian(avih.AsSpan(24), 2);                // dwStreams
+        BinaryPrimitives.WriteUInt32LittleEndian(avih.AsSpan(8), 0x10); // AVIF_HASINDEX
+        BinaryPrimitives.WriteUInt32LittleEndian(avih.AsSpan(16), (uint)frames); // dwTotalFrames
+        BinaryPrimitives.WriteUInt32LittleEndian(avih.AsSpan(24), 2); // dwStreams
         BinaryPrimitives.WriteUInt32LittleEndian(avih.AsSpan(32), (uint)width);
         BinaryPrimitives.WriteUInt32LittleEndian(avih.AsSpan(36), (uint)height);
         WriteChunk(ms, "avih", avih);
@@ -540,17 +539,17 @@ internal static class AviTestWriter
         var videoStrlSizePos = StartList(ms, "strl");
         var vstrh = new byte[56];
         BinaryPrimitives.WriteUInt32LittleEndian(vstrh.AsSpan(0), FourCc("vids"));
-        BinaryPrimitives.WriteUInt32LittleEndian(vstrh.AsSpan(20), sampletime);      // dwScale
-        BinaryPrimitives.WriteUInt32LittleEndian(vstrh.AsSpan(24), timescale);       // dwRate
-        BinaryPrimitives.WriteUInt32LittleEndian(vstrh.AsSpan(32), (uint)frames);    // dwLength
+        BinaryPrimitives.WriteUInt32LittleEndian(vstrh.AsSpan(20), sampletime); // dwScale
+        BinaryPrimitives.WriteUInt32LittleEndian(vstrh.AsSpan(24), timescale); // dwRate
+        BinaryPrimitives.WriteUInt32LittleEndian(vstrh.AsSpan(32), (uint)frames); // dwLength
         WriteChunk(ms, "strh", vstrh);
 
         var vstrf = new byte[40]; // BITMAPINFOHEADER
         BinaryPrimitives.WriteUInt32LittleEndian(vstrf.AsSpan(0), 40);
         BinaryPrimitives.WriteUInt32LittleEndian(vstrf.AsSpan(4), (uint)width);
         BinaryPrimitives.WriteUInt32LittleEndian(vstrf.AsSpan(8), (uint)height);
-        BinaryPrimitives.WriteUInt16LittleEndian(vstrf.AsSpan(12), 1);               // planes
-        BinaryPrimitives.WriteUInt16LittleEndian(vstrf.AsSpan(14), 16);              // bpp
+        BinaryPrimitives.WriteUInt16LittleEndian(vstrf.AsSpan(12), 1); // planes
+        BinaryPrimitives.WriteUInt16LittleEndian(vstrf.AsSpan(14), 16); // bpp
         BinaryPrimitives.WriteUInt32LittleEndian(vstrf.AsSpan(16), formatFourcc);
         BinaryPrimitives.WriteUInt32LittleEndian(vstrf.AsSpan(20), (uint)frameBytes);
         WriteChunk(ms, "strf", vstrf);
@@ -559,14 +558,14 @@ internal static class AviTestWriter
         var audioStrlSizePos = StartList(ms, "strl");
         var astrh = new byte[56];
         BinaryPrimitives.WriteUInt32LittleEndian(astrh.AsSpan(0), FourCc("auds"));
-        BinaryPrimitives.WriteUInt32LittleEndian(astrh.AsSpan(20), 1);               // dwScale
-        BinaryPrimitives.WriteUInt32LittleEndian(astrh.AsSpan(24), audioRate);       // dwRate
+        BinaryPrimitives.WriteUInt32LittleEndian(astrh.AsSpan(20), 1); // dwScale
+        BinaryPrimitives.WriteUInt32LittleEndian(astrh.AsSpan(24), audioRate); // dwRate
         BinaryPrimitives.WriteUInt32LittleEndian(astrh.AsSpan(32), (uint)totalSamples); // dwLength
         BinaryPrimitives.WriteUInt32LittleEndian(astrh.AsSpan(44), audioChannels * 2); // dwSampleSize
         WriteChunk(ms, "strh", astrh);
 
         var astrf = new byte[16]; // WAVEFORMATEX
-        BinaryPrimitives.WriteUInt16LittleEndian(astrf.AsSpan(0), 1);                // PCM
+        BinaryPrimitives.WriteUInt16LittleEndian(astrf.AsSpan(0), 1); // PCM
         BinaryPrimitives.WriteUInt16LittleEndian(astrf.AsSpan(2), (ushort)audioChannels);
         BinaryPrimitives.WriteUInt32LittleEndian(astrf.AsSpan(4), audioRate);
         BinaryPrimitives.WriteUInt32LittleEndian(astrf.AsSpan(8), audioRate * audioChannels * 2);

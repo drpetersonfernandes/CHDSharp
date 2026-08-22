@@ -113,10 +113,10 @@ public class AvHuffDebugTests
                 var readErr = chd.ReadHunk(0, buf);
                 if (readErr != ChdError.Chderrnone)
                 {
-                    var videoStart = 10;
+                    const int videoStart = 10;
                     Assert.Fail($"ReadHunk(0) returned {readErr}; rawBytes={rawBytes} compLen={compLen}\n" +
-                        $"compressed header: {string.Join(" ", compressed.Take(14).Select(b => b.ToString("X2")))}\n" +
-                        $"video0x80={compressed[videoStart]:X2}");
+                                $"compressed header: {string.Join(" ", compressed.Take(14).Select(b => b.ToString("X2")))}\n" +
+                                $"video0x80={compressed[videoStart]:X2}");
                 }
 
                 Assert.Equal(raw, buf);
@@ -127,6 +127,8 @@ public class AvHuffDebugTests
             File.Delete(chdPath);
         }
     }
+
+    [Theory]
     [InlineData("allZeros")]
     [InlineData("alternating")]
     [InlineData("dense")]

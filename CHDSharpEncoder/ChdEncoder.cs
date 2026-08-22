@@ -501,7 +501,7 @@ public static class ChdEncoder
 
         // AVI video timing (MAME: video_timescale = fps_times_1million / interlace_factor)
         var videoTimescale = (uint)(fpsTimes1Million / (uint)interlaceFactor);
-        uint videoSampletime = 1000000;
+        const uint videoSampletime = 1000000;
 
         using var avi = AviWriter.Create(aviPath, w, h * (uint)interlaceFactor,
             videoTimescale, videoSampletime, ch, sampleRate);
@@ -985,6 +985,7 @@ public static class ChdEncoder
                         // for CDDA audio tracks (matching MAME's cdrom.cpp:402 behavior)
                         SwapCdda16(buffer, valid, CdMaxSectorData, CdFrameSize);
                     }
+
                     return valid;
                 };
             }

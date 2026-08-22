@@ -10,21 +10,21 @@ namespace CHDSharpEncoder.ZLib.Deflate;
 internal static partial class Deflater
 {
     private const int DefaultMemLevel = 8;
-    private static readonly ObjectPool<DeflateState> s_objectPool = new();
+    private static readonly ObjectPool<DeflateState> SObjectPool = new();
 
     internal static int DeflateInit(ref ZStream strm, int level)
     {
-        return DeflateInit(ref strm, level, Z_DEFLATED, MaxWindowBits, DefaultMemLevel, Z_DEFAULT_STRATEGY);
+        return DeflateInit(ref strm, level, ZDeflated, MaxWindowBits, DefaultMemLevel, ZDefaultStrategy);
     }
 
     internal static int DeflateInit(ref ZStream strm, int level, int method, int windowBits, int memLevel, int strategy)
     {
-        const int MaxMemLevel = 9;
-        const int MinMatch = 3;
+        const int maxMemLevel = 9;
+        const int minMatch = 3;
 
-        strm.msg = null;
+        strm.Msg = null;
 
-        if (level == Z_DEFAULT_COMPRESSION)
+        if (level == ZDefaultCompression)
         {
             level = 6;
         }
@@ -34,18 +34,18 @@ internal static partial class Deflater
         {
             wrap = 0;
             if (windowBits < -15)
-                return Z_STREAM_ERROR;
+                return ZStreamError;
 
             windowBits = -windowBits;
         }
 
-        if (memLevel < 1 || memLevel > MaxMemLevel
-            || method != Z_DEFLATED
+        if (memLevel < 1 || memLevel > maxMemLevel
+            || method != ZDeflated
             || windowBits < 8 || windowBits > 15
             || level < 0 || level > 9
-            || strategy < 0 || strategy > Z_FIXED
+            || strategy < 0 || strategy > ZFixed
             || (windowBits == 8 && wrap != 1))
-            return Z_STREAM_ERROR;
+            return ZStreamError;
 
         if (windowBits == 8)
         {
@@ -55,10 +55,10 @@ internal static partial class Deflater
         DeflateState s = null;
         try
         {
-            s = s_objectPool.Get();
-            strm.deflateState = s;
+            s = SObjectPool.Get();
+            strm.DeflateState = s;
 #if NET7_0_OR_GREATER
-            strm.deflateRefs = new DeflateRefs();
+            strm.DeflateRefs = new DeflateRefs();
 #endif
             s.Status = InitState; // to pass state test in DeflateReset()
 
@@ -67,15 +67,15 @@ internal static partial class Deflater
             s.WSize = 1U << windowBits;
             s.WMask = s.WSize - 1;
 
-            var hash_bits = memLevel + 7;
-            s.HashBits = (uint)hash_bits;
-            s.HashSize = 1U << hash_bits;
+            var hashBits = memLevel + 7;
+            s.HashBits = (uint)hashBits;
+            s.HashSize = 1U << hashBits;
             s.HashMask = s.HashSize - 1;
-            s.HashShift = (hash_bits + MinMatch - 1) / MinMatch;
+            s.HashShift = (hashBits + minMatch - 1) / minMatch;
 
-            var w_size = (int)s.WSize;
-            s.Window = ArrayPool<byte>.Shared.Rent(w_size * 2);
-            s.Prev = ArrayPool<ushort>.Shared.Rent(w_size);
+            var wSize = (int)s.WSize;
+            s.Window = ArrayPool<byte>.Shared.Rent(wSize * 2);
+            s.Prev = ArrayPool<ushort>.Shared.Rent(wSize);
             s.Head = ArrayPool<ushort>.Shared.Rent((int)s.HashSize);
 
             s.HighWater = 0; // nothing written to s.window yet
@@ -85,7 +85,7 @@ internal static partial class Deflater
             s.PendingBufSize = s.LitBufsize * 4;
             s.PendingBuf = ArrayPool<byte>.Shared.Rent((int)s.PendingBufSize);
 #if NET7_0_OR_GREATER
-            ref var refs = ref strm.deflateRefs;
+            ref var refs = ref strm.DeflateRefs;
             refs.Head = ref MemoryMarshal.GetReference<ushort>(s.Head);
             refs.PendingBuf = ref MemoryMarshal.GetReference<byte>(s.PendingBuf);
 #endif
@@ -97,9 +97,9 @@ internal static partial class Deflater
                 s.Status = FinishState;
             }
 
-            strm.msg = SzErrmsg[Z_NEED_DICT - Z_MEM_ERROR];
+            strm.Msg = SzErrmsg[ZNeedDict - ZMemError];
             _ = DeflateEnd(ref strm);
-            return Z_MEM_ERROR;
+            return ZMemError;
         }
         catch (Exception)
         {
@@ -114,7 +114,7 @@ internal static partial class Deflater
                 if (s.PendingBuf != null)
                     ArrayPool<byte>.Shared.Return(s.PendingBuf);
 
-                s_objectPool.Return(s);
+                SObjectPool.Return(s);
             }
 
             throw;

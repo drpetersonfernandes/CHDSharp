@@ -173,7 +173,7 @@ public class ChdCodecChdmanValidationTests : IDisposable
 
         File.WriteAllBytes(binPath, bin);
 
-        var hunkBytes = CdConstants.FramesPerHunk * (uint)CdConstants.FrameSize;
+        const uint hunkBytes = CdConstants.FramesPerHunk * (uint)CdConstants.FrameSize;
         ChdEncoder.EncodeCd(cuePath, oursPath, hunkBytes: hunkBytes,
             unitBytes: (uint)CdConstants.FrameSize, codecTags: [CodecTags.Cdzs]);
 

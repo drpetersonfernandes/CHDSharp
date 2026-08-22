@@ -11,9 +11,9 @@ internal static partial class Deflater
     internal static int DeflateEnd(ref ZStream strm)
     {
         if (DeflateStateCheck(ref strm))
-            return Z_STREAM_ERROR;
+            return ZStreamError;
 
-        var s = strm.deflateState;
+        var s = strm.DeflateState;
         var status = s.Status;
 
         if (s.Window != null)
@@ -25,9 +25,9 @@ internal static partial class Deflater
         if (s.PendingBuf != null)
             ArrayPool<byte>.Shared.Return(s.PendingBuf);
 
-        s_objectPool.Return(s);
-        strm.deflateState = null;
+        SObjectPool.Return(s);
+        strm.DeflateState = null;
 
-        return status == BusyState ? Z_DATA_ERROR : Z_OK;
+        return status == BusyState ? ZDataError : ZOk;
     }
 }

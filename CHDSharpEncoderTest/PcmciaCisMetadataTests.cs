@@ -176,13 +176,13 @@ public class PcmciaCisMetadataTests : IDisposable
 
         var entries = new List<MetadataEntry>
         {
-            new MetadataEntry
+            new()
             {
                 Tag = MetadataWriter.PcmciaCisMetadataTag,
                 Flags = MetadataWriter.ChdMdflagsChecksum,
                 Payload = cisData
             },
-            new MetadataEntry
+            new()
             {
                 Tag = 0x54455354, // 'TEST'
                 Flags = MetadataWriter.ChdMdflagsChecksum,

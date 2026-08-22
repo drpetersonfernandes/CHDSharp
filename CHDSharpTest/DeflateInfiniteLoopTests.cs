@@ -194,7 +194,7 @@ public class DeflateInfiniteLoopTests
             0x05, // BFINAL=1, BTYPE=10 (dynamic)
             0x00, // HLIT=0 (actually +257 = 257), HDIST high bits
             0x00, // HDIST low bits (actually +1 = 1), HCLEN high bits
-            0x00  // HCLEN low bits (actually +4 = 4)
+            0x00 // HCLEN low bits (actually +4 = 4)
         };
         var zlib = WrapInZlib(deflate);
         var chd = MakeV3WithCompressedHunk(zlib);
@@ -245,6 +245,7 @@ public class DeflateInfiniteLoopTests
             {
                 deflate.Write(original, 0, original.Length);
             }
+
             // Dummy adler32 (decoder will check, but for testing inflate path)
             ms.Write(new byte[4], 0, 4);
             compressed = ms.ToArray();

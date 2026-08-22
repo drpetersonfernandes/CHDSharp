@@ -150,15 +150,15 @@ public static partial class Chd
         if (string.IsNullOrEmpty(filename) || !File.Exists(filename))
             return new ChdResult(ChdError.Chderrfilenotfound, null, null, null);
 
-        uint? ver = null;
-        byte[]? headerSha1 = null;
-        byte[]? headerMd5 = null;
-        byte[]? computedRawSha1 = null;
-        var needRaw = false;
-        var needCombined = false;
+        uint? ver;
+        byte[]? headerSha1;
+        byte[]? headerMd5;
+        byte[]? computedRawSha1;
+        bool needRaw;
+        bool needCombined;
         byte[]? combined = null;
-        uint rawSha1Offset = 0;
-        uint? combinedSha1Offset = null;
+        uint rawSha1Offset;
+        uint? combinedSha1Offset;
 
         using (var fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 4096))
         {
@@ -200,7 +200,7 @@ public static partial class Chd
 
             needRaw = true;
             needCombined = combinedSha1Offset.HasValue;
-            byte[]? storedRaw = null;
+            byte[]? storedRaw;
             byte[]? storedCombined = null;
             try
             {

@@ -6,13 +6,13 @@ namespace CHDSharpEncoder.ZLib.Deflate;
 
 internal sealed class TreeDescriptor
 {
-    internal readonly TreeNode[] dyn_tree; // the dynamic tree
+    internal readonly TreeNode[] DynTree; // the dynamic tree
     internal readonly StaticTree StatDesc; // the corresponding static tree
     internal int MaxCode; // largest code with non zero frequency
 
     internal TreeDescriptor(TreeNode[] dynTree, StaticTree statDesc)
     {
-        this.dyn_tree = dynTree;
-        this.StatDesc = statDesc;
+        DynTree = dynTree;
+        StatDesc = statDesc;
     }
 }

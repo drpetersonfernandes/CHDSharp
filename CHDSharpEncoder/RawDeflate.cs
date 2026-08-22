@@ -18,12 +18,12 @@ public static class RawDeflate
         var zlib = new ZLib.ZLib();
         var output = new byte[zlib.CompressBound((uint)data.Length)];
         var zs = new ZStream { Input = data, Output = output };
-        _ = zlib.DeflateInit(ref zs, Z_BEST_COMPRESSION, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
+        _ = zlib.DeflateInit(ref zs, ZBestCompression, ZDeflated, -15, 8, ZDefaultStrategy);
         int status;
         do
         {
-            status = zlib.Deflate(ref zs, Z_FINISH);
-        } while (status == Z_OK);
+            status = zlib.Deflate(ref zs, ZFinish);
+        } while (status == ZOk);
 
         _ = zlib.DeflateEnd(ref zs);
 

@@ -12,10 +12,10 @@ internal static partial class Inflater
 {
     private static void InflateFast(ref ZStream strm, uint start, ref byte window, ref Code lcode, ref Code dcode)
     {
-        var state = strm.inflateState;
-        var last = strm.next_in + (strm.avail_in - 5);      // have enough input while in < last
-        var beg = strm.next_out - (start - strm.avail_out); // inflate()'s initial strm.next_out
-        var end = strm.next_out + (strm.avail_out - 257);   // while out < end, enough space available
+        var state = strm.InflateState;
+        var last = strm.next_in + (strm.AvailIn - 5); // have enough input while in < last
+        var beg = strm.next_out - (start - strm.AvailOut); // inflate()'s initial strm.next_out
+        var end = strm.next_out + (strm.AvailOut - 257); // while out < end, enough space available
         var wsize = state.Wsize;
         var whave = state.Whave;
         var wnext = state.Wnext;
@@ -23,22 +23,22 @@ internal static partial class Inflater
         var bits = state.Bits;
         var lmask = (1U << state.Lenbits) - 1;
         var dmask = (1U << state.Distbits) - 1;
-        uint len;   // match length, unused bytes
+        uint len; // match length, unused bytes
 
         ref var @in = ref
 #if NET7_0_OR_GREATER
-            Unsafe.Add(ref strm.input_ptr, strm.next_in);
+            Unsafe.Add(ref strm.InputPtr, strm.next_in);
 #else
             MemoryMarshal.GetReference(strm._input.Slice((int)strm.next_in));
 #endif
         ref var @out = ref
 #if NET7_0_OR_GREATER
-            Unsafe.Add(ref strm.output_ptr, strm.next_out);
+            Unsafe.Add(ref strm.OutputPtr, strm.next_out);
 #else
             MemoryMarshal.GetReference(strm._output.Slice((int)strm.next_out));
 #endif
 
-        // decode literals and length/distances until end-of-block or not enough input data or output space            
+        // decode literals and length/distances until end-of-block or not enough input data or output space
         do
         {
             if (bits < 15)
@@ -51,23 +51,23 @@ internal static partial class Inflater
                 bits += 8;
                 strm.next_in += 2;
             }
+
             ref var here = ref Unsafe.Add(ref lcode, hold & lmask); // retrieved table entry
         dolen:
             uint op = here.bits; // code bits, operation, extra bits, or window position, window bytes to copy
             if (op == 0)
             {
-                strm.msg = "invalid literal/length code";
+                strm.Msg = "invalid literal/length code";
                 state.Mode = InflateMode.Bad;
                 break;
             }
+
             hold >>= (int)op;
             bits -= op;
             op = here.op;
             if (op == 0) // literal
             {
-                Trace.Tracevv(here.val is >= 0x20 and < 0x7f ?
-                    $"inflate:         literal '{Convert.ToChar(here.val)}'\n" :
-                    $"inflate:         literal 0x{here.val:X2}\n");
+                Trace.Tracevv(here.val is >= 0x20 and < 0x7f ? $"inflate:         literal '{Convert.ToChar(here.val)}'\n" : $"inflate:         literal 0x{here.val:X2}\n");
                 @out = (byte)here.val;
                 @out = ref Unsafe.Add(ref @out, 1U);
                 strm.next_out++;
@@ -85,10 +85,12 @@ internal static partial class Inflater
                         bits += 8;
                         strm.next_in++;
                     }
+
                     len += hold & ((1U << (int)op) - 1);
                     hold >>= (int)op;
                     bits -= op;
                 }
+
                 Trace.Tracevv($"inflate:         length {len}\n");
                 if (bits < 15)
                 {
@@ -100,15 +102,17 @@ internal static partial class Inflater
                     bits += 8;
                     strm.next_in += 2;
                 }
+
                 here = ref Unsafe.Add(ref dcode, hold & dmask);
             dodist:
                 op = here.bits;
                 if (op == 0)
                 {
-                    strm.msg = "invalid distance code";
+                    strm.Msg = "invalid distance code";
                     state.Mode = InflateMode.Bad;
                     break;
                 }
+
                 hold >>= (int)op;
                 bits -= op;
                 op = here.op;
@@ -130,6 +134,7 @@ internal static partial class Inflater
                             strm.next_in++;
                         }
                     }
+
                     dist += hold & ((1U << (int)op) - 1);
                     hold >>= (int)op;
                     bits -= op;
@@ -142,11 +147,12 @@ internal static partial class Inflater
                         {
                             if (state.Sane != 0)
                             {
-                                strm.msg = "invalid distance too far back";
+                                strm.Msg = "invalid distance too far back";
                                 state.Mode = InflateMode.Bad;
                                 break;
                             }
                         }
+
                         ref var from = ref window; // where to copy match from
                         if (wnext == 0) // very common case
                         {
@@ -161,6 +167,7 @@ internal static partial class Inflater
                                     from = ref Unsafe.Add(ref from, 1U);
                                     strm.next_out++;
                                 } while (--op != 0);
+
                                 from = ref Unsafe.Subtract(ref @out, dist); // rest from output
                             }
                         }
@@ -178,6 +185,7 @@ internal static partial class Inflater
                                     from = ref Unsafe.Add(ref from, 1U);
                                     strm.next_out++;
                                 } while (--op != 0);
+
                                 from = ref window;
                                 if (wnext < len) // some from start of window
                                 {
@@ -190,6 +198,7 @@ internal static partial class Inflater
                                         from = ref Unsafe.Add(ref from, 1U);
                                         strm.next_out++;
                                     } while (--op != 0);
+
                                     from = ref Unsafe.Subtract(ref @out, dist); // rest from output
                                 }
                             }
@@ -207,9 +216,11 @@ internal static partial class Inflater
                                     from = ref Unsafe.Add(ref from, 1U);
                                     strm.next_out++;
                                 } while (--op != 0);
+
                                 from = ref Unsafe.Subtract(ref @out, dist); // rest from output
                             }
                         }
+
                         while (len > 2)
                         {
                             @out = from;
@@ -226,6 +237,7 @@ internal static partial class Inflater
                             strm.next_out += 3;
                             len -= 3;
                         }
+
                         if (len != 0)
                         {
                             @out = from;
@@ -261,6 +273,7 @@ internal static partial class Inflater
                             len -= 3;
                             strm.next_out += 3;
                         } while (len > 2);
+
                         if (len != 0)
                         {
                             @out = from;
@@ -284,7 +297,7 @@ internal static partial class Inflater
                 }
                 else
                 {
-                    strm.msg = "invalid distance code";
+                    strm.Msg = "invalid distance code";
                     state.Mode = InflateMode.Bad;
                     break;
                 }
@@ -302,7 +315,7 @@ internal static partial class Inflater
             }
             else
             {
-                strm.msg = "invalid literal/length code";
+                strm.Msg = "invalid literal/length code";
                 state.Mode = InflateMode.Bad;
                 break;
             }
@@ -316,8 +329,8 @@ internal static partial class Inflater
         hold &= (1U << (int)bits) - 1;
 
         // update state and return
-        strm.avail_in = strm.next_in < last ? 5 + (last - strm.next_in) : 5 - (strm.next_in - last);
-        strm.avail_out = strm.next_out < end ? 257 + (end - strm.next_out) : 257 - (strm.next_out - end);
+        strm.AvailIn = strm.next_in < last ? 5 + (last - strm.next_in) : 5 - (strm.next_in - last);
+        strm.AvailOut = strm.next_out < end ? 257 + (end - strm.next_out) : 257 - (strm.next_out - end);
 
         state.Hold = hold;
         state.Bits = bits;

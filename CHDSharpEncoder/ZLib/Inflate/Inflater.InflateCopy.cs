@@ -13,21 +13,21 @@ internal static partial class Inflater
     {
         // check input
         if (InflateStateCheck(ref source))
-            return Z_STREAM_ERROR;
+            return ZStreamError;
 
-        var state = source.inflateState;
+        var state = source.InflateState;
 
         // allocate space
         InflateState copy;
         try
         {
-            copy = s_objectPool.Get();
+            copy = SObjectPool.Get();
             if (copy == null)
-                return Z_MEM_ERROR;
+                return ZMemError;
         }
         catch (OutOfMemoryException)
         {
-            return Z_MEM_ERROR;
+            return ZMemError;
         }
 
         byte[] window = null;
@@ -41,18 +41,18 @@ internal static partial class Inflater
             }
             catch (OutOfMemoryException)
             {
-                return Z_MEM_ERROR;
+                return ZMemError;
             }
         }
 
         // copy state
-        dest.avail_in = source.avail_in;
+        dest.AvailIn = source.AvailIn;
         dest.total_in = source.total_in;
-        dest.avail_out = source.avail_out;
+        dest.AvailOut = source.AvailOut;
         dest.total_out = source.total_out;
-        dest.msg = source.msg;
-        dest.inflateState = copy;
-        dest.deflateState = null;
+        dest.Msg = source.Msg;
+        dest.InflateState = copy;
+        dest.DeflateState = null;
         dest.next_in = source.next_in;
         dest.next_out = source.next_out;
         dest.data_type = source.data_type;
@@ -86,46 +86,46 @@ internal static partial class Inflater
         copy.Was = state.Was;
 
 #if NET7_0_OR_GREATER
-        ref var sourceRefs = ref source.inflateRefs;
-        ref var destRefs = ref dest.inflateRefs;
+        ref var sourceRefs = ref source.InflateRefs;
+        ref var destRefs = ref dest.InflateRefs;
         InitRefFields(state, ref sourceRefs);
         InitRefFields(copy, ref destRefs);
 #endif
 
         ref var sourceLens = ref
 #if NET7_0_OR_GREATER
-            sourceRefs.lens;
+            sourceRefs.Lens;
 #else
         MemoryMarshal.GetReference<ushort>(state.lens);
 #endif
         ref var sourceWork = ref
 #if NET7_0_OR_GREATER
-            sourceRefs.work;
+            sourceRefs.Work;
 #else
         MemoryMarshal.GetReference<ushort>(state.work);
 #endif
         ref var sourceCodes = ref
 #if NET7_0_OR_GREATER
-            sourceRefs.codes;
+            sourceRefs.Codes;
 #else
         MemoryMarshal.GetReference<Code>(state.codes);
 #endif
 
         ref var destLens = ref
 #if NET7_0_OR_GREATER
-            destRefs.lens;
+            destRefs.Lens;
 #else
         MemoryMarshal.GetReference<ushort>(copy.lens);
 #endif
         ref var destWork = ref
 #if NET7_0_OR_GREATER
-            destRefs.work;
+            destRefs.Work;
 #else
         MemoryMarshal.GetReference<ushort>(copy.work);
 #endif
         ref var destCodes = ref
 #if NET7_0_OR_GREATER
-            destRefs.codes;
+            destRefs.Codes;
 #else
         MemoryMarshal.GetReference<Code>(copy.codes);
 #endif
@@ -165,21 +165,21 @@ internal static partial class Inflater
                 ref MemoryMarshal.GetReference<byte>(state.Window), (uint)wsize);
 
         copy.Window = window;
-        return Z_OK;
+        return ZOk;
     }
 
 #if NET7_0_OR_GREATER
     private static void InitRefFields(InflateState s, ref InflateRefs refs)
     {
-        if (netUnsafe.IsNullRef(ref refs.lens))
+        if (netUnsafe.IsNullRef(ref refs.Lens))
         {
-            refs.lens = ref MemoryMarshal.GetReference<ushort>(s.Lens);
+            refs.Lens = ref MemoryMarshal.GetReference<ushort>(s.Lens);
         }
 
-        if (netUnsafe.IsNullRef(ref refs.codes))
+        if (netUnsafe.IsNullRef(ref refs.Codes))
         {
-            refs.codes = ref MemoryMarshal.GetReference<Code>(s.Codes);
-            refs.work = ref MemoryMarshal.GetReference<ushort>(s.Work);
+            refs.Codes = ref MemoryMarshal.GetReference<Code>(s.Codes);
+            refs.Work = ref MemoryMarshal.GetReference<ushort>(s.Work);
         }
     }
 #endif

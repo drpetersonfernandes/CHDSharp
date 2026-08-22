@@ -41,7 +41,10 @@ public enum ChdCodec
 }
 
 /// <summary>Flags describing the type and properties of a hunk map entry.</summary>
+[Flags]
+#pragma warning disable MA0062 // Non-flags enums should not be marked with "FlagsAttribute" - mask value is intentional
 public enum MapEntryFlag
+#pragma warning restore MA0062
 {
     /// <summary>Mask to isolate the hunk type from a map entry.</summary>
     Mapentryflagtypemask = 0x000f, /* what type of hunk */

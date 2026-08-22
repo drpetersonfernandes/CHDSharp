@@ -15,29 +15,29 @@ namespace CHDSharpEncoder.ZLib;
 public ref struct ZStream
 #pragma warning restore CA1711
 {
-    internal uint next_in;      // the index of next input byte in the input buffer
-    internal uint avail_in;     // number of bytes available at next_in
-    internal uint total_in;     // total number of input bytes read so far
+    internal uint next_in; // the index of next input byte in the input buffer
+    internal uint AvailIn; // number of bytes available at next_in
+    internal uint total_in; // total number of input bytes read so far
 
-    internal uint next_out;     // the index of next output byte in the output buffer
-    internal uint avail_out;    // remaining free space at next_out
-    internal uint total_out;    // total number of bytes output so far
+    internal uint next_out; // the index of next output byte in the output buffer
+    internal uint AvailOut; // remaining free space at next_out
+    internal uint total_out; // total number of bytes output so far
 
-    internal string msg;        // last error message
+    internal string Msg; // last error message
 
-    internal InflateState inflateState;
-    internal DeflateState deflateState;
+    internal InflateState InflateState;
+    internal DeflateState DeflateState;
 
-    internal int data_type;     // best guess about the data type: binary or text for deflate, or the decoding state for inflate
+    internal int data_type; // best guess about the data type: binary or text for deflate, or the decoding state for inflate
 
     internal ReadOnlySpan<byte> _input;
     internal Span<byte> _output;
 
 #if NET7_0_OR_GREATER
-    internal ref byte input_ptr;
-    internal ref byte output_ptr;
-    internal InflateRefs inflateRefs;
-    internal DeflateRefs deflateRefs;
+    internal ref byte InputPtr;
+    internal ref byte OutputPtr;
+    internal InflateRefs InflateRefs;
+    internal DeflateRefs DeflateRefs;
 #endif
 
     /// <summary>
@@ -51,9 +51,9 @@ public ref struct ZStream
         {
             _input = value;
             next_in = 0;
-            avail_in = (uint)value.Length;
+            AvailIn = (uint)value.Length;
 #if NET7_0_OR_GREATER
-            input_ptr = ref MemoryMarshal.GetReference(_input);
+            InputPtr = ref MemoryMarshal.GetReference(_input);
 #endif
         }
     }
@@ -66,11 +66,11 @@ public ref struct ZStream
     /// <remarks>If you choose to set this optional property, you should set it after you have set the <see cref="Input"/> property.</remarks>
     public int AvailableIn
     {
-        readonly get => (int)avail_in;
+        readonly get => (int)AvailIn;
         set
         {
             ValidateAvailableBytes(value, next_in, _input, nameof(Input), nameof(NextIn));
-            avail_in = (uint)value;
+            AvailIn = (uint)value;
         }
     }
 
@@ -109,9 +109,9 @@ public ref struct ZStream
         {
             _output = value;
             next_out = 0;
-            avail_out = (uint)value.Length;
+            AvailOut = (uint)value.Length;
 #if NET7_0_OR_GREATER
-            output_ptr = ref MemoryMarshal.GetReference(_output);
+            OutputPtr = ref MemoryMarshal.GetReference(_output);
 #endif
         }
     }
@@ -124,11 +124,11 @@ public ref struct ZStream
     /// <remarks>If you choose to set this optional property, you should set it after you have set the <see cref="Output"/> property.</remarks>
     public int AvailableOut
     {
-        readonly get => (int)avail_out;
+        readonly get => (int)AvailOut;
         set
         {
             ValidateAvailableBytes(value, next_out, _output, nameof(Output), nameof(NextOut));
-            avail_out = (uint)value;
+            AvailOut = (uint)value;
         }
     }
 
@@ -157,7 +157,7 @@ public ref struct ZStream
     /// <summary>
     /// Gets the last error message, or <see langword="null"/> if no error.
     /// </summary>
-    public readonly string Message => msg;
+    public readonly string Message => Msg;
 
     /// <summary>
     /// Gets a value that represents a best guess about the data type: binary or text for deflate, or the decoding state for inflate.

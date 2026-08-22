@@ -9,27 +9,27 @@ internal static partial class Deflater
     internal static int DeflateReset(ref ZStream strm)
     {
         var ret = DeflateResetKeep(ref strm);
-        if (ret == Z_OK)
+        if (ret == ZOk)
             LongestMatchInit(ref strm);
         return ret;
     }
 
     private static int DeflateResetKeep(ref ZStream strm)
     {
-        const int Z_UNKNOWN = 2;
+        const int zUnknown = 2;
 
         if (DeflateStateCheck(ref strm))
-            return Z_STREAM_ERROR;
+            return ZStreamError;
 
         strm.total_in = strm.total_out = 0;
-        strm.msg = null;
-        strm.data_type = Z_UNKNOWN;
+        strm.Msg = null;
+        strm.data_type = zUnknown;
 
-        var s = strm.deflateState;
+        var s = strm.DeflateState;
         s.Pending = 0;
         s.PendingOut = s.PendingBuf;
 #if NET7_0_OR_GREATER
-        ref var refs = ref strm.deflateRefs;
+        ref var refs = ref strm.DeflateRefs;
         refs.PendingOut = ref refs.PendingBuf;
 #endif
 
@@ -46,6 +46,6 @@ internal static partial class Deflater
 
         Tree.Init(ref strm);
 
-        return Z_OK;
+        return ZOk;
     }
 }

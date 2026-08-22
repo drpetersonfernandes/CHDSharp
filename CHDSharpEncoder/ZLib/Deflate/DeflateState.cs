@@ -13,9 +13,9 @@ internal sealed class DeflateState
 {
     private const byte MaxBlBits = 7; // Bit length codes must not exceed MAX_BL_BITS bits
 
-    private static readonly StaticTree SLDesc = new(Tree.SLtree, Literals + 1, LCodes, MaxBits);
+    private static readonly StaticTree SlDesc = new(Tree.SLtree, Literals + 1, LCodes, MaxBits);
 
-    private static readonly StaticTree SDDesc = new(Tree.SDtree, 0, DCodes, MaxBits);
+    private static readonly StaticTree SdDesc = new(Tree.SDtree, 0, DCodes, MaxBits);
 
     private static readonly StaticTree SBlDesc = new(null, 0, BlCodes, MaxBlBits);
 
@@ -24,8 +24,8 @@ internal sealed class DeflateState
     /// </summary>
     public DeflateState()
     {
-        LDesc = new TreeDescriptor(DynLtree, SLDesc);
-        DDesc = new TreeDescriptor(DynDtree, SDDesc);
+        LDesc = new TreeDescriptor(DynLtree, SlDesc);
+        DDesc = new TreeDescriptor(DynDtree, SdDesc);
         BlDesc = new TreeDescriptor(BlTree, SBlDesc);
     }
 
@@ -68,10 +68,10 @@ internal sealed class DeflateState
 
     internal ushort[] Head; // Heads of the hash chains or null.
 
-    internal uint InsH;            // hash index of string to be inserted
-    internal uint HashSize;        // number of elements in hash table
-    internal uint HashBits;        // log2(hash_size)
-    internal uint HashMask;        // hash_size-1
+    internal uint InsH; // hash index of string to be inserted
+    internal uint HashSize; // number of elements in hash table
+    internal uint HashBits; // log2(hash_size)
+    internal uint HashMask; // hash_size-1
 
     internal int HashShift;
     /* Number of bits by which ins_h must be shifted at each input
@@ -80,14 +80,14 @@ internal sealed class DeflateState
      *   hash_shift * MIN_MATCH >= hash_bits
      */
 
-    internal int BlockStart;       // Window position at the beginning of the current output block. Gets negative when the window is moved backwards.
+    internal int BlockStart; // Window position at the beginning of the current output block. Gets negative when the window is moved backwards.
 
-    internal uint MatchLength;     // length of best match
-    internal uint PrevMatch;       // previous match
-    internal bool MatchAvailable;  // set if previous match exists
-    internal uint Strstart;         // start of string to insert
-    internal uint MatchStart;      // start of matching string
-    internal uint Lookahead;        // number of valid bytes ahead in window
+    internal uint MatchLength; // length of best match
+    internal uint PrevMatch; // previous match
+    internal bool MatchAvailable; // set if previous match exists
+    internal uint Strstart; // start of string to insert
+    internal uint MatchStart; // start of matching string
+    internal uint Lookahead; // number of valid bytes ahead in window
 
     internal uint PrevLength;
     /* Length of the best match at previous step. Matches not greater than this
@@ -106,26 +106,26 @@ internal sealed class DeflateState
      * levels >= 4.
      */
 
-    internal int Level;         // compression level (1..9)
-    internal int Strategy;      // favor or force Huffman coding
+    internal int Level; // compression level (1..9)
+    internal int Strategy; // favor or force Huffman coding
 
-    internal uint GoodMatch;   // Use a faster search when the previous match is longer than this
+    internal uint GoodMatch; // Use a faster search when the previous match is longer than this
 
-    internal int NiceMatch;    // Stop searching when current match exceeds this
+    internal int NiceMatch; // Stop searching when current match exceeds this
 
-    internal readonly TreeNode[] DynLtree = new TreeNode[HeapSize];        // literal and length tree
-    internal readonly TreeNode[] DynDtree = new TreeNode[2 * DCodes + 1];  // distance tree
-    internal readonly TreeNode[] BlTree = new TreeNode[2 * BlCodes + 1];   // Huffman tree for bit lengths
+    internal readonly TreeNode[] DynLtree = new TreeNode[HeapSize]; // literal and length tree
+    internal readonly TreeNode[] DynDtree = new TreeNode[2 * DCodes + 1]; // distance tree
+    internal readonly TreeNode[] BlTree = new TreeNode[2 * BlCodes + 1]; // Huffman tree for bit lengths
 
-    internal readonly TreeDescriptor LDesc;    // desc. for literal tree
-    internal readonly TreeDescriptor DDesc;    // desc. for distance tree
-    internal readonly TreeDescriptor BlDesc;   // desc. for bit length tree
+    internal readonly TreeDescriptor LDesc; // desc. for literal tree
+    internal readonly TreeDescriptor DDesc; // desc. for distance tree
+    internal readonly TreeDescriptor BlDesc; // desc. for bit length tree
 
     internal readonly ushort[] BlCount = new ushort[MaxBits + 1]; // number of codes at each bit length for an optimal tree
 
-    internal readonly int[] Heap = new int[2 * LCodes + 1];  // heap used to build the Huffman trees
-    internal uint HeapLen;                         // number of elements in the heap
-    internal uint HeapMax;                         // element of largest frequency
+    internal readonly int[] Heap = new int[2 * LCodes + 1]; // heap used to build the Huffman trees
+    internal uint HeapLen; // number of elements in the heap
+    internal uint HeapMax; // element of largest frequency
 
     internal readonly byte[] Depth = new byte[2 * LCodes + 1]; // Depth of each subtree used as tie breaker for trees of equal frequency
 
@@ -149,22 +149,22 @@ internal sealed class DeflateState
      *   - I can't count above 4
      */
 
-    internal uint SymNext;         // running index in sym_buf
-    internal uint SymEnd;          // symbol table full when sym_next reaches this
+    internal uint SymNext; // running index in sym_buf
+    internal uint SymEnd; // symbol table full when sym_next reaches this
 
-    internal uint OptLen;          // bit length of current block with optimal trees
-    internal uint StaticLen;       // bit length of current block with static trees
-    internal uint Matches;          // number of string matches in current block
-    internal uint Insert;           // bytes at end of window left to insert
+    internal uint OptLen; // bit length of current block with optimal trees
+    internal uint StaticLen; // bit length of current block with static trees
+    internal uint Matches; // number of string matches in current block
+    internal uint Insert; // bytes at end of window left to insert
 
 #if DEBUG
-    internal uint CompressedLen;   // total bit length of compressed file mod 2^32
-    internal uint BitsSent;        // bit length of compressed data sent mod 2^32
+    internal uint CompressedLen; // total bit length of compressed file mod 2^32
+    internal uint BitsSent; // bit length of compressed data sent mod 2^32
 #endif
 
     internal ushort BiBuf; //Output buffer. bits are inserted starting at the bottom (least significant bits).
 
-    internal int BiValid;  //Number of valid bits in bi_buf. All bits above the last valid bit are always zero.
+    internal int BiValid; //Number of valid bits in bi_buf. All bits above the last valid bit are always zero.
 
     internal uint HighWater;
     /* High water mark offset in window for initialized bytes -- bytes above

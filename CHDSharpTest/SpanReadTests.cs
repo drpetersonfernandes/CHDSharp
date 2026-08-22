@@ -58,7 +58,7 @@ public class SpanReadTests
     private static void OpenTestChd(out ChdFile chd)
     {
         var ms = BuildTestChd();
-        var err = ChdFile.Open(ms, true, out chd);
+        var err = ChdFile.Open(ms, true, out chd!);
         Assert.Equal(ChdError.Chderrnone, err);
     }
 

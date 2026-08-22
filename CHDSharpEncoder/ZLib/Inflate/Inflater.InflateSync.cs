@@ -11,11 +11,11 @@ internal static partial class Inflater
     internal static int InflateSync(ref ZStream strm)
     {
         if (InflateStateCheck(ref strm))
-            return Z_STREAM_ERROR;
+            return ZStreamError;
 
-        var state = strm.inflateState;
-        if (strm.avail_in == 0 && state.Bits < 8)
-            return Z_BUF_ERROR;
+        var state = strm.InflateState;
+        if (strm.AvailIn == 0 && state.Bits < 8)
+            return ZBufError;
 
         uint len = 0;
         // if first time, start search in bit buffer
@@ -34,6 +34,7 @@ internal static partial class Inflater
                 state.Hold >>= 8;
                 state.Bits -= 8;
             }
+
             state.Have = 0;
             _ = SyncSearch(ref state.Have, ref buf, len);
         }
@@ -41,26 +42,26 @@ internal static partial class Inflater
         // search available input
         var @in = SyncSearch(ref state.Have, ref
 #if NET7_0_OR_GREATER
-            Unsafe.Add(ref strm.input_ptr, strm.next_in),
+            Unsafe.Add(ref strm.InputPtr, strm.next_in),
 #else
             MemoryMarshal.GetReference(strm._input.Slice((int)strm.next_in)),
 #endif
-                strm.avail_in);
-        strm.avail_in -= @in;
+            strm.AvailIn);
+        strm.AvailIn -= @in;
         strm.next_in += @in;
         strm.total_in += @in;
 
         // return no joy or set up to restart Inflate on a new block
         if (state.Have != 4)
-            return Z_DATA_ERROR;
+            return ZDataError;
 
         if (state.Flags == -1)
         {
-            state.Wrap = 0;     // if no header yet, treat as raw
+            state.Wrap = 0; // if no header yet, treat as raw
         }
         else
         {
-            state.Wrap &= ~4;   // no point in computing a check value now */
+            state.Wrap &= ~4; // no point in computing a check value now */
         }
 
         var flags = state.Flags; // temporary to save header status
@@ -72,7 +73,7 @@ internal static partial class Inflater
         strm.total_out = @out;
         state.Flags = flags;
         state.Mode = InflateMode.Type;
-        return Z_OK;
+        return ZOk;
     }
 
     private static uint SyncSearch(ref uint have, ref byte buf, uint len)
@@ -97,6 +98,7 @@ internal static partial class Inflater
 
             next++;
         }
+
         have = got;
         return next;
     }

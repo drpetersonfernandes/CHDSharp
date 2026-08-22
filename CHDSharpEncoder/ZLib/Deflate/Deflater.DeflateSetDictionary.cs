@@ -12,13 +12,13 @@ internal static partial class Deflater
     internal static int DeflateSetDictionary(ref ZStream strm, ReadOnlySpan<byte> dictionary)
     {
         if (DeflateStateCheck(ref strm))
-            return Z_STREAM_ERROR;
+            return ZStreamError;
 
-        var s = strm.deflateState;
+        var s = strm.DeflateState;
 
         var wrap = s.Wrap;
         if (wrap == 2 || (wrap == 1 && s.Status != InitState) || s.Lookahead != 0)
-            return Z_STREAM_ERROR;
+            return ZStreamError;
 
         var dictLength = (uint)dictionary.Length;
         // when using zlib wrappers, compute Adler-32 for provided dictionary
@@ -29,7 +29,7 @@ internal static partial class Deflater
 
         s.Wrap = 0; // avoid computing Adler-32 in ReadBuf
 
-        uint next_in = 0;
+        uint nextIn = 0;
         // if dictionary would fill window, just replace the history
         if (dictLength >= s.WSize)
         {
@@ -40,18 +40,19 @@ internal static partial class Deflater
                 s.BlockStart = 0;
                 s.Insert = 0;
             }
-            next_in = dictLength - s.WSize; //use the tail 
+
+            nextIn = dictLength - s.WSize; //use the tail
             dictLength = s.WSize;
         }
 
         // insert dictionary into window and hash
-        var avail = strm.avail_in;
+        var avail = strm.AvailIn;
         var next = strm.next_in;
         var input = strm._input;
 #if NET7_0_OR_GREATER
-        ref var input_ptr = ref strm.input_ptr;
+        ref var inputPtr = ref strm.InputPtr;
         strm.Input = dictionary;
-        ref var refs = ref strm.deflateRefs;
+        ref var refs = ref strm.DeflateRefs;
         if (netUnsafe.IsNullRef(ref refs.Window))
         {
             refs.Window = ref MemoryMarshal.GetReference<byte>(s.Window);
@@ -65,23 +66,23 @@ internal static partial class Deflater
         strm.avail_in = dictLength;
         strm._input = dictionary;
 #endif
-        strm.next_in = next_in;
+        strm.next_in = nextIn;
 
         ref var window = ref
 #if NET7_0_OR_GREATER
-        refs.Window;
+            refs.Window;
 #else
         MemoryMarshal.GetReference<byte>(s.window);
 #endif
         ref var prev = ref
 #if NET7_0_OR_GREATER
-        refs.Prev;
+            refs.Prev;
 #else
         MemoryMarshal.GetReference<ushort>(s.prev);
 #endif
         ref var head = ref
 #if NET7_0_OR_GREATER
-        refs.Head;
+            refs.Head;
 #else
         MemoryMarshal.GetReference<ushort>(s.head);
 #endif
@@ -98,10 +99,12 @@ internal static partial class Deflater
                 temp = (ushort)str;
                 str++;
             } while (--n != 0);
+
             s.Strstart = str;
             s.Lookahead = MinMatch - 1;
             FillWindow(ref strm, ref window, ref prev, ref head);
         }
+
         s.Strstart += s.Lookahead;
         s.BlockStart = (int)s.Strstart;
         s.Insert = s.Lookahead;
@@ -110,11 +113,11 @@ internal static partial class Deflater
         s.MatchAvailable = false;
         strm._input = input;
 #if NET7_0_OR_GREATER
-        strm.input_ptr = ref input_ptr;
+        strm.InputPtr = ref inputPtr;
 #endif
         strm.next_in = next;
-        strm.avail_in = avail;
+        strm.AvailIn = avail;
         s.Wrap = wrap;
-        return Z_OK;
+        return ZOk;
     }
 }

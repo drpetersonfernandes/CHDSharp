@@ -6,33 +6,34 @@ namespace CHDSharpEncoder.ZLib.Inflate;
 
 internal static partial class Inflater
 {
-    private static readonly ObjectPool<InflateState> s_objectPool = new();
+    private static readonly ObjectPool<InflateState> SObjectPool = new();
 
     internal static int InflateInit(ref ZStream strm, int windowBits)
     {
-        strm.msg = null;
+        strm.Msg = null;
         InflateState state;
         try
         {
-            state = s_objectPool.Get();
+            state = SObjectPool.Get();
         }
         catch (OutOfMemoryException)
         {
-            return Z_MEM_ERROR;
+            return ZMemError;
         }
 #if NET7_0_OR_GREATER
-        strm.inflateRefs = new InflateRefs();
+        strm.InflateRefs = new InflateRefs();
 #endif
         Trace.Tracev("inflate: allocated\n");
-        strm.inflateState = state;
+        strm.InflateState = state;
         state.Mode = InflateMode.Head;
 
         var ret = InflateReset(ref strm, windowBits);
-        if (ret != Z_OK)
+        if (ret != ZOk)
         {
-            s_objectPool.Return(state);
-            strm.inflateState = null;
+            SObjectPool.Return(state);
+            strm.InflateState = null;
         }
+
         return ret;
     }
 }

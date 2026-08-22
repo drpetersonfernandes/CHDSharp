@@ -179,9 +179,9 @@ internal static class FlacLpcMath
     /// <summary>FLAC__lpc_window_data_partial for subdivide-tukey sub-blocks.</summary>
     public static void WindowDataPartial(ReadOnlySpan<int> input, ReadOnlySpan<float> window, Span<float> output, uint dataLen, uint partSize, uint dataShift)
     {
-        int i;
         if (partSize + dataShift < dataLen)
         {
+            int i;
             for (i = 0; i < (int)partSize; i++)
             {
                 output[i] = input[(int)(dataShift + i)] * window[i];
@@ -240,11 +240,12 @@ internal static class FlacLpcMath
     {
         var err = autoc[0];
         var lpc = new double[FlacBitMath.MaxLpcOrder];
-        int i, j;
+        int i;
 
         for (i = 0; i < (int)maxOrder; i++)
         {
             var r = -autoc[i + 1];
+            int j;
             for (j = 0; j < i; j++)
             {
                 r -= lpc[j] * autoc[i - j];
@@ -352,14 +353,14 @@ internal static class FlacLpcMath
         const int maxShiftLimit = (1 << (FlacBitMath.SubframeLpcQlpShiftLen - 1)) - 1;
         const int minShiftLimit = -maxShiftLimit - 1;
 
-        if (shift > maxShiftLimit)
+        switch (shift)
         {
-            shift = maxShiftLimit;
-        }
-        else if (shift < minShiftLimit)
-        {
-            shift = 0;
-            return false;
+            case > maxShiftLimit:
+                shift = maxShiftLimit;
+                break;
+            case < minShiftLimit:
+                shift = 0;
+                return false;
         }
 
         if (shift >= 0)
@@ -494,7 +495,7 @@ internal static class FlacLpcMath
 }
 
 /// <summary>A minimal 2D double array view used to store per-order LPC coefficients.</summary>
-internal ref struct Span2D<T>
+internal readonly ref struct Span2D<T>
 {
     private readonly Span<T> _data;
     private readonly int _width;

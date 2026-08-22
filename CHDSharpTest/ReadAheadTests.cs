@@ -200,7 +200,7 @@ public class ReadAheadTests
     }
 
     [Fact]
-    public void DisposeAsync_with_readahead_does_not_throw()
+    public async Task DisposeAsync_with_readahead_does_not_throw()
     {
         var ms = BuildTestChd();
         var err = ChdFile.Open(ms, true, out var chd);
@@ -211,8 +211,7 @@ public class ReadAheadTests
         chd.ReadHunk(0, buf);
 
         // Should not throw
-        var disposeTask = chd.DisposeAsync();
-        disposeTask.AsTask().Wait();
+        await chd.DisposeAsync();
     }
 
     // ── Read-ahead with LRU cache interaction ─────────────────────────────
@@ -252,7 +251,7 @@ public class ReadAheadTests
         chd.ConfigureReadAhead(4);
 
         var buf = new byte[Blocksize];
-        var totalHunks = (uint)(TotalBytes / Blocksize);
+        const uint totalHunks = (uint)(TotalBytes / Blocksize);
 
         // Read last hunk — read-ahead tries hunks past the end, should not error
         var err = chd.ReadHunk(totalHunks - 1, buf);

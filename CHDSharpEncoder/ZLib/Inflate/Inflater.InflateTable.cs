@@ -12,34 +12,42 @@ internal static partial class Inflater
     internal const ushort EnoughDists = 592;
     private const byte MaxBits = 15;
 
-    internal static readonly ushort[] s_lbase = new ushort[31] { // Length codes 257..285 base
+    internal static readonly ushort[] SLbase = new ushort[]
+    { // Length codes 257..285 base
         3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17, 19, 23, 27, 31,
-        35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258, 0, 0 };
+        35, 43, 51, 59, 67, 83, 99, 115, 131, 163, 195, 227, 258, 0, 0
+    };
 
-    internal static readonly ushort[] s_lext = new ushort[31] { // Length codes 257..285 extra
+    internal static readonly ushort[] SLext = new ushort[]
+    { // Length codes 257..285 extra
         16, 16, 16, 16, 16, 16, 16, 16, 17, 17, 17, 17, 18, 18, 18, 18,
-        19, 19, 19, 19, 20, 20, 20, 20, 21, 21, 21, 21, 16, 203, 77 };
+        19, 19, 19, 19, 20, 20, 20, 20, 21, 21, 21, 21, 16, 203, 77
+    };
 
-    internal static readonly ushort[] s_dbase = new ushort[32] { // Distance codes 0..29 base
+    internal static readonly ushort[] SDbase = new ushort[]
+    { // Distance codes 0..29 base
         1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193,
         257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145,
-        8193, 12289, 16385, 24577, 0, 0 };
+        8193, 12289, 16385, 24577, 0, 0
+    };
 
-    internal static readonly ushort[] s_dext = new ushort[32]{ // Distance codes 0..29 extra
+    internal static readonly ushort[] SDext = new ushort[]
+    { // Distance codes 0..29 extra
         16, 16, 16, 16, 17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22,
         23, 23, 24, 24, 25, 25, 26, 26, 27, 27,
-        28, 28, 29, 29, 64, 64 };
+        28, 28, 29, 29, 64, 64
+    };
 
     internal static int InflateTable(CodeType type, ref ushort lens, uint codes, ref Code table, ref int bits, ref ushort work, ref uint offset,
         ref ushort lbase, ref ushort lext, ref ushort dbase, ref ushort dext)
     {
-        Code here;                          // table entry for duplication
-        const byte Length = MaxBits + 1;
-        Span<ushort> count = stackalloc ushort[Length];// number of codes of each length
+        Code here; // table entry for duplication
+        const byte length = MaxBits + 1;
+        Span<ushort> count = stackalloc ushort[length]; // number of codes of each length
         ref var ptrToCount = ref MemoryMarshal.GetReference(count);
 
         // accumulate lengths for codes (assumes lens[] all in 0..MAXBITS)
-        netUnsafe.InitBlock(ref netUnsafe.As<ushort, byte>(ref ptrToCount), 0, Length * sizeof(ushort));
+        netUnsafe.InitBlock(ref netUnsafe.As<ushort, byte>(ref ptrToCount), 0, length * sizeof(ushort));
 
         uint sym = 0; // index of code symbols
         for (; sym < codes; sym++)
@@ -48,7 +56,7 @@ internal static partial class Inflater
         }
 
         // bound code lengths, force root to be within code lengths
-        var root = bits;   // number of index bits for root table
+        var root = bits; // number of index bits for root table
         uint max = MaxBits; // maximum code lengths
         for (; max >= 1; max--)
             if (Unsafe.Add(ref ptrToCount, max) != 0)
@@ -70,6 +78,7 @@ internal static partial class Inflater
             bits = 1;
             return 0; // no symbols, but wait for decoding to report error
         }
+
         uint min = 1; // minimum code lengths
         for (; min < max; min++)
             if (Unsafe.Add(ref ptrToCount, min) != 0)
@@ -82,7 +91,7 @@ internal static partial class Inflater
 
         // check for an over-subscribed or incomplete set of lengths
         var left = 1; // number of prefix codes available
-        uint len = 1;  // a code's length in bits
+        uint len = 1; // a code's length in bits
         for (; len <= MaxBits; len++)
         {
             left <<= 1;
@@ -90,11 +99,12 @@ internal static partial class Inflater
             if (left < 0)
                 return -1; // over-subscribed
         }
+
         if (left > 0 && (type == CodeType.Codes || max != 1))
             return -1; // incomplete set
 
         // generate offsets into symbol table for each length for sorting
-        Span<ushort> offs = stackalloc ushort[Length]; // offsets in table for each length
+        Span<ushort> offs = stackalloc ushort[length]; // offsets in table for each length
         ref var ptrToOffs = ref MemoryMarshal.GetReference(offs);
         Unsafe.Add(ref ptrToOffs, 1U) = 0;
         for (len = 1; len < MaxBits; len++)
@@ -128,25 +138,23 @@ internal static partial class Inflater
         }
 
         // initialize state for loop
-        uint huff = 0;              // starting code
-        sym = 0;                    // starting code symbol
-        len = min;                  // starting code length
-        uint next = 0;              // current offset to table to fill in
-        var curr = (uint)root;     // current table index bits
-        uint drop = 0;              // current bits to drop from code for index
-        var low = uint.MaxValue;   // trigger new sub-table when len > root
-        var used = 1U << root;     // use root table entries
-        var mask = used - 1;       // mask for comparing low
+        uint huff = 0; // starting code
+        sym = 0; // starting code symbol
+        len = min; // starting code length
+        uint next = 0; // current offset to table to fill in
+        var curr = (uint)root; // current table index bits
+        uint drop = 0; // current bits to drop from code for index
+        var low = uint.MaxValue; // trigger new sub-table when len > root
+        var used = 1U << root; // use root table entries
+        var mask = used - 1; // mask for comparing low
 
         // check available table space
         if ((type == CodeType.Lens && used > EnoughLens) ||
             (type == CodeType.Dists && used > EnoughDists))
             return 1;
 
-        uint incr; // for incrementing code, index
-        uint fill; // index for replicating entries
         // process all codes and make table entries
-        for (; ; )
+        for (;;)
         {
             // create table entry
             var temp = (byte)(len - drop);
@@ -166,8 +174,8 @@ internal static partial class Inflater
             }
 
             // replicate for those indices with low len bits equal to huff
-            incr = 1U << (int)(len - drop);
-            fill = 1U << (int)curr;
+            var incr = 1U << (int)(len - drop); // for incrementing code, index
+            var fill = 1U << (int)curr; // index for replicating entries
             min = fill; // save offset to next table
             do
             {

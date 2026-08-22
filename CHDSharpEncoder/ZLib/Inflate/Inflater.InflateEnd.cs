@@ -9,11 +9,11 @@ internal static partial class Inflater
     internal static int InflateEnd(ref ZStream strm)
     {
         if (InflateStateCheck(ref strm))
-            return Z_STREAM_ERROR;
+            return ZStreamError;
 
-        s_objectPool.Return(strm.inflateState);
-        strm.inflateState = null;
+        SObjectPool.Return(strm.InflateState);
+        strm.InflateState = null;
         Trace.Tracev("inflate: end\n");
-        return Z_OK;
+        return ZOk;
     }
 }

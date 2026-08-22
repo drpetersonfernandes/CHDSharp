@@ -9,24 +9,25 @@ internal static partial class Inflater
     internal static int InflatePrime(ref ZStream strm, int bits, int value)
     {
         if (InflateStateCheck(ref strm))
-            return Z_STREAM_ERROR;
+            return ZStreamError;
 
         if (bits == 0)
-            return Z_OK;
+            return ZOk;
 
-        var state = strm.inflateState;
+        var state = strm.InflateState;
         if (bits < 0)
         {
             state.Hold = 0;
             state.Bits = 0;
-            return Z_OK;
+            return ZOk;
         }
+
         if (bits > 16 || state.Bits + (uint)bits > 32)
-            return Z_STREAM_ERROR;
+            return ZStreamError;
 
         value &= (1 << bits) - 1;
         state.Hold += (uint)(value << (int)state.Bits);
         state.Bits += (uint)bits;
-        return Z_OK;
+        return ZOk;
     }
 }

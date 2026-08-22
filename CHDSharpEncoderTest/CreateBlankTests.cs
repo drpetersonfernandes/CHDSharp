@@ -1,7 +1,6 @@
 using CHDSharp;
 using CHDSharp.Models;
 using CHDSharpEncoder;
-using CHDSharpEncoder.Models;
 
 namespace CHDSharpEncoderTest;
 
@@ -13,7 +12,7 @@ public class CreateBlankTests
         var chdPath = Path.GetTempFileName();
         try
         {
-            var totalBytes = 40960UL; // 10 hunks
+            const ulong totalBytes = 40960UL; // 10 hunks
             ChdEncoder.CreateBlank(chdPath, totalBytes, 4096, 512);
 
             var chd = File.ReadAllBytes(chdPath);
@@ -37,7 +36,7 @@ public class CreateBlankTests
         var chdPath = Path.GetTempFileName();
         try
         {
-            var totalBytes = 1024 * 1024UL; // 1 MB
+            const ulong totalBytes = 1024 * 1024UL; // 1 MB
             ChdEncoder.CreateBlank(chdPath, totalBytes, 4096, 512);
 
             var chd = File.ReadAllBytes(chdPath);
@@ -56,7 +55,7 @@ public class CreateBlankTests
         var chdPath = Path.GetTempFileName();
         try
         {
-            var totalBytes = 1024 * 1024UL; // 1 MB
+            const ulong totalBytes = 1024 * 1024UL; // 1 MB
             ChdEncoder.CreateBlank(chdPath, totalBytes, 4096, 512);
 
             var err = ChdFile.Open(chdPath, out var chd);
@@ -72,10 +71,10 @@ public class CreateBlankTests
                     {
                         found = true;
                         var text = System.Text.Encoding.ASCII.GetString(entry.Data).TrimEnd('\0');
-                        Assert.Contains("CYLS:", text);
-                        Assert.Contains("HEADS:", text);
-                        Assert.Contains("SECS:", text);
-                        Assert.Contains("BPS:", text);
+                        Assert.Contains("CYLS:", text, StringComparison.Ordinal);
+                        Assert.Contains("HEADS:", text, StringComparison.Ordinal);
+                        Assert.Contains("SECS:", text, StringComparison.Ordinal);
+                        Assert.Contains("BPS:", text, StringComparison.Ordinal);
                     }
                 }
 
@@ -94,7 +93,7 @@ public class CreateBlankTests
         var chdPath = Path.GetTempFileName();
         try
         {
-            var totalBytes = 512 * 1024UL; // 512 KB
+            const ulong totalBytes = 512 * 1024UL; // 512 KB
             ChdEncoder.CreateBlank(chdPath, totalBytes, 4096, 512);
 
             using var fs = File.OpenRead(chdPath);
@@ -113,10 +112,10 @@ public class CreateBlankTests
         var chdPath = Path.GetTempFileName();
         try
         {
-            uint cylinders = 100;
-            uint heads = 16;
-            uint sectors = 63;
-            uint sectorSize = 512;
+            const uint cylinders = 100;
+            const uint heads = 16;
+            const uint sectors = 63;
+            const uint sectorSize = 512;
             ChdEncoder.CreateBlankWithChs(chdPath, cylinders, heads, sectors, sectorSize);
 
             var err = ChdFile.Open(chdPath, out var chd);
@@ -125,7 +124,7 @@ public class CreateBlankTests
 
             using (chd)
             {
-                var expectedSize = (ulong)cylinders * heads * sectors * sectorSize;
+                const ulong expectedSize = (ulong)cylinders * heads * sectors * sectorSize;
                 Assert.Equal(expectedSize, chd.TotalBytes);
 
                 var found = false;
@@ -135,10 +134,10 @@ public class CreateBlankTests
                     {
                         found = true;
                         var text = System.Text.Encoding.ASCII.GetString(entry.Data).TrimEnd('\0');
-                        Assert.Contains($"CYLS:{cylinders}", text);
-                        Assert.Contains($"HEADS:{heads}", text);
-                        Assert.Contains($"SECS:{sectors}", text);
-                        Assert.Contains($"BPS:{sectorSize}", text);
+                        Assert.Contains($"CYLS:{cylinders}", text, StringComparison.Ordinal);
+                        Assert.Contains($"HEADS:{heads}", text, StringComparison.Ordinal);
+                        Assert.Contains($"SECS:{sectors}", text, StringComparison.Ordinal);
+                        Assert.Contains($"BPS:{sectorSize}", text, StringComparison.Ordinal);
                     }
                 }
 
@@ -157,7 +156,7 @@ public class CreateBlankTests
         var chdPath = Path.GetTempFileName();
         try
         {
-            var totalBytes = 8192UL; // 2 hunks
+            const ulong totalBytes = 8192UL; // 2 hunks
             ChdEncoder.CreateBlank(chdPath, totalBytes, 4096, 512);
 
             var err = ChdFile.Open(chdPath, out var chd);
@@ -191,7 +190,7 @@ public class CreateBlankTests
         var chdPath = Path.GetTempFileName();
         try
         {
-            var totalBytes = 4096UL; // 1 hunk
+            const ulong totalBytes = 4096UL; // 1 hunk
             ChdEncoder.CreateBlank(chdPath, totalBytes, 4096, 512, [CodecTags.None]);
 
             var err = ChdFile.Open(chdPath, out var chd);
@@ -215,7 +214,7 @@ public class CreateBlankTests
         var chdPath = Path.GetTempFileName();
         try
         {
-            var totalBytes = 100 * 1024 * 1024UL; // 100 MB
+            const ulong totalBytes = 100 * 1024 * 1024UL; // 100 MB
             ChdEncoder.CreateBlank(chdPath, totalBytes, 4096, 512);
 
             var err = ChdFile.Open(chdPath, out var chd);

@@ -11,9 +11,9 @@ internal static partial class Inflater
     internal static int InflateReset(ref ZStream strm)
     {
         if (InflateStateCheck(ref strm))
-            return Z_STREAM_ERROR;
+            return ZStreamError;
 
-        var state = strm.inflateState;
+        var state = strm.InflateState;
         state.Wsize = 0;
         state.Whave = 0;
         state.Wnext = 0;
@@ -23,15 +23,15 @@ internal static partial class Inflater
     internal static int InflateReset(ref ZStream strm, int windowBits)
     {
         if (InflateStateCheck(ref strm))
-            return Z_STREAM_ERROR;
+            return ZStreamError;
 
-        var state = strm.inflateState;
+        var state = strm.InflateState;
         int wrap;
         // extract wrap request from windowBits parameter
         if (windowBits < 0)
         {
             if (windowBits < -15)
-                return Z_STREAM_ERROR;
+                return ZStreamError;
 
             wrap = 0;
             windowBits = -windowBits;
@@ -43,7 +43,7 @@ internal static partial class Inflater
 
         // set number of window bits, free window if different
         if (windowBits != 0 && windowBits is < 8 or > 15)
-            return Z_STREAM_ERROR;
+            return ZStreamError;
 
         if (state.Window != null && state.Wbits != (uint)windowBits)
         {
@@ -60,11 +60,11 @@ internal static partial class Inflater
     internal static int InflateResetKeep(ref ZStream strm)
     {
         if (InflateStateCheck(ref strm))
-            return Z_STREAM_ERROR;
+            return ZStreamError;
 
-        var state = strm.inflateState;
+        var state = strm.InflateState;
         strm.total_in = strm.total_out = state.Total = 0;
-        strm.msg = null;
+        strm.Msg = null;
         if (state.Wrap != 0)
         {
             strm.Adler = (uint)(state.Wrap & 1);
@@ -83,6 +83,6 @@ internal static partial class Inflater
         state.Sane = 1;
         state.Back = -1;
         Trace.Tracev("inflate: reset\n");
-        return Z_OK;
+        return ZOk;
     }
 }

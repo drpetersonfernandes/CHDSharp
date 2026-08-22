@@ -65,6 +65,7 @@ public class FlacPcm16Debug : IDisposable
                 break;
             }
         }
+
         Assert.True(firstDiff < 0, $"pcm16 flac diverges from chdman at hunk {firstDiff}");
     }
 
@@ -87,6 +88,7 @@ public class FlacPcm16Debug : IDisposable
             b[i * 2] = (byte)sample;
             b[i * 2 + 1] = (byte)(sample >> 8);
         }
+
         return b;
     }
 

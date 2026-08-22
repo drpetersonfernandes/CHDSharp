@@ -1744,6 +1744,105 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         return err;
     }
 
+    /// <summary>
+    /// Opens the CHD file and returns a seekable, read-only <see cref="Stream"/> over the
+    /// decompressed image. The stream decompresses hunks on demand; a single hunk is cached
+    /// so sequential reads avoid re-decoding.
+    /// </summary>
+    /// <param name="filename">Path to the CHD file.</param>
+    /// <param name="stream">When this method returns <see cref="ChdError.Chderrnone"/>, contains
+    /// the <see cref="ChdImageStream"/>; <c>null</c> on failure.</param>
+    /// <param name="cancellationToken">A token to cancel the open operation.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
+    /// <remarks>Disposing the returned stream disposes the underlying <see cref="ChdFile"/>.</remarks>
+    public static ChdError OpenAsStream(string filename, out ChdImageStream? stream, CancellationToken cancellationToken = default)
+    {
+        var err = Open(filename, out var chd, cancellationToken);
+        stream = err == ChdError.Chderrnone && chd != null ? new ChdImageStream(chd, ownsChd: true) : null;
+        return err;
+    }
+
+    /// <summary>
+    /// Opens the CHD file with a parent and returns a seekable, read-only <see cref="Stream"/>
+    /// over the decompressed image.
+    /// </summary>
+    /// <param name="filename">Path to the CHD file.</param>
+    /// <param name="parentFilename">Path to the parent CHD file, or <c>null</c> to open without a parent.</param>
+    /// <param name="stream">When this method returns <see cref="ChdError.Chderrnone"/>, contains
+    /// the <see cref="ChdImageStream"/>; <c>null</c> on failure.</param>
+    /// <param name="cancellationToken">A token to cancel the open operation.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
+    public static ChdError OpenAsStream(string filename, string? parentFilename, out ChdImageStream? stream, CancellationToken cancellationToken = default)
+    {
+        var err = Open(filename, parentFilename, out var chd, cancellationToken);
+        stream = err == ChdError.Chderrnone && chd != null ? new ChdImageStream(chd, ownsChd: true) : null;
+        return err;
+    }
+
+    /// <summary>
+    /// Opens the CHD from an already-opened <see cref="ChdFile"/> and returns a seekable,
+    /// read-only <see cref="Stream"/> over the decompressed image.
+    /// </summary>
+    /// <param name="chd">An opened <see cref="ChdFile"/> instance. Ownership is transferred to the
+    /// stream; disposing the stream disposes this instance.</param>
+    /// <param name="stream">Contains the <see cref="ChdImageStream"/>.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/>.</returns>
+    public static ChdError OpenAsStream(ChdFile chd, out ChdImageStream stream)
+    {
+        ArgumentNullException.ThrowIfNull(chd);
+        stream = new ChdImageStream(chd, ownsChd: true);
+        return ChdError.Chderrnone;
+    }
+
+    /// <summary>
+    /// Opens the CHD from an already-opened <see cref="ChdFile"/> and returns a seekable,
+    /// read-only <see cref="Stream"/> over the decompressed image, optionally without
+    /// transferring ownership.
+    /// </summary>
+    /// <param name="chd">An opened <see cref="ChdFile"/> instance.</param>
+    /// <param name="ownsChd">If <c>true</c>, disposing the stream disposes <paramref name="chd"/>.</param>
+    /// <param name="stream">Contains the <see cref="ChdImageStream"/>.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/>.</returns>
+    public static ChdError OpenAsStream(ChdFile chd, bool ownsChd, out ChdImageStream stream)
+    {
+        ArgumentNullException.ThrowIfNull(chd);
+        stream = new ChdImageStream(chd, ownsChd);
+        return ChdError.Chderrnone;
+    }
+
+    /// <summary>
+    /// Asynchronously opens the CHD file and returns a seekable, read-only <see cref="Stream"/>
+    /// over the decompressed image.
+    /// </summary>
+    /// <param name="filename">Path to the CHD file.</param>
+    /// <param name="cancellationToken">A token to cancel the open operation.</param>
+    /// <returns>A tuple of (<see cref="ChdError"/>, <see cref="ChdImageStream"/>?). Error is
+    /// <see cref="ChdError.Chderrnone"/> on success; stream is non-null on success.</returns>
+    public static async Task<(ChdError error, ChdImageStream? stream)> OpenAsStreamAsync(string filename, CancellationToken cancellationToken = default)
+    {
+        var (error, chd) = await OpenAsync(filename, cancellationToken).ConfigureAwait(false);
+        if (error != ChdError.Chderrnone || chd == null)
+            return (error, null);
+        return (ChdError.Chderrnone, new ChdImageStream(chd, ownsChd: true));
+    }
+
+    /// <summary>
+    /// Asynchronously opens the CHD file with a parent and returns a seekable, read-only
+    /// <see cref="Stream"/> over the decompressed image.
+    /// </summary>
+    /// <param name="filename">Path to the CHD file.</param>
+    /// <param name="parentFilename">Path to the parent CHD file, or <c>null</c> to open without a parent.</param>
+    /// <param name="cancellationToken">A token to cancel the open operation.</param>
+    /// <returns>A tuple of (<see cref="ChdError"/>, <see cref="ChdImageStream"/>?). Error is
+    /// <see cref="ChdError.Chderrnone"/> on success; stream is non-null on success.</returns>
+    public static async Task<(ChdError error, ChdImageStream? stream)> OpenAsStreamAsync(string filename, string? parentFilename, CancellationToken cancellationToken = default)
+    {
+        var (error, chd) = await OpenAsync(filename, parentFilename, cancellationToken).ConfigureAwait(false);
+        if (error != ChdError.Chderrnone || chd == null)
+            return (error, null);
+        return (ChdError.Chderrnone, new ChdImageStream(chd, ownsChd: true));
+    }
+
     private static ChdError ValidateParent(ChdHeader child, ChdHeader parent)
     {
         var childMd5 = child.Parentmd5;

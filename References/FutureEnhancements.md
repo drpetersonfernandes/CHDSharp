@@ -148,17 +148,6 @@ Legend — issue references: `#NN` = [rtissera/libchdr issue](https://github.com
 
 ---
 
-### 12. Sidecar Meta File Support (#164)
-
-| Field | Value |
-|-------|-------|
-| **Missing Feature** | External "sidecar" metadata files alongside `.chd` images to carry extended CD metadata (multi-index tracks, CATALOG, ISRC, raw CD subchannel data such as Libcrypt/SBI/subcode) that CHD format cannot natively store. Requested in libchdr #164 with concrete breakage reports: Saturn/Sega CD games rely on multi-index timing and subcode data that CHD V5 discards; CATALOG/ISRC are stripped during conversion. A tiny sidecar file fixes it without re-compressing terabyte-scale collections. |
-| **Implementation Status** | Not planned |
-| **Proposed Logic** | Define a `ChdSidecar` class that loads an XML or JSON sidecar file (e.g. `.chd.xml`) describing extended track metadata, subchannel patches, and supplemental info. In `ChdFile.Open()`, probe for a sibling file with a known extension. In `ChdTocParser`, merge sidecar data into the parsed track list — overriding pregap, appending subchannel patches, injecting CATALOG/ISRC fields. In `ExtractToDirectory()`, write the sidecar alongside the extracted BIN/CUE. Define a schema (XSD or JSON Schema) for the sidecar format. Coordinate with MAME/RetroArch community on a standard sidecar format if one does not yet exist. |
-| **Estimated Time** | 8–12 hours |
-
----
-
 ### 13. MSF/LBA Conversion + Sector-Address Read API (#155)
 
 | Field | Value |
@@ -169,29 +158,7 @@ Legend — issue references: `#NN` = [rtissera/libchdr issue](https://github.com
 | **Implemented As** | `CdRomAddress` (public static, `CHDSharpLib/Utils/CdRomAddress.cs`): `MsfToLba`/`LbaToMsf` (BCD, ±150 lead-in), `MsfToLbaAlt`/`LbaToMsfAlt` (BCD, no lead-in — Sega CD / PC Engine), constants `FramesPerSecond`/`SecondsPerMinute`/`PregapFrames`; invalid BCD nibbles and minutes > 99 (BCD limit) throw `ArgumentOutOfRangeException`. `ChdFile.ReadSector(uint lba, byte[] buffer, ct)` reads the 2352-byte sector data (zero-padded tail for sub-2352 data sizes, as stored), `ReadSectorMsf(m, s, f, buffer, ct)` the BCD-MSF variant (addresses before 00:02:00 rejected), and `ReadFrame(uint lba, byte[] buffer, ct)` the full 2448-byte frame incl. subcode. LBA→image mapping derived from the track table: image frame = `lba + (PreGapDataSize > 0 ? tracks[0].PreGap : 0)` — the pregap is physically in the image only when the metadata carries the `PGTYPE:V...` data prefix (CUE INDEX 00/01, chdman parity), otherwise the image begins at track 1's INDEX 01 (Redump-style CUEs, PREGAP-keyword CUEs, NRG, TOC, GDI). Non-CD/GD-ROM images (no track metadata) return `Chderrinvaliddata`; bad buffers/out-of-range addresses return `Chderrinvalidparameter`. Tests in `CdRomAddressTests` (BCD vectors, lead-in boundaries, 99-minute BCD limit, invalid-BCD throws, round trips) and `ReadSectorTests` (sector reads match the decompressed image, all-1000-frames concatenation equals the whole image, MSF↔LBA equivalence, error paths, and V3/V4/V5 CD corpus coverage incl. cdlz/cdfl codecs). |
 | **Estimated Time** | 2–3 hours |
 
----
 
-### 14. Threaded Read-Ahead Decompression (#34)
-
-| Field | Value |
-|-------|-------|
-| **Missing Feature** | Background worker threads that predict and pre-decompress upcoming hunks, eliminating I/O stalls during sequential reads and audio/video streaming. Requested in libchdr #34 (kcgen): threaded so latency isn't added to the current read, read-ahead distance configurable in KiB, `-1` = decode everything ahead. |
-| **Implementation Status** | Not planned |
-| **Proposed Logic** | Add an optional `ReadAhead` mode to `ChdFile`. When enabled, after each `ReadHunk()`, a background `Task` pre-decompresses the next N hunks (configurable, default 4) into a ring buffer keyed by hunk index. Use `SemaphoreSlim` to cap memory usage. `ReadHunk()` checks the ring buffer first — on hit, swap the buffer in; on miss, decompress synchronously as today. Expose via `ChdFile.EnableReadAhead(int lookAhead = 4)`. The existing `_cachedHunk` single-slot cache remains as the L1; the ring buffer acts as L2. For `EnumerateHunks()`, use a `Channel<byte[]>` to bridge the background producer and the caller's consumer. Wire into the parallel verification pipeline in `Chd.CheckFile()` for consistent behavior. Consider implementing #8 (LRU cache) first — it covers most of the same reuse win with less complexity. |
-| **Estimated Time** | 6–8 hours |
-
----
-
-### 15. Xdelta/PPF Patch → Child CHD (#77)
-
-| Field | Value |
-|-------|-------|
-| **Missing Feature** | libchdr #77 (i30817): apply an xdelta (or PPF) patch directly to a parent CHD, producing a child CHD without decompressing/recompressing the parent. Xdelta is the standard ROM-hack distribution format for CD-based games (Saturn, PS1, Dreamcast); users currently must extract the parent CHD → BIN/CUE, apply the patch, then re-create the CHD — a multi-step, multi-GB workflow that could be a single command. |
-| **Implementation Status** | Not planned |
-| **Proposed Logic** | (1) Add `ChdEncoder.ApplyPatch(parentChdPath, patchPath, outputChdPath)` that reads the parent CHD, applies a binary patch (xdelta or PPF) at the byte level, and writes the result as a delta child CHD (using existing `COMPRESSION_PARENT` references for unchanged hunks). (2) Xdelta format: parse the VCDIFF header (RFC 3284) to get the target window instructions, read only the affected parent hunks, apply the copy/insert/run instructions, and compress the modified hunks as `COMPRESSION_TYPE_0` while unchanged hunks become `COMPRESSION_PARENT`. (3) PPF format: simpler — parse the PPF patch header (offset + data pairs), apply to the relevant parent hunks, re-compress only those hunks. (4) Auto-detect format from patch file magic (`VCDM` for xdelta, `PPF` for PPF). (5) CLI: `--applypatch <parent.chd> <patch.xdelta> <output.chd>`. (6) Checksum verification: both formats include source/target checksums — validate the parent's SHA-1 matches the patch's expected source before applying. |
-| **Estimated Time** | 8–12 hours |
-
----
 
 ## Tier 4 — Large-File Support
 
@@ -222,28 +189,6 @@ Legend — issue references: `#NN` = [rtissera/libchdr issue](https://github.com
 | **Proposed Logic** | Add `CancellationToken ct = default` as the last parameter to: `ChdFile.Open/OpenAsync` (all overloads), `ChdFile.Read/ReadAsync/ReadHunk/ReadHunkAsync/ReadAllBytes/ExtractToDirectory`, `Chd.CheckFile/CheckFileWithParent`. In `DecompressDataParallel`, pass `ct` to the internal `CancellationTokenSource.CreateLinkedTokenSource(ct)`. In `ReadHunk`, check `ct.ThrowIfCancellationRequested()` before decompression. In `ExtractToDirectory`, check between hunk writes. This is a non-breaking change since the parameter has a default value. |
 | **Implemented As** | `CancellationToken` added as the last parameter (default `default`) to every `ChdFile.Open`/`OpenAsync` overload, `ReadHunk`/`ReadHunkAsync`, `Read`/`ReadAsync`, `ReadAllBytes`, `ExtractToDirectory`/`ExtractToDirectoryWithReporting`, and both `Chd.CheckFile`/`CheckFileWithParent` overloads. Cancellation throws `OperationCanceledException` (`.NET`-idiomatic; async variants surface it as a cancelled task via `Task.Run(..., token)`). `DecompressDataParallel` now uses `CancellationTokenSource.CreateLinkedTokenSource(ct)` so caller cancellation stops the producer/workers/hasher; after the pipeline drains, the caller token is re-checked so a cancelled deep check throws OCE instead of reporting a bogus partial-hash mismatch. `ExtractToDirectoryWithReporting`/`TryWriteTrackToFile` rethrow OCE so cancellation is never swallowed into an error result. Checks are placed per hunk/chunk (zero overhead when not cancelled — just an `IsCancellationRequested` probe). Tests in `CancellationTokenTests` cover pre-cancelled throws for every method, cancelled-task async twins, mid-run cancellation of the parallel pipeline via the progress hook, and backward-compatible calls without the token. |
 | **Estimated Time** | 4–6 hours |
-
----
-
-### 18. Decompressed Image Stream Wrapper
-
-| Field | Value |
-|-------|-------|
-| **Missing Feature** | No `Stream`-like object wrapping the decompressed CHD image. Consumers expecting a `Stream` (e.g., piping to other tools, computing hashes, feeding decoders) must manually loop over hunks. |
-| **Implementation Status** | Not planned |
-| **Proposed Logic** | Add `ChdFile.OpenAsStream()` returning a `ChdImageStream : Stream` class. It wraps `ChdFile.Read()` with `CanSeek=true`, `CanRead=true`, `CanWrite=false`. `Seek` updates an internal `_position`. `Read` delegates to `ChdFile.Read(_position, buffer, 0, count)` and advances position. `Length` returns `TotalBytes`. Dispose disposes the parent `ChdFile`. Optionally support `ReadAsync` via `ChdFile.ReadAsync`. |
-| **Estimated Time** | 3–4 hours |
-
----
-
-### 19. Span&lt;byte&gt; / Memory&lt;byte&gt; Read Overloads
-
-| Field | Value |
-|-------|-------|
-| **Missing Feature** | `ReadHunk` and `Read` accept only `byte[]`. Callers using `stackalloc`, `ArrayPool`, or `Memory<byte>` must allocate a new array to use these APIs. |
-| **Implementation Status** | Not planned |
-| **Proposed Logic** | Add overloads: `ReadHunk(uint hunknum, Span<byte> buffer)` and `Read(ulong offset, Span<byte> destination, int count)`. Internally, the existing `byte[]`-based logic can work with spans via `MemoryMarshal.TryGetArray`. For `ReadHunk`, copy from the internal `_hunkBuffer` to the caller's span. For `Read`, use the span directly in the cross-hunk loop. `Memory<byte>` overloads can be added later for truly async paths. |
-| **Estimated Time** | 3–4 hours |
 
 ---
 
@@ -421,3 +366,58 @@ Legend — issue references: `#NN` = [rtissera/libchdr issue](https://github.com
 | **Implemented As** | `ChdFile.Precache()` — reads the whole stream into a `byte[]` (2 GiB cap), restores stream position, idempotent. |
 | **Estimated Time** | 2–3 hours |
 
+---
+
+### 14. Threaded Read-Ahead Decompression (#34)
+
+| Field | Value |
+|-------|-------|
+| **Missing Feature** | Background worker threads that predict and pre-decompress upcoming hunks, eliminating I/O stalls during sequential reads and audio/video streaming. Requested in libchdr #34 (kcgen): threaded so latency isn't added to the current read, read-ahead distance configurable in KiB, `-1` = decode everything ahead. |
+| **Implementation Status** | Not planned |
+| **Proposed Logic** | Add an optional `ReadAhead` mode to `ChdFile`. When enabled, after each `ReadHunk()`, a background `Task` pre-decompresses the next N hunks (configurable, default 4) into a ring buffer keyed by hunk index. Use `SemaphoreSlim` to cap memory usage. `ReadHunk()` checks the ring buffer first — on hit, swap the buffer in; on miss, decompress synchronously as today. Expose via `ChdFile.EnableReadAhead(int lookAhead = 4)`. The existing `_cachedHunk` single-slot cache remains as the L1; the ring buffer acts as L2. For `EnumerateHunks()`, use a `Channel<byte[]>` to bridge the background producer and the caller's consumer. Wire into the parallel verification pipeline in `Chd.CheckFile()` for consistent behavior. Consider implementing #8 (LRU cache) first — it covers most of the same reuse win with less complexity. |
+| **Estimated Time** | 6–8 hours |
+
+---
+
+### 12. Sidecar Meta File Support (#164)
+
+| Field | Value |
+|-------|-------|
+| **Missing Feature** | External "sidecar" metadata files alongside `.chd` images to carry extended CD metadata (multi-index tracks, CATALOG, ISRC, raw CD subchannel data such as Libcrypt/SBI/subcode) that CHD format cannot natively store. Requested in libchdr #164 with concrete breakage reports: Saturn/Sega CD games rely on multi-index timing and subcode data that CHD V5 discards; CATALOG/ISRC are stripped during conversion. A tiny sidecar file fixes it without re-compressing terabyte-scale collections. |
+| **Implementation Status** | Not planned |
+| **Proposed Logic** | Define a `ChdSidecar` class that loads an XML or JSON sidecar file (e.g. `.chd.xml`) describing extended track metadata, subchannel patches, and supplemental info. In `ChdFile.Open()`, probe for a sibling file with a known extension. In `ChdTocParser`, merge sidecar data into the parsed track list — overriding pregap, appending subchannel patches, injecting CATALOG/ISRC fields. In `ExtractToDirectory()`, write the sidecar alongside the extracted BIN/CUE. Define a schema (XSD or JSON Schema) for the sidecar format. Coordinate with MAME/RetroArch community on a standard sidecar format if one does not yet exist. |
+| **Estimated Time** | 8–12 hours |
+
+---
+
+### 15. Xdelta/PPF Patch → Child CHD (#77)
+
+| Field | Value |
+|-------|-------|
+| **Missing Feature** | libchdr #77 (i30817): apply an xdelta (or PPF) patch directly to a parent CHD, producing a child CHD without decompressing/recompressing the parent. Xdelta is the standard ROM-hack distribution format for CD-based games (Saturn, PS1, Dreamcast); users currently must extract the parent CHD → BIN/CUE, apply the patch, then re-create the CHD — a multi-step, multi-GB workflow that could be a single command. |
+| **Implementation Status** | Not planned |
+| **Proposed Logic** | (1) Add `ChdEncoder.ApplyPatch(parentChdPath, patchPath, outputChdPath)` that reads the parent CHD, applies a binary patch (xdelta or PPF) at the byte level, and writes the result as a delta child CHD (using existing `COMPRESSION_PARENT` references for unchanged hunks). (2) Xdelta format: parse the VCDIFF header (RFC 3284) to get the target window instructions, read only the affected parent hunks, apply the copy/insert/run instructions, and compress the modified hunks as `COMPRESSION_TYPE_0` while unchanged hunks become `COMPRESSION_PARENT`. (3) PPF format: simpler — parse the PPF patch header (offset + data pairs), apply to the relevant parent hunks, re-compress only those hunks. (4) Auto-detect format from patch file magic (`VCDM` for xdelta, `PPF` for PPF). (5) CLI: `--applypatch <parent.chd> <patch.xdelta> <output.chd>`. (6) Checksum verification: both formats include source/target checksums — validate the parent's SHA-1 matches the patch's expected source before applying. |
+| **Estimated Time** | 8–12 hours |
+
+---
+
+### 18. Decompressed Image Stream Wrapper
+
+| Field | Value |
+|-------|-------|
+| **Missing Feature** | No `Stream`-like object wrapping the decompressed CHD image. Consumers expecting a `Stream` (e.g., piping to other tools, computing hashes, feeding decoders) must manually loop over hunks. |
+| **Implementation Status** | Finished |
+| **Proposed Logic** | Add `ChdFile.OpenAsStream()` returning a `ChdImageStream : Stream` class. It wraps `ChdFile.Read()` with `CanSeek=true`, `CanRead=true`, `CanWrite=false`. `Seek` updates an internal `_position`. `Read` delegates to `ChdFile.Read(_position, buffer, 0, count)` and advances position. `Length` returns `TotalBytes`. Dispose disposes the parent `ChdFile`. Optionally support `ReadAsync` via `ChdFile.ReadAsync`. |
+| **Implemented As** | Added `ChdImageStream : Stream` class. `CanRead=true`, `CanSeek=true`, `CanWrite=false`. `Position` property with getter/setter. `Read` delegates to `ChdFile.Read` and advances `_position`. `ReadAsync` delegates to `ChdFile.ReadAsync`. `Seek` supports `Begin`/`Current`/`End` with bounds validation. `Length` returns `TotalBytes`. `Flush` is a no-op. `Write`/`SetLength` throw `NotSupportedException`. Dispose optionally disposes the parent `ChdFile` (`ownsChd` flag). `DisposeAsync` is supported on .NET 7+. Added `ChdFile.OpenAsStream` factory methods: from filename, from filename+parent, from `ChdFile` (with/without ownership transfer). Added `ChdFile.OpenAsStreamAsync` variants returning `(ChdError, ChdImageStream?)`. Added 31 unit tests covering all properties, read/seek/async behavior, error handling, cross-hunk reads, EOF handling, dispose semantics, and real CHD validation. Full suite 4587/4588 (pre-existing LaserDisc flaky test excluded). |
+| **Estimated Time** | 3–4 hours |
+
+---
+
+### 19. Span&lt;byte&gt; / Memory&lt;byte&gt; Read Overloads
+
+| Field | Value |
+|-------|-------|
+| **Missing Feature** | `ReadHunk` and `Read` accept only `byte[]`. Callers using `stackalloc`, `ArrayPool`, or `Memory<byte>` must allocate a new array to use these APIs. |
+| **Implementation Status** | Not planned |
+| **Proposed Logic** | Add overloads: `ReadHunk(uint hunknum, Span<byte> buffer)` and `Read(ulong offset, Span<byte> destination, int count)`. Internally, the existing `byte[]`-based logic can work with spans via `MemoryMarshal.TryGetArray`. For `ReadHunk`, copy from the internal `_hunkBuffer` to the caller's span. For `Read`, use the span directly in the cross-hunk loop. `Memory<byte>` overloads can be added later for truly async paths. |
+| **Estimated Time** | 3–4 hours |

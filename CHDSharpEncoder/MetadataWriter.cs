@@ -44,6 +44,9 @@ public static class MetadataWriter
     /// <summary>'CIS ' PCMCIA Card Information Structure metadata tag (big-endian).</summary>
     public const uint PcmciaCisMetadataTag = 0x43495320;
 
+    /// <summary>'KEY ' hard disk encryption key metadata tag (big-endian).</summary>
+    public const uint KeyMetadataTag = 0x4B455920;
+
     /// <summary>CHD_MDFLAGS_CHECKSUM: the entry is covered by the combined SHA-1 verification.</summary>
     public const byte ChdMdflagsChecksum = 0x01;
 

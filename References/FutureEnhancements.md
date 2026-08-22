@@ -337,8 +337,9 @@ Legend — issue references: `#NN` = [rtissera/libchdr issue](https://github.com
 | Field | Value |
 |-------|-------|
 | **Missing Feature** | chdman stores hard disk encryption keys as `KEY ` metadata (binary blob). Used by OG Xbox and other platforms that encrypt HDD contents. CHDSharp has no read/write support for this tag. |
-| **Implementation Status** | Not planned |
+| **Implementation Status** | Finished |
 | **Proposed Logic** | (1) Add `KeyMetadataTag = 0x4B455920` ("KEY ") constant. (2) Expose `KeyData` property on `ChdFile` returning the raw bytes. (3) In `ChdHeaderInfo` DTO, include the key if present. (4) During `copy`, clone `KEY ` entries. (5) In CLI, support `--key <path>` for `createhd`. |
+| **Implemented As** | Added `KeyMetadataTag = 0x4B455920` constant to `MetadataWriter`. Added `KeyData` property to `ChdFile` that returns the raw encryption key bytes (or null if absent). KEY metadata is automatically cloned during `ChdEncoder.Copy()` (all non-legacy metadata is cloned verbatim). Added6 unit tests: read/write, absent returns null, preserved during copy, set/delete, coexistence with other metadata, and coexistence with CIS metadata. All18 KeyMetadataTests pass across net8.0/net9.0/net10.0. |
 | **Estimated Time** | 1–2 hours |
 
 ---

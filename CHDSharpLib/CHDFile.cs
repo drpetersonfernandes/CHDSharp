@@ -335,6 +335,26 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
+    /// Gets the hard disk encryption key metadata bytes, or <c>null</c> if this CHD
+    /// does not contain a <c>KEY </c> metadata entry. Used by OG Xbox and other platforms
+    /// that encrypt HDD contents.
+    /// </summary>
+    public byte[]? KeyData
+    {
+        get
+        {
+            EnsureMetadataLoaded();
+            if (_metadata == null) return null;
+            foreach (var entry in _metadata)
+            {
+                if (string.Equals(entry.Tag, "KEY ", StringComparison.Ordinal))
+                    return entry.Data;
+            }
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Gets the list of metadata entries from the CHD header (game name,
     /// disc info, etc.). Lazy-loaded on first access; empty list if the CHD
     /// has no metadata or an error occurs. For V1/V2 CHDs (which have no

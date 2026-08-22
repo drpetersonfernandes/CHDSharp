@@ -73,7 +73,21 @@ public static class MetadataWriter
             }
         }
 
-        var text = $"CYLS:{cylinders},HEADS:{heads},SECS:{sectorsPerTrack},BPS:{bytesPerSector}";
+        return BuildHardDiskMetadata((uint)cylinders, heads, sectorsPerTrack, bytesPerSector);
+    }
+
+    /// <summary>
+    /// Builds the 'GDDD' hard-disk geometry metadata entry with explicit CHS values.
+    /// Used when a template (<see cref="HardDiskTemplates"/>) supplies the geometry instead
+    /// of guessing from the file size. Matches MAME's <c>HARD_DISK_METADATA_FORMAT</c>.
+    /// </summary>
+    /// <param name="cylinders">Number of cylinders.</param>
+    /// <param name="heads">Number of heads.</param>
+    /// <param name="sectors">Sectors per track.</param>
+    /// <param name="bytesPerSector">Bytes per sector (BPS).</param>
+    public static MetadataEntry BuildHardDiskMetadata(uint cylinders, uint heads, uint sectors, uint bytesPerSector)
+    {
+        var text = $"CYLS:{cylinders},HEADS:{heads},SECS:{sectors},BPS:{bytesPerSector}";
         return new MetadataEntry
         {
             Tag = HardDiskMetadataTag,

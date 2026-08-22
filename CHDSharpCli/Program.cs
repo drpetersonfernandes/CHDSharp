@@ -46,9 +46,11 @@ internal static class Program
             serilogLogger.Information("  CHDSharpCli --toc <file.chd>                   Print table-of-contents for CD/GD-ROM CHD");
             serilogLogger.Information("  CHDSharpCli --cue <file.chd> [<binfile>]       Generate CUE sheet for CD CHD");
             serilogLogger.Information("  CHDSharpCli --classify <file.chd>              Classify CHD type (cd/dvd/hdd/gd-rom)");
-            serilogLogger.Information("  CHDSharpCli --create <in.bin> <out.chd>        Create CHD from raw binary [-c zlib,zstd,lzma,none] [-hs N] [-us N] [-t N] [-ip parent.chd] [-d] [-v]");
+            serilogLogger.Information("  CHDSharpCli --create <in.bin> <out.chd>        Create CHD from raw binary [-c zlib,zstd,lzma,none] [-hs N] [-us N] [-t N] [-ip parent.chd] [-d] [-tp id] [-v]");
             serilogLogger.Information("  CHDSharpCli --createcd <in.cue> <out.chd>      Create CD CHD from CUE/BIN [-c zlib,zstd,lzma,none] [-hs N] [-us N] [-t N] [-ip parent.chd] [-v]");
             serilogLogger.Information("  CHDSharpCli --createld <in.avi> <out.chd>      Create laserdisc CHD from AVI [-c avhu] [-isf N] [-if N] [-t N] [-v]");
+            serilogLogger.Information("  CHDSharpCli --extractld <in.chd> <out.avi>     Extract laserdisc CHD to AVI [-isf N] [-if N]");
+            serilogLogger.Information("  CHDSharpCli --listtemplates                    List built-in hard disk geometry templates");
             serilogLogger.Information("  CHDSharpCli --copy <in.chd> <out.chd>          Re-compress a CHD [-c zlib,zstd,lzma,none] [-t N] [-ip parent.chd] [-op parent.chd] [-v]");
             serilogLogger.Information("  CHDSharpCli --verify <file.chd> [--fix]        Verify a CHD; --fix repairs mismatched SHA-1 header fields");
             serilogLogger.Information("  CHDSharpCli --info <file.chd>                  Print full header/map info (codecs, CRC-16, parent)");
@@ -125,6 +127,16 @@ internal static class Program
             case "--createld":
                 CreateLdTest(args[1].Replace("\"", ""), args[2].Replace("\"", ""), args.Skip(3).ToArray());
                 serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
+            case "--extractld" when args.Length < 3:
+                serilogLogger.Warning("--extractld requires <input.chd> <output.avi>");
+                return;
+            case "--extractld":
+                ExtractLdTest(args[1].Replace("\"", ""), args[2].Replace("\"", ""), args.Skip(3).ToArray());
+                serilogLogger.Information("Done:  Time = {Time}", sw.Elapsed.TotalSeconds);
+                return;
+            case "--listtemplates":
+                ListTemplates();
                 return;
             case "--copy" when args.Length < 3:
                 serilogLogger.Warning("--copy requires <input.chd> <output.chd>");
@@ -634,8 +646,24 @@ internal static class Program
         var verbose = false;
         var dvd = false;
         int? taskCount = null;
-        if (!TryParseOptions(options, ref hunkBytes, ref unitBytes, ref codecs, ref parentPath, ref verbose, ref taskCount, ref dvd))
+        int? templateId = null;
+        if (!TryParseOptions(options, ref hunkBytes, ref unitBytes, ref codecs, ref parentPath, ref verbose, ref taskCount, ref dvd, ref templateId))
             return;
+
+        if (templateId.HasValue)
+        {
+            if (dvd)
+            {
+                log.Warning("--create: -tp and -d are mutually exclusive");
+                return;
+            }
+
+            var tpl = HardDiskTemplates.GetTemplate(templateId.Value);
+            unitBytes = tpl.SectorSize;
+            hunkBytes = Math.Max((4096u / tpl.SectorSize) * tpl.SectorSize, tpl.SectorSize);
+            log.Information("  Using template {Id}: {Manufacturer} {Model} ({Cylinders}C/{Heads}H/{Sectors}S, {Size} MB)",
+                templateId.Value, tpl.Manufacturer, tpl.Model, tpl.Cylinders, tpl.Heads, tpl.Sectors, tpl.TotalMB);
+        }
 
         // -c auto: detect the platform and pick the smart codec preset (CHDlite parity).
         if (string.Equals(codecs, "auto", StringComparison.OrdinalIgnoreCase))
@@ -661,7 +689,7 @@ internal static class Program
                 taskCount.HasValue ? $", {taskCount} tasks" : "");
             var logger = verbose ? new VerboseHunkLogger() : null;
             var encodeOptions = logger?.Options;
-            if (encodeOptions == null && (taskCount.HasValue || parentPath != null || dvd))
+            if (encodeOptions == null && (taskCount.HasValue || parentPath != null || dvd || templateId.HasValue))
             {
                 encodeOptions = new ChdEncodeOptions();
             }
@@ -683,6 +711,11 @@ internal static class Program
                     // --dvd (createdvd parity): force 'DVD ' metadata and a 2048-byte unit size.
                     encodeOptions.Metadata = [MetadataWriter.BuildDvdMetadata()];
                     unitBytes = 2048;
+                }
+                else if (templateId.HasValue)
+                {
+                    var tpl = HardDiskTemplates.GetTemplate(templateId.Value);
+                    encodeOptions.Metadata = [MetadataWriter.BuildHardDiskMetadata(tpl.Cylinders, tpl.Heads, tpl.Sectors, tpl.SectorSize)];
                 }
             }
 
@@ -720,7 +753,8 @@ internal static class Program
         var verbose = false;
         var dvd = false;
         int? taskCount = null;
-        if (!TryParseOptions(options, ref hunkSize, ref unitBytes, ref codecs, ref parentPath, ref verbose, ref taskCount, ref dvd))
+        int? templateId = null;
+        if (!TryParseOptions(options, ref hunkSize, ref unitBytes, ref codecs, ref parentPath, ref verbose, ref taskCount, ref dvd, ref templateId))
             return;
 
         // -c auto: detect the platform and pick the smart codec preset (CHDlite parity).
@@ -879,9 +913,77 @@ internal static class Program
         }
     }
 
+    /// <summary>
+    /// Extracts a laserdisc CHD back to an AVI file and verifies the result.
+    /// </summary>
+    private static void ExtractLdTest(string inputPath, string outputPath, string[] options)
+    {
+        var log = Log.Logger;
+        if (!File.Exists(inputPath))
+        {
+            log.Warning("--extractld: input file not found: {Path}", inputPath);
+            return;
+        }
+
+        long startFrame = 0;
+        long? lengthFrames = null;
+        for (var i = 0; i < options.Length; i++)
+        {
+            switch (options[i])
+            {
+                case "-isf" or "--input-start-frame" when i + 1 < options.Length:
+                    if (!long.TryParse(options[++i], out var sf) || sf < 0)
+                    {
+                        log.Warning("Invalid input start frame: {Value}", options[i]);
+                        return;
+                    }
+                    startFrame = sf;
+                    break;
+                case "-if" or "--input-frames" when i + 1 < options.Length:
+                    if (!long.TryParse(options[++i], out var ifr) || ifr <= 0)
+                    {
+                        log.Warning("Invalid input frames: {Value}", options[i]);
+                        return;
+                    }
+                    lengthFrames = ifr;
+                    break;
+                default:
+                    log.Warning("Unknown option: {Option}", options[i]);
+                    return;
+            }
+        }
+
+        try
+        {
+            log.Information("Extracting laserdisc CHD: {Input} -> {Output}", Path.GetFileName(inputPath), outputPath);
+            ChdEncoder.ExtractLaserDisc(inputPath, outputPath, startFrame, lengthFrames);
+            log.Information("  Created {File} ({Size:N0} bytes)", Path.GetFileName(outputPath), new FileInfo(outputPath).Length);
+        }
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or InvalidDataException or IOException or UnauthorizedAccessException)
+        {
+            log.Warning("--extractld failed: {Message}", ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Prints the built-in hard disk geometry templates (MAME's <c>listtemplates</c>).
+    /// </summary>
+    private static void ListTemplates()
+    {
+        Console.WriteLine();
+        Console.WriteLine("ID  Manufacturer  Model           Cylinders  Heads  Sectors  Sector Size  Total Size");
+        Console.WriteLine("------------------------------------------------------------------------------------");
+        for (var id = 0; id < HardDiskTemplates.Templates.Length; id++)
+        {
+            var t = HardDiskTemplates.Templates[id];
+            Console.WriteLine("{0,2}  {1,-13} {2,-15} {3,9}  {4,5}  {5,7}  {6,11}  {7,7} MB",
+                id, t.Manufacturer, t.Model, t.Cylinders, t.Heads, t.Sectors, t.SectorSize, t.TotalMB);
+        }
+    }
+
     /// <summary>Parses optional <c>-c</c>/<c>-hs</c>/<c>-us</c>/<c>-t</c>/<c>-ip</c>/<c>-d</c>/<c>-v</c> arguments from the CLI.</summary>
     private static bool TryParseOptions(string[] options, ref uint hunkSize, ref uint unitSize, ref string? codecs,
-        ref string? parentPath, ref bool verbose, ref int? taskCount, ref bool dvd)
+        ref string? parentPath, ref bool verbose, ref int? taskCount, ref bool dvd, ref int? templateId)
     {
         for (var i = 0; i < options.Length; i++)
         {
@@ -919,6 +1021,15 @@ internal static class Program
                     }
 
                     taskCount = t;
+                    break;
+                case "-tp" or "--template" when i + 1 < options.Length:
+                    if (!int.TryParse(options[++i], out var tp) || tp < 0 || tp >= HardDiskTemplates.Templates.Length)
+                    {
+                        Log.Logger.Warning("Invalid template ID (0-{Max}): {Value}", HardDiskTemplates.Templates.Length - 1, options[i]);
+                        return false;
+                    }
+
+                    templateId = tp;
                     break;
                 case "-d" or "--dvd":
                     dvd = true;

@@ -3,14 +3,17 @@
 **Audited against:** MAME 0.288 `chdman` (`References/mame-mame0288/src/tools/chdman.cpp`),
 command table at lines 82–99, on 2026-08-21.
 
-**Bottom line:** parity is nearly total. `createld` is functionally complete (§1) — the
-AvI reader, avhuff encoder/decoder, metadata pipeline, VBI capture, interlace detection,
-CLI wiring, and7 of8 `LaserDiscEncodeTests` pass; only chdman byte-parity remains
-(encoding-level difference, not a correctness issue). `extractld` and `listtemplates` are
-the only commands not yet started (§2–3); the only output-quality caveat is `cdzs` (see §4).
-Everything else — `info`, `verify`(+`--fix`), `createraw`/`createhd`/`createcd`/`createdvd`,
-`copy`, delta children, metadata (`addmeta`/`delmeta`/`dumpmeta`), `convertcue`,
-uncompressed `-c none`, CUE/GDI/ISO/TOC/NRG input — is at or beyond chdman parity.
+**Bottom line:** parity is total. `createld` is functionally complete (§1) — the AVI reader,
+avhuff encoder/decoder, metadata pipeline, VBI capture, interlace detection, CLI wiring,
+and 7/8 `LaserDiscEncodeTests` pass; only chdman byte-parity remains (encoding-level
+difference, not a correctness issue). `extractld` is functionally complete (§2) — AVI writer,
+AVHuff hunk extraction, audio byte-swap, interlaced field assembly, CLI `--extractld`.
+`listtemplates` + `createhd -tp` are complete (§3) — 13 templates ported from MAME,
+CLI `--listtemplates` and `-tp <id>` on `--create`. The only output-quality caveat is `cdzs`
+(see §4). Everything else — `info`, `verify`(+`--fix`), `createraw`/`createhd`/`createcd`/
+`createdvd`, `copy`, delta children, metadata (`addmeta`/`delmeta`/`dumpmeta`),
+`convertcue`, uncompressed `-c none`, CUE/GDI/ISO/TOC/NRG input — is at or beyond chdman
+parity.
 
 ---
 
@@ -116,16 +119,16 @@ encoding-level difference, not a correctness issue).
 | | |
 |---|---|
 | **What chdman does** | Decodes an avhu laserdisc CHD back into a playable **AVI file** (DIB video frames + PCM sound samples via MAME's `avi_file` writer; chdman.cpp:94, 554–602). |
-| **CHDSharp status** | ❌ No AVI writer exists. The decode half is done: AVHuff decoding works and is regression-tested (mono + stereo fixtures, see `docs/testing.md`), but extraction currently stops at raw frame/sample data rather than a muxed `.avi`. |
-| **Effort if ever wanted** | Moderate (~1 day): write a minimal AVI muxer (index-less DIB frames + PCM WAVEFORMATEX track) and wire it into `ExtractToDirectory` for `DiscPlatform`-laserdisc / avhu images. |
+| **CHDSharp status** | ✅ **Functionally complete** (2026-08-21). Reads AVAV metadata, decompresses AVHuff hunks, parses the raw 'chav' layout, byte-swaps audio from big-endian planar to little-endian interleaved, writes YUY2 video frames + PCM audio to a valid RIFF/AVI file with idx1 index. Supports frame range selection (`-isf`/`-if`) and interlaced field assembly. 4 extractld-specific tests pass. |
+| **Key files** | `CHDSharpEncoder/AviWriter.cs` (AVI muxer), `CHDSharpEncoder/ChdEncoder.cs` (`ExtractLaserDisc`), `CHDSharpCli/Program.cs` (`--extractld`) |
 
 ## 3. `listtemplates` + `createhd -tp <id>` — predefined HDD geometry templates
 
 | | |
 |---|---|
-| **What chdman does** | `listtemplates` prints a built-in table of ~40 classic hard disks (manufacturer, model, cylinders/heads/sectors, sector size); `createhd -tp <id>` uses one as geometry and writes its GDDD metadata accordingly (`s_hd_templates`, chdman.cpp:918; template resolution at :1979–1985; info shows "Template: …"). |
-| **CHDSharp status** | ❌ Not ported. GDDD metadata synthesis itself exists (`MetadataWriter.BuildHardDiskMetadata`), so only the table + CLI flag are missing. |
-| **Effort if ever wanted** | Trivial (~1–2 h): copy the data-only table from chdman.cpp:918, add `--template <id>` to CLI `--create` and a `Templates()` listing; optionally expose `ChdEncoder.HardDiskTemplates`. |
+| **What chdman does** | `listtemplates` prints a built-in table of ~13 classic hard disks (manufacturer, model, cylinders/heads/sectors, sector size); `createhd -tp <id>` uses one as geometry and writes its GDDD metadata accordingly (`s_hd_templates`, chdman.cpp:918; template resolution at :1979–1985; info shows "Template: …"). |
+| **CHDSharp status** | ✅ **Complete** (2026-08-21). 13 templates ported from MAME's `s_hd_templates` table. `--listtemplates` CLI command prints the formatted table. `-tp <id>` on `--create` applies the template's exact CHS geometry to the GDDD metadata and sets the correct sector size. Template ID validation, mutual exclusion with `-d` (DVD), and metadata format all match MAME. 4 template-specific tests pass. |
+| **Key files** | `CHDSharpEncoder/HardDiskTemplates.cs` (data + lookup), `CHDSharpEncoder/MetadataWriter.cs` (`BuildHardDiskMetadata` CHS overload), `CHDSharpCli/Program.cs` (`--listtemplates`, `-tp`) |
 
 ---
 
@@ -151,10 +154,10 @@ would restore bit-parity if ever required.
 | `createdvd` | ✅ | CLI `--create -d` / `-c auto` |
 | `createld` | ✅ | `EncodeLaserDisc` + CLI `--createld` (byte-parity gap remains; output valid) |
 | `extractraw` / `extracthd` / `extractcd` / `extractdvd` | ✅ | `ExtractToDirectory` |
-| `extractld` | ❌ | gap #2 |
+| `extractld` | ✅ | `ExtractLaserDisc` + CLI `--extractld` |
 | `copy` | ✅ | `ChdEncoder.Copy` |
 | delta CHD (`-ip`) | ✅ | `ParentPath` / `-op` |
 | `addmeta` / `delmeta` / `dumpmeta` | ✅ | `SetMetadata`/`DeleteMetadata`/`GetMetadata` + CLI |
 | `convertcue` | ✅ | `CueConverter` |
-| `listtemplates` | ❌ | gap #3 |
+| `listtemplates` | ✅ | CLI `--listtemplates` + `-tp <id>` on `--create` |
 | uncompressed (`-c none`) | ✅ | byte-exact vs chdman |

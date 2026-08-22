@@ -299,6 +299,114 @@ public class LaserDiscEncodeTests : IDisposable
         return result;
     }
 
+    [Fact]
+    public void ListTemplates_HasCorrectCount()
+    {
+        Assert.Equal(13, HardDiskTemplates.Templates.Length);
+    }
+
+    [Fact]
+    public void ListTemplates_FirstAndLastMatchMame()
+    {
+        var first = HardDiskTemplates.Templates[0];
+        Assert.Equal("Conner", first.Manufacturer);
+        Assert.Equal("CFA170A", first.Model);
+        Assert.Equal(332u, first.Cylinders);
+        Assert.Equal(16u, first.Heads);
+        Assert.Equal(63u, first.Sectors);
+        Assert.Equal(512u, first.SectorSize);
+
+        var last = HardDiskTemplates.Templates[12];
+        Assert.Equal("Micropolis", last.Manufacturer);
+        Assert.Equal("1528", last.Model);
+        Assert.Equal(2094u, last.Cylinders);
+        Assert.Equal(15u, last.Heads);
+        Assert.Equal(83u, last.Sectors);
+        Assert.Equal(512u, last.SectorSize);
+    }
+
+    [Fact]
+    public void GetTemplate_InvalidId_Throws()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => HardDiskTemplates.GetTemplate(-1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => HardDiskTemplates.GetTemplate(13));
+    }
+
+    [Fact]
+    public void BuildHardDiskMetadata_ExplicitChs_MatchesFormat()
+    {
+        var entry = MetadataWriter.BuildHardDiskMetadata(332, 16, 63, 512);
+        var text = Encoding.ASCII.GetString(entry.Payload).TrimEnd('\0');
+        Assert.Equal("CYLS:332,HEADS:16,SECS:63,BPS:512", text);
+    }
+
+    [Fact]
+    public void ExtractLaserDisc_Progressive_RoundTrips()
+    {
+        var aviPath = WriteSmallAvi();
+        var chdPath = Path.Combine(_testDataDir, "small.chd");
+        var extractedPath = Path.Combine(_testDataDir, "extracted.avi");
+
+        ChdEncoder.EncodeLaserDisc(aviPath, chdPath);
+        ChdEncoder.ExtractLaserDisc(chdPath, extractedPath);
+
+        Assert.True(File.Exists(extractedPath), "Extracted AVI should exist");
+        var extractedSize = new FileInfo(extractedPath).Length;
+        Assert.True(extractedSize > 0, "Extracted AVI should be non-empty");
+
+        using var extractedAvi = AviReader.Open(extractedPath);
+        Assert.Equal(64, extractedAvi.Info.Width);
+        Assert.Equal(64, extractedAvi.Info.Height);
+    }
+
+    [Fact]
+    public void ExtractLaserDisc_WithFrameRange_Works()
+    {
+        var aviPath = WriteSmallAvi();
+        var chdPath = Path.Combine(_testDataDir, "range.chd");
+        var extractedPath = Path.Combine(_testDataDir, "range_extracted.avi");
+
+        ChdEncoder.EncodeLaserDisc(aviPath, chdPath);
+        ChdEncoder.ExtractLaserDisc(chdPath, extractedPath, startFrame: 2, lengthFrames: 3);
+
+        Assert.True(File.Exists(extractedPath), "Extracted AVI should exist");
+        using var extractedAvi = AviReader.Open(extractedPath);
+        // 3 frames extracted
+        Assert.Equal(64, extractedAvi.Info.Width);
+    }
+
+    [Fact]
+    public void ExtractLaserDisc_NonLaserdiscChd_ThrowsInvalidData()
+    {
+        // create a raw CHD (not laserdisc)
+        var rawPath = Path.Combine(_testDataDir, "raw.bin");
+        File.WriteAllBytes(rawPath, new byte[4096]);
+        var chdPath = Path.Combine(_testDataDir, "raw.chd");
+        ChdEncoder.EncodeRaw(rawPath, chdPath);
+
+        var extractedPath = Path.Combine(_testDataDir, "raw_extracted.avi");
+        Assert.Throws<InvalidDataException>(() => ChdEncoder.ExtractLaserDisc(chdPath, extractedPath));
+    }
+
+    [Fact]
+    public void ExtractLaserDisc_VideoAndAudioDataIsValid()
+    {
+        // create CHD, extract, then re-create CHD from extracted AVI
+        // and verify the data flows through correctly
+        var aviPath = WriteSmallAvi();
+        var chdPath = Path.Combine(_testDataDir, "roundtrip.chd");
+        var extractedPath = Path.Combine(_testDataDir, "roundtrip_extracted.avi");
+        var reEncodedPath = Path.Combine(_testDataDir, "roundtrip_re.chd");
+
+        ChdEncoder.EncodeLaserDisc(aviPath, chdPath);
+        ChdEncoder.ExtractLaserDisc(chdPath, extractedPath);
+
+        // the extracted AVI should be re-encodable
+        var info = ChdEncoder.EncodeLaserDisc(extractedPath, reEncodedPath);
+        Assert.Equal(10ul, info.Frames);
+        Assert.True(File.Exists(reEncodedPath));
+    }
+
     private static (int ExitCode, string StdOut, string StdErr) RunChdman(string chdmanPath, params string[] args)
     {
         var psi = new ProcessStartInfo

@@ -27,6 +27,7 @@ Implementation plan and validation history: [`References/EncoderPlan.md`](../Ref
 | CD encode | `ChdEncoder.EncodeCd(cuePath, chdPath, hunkBytes, unitBytes, codecTags, options)` |
 | Copy / re-compress | `ChdEncoder.Copy(sourceChd, chdPath, codecTags, options)` — any V1–V5 source, metadata cloned |
 | Laserdisc encode | `ChdEncoder.EncodeLaserDisc(aviPath, chdPath)` — AVI → V5 laserdisc CHD (AVHuff: delta-RLE Huffman video + FLAC audio), interlace detection, VBI metadata capture, frame range selection |
+| Laserdisc extract | `ChdEncoder.ExtractLaserDisc(chdPath, aviPath)` — V5 laserdisc CHD → AVI (YUY2 video + PCM audio), interlaced field assembly, frame range selection |
 | Input formats | raw binary; CUE/BIN, GDI, ISO, TOC (cdrdao-style), NRG (Nero); AVI (YUY2/VYUY/UYVY + PCM); existing CHD files |
 | Codecs | `zlib` (default), `zstd`, `lzma`, `huff`, `flac`, `cdzl`, `cdlz`, `cdzs`, `cdfl`, `none` — up to 4 per file, smallest output per hunk |
 | Deduplication | SELF references (CRC/SHA-1 keyed), with SELF_0/SELF_1 map promotion |
@@ -109,9 +110,11 @@ For tuning and measurement today:
 ## CLI
 
 ```bash
-CHDSharpCli --create in.bin out.chd [-c zlib,zstd,lzma,none] [-hs 65536] [-us 4096] [-t 8] [-ip parent.chd] [-v]
+CHDSharpCli --create in.bin out.chd [-c zlib,zstd,lzma,none] [-hs 65536] [-us 4096] [-t 8] [-ip parent.chd] [-tp id] [-d] [-v]
 CHDSharpCli --createcd in.cue out.chd [-c zlib,zstd,lzma,none] [-hs N] [-us N] [-t 8] [-ip parent.chd] [-v]
 CHDSharpCli --createld in.avi out.chd [-c avhu] [-isf N] [-if N] [-hs N] [-v]
+CHDSharpCli --extractld in.chd out.avi [-isf N] [-if N]
+CHDSharpCli --listtemplates
 CHDSharpCli --copy in.chd out.chd [-c zlib,zstd,lzma,none] [-t 8] [-ip parent.chd] [-op parent.chd] [-v]
 ```
 
@@ -119,12 +122,14 @@ All commands deep-verify the result with CHDSharpLib before exiting.
 
 ## Status
 
-All chdman-reachable features are implemented: all 9 writable codecs (+ `none`), NRG/GDI/
-ISO/TOC/CUE input, AVI input for laserdisc (`createld`), metadata editing (`SetMetadata`/
-`DeleteMetadata` + CLI `addmeta`/`delmeta`), CUE style conversion / Redump matching
-(`CueConverter`), platform detection with smart codec presets (`-c auto`), and byte-exact
-map clipping parity. `createld` produces valid, `chdman verify`-passing laserdisc CHDs from
-AVI files (YUY2/VYUY/UYVY, interlaced or progressive, with VBI metadata); the only gap
-is encoding-level byte-parity with chdman's output (ours is smaller due to more compact
-encoding). `extractld` (laserdisc CHD → AVI) is the only deliberately skipped chdman
-command. Future ideas live in [`References/ProposedFixes.md`](../References/ProposedFixes.md).
+All chdman-reachable features are implemented: all 10 writable codecs (including `avhu`
+via `createld`/`extractld`), NRG/GDI/ISO/TOC/CUE input, AVI input/output for laserdisc,
+predefined HDD geometry templates (`--listtemplates`, `-tp <id>`), metadata editing
+(`SetMetadata`/`DeleteMetadata` + CLI `addmeta`/`delmeta`), CUE style conversion /
+Redump matching (`CueConverter`), platform detection with smart codec presets (`-c auto`),
+and byte-exact map clipping parity. `createld` produces valid, `chdman verify`-passing
+laserdisc CHDs from AVI files (YUY2/VYUY/UYVY, interlaced or progressive, with VBI
+metadata); `extractld` decodes laserdisc CHDs back to playable AVI files. The only gaps
+are encoding-level byte-parity with chdman's `createld` output (ours is smaller due to
+more compact encoding) and `cdzs` bit-exactness (managed zstd trailing byte). Future ideas
+live in [`References/ProposedFixes.md`](../References/ProposedFixes.md).

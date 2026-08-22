@@ -7,7 +7,7 @@ namespace CHDSharpEncoder.Flac;
 /// </summary>
 internal static class FlacLpcMath
 {
-    private const double M_LN2 = 0.693147180559945309417232121458176568;
+    private const double MLn2 = 0.693147180559945309417232121458176568;
 
     // ---------------- fixed.c: best predictor selection ----------------
 
@@ -48,11 +48,11 @@ internal static class FlacLpcMath
             order = 4;
         }
 
-        residualBitsPerSample[0] = e0 > 0 ? (float)(Math.Log(M_LN2 * (double)e0 / dataLen) / M_LN2) : 0f;
-        residualBitsPerSample[1] = e1 > 0 ? (float)(Math.Log(M_LN2 * (double)e1 / dataLen) / M_LN2) : 0f;
-        residualBitsPerSample[2] = e2 > 0 ? (float)(Math.Log(M_LN2 * (double)e2 / dataLen) / M_LN2) : 0f;
-        residualBitsPerSample[3] = e3 > 0 ? (float)(Math.Log(M_LN2 * (double)e3 / dataLen) / M_LN2) : 0f;
-        residualBitsPerSample[4] = e4 > 0 ? (float)(Math.Log(M_LN2 * (double)e4 / dataLen) / M_LN2) : 0f;
+        residualBitsPerSample[0] = e0 > 0 ? (float)(Math.Log(MLn2 * (double)e0 / dataLen) / MLn2) : 0f;
+        residualBitsPerSample[1] = e1 > 0 ? (float)(Math.Log(MLn2 * (double)e1 / dataLen) / MLn2) : 0f;
+        residualBitsPerSample[2] = e2 > 0 ? (float)(Math.Log(MLn2 * (double)e2 / dataLen) / MLn2) : 0f;
+        residualBitsPerSample[3] = e3 > 0 ? (float)(Math.Log(MLn2 * (double)e3 / dataLen) / MLn2) : 0f;
+        residualBitsPerSample[4] = e4 > 0 ? (float)(Math.Log(MLn2 * (double)e4 / dataLen) / MLn2) : 0f;
 
         return order;
     }
@@ -93,11 +93,11 @@ internal static class FlacLpcMath
             order = 4;
         }
 
-        residualBitsPerSample[0] = e0 > 0 ? (float)(Math.Log(M_LN2 * (double)e0 / dataLen) / M_LN2) : 0f;
-        residualBitsPerSample[1] = e1 > 0 ? (float)(Math.Log(M_LN2 * (double)e1 / dataLen) / M_LN2) : 0f;
-        residualBitsPerSample[2] = e2 > 0 ? (float)(Math.Log(M_LN2 * (double)e2 / dataLen) / M_LN2) : 0f;
-        residualBitsPerSample[3] = e3 > 0 ? (float)(Math.Log(M_LN2 * (double)e3 / dataLen) / M_LN2) : 0f;
-        residualBitsPerSample[4] = e4 > 0 ? (float)(Math.Log(M_LN2 * (double)e4 / dataLen) / M_LN2) : 0f;
+        residualBitsPerSample[0] = e0 > 0 ? (float)(Math.Log(MLn2 * (double)e0 / dataLen) / MLn2) : 0f;
+        residualBitsPerSample[1] = e1 > 0 ? (float)(Math.Log(MLn2 * (double)e1 / dataLen) / MLn2) : 0f;
+        residualBitsPerSample[2] = e2 > 0 ? (float)(Math.Log(MLn2 * (double)e2 / dataLen) / MLn2) : 0f;
+        residualBitsPerSample[3] = e3 > 0 ? (float)(Math.Log(MLn2 * (double)e3 / dataLen) / MLn2) : 0f;
+        residualBitsPerSample[4] = e4 > 0 ? (float)(Math.Log(MLn2 * (double)e4 / dataLen) / MLn2) : 0f;
 
         return order;
     }
@@ -116,7 +116,7 @@ internal static class FlacLpcMath
                 1 => data[idx] - data[idx - 1],
                 2 => data[idx] - 2 * data[idx - 1] + data[idx - 2],
                 3 => data[idx] - 3 * data[idx - 1] + 3 * data[idx - 2] - data[idx - 3],
-                _ => data[idx] - 4 * data[idx - 1] + 6 * data[idx - 2] - 4 * data[idx - 3] + data[idx - 4],
+                _ => data[idx] - 4 * data[idx - 1] + 6 * data[idx - 2] - 4 * data[idx - 3] + data[idx - 4]
             };
         }
     }
@@ -126,8 +126,15 @@ internal static class FlacLpcMath
     /// <summary>FLAC__window_tukey: builds a Tukey window of length L with fraction p tapered.</summary>
     public static void WindowTukey(Span<float> window, int length, float p)
     {
-        if (p <= 0.0f) { WindowRectangle(window, length); return; }
-        if (p >= 1.0f) { WindowHann(window, length); return; }
+        switch (p)
+        {
+            case <= 0.0f:
+                WindowRectangle(window, length);
+                return;
+            case >= 1.0f:
+                WindowHann(window, length);
+                return;
+        }
 
         var np = (int)(p / 2.0f * length) - 1;
         WindowRectangle(window, length);
@@ -299,7 +306,7 @@ internal static class FlacLpcMath
     {
         if (lpcError > 0.0)
         {
-            var bps = 0.5 * Math.Log(errorScale * lpcError) / M_LN2;
+            var bps = 0.5 * Math.Log(errorScale * lpcError) / MLn2;
             return bps >= 0.0 ? bps : 0.0;
         }
 
@@ -339,8 +346,8 @@ internal static class FlacLpcMath
         var qmin = -qmax;
         qmax--;
 
-        var log2cmax = (int)Math.Floor(Math.Log(cmax, 2.0));
-        shift = (int)precision - log2cmax - 1;
+        var log2Cmax = (int)Math.Floor(Math.Log(cmax, 2.0));
+        shift = (int)precision - log2Cmax - 1;
 
         const int maxShiftLimit = (1 << (FlacBitMath.SubframeLpcQlpShiftLen - 1)) - 1;
         const int minShiftLimit = -maxShiftLimit - 1;

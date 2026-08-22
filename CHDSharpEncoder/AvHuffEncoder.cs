@@ -146,7 +146,7 @@ internal sealed class AvHuffEncoder
     /// <c>flac_encoder::reset(dest, samples * 2)</c> (bytes beyond the cap are dropped but
     /// still counted in the recorded stream size).
     /// </summary>
-    private void EncodeAudio(ReadOnlySpan<byte> source, int channels, int samples, Span<byte> dest, int dstOffs)
+    private static void EncodeAudio(ReadOnlySpan<byte> source, int channels, int samples, Span<byte> dest, int dstOffs)
     {
         // set huffman tree size to 0xffff to indicate FLAC
         dest[8] = 0xFF;

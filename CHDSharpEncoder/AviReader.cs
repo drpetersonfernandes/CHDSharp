@@ -20,21 +20,22 @@ public sealed class AviReader : IDisposable
 {
     /// <summary>Video format fourccs (little-endian, like MAME's AVI_FOURCC).</summary>
     private const uint FormatUyvy = 0x59565955; // 'UYVY'
+
     private const uint FormatVyuy = 0x59555956; // 'VYUY'
     private const uint FormatYuy2 = 0x32595559; // 'YUY2'
     private const uint FormatHfyu = 0x55594648; // 'HFYU'
 
     private const uint ChunkTypeRiff = 0x46464952; // 'RIFF'
     private const uint ChunkTypeList = 0x5453494C; // 'LIST'
-    private const uint ListTypeAvi = 0x20495641;   // 'AVI '
-    private const uint ListTypeAvix = 0x58495641;  // 'AVIX'
-    private const uint ListTypeHdrl = 0x6C726468;  // 'hdrl'
-    private const uint ListTypeStrl = 0x6C727473;  // 'strl'
-    private const uint ListTypeMovi = 0x69766F6D;  // 'movi'
-    private const uint ChunkAvih = 0x68697661;     // 'avih'
-    private const uint ChunkStrh = 0x68727473;     // 'strh'
-    private const uint ChunkStrf = 0x66727473;     // 'strf'
-    private const uint ChunkIdx1 = 0x31786469;     // 'idx1'
+    private const uint ListTypeAvi = 0x20495641; // 'AVI '
+    private const uint ListTypeAvix = 0x58495641; // 'AVIX'
+    private const uint ListTypeHdrl = 0x6C726468; // 'hdrl'
+    private const uint ListTypeStrl = 0x6C727473; // 'strl'
+    private const uint ListTypeMovi = 0x69766F6D; // 'movi'
+    private const uint ChunkAvih = 0x68697661; // 'avih'
+    private const uint ChunkStrh = 0x68727473; // 'strh'
+    private const uint ChunkStrf = 0x66727473; // 'strf'
+    private const uint ChunkIdx1 = 0x31786469; // 'idx1'
     private const uint StreamTypeVids = 0x73646976; // 'vids'
     private const uint StreamTypeAuds = 0x73647561; // 'auds'
 
@@ -49,18 +50,18 @@ public sealed class AviReader : IDisposable
     /// <summary>Describes one parsed AVI stream.</summary>
     private sealed class AviStream
     {
-        public uint Type;                // 'vids' / 'auds'
+        public uint Type; // 'vids' / 'auds'
         public uint Scale = 1;
         public uint Rate;
-        public uint SamplesFromHeader;   // dwLength from 'strh'
+        public uint SamplesFromHeader; // dwLength from 'strh'
 
-        public int Width, Height;        // video
-        public uint Depth;               // video
-        public uint Format;              // video fourcc
+        public int Width, Height; // video
+        public uint Depth; // video
+        public uint Format; // video fourcc
 
-        public ushort Channels;          // audio
-        public uint SampleRate;          // audio
-        public ushort SampleBits;        // audio
+        public ushort Channels; // audio
+        public uint SampleRate; // audio
+        public ushort SampleBits; // audio
 
         public readonly List<(long Offset, int Length)> Chunks = [];
     }
@@ -286,28 +287,32 @@ public sealed class AviReader : IDisposable
                 var dataPos = chunkPos + 8;
                 var nextPos = dataPos + size + (size & 1);
 
-                if (type == ChunkTypeList)
+                switch (type)
                 {
-                    ReadOnlySpan<byte> listHeader = ReadAt(dataPos, 4);
-                    var listType2 = BinaryPrimitives.ReadUInt32LittleEndian(listHeader);
-                    switch (listType2)
+                    case ChunkTypeList:
                     {
-                        case ListTypeHdrl:
-                            ParseHeaderList(dataPos + 4, size - 4);
-                            break;
-                        case ListTypeMovi:
-                            if (firstMoviData < 0)
-                            {
-                                firstMoviData = dataPos + 4;
-                            }
+                        ReadOnlySpan<byte> listHeader = ReadAt(dataPos, 4);
+                        var listType2 = BinaryPrimitives.ReadUInt32LittleEndian(listHeader);
+                        switch (listType2)
+                        {
+                            case ListTypeHdrl:
+                                ParseHeaderList(dataPos + 4, size - 4);
+                                break;
+                            case ListTypeMovi:
+                                if (firstMoviData < 0)
+                                {
+                                    firstMoviData = dataPos + 4;
+                                }
 
-                            ScanMoviList(dataPos + 4, size - 4);
-                            break;
+                                ScanMoviList(dataPos + 4, size - 4);
+                                break;
+                        }
+
+                        break;
                     }
-                }
-                else if (type == ChunkIdx1 && firstMoviData >= 0)
-                {
-                    ParseIdx1(dataPos, size, firstMoviData);
+                    case ChunkIdx1 when firstMoviData >= 0:
+                        ParseIdx1(dataPos, size, firstMoviData);
+                        break;
                 }
 
                 if (nextPos <= chunkPos)
@@ -336,18 +341,23 @@ public sealed class AviReader : IDisposable
             var chunkSize = BinaryPrimitives.ReadUInt32LittleEndian(header[4..]);
             var dataPos = pos + 8;
 
-            if (type == ChunkAvih && chunkSize >= 28)
+            switch (type)
             {
-                ReadOnlySpan<byte> data = ReadAt(dataPos, (int)Math.Min(chunkSize, 64));
-                var streamCount = BinaryPrimitives.ReadUInt32LittleEndian(data[24..]);
-                for (var i = 0; i < streamCount && i < 16; i++)
-                    _streams.Add(new AviStream());
-            }
-            else if (type == ChunkTypeList)
-            {
-                ReadOnlySpan<byte> listHeader = ReadAt(dataPos, 4);
-                if (BinaryPrimitives.ReadUInt32LittleEndian(listHeader) == ListTypeStrl)
-                    ParseStreamList(dataPos + 4, chunkSize - 4);
+                case ChunkAvih when chunkSize >= 28:
+                {
+                    ReadOnlySpan<byte> data = ReadAt(dataPos, (int)Math.Min(chunkSize, 64));
+                    var streamCount = BinaryPrimitives.ReadUInt32LittleEndian(data[24..]);
+                    for (var i = 0; i < streamCount && i < 16; i++)
+                        _streams.Add(new AviStream());
+                    break;
+                }
+                case ChunkTypeList:
+                {
+                    ReadOnlySpan<byte> listHeader = ReadAt(dataPos, 4);
+                    if (BinaryPrimitives.ReadUInt32LittleEndian(listHeader) == ListTypeStrl)
+                        ParseStreamList(dataPos + 4, chunkSize - 4);
+                    break;
+                }
             }
 
             pos = dataPos + chunkSize + (chunkSize & 1);
@@ -370,29 +380,36 @@ public sealed class AviReader : IDisposable
             var chunkSize = BinaryPrimitives.ReadUInt32LittleEndian(header[4..]);
             var dataPos = pos + 8;
 
-            if (type == ChunkStrh && chunkSize >= 36)
+            switch (type)
             {
-                ReadOnlySpan<byte> data = ReadAt(dataPos, 40);
-                stream.Type = BinaryPrimitives.ReadUInt32LittleEndian(data);
-                stream.Scale = BinaryPrimitives.ReadUInt32LittleEndian(data[20..]);
-                stream.Rate = BinaryPrimitives.ReadUInt32LittleEndian(data[24..]);
-                stream.SamplesFromHeader = BinaryPrimitives.ReadUInt32LittleEndian(data[32..]);
-            }
-            else if (type == ChunkStrf && chunkSize >= 16)
-            {
-                ReadOnlySpan<byte> data = ReadAt(dataPos, (int)Math.Min(chunkSize, 64));
-                if (stream.Type == StreamTypeVids)
+                case ChunkStrh when chunkSize >= 36:
                 {
-                    stream.Width = (int)BinaryPrimitives.ReadUInt32LittleEndian(data[4..]);
-                    stream.Height = (int)BinaryPrimitives.ReadUInt32LittleEndian(data[8..]);
-                    stream.Depth = BinaryPrimitives.ReadUInt16LittleEndian(data[14..]);
-                    stream.Format = BinaryPrimitives.ReadUInt32LittleEndian(data[16..]);
+                    ReadOnlySpan<byte> data = ReadAt(dataPos, 40);
+                    stream.Type = BinaryPrimitives.ReadUInt32LittleEndian(data);
+                    stream.Scale = BinaryPrimitives.ReadUInt32LittleEndian(data[20..]);
+                    stream.Rate = BinaryPrimitives.ReadUInt32LittleEndian(data[24..]);
+                    stream.SamplesFromHeader = BinaryPrimitives.ReadUInt32LittleEndian(data[32..]);
+                    break;
                 }
-                else if (stream.Type == StreamTypeAuds)
+                case ChunkStrf when chunkSize >= 16:
                 {
-                    stream.Channels = BinaryPrimitives.ReadUInt16LittleEndian(data[2..]);
-                    stream.SampleRate = BinaryPrimitives.ReadUInt32LittleEndian(data[4..]);
-                    stream.SampleBits = BinaryPrimitives.ReadUInt16LittleEndian(data[14..]);
+                    ReadOnlySpan<byte> data = ReadAt(dataPos, (int)Math.Min(chunkSize, 64));
+                    switch (stream.Type)
+                    {
+                        case StreamTypeVids:
+                            stream.Width = (int)BinaryPrimitives.ReadUInt32LittleEndian(data[4..]);
+                            stream.Height = (int)BinaryPrimitives.ReadUInt32LittleEndian(data[8..]);
+                            stream.Depth = BinaryPrimitives.ReadUInt16LittleEndian(data[14..]);
+                            stream.Format = BinaryPrimitives.ReadUInt32LittleEndian(data[16..]);
+                            break;
+                        case StreamTypeAuds:
+                            stream.Channels = BinaryPrimitives.ReadUInt16LittleEndian(data[2..]);
+                            stream.SampleRate = BinaryPrimitives.ReadUInt32LittleEndian(data[4..]);
+                            stream.SampleBits = BinaryPrimitives.ReadUInt16LittleEndian(data[14..]);
+                            break;
+                    }
+
+                    break;
                 }
             }
 

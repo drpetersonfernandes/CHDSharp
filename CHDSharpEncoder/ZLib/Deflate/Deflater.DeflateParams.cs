@@ -25,45 +25,45 @@ internal static partial class Deflater
 
         ref var configuration_table = ref
 #if NET7_0_OR_GREATER
-            strm.deflateRefs.configuration_table;
+            strm.deflateRefs.ConfigurationTable;
 #else
             MemoryMarshal.GetReference<Config>(s_configuration_table);
 #endif
-        var deflate_type = Unsafe.Add(ref configuration_table, (uint)s.level).deflate_type;
+        var deflate_type = Unsafe.Add(ref configuration_table, (uint)s.Level).deflate_type;
         ref var config = ref Unsafe.Add(ref configuration_table, (uint)level);
-        if ((strategy != s.strategy || deflate_type != config.deflate_type)
-            && s.last_flush != -2)
+        if ((strategy != s.Strategy || deflate_type != config.deflate_type)
+            && s.LastFlush != -2)
         {
             // Flush the last buffer:
             var err = Deflate(ref strm, Z_BLOCK);
             if (err == Z_STREAM_ERROR)
                 return err;
-            if (strm.avail_in != 0 || s.strstart - s.block_start + s.lookahead != 0)
+            if (strm.avail_in != 0 || s.Strstart - s.BlockStart + s.Lookahead != 0)
                 return Z_BUF_ERROR;
         }
-        if (s.level != level)
+        if (s.Level != level)
         {
-            if (s.level == 0 && s.matches != 0)
+            if (s.Level == 0 && s.Matches != 0)
             {
-                if (s.matches == 1)
+                if (s.Matches == 1)
                 {
 #if NET7_0_OR_GREATER
                     ref var refs = ref strm.deflateRefs;
-                    if (netUnsafe.IsNullRef(ref refs.prev))
+                    if (netUnsafe.IsNullRef(ref refs.Prev))
                     {
-                        refs.prev = ref MemoryMarshal.GetReference<ushort>(s.prev);
+                        refs.Prev = ref MemoryMarshal.GetReference<ushort>(s.Prev);
                     }
 #endif
                     ref var prev = ref
 #if NET7_0_OR_GREATER
-                    refs.prev;
+                    refs.Prev;
 #else
                     MemoryMarshal.GetReference<ushort>(s.prev);
 #endif
 
                     SlideHash(s, ref prev, ref
 #if NET7_0_OR_GREATER
-                    refs.head
+                    refs.Head
 #else
                     MemoryMarshal.GetReference<ushort>(s.head)
 #endif
@@ -73,15 +73,15 @@ internal static partial class Deflater
                 {
                     ClearHash(ref strm);
                 }
-                s.matches = 0;
+                s.Matches = 0;
             }
-            s.level = level;
-            s.max_lazy_match = config.max_lazy;
-            s.good_match = config.good_length;
-            s.nice_match = config.nice_length;
-            s.max_chain_length = config.max_chain;
+            s.Level = level;
+            s.MaxLazyMatch = config.max_lazy;
+            s.GoodMatch = config.good_length;
+            s.NiceMatch = config.nice_length;
+            s.MaxChainLength = config.max_chain;
         }
-        s.strategy = strategy;
+        s.Strategy = strategy;
         return Z_OK;
     }
 }

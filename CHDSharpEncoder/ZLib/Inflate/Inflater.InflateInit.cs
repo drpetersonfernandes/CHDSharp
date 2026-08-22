@@ -21,7 +21,7 @@ internal static partial class Inflater
             return Z_MEM_ERROR;
         }
 #if NET7_0_OR_GREATER
-        strm.inflateRefs = new();
+        strm.inflateRefs = new InflateRefs();
 #endif
         Trace.Tracev("inflate: allocated\n");
         strm.inflateState = state;

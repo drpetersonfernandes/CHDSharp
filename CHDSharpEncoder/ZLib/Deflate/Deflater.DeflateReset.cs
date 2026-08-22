@@ -26,23 +26,23 @@ internal static partial class Deflater
         strm.data_type = Z_UNKNOWN;
 
         var s = strm.deflateState;
-        s.pending = 0;
-        s.pending_out = s.pending_buf;
+        s.Pending = 0;
+        s.PendingOut = s.PendingBuf;
 #if NET7_0_OR_GREATER
         ref var refs = ref strm.deflateRefs;
-        refs.pending_out = ref refs.pending_buf;
+        refs.PendingOut = ref refs.PendingBuf;
 #endif
 
-        if (s.wrap < 0)
+        if (s.Wrap < 0)
         {
-            s.wrap = -s.wrap; // was made negative by deflate(..., Z_FINISH);
+            s.Wrap = -s.Wrap; // was made negative by deflate(..., Z_FINISH);
         }
 
-        s.status = InitState;
+        s.Status = InitState;
 
         strm.Adler = Adler32.Update(0, ref netUnsafe.NullRef<byte>(), 0);
 
-        s.last_flush = -2;
+        s.LastFlush = -2;
 
         Tree.Init(ref strm);
 

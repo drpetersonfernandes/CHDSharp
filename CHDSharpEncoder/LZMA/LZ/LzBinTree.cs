@@ -441,11 +441,10 @@ internal class BinTree : InWindow, IMatchFinder
             }
 
             MovePos();
-        }
-        while (--num != 0);
+        } while (--num != 0);
     }
 
-    private void NormalizeLinks(uint[] items, uint numItems, uint subValue)
+    private static void NormalizeLinks(uint[] items, uint numItems, uint subValue)
     {
         for (uint i = 0; i < numItems; i++)
         {

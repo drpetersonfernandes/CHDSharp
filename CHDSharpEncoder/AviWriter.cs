@@ -30,8 +30,8 @@ internal sealed class AviWriter : IDisposable
     private long _moviSizePos;
 
     private static readonly uint FccYuy2 = FourCc("YUY2");
-    private static readonly uint Fcc00dc = FourCc("00dc");
-    private static readonly uint Fcc01wb = FourCc("01wb");
+    private static readonly uint Fcc00Dc = FourCc("00dc");
+    private static readonly uint Fcc01Wb = FourCc("01wb");
 
     private AviWriter(Stream stream, uint width, uint height,
         uint videoTimescale, uint videoSampletime,
@@ -72,11 +72,11 @@ internal sealed class AviWriter : IDisposable
     {
         ObjectDisposedException.ThrowIf(_finalized, this);
         var offset = _stream.Position - (_moviSizePos + 4);
-        WriteU32(Fcc00dc);
+        WriteU32(Fcc00Dc);
         WriteU32((uint)yuy2Data.Length);
         _stream.Write(yuy2Data);
         if (yuy2Data.Length % 2 != 0) _stream.WriteByte(0);
-        _index.Add((Fcc00dc, offset, (uint)yuy2Data.Length));
+        _index.Add((Fcc00Dc, offset, (uint)yuy2Data.Length));
         _videoFrameCount++;
     }
 
@@ -84,11 +84,11 @@ internal sealed class AviWriter : IDisposable
     {
         ObjectDisposedException.ThrowIf(_finalized, this);
         var offset = _stream.Position - (_moviSizePos + 4);
-        WriteU32(Fcc01wb);
+        WriteU32(Fcc01Wb);
         WriteU32((uint)pcmData.Length);
         _stream.Write(pcmData);
         if (pcmData.Length % 2 != 0) _stream.WriteByte(0);
-        _index.Add((Fcc01wb, offset, (uint)pcmData.Length));
+        _index.Add((Fcc01Wb, offset, (uint)pcmData.Length));
         _audioSampleCount += sampleCount;
     }
 
@@ -183,7 +183,7 @@ internal sealed class AviWriter : IDisposable
         foreach (var (id, offset, size) in _index)
         {
             BinaryPrimitives.WriteUInt32LittleEndian(buf.AsSpan(0), id);
-            BinaryPrimitives.WriteUInt32LittleEndian(buf.AsSpan(4), id == Fcc00dc ? 0x10u : 0u);
+            BinaryPrimitives.WriteUInt32LittleEndian(buf.AsSpan(4), id == Fcc00Dc ? 0x10u : 0u);
             BinaryPrimitives.WriteUInt32LittleEndian(buf.AsSpan(8), (uint)offset);
             BinaryPrimitives.WriteUInt32LittleEndian(buf.AsSpan(12), size);
             _stream.Write(buf);
@@ -209,7 +209,7 @@ internal sealed class AviWriter : IDisposable
         var buf = new byte[56];
         BinaryPrimitives.WriteUInt32LittleEndian(buf.AsSpan(0), usecPerFrame);
         BinaryPrimitives.WriteUInt32LittleEndian(buf.AsSpan(8), 0x10); // AVIF_HASINDEX
-        BinaryPrimitives.WriteUInt32LittleEndian(buf.AsSpan(16), 0);   // dwTotalFrames (patched)
+        BinaryPrimitives.WriteUInt32LittleEndian(buf.AsSpan(16), 0); // dwTotalFrames (patched)
         BinaryPrimitives.WriteUInt32LittleEndian(buf.AsSpan(24), _audioChannels > 0 ? 2u : 1u);
         BinaryPrimitives.WriteUInt32LittleEndian(buf.AsSpan(32), _width);
         BinaryPrimitives.WriteUInt32LittleEndian(buf.AsSpan(36), _height);

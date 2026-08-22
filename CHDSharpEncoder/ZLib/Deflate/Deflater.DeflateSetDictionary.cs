@@ -16,8 +16,8 @@ internal static partial class Deflater
 
         var s = strm.deflateState;
 
-        var wrap = s.wrap;
-        if (wrap == 2 || wrap == 1 && s.status != InitState || s.lookahead != 0)
+        var wrap = s.Wrap;
+        if (wrap == 2 || wrap == 1 && s.Status != InitState || s.Lookahead != 0)
             return Z_STREAM_ERROR;
 
         var dictLength = (uint)dictionary.Length;
@@ -27,21 +27,21 @@ internal static partial class Deflater
             strm.Adler = Adler32.Update(strm.Adler, ref MemoryMarshal.GetReference(dictionary), dictLength);
         }
 
-        s.wrap = 0; // avoid computing Adler-32 in ReadBuf
+        s.Wrap = 0; // avoid computing Adler-32 in ReadBuf
 
         uint next_in = 0;
         // if dictionary would fill window, just replace the history
-        if (dictLength >= s.w_size)
+        if (dictLength >= s.WSize)
         {
             if (wrap == 0) // already empty otherwise
             {
                 ClearHash(ref strm);
-                s.strstart = 0;
-                s.block_start = 0;
-                s.insert = 0;
+                s.Strstart = 0;
+                s.BlockStart = 0;
+                s.Insert = 0;
             }
-            next_in = dictLength - s.w_size; //use the tail 
-            dictLength = s.w_size;
+            next_in = dictLength - s.WSize; //use the tail 
+            dictLength = s.WSize;
         }
 
         // insert dictionary into window and hash
@@ -52,14 +52,14 @@ internal static partial class Deflater
         ref var input_ptr = ref strm.input_ptr;
         strm.Input = dictionary;
         ref var refs = ref strm.deflateRefs;
-        if (netUnsafe.IsNullRef(ref refs.window))
+        if (netUnsafe.IsNullRef(ref refs.Window))
         {
-            refs.window = ref MemoryMarshal.GetReference<byte>(s.window);
+            refs.Window = ref MemoryMarshal.GetReference<byte>(s.Window);
         }
 
-        if (netUnsafe.IsNullRef(ref refs.prev))
+        if (netUnsafe.IsNullRef(ref refs.Prev))
         {
-            refs.prev = ref MemoryMarshal.GetReference<ushort>(s.prev);
+            refs.Prev = ref MemoryMarshal.GetReference<ushort>(s.Prev);
         }
 #else
         strm.avail_in = dictLength;
@@ -69,52 +69,52 @@ internal static partial class Deflater
 
         ref var window = ref
 #if NET7_0_OR_GREATER
-        refs.window;
+        refs.Window;
 #else
         MemoryMarshal.GetReference<byte>(s.window);
 #endif
         ref var prev = ref
 #if NET7_0_OR_GREATER
-        refs.prev;
+        refs.Prev;
 #else
         MemoryMarshal.GetReference<ushort>(s.prev);
 #endif
         ref var head = ref
 #if NET7_0_OR_GREATER
-        refs.head;
+        refs.Head;
 #else
         MemoryMarshal.GetReference<ushort>(s.head);
 #endif
         FillWindow(ref strm, ref window, ref prev, ref head);
-        while (s.lookahead >= MinMatch)
+        while (s.Lookahead >= MinMatch)
         {
-            var str = s.strstart;
-            var n = s.lookahead - (MinMatch - 1);
+            var str = s.Strstart;
+            var n = s.Lookahead - (MinMatch - 1);
             do
             {
-                UpdateHash(s, ref s.ins_h, Unsafe.Add(ref window, str + MinMatch - 1));
-                ref var temp = ref Unsafe.Add(ref head, s.ins_h);
-                Unsafe.Add(ref prev, str & s.w_mask) = temp;
+                UpdateHash(s, ref s.InsH, Unsafe.Add(ref window, str + MinMatch - 1));
+                ref var temp = ref Unsafe.Add(ref head, s.InsH);
+                Unsafe.Add(ref prev, str & s.WMask) = temp;
                 temp = (ushort)str;
                 str++;
             } while (--n != 0);
-            s.strstart = str;
-            s.lookahead = MinMatch - 1;
+            s.Strstart = str;
+            s.Lookahead = MinMatch - 1;
             FillWindow(ref strm, ref window, ref prev, ref head);
         }
-        s.strstart += s.lookahead;
-        s.block_start = (int)s.strstart;
-        s.insert = s.lookahead;
-        s.lookahead = 0;
-        s.match_length = s.prev_length = MinMatch - 1;
-        s.match_available = false;
+        s.Strstart += s.Lookahead;
+        s.BlockStart = (int)s.Strstart;
+        s.Insert = s.Lookahead;
+        s.Lookahead = 0;
+        s.MatchLength = s.PrevLength = MinMatch - 1;
+        s.MatchAvailable = false;
         strm._input = input;
 #if NET7_0_OR_GREATER
         strm.input_ptr = ref input_ptr;
 #endif
         strm.next_in = next;
         strm.avail_in = avail;
-        s.wrap = wrap;
+        s.Wrap = wrap;
         return Z_OK;
     }
 }

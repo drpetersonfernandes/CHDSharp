@@ -170,16 +170,16 @@ public static class MetadataWriter
     /// <c>FPS:%d.%06d WIDTH:%d HEIGHT:%d INTERLACED:%d CHANNELS:%d SAMPLERATE:%d</c>
     /// (null-terminated, checksummed).
     /// </summary>
-    /// <param name="fpsTimes1million">Frame rate in frames per 1,000,000 seconds.</param>
+    /// <param name="fpsTimes1Million">Frame rate in frames per 1,000,000 seconds.</param>
     /// <param name="width">Video width in pixels.</param>
     /// <param name="height">Video height in lines (field height for interlaced sources).</param>
     /// <param name="interlaced">Whether the source is interlaced.</param>
     /// <param name="channels">Audio channel count.</param>
     /// <param name="sampleRate">Audio sample rate in Hz.</param>
-    public static MetadataEntry BuildAvMetadata(ulong fpsTimes1million, uint width, uint height,
+    public static MetadataEntry BuildAvMetadata(ulong fpsTimes1Million, uint width, uint height,
         bool interlaced, uint channels, uint sampleRate)
     {
-        var text = $"FPS:{fpsTimes1million / 1000000}.{fpsTimes1million % 1000000:D6} " +
+        var text = $"FPS:{fpsTimes1Million / 1000000}.{fpsTimes1Million % 1000000:D6} " +
                    $"WIDTH:{width} HEIGHT:{height} INTERLACED:{(interlaced ? 1 : 0)} " +
                    $"CHANNELS:{channels} SAMPLERATE:{sampleRate}";
         return new MetadataEntry

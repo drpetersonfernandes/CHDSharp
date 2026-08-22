@@ -14,16 +14,16 @@ internal static partial class Deflater
             return Z_STREAM_ERROR;
 
         var s = strm.deflateState;
-        var status = s.status;
+        var status = s.Status;
 
-        if (s.window != default)
-            ArrayPool<byte>.Shared.Return(s.window);
-        if (s.prev != default)
-            ArrayPool<ushort>.Shared.Return(s.prev);
-        if (s.head != default)
-            ArrayPool<ushort>.Shared.Return(s.head);
-        if (s.pending_buf != default)
-            ArrayPool<byte>.Shared.Return(s.pending_buf);
+        if (s.Window != default)
+            ArrayPool<byte>.Shared.Return(s.Window);
+        if (s.Prev != default)
+            ArrayPool<ushort>.Shared.Return(s.Prev);
+        if (s.Head != default)
+            ArrayPool<ushort>.Shared.Return(s.Head);
+        if (s.PendingBuf != default)
+            ArrayPool<byte>.Shared.Return(s.PendingBuf);
 
         s_objectPool.Return(s);
         strm.deflateState = null;

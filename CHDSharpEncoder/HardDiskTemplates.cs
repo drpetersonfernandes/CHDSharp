@@ -14,14 +14,19 @@ public static class HardDiskTemplates
     /// <param name="Heads">Number of heads.</param>
     /// <param name="Sectors">Sectors per track.</param>
     /// <param name="SectorSize">Bytes per sector.</param>
-    public record HardDiskTemplate(string Manufacturer, string Model,
-        uint Cylinders, uint Heads, uint Sectors, uint SectorSize)
+    public record HardDiskTemplate(
+        string Manufacturer,
+        string Model,
+        uint Cylinders,
+        uint Heads,
+        uint Sectors,
+        uint SectorSize)
     {
         /// <summary>Total image size in bytes (Cylinders * Heads * Sectors * SectorSize).</summary>
         public ulong TotalBytes => (ulong)Cylinders * Heads * Sectors * SectorSize;
 
         /// <summary>Total image size in megabytes (for display).</summary>
-        public long TotalMB => (long)(TotalBytes / (1024 * 1024));
+        public long TotalMb => (long)(TotalBytes / (1024 * 1024));
     }
 
     /// <summary>
@@ -30,19 +35,19 @@ public static class HardDiskTemplates
     /// </summary>
     public static readonly HardDiskTemplate[] Templates =
     [
-        new("Conner",     "CFA170A",    332, 16, 63, 512),
-        new("Rodime",     "R0201",      321,  2, 16, 512),
-        new("Rodime",     "R0202",      321,  4, 16, 512),
-        new("Rodime",     "R0203",      321,  6, 16, 512),
-        new("Rodime",     "R0204",      321,  8, 16, 512),
-        new("Seagate",    "ST-213",     615,  2, 17, 512),
-        new("Seagate",    "ST-225",     615,  4, 17, 512),
-        new("Seagate",    "ST-251",     820,  6, 17, 512),
-        new("Seagate",    "ST-3600N",  1877,  7, 76, 512),
-        new("Maxtor",     "LXT-213S",  1314,  7, 53, 512),
-        new("Maxtor",     "LXT-340S",  1574,  7, 70, 512),
-        new("Maxtor",     "MXT-540SL", 2466,  7, 87, 512),
-        new("Micropolis", "1528",      2094, 15, 83, 512),
+        new("Conner", "CFA170A", 332, 16, 63, 512),
+        new("Rodime", "R0201", 321, 2, 16, 512),
+        new("Rodime", "R0202", 321, 4, 16, 512),
+        new("Rodime", "R0203", 321, 6, 16, 512),
+        new("Rodime", "R0204", 321, 8, 16, 512),
+        new("Seagate", "ST-213", 615, 2, 17, 512),
+        new("Seagate", "ST-225", 615, 4, 17, 512),
+        new("Seagate", "ST-251", 820, 6, 17, 512),
+        new("Seagate", "ST-3600N", 1877, 7, 76, 512),
+        new("Maxtor", "LXT-213S", 1314, 7, 53, 512),
+        new("Maxtor", "LXT-340S", 1574, 7, 70, 512),
+        new("Maxtor", "MXT-540SL", 2466, 7, 87, 512),
+        new("Micropolis", "1528", 2094, 15, 83, 512)
     ];
 
     /// <summary>

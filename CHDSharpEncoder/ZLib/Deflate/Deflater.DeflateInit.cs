@@ -58,43 +58,43 @@ internal static partial class Deflater
             s = s_objectPool.Get();
             strm.deflateState = s;
 #if NET7_0_OR_GREATER
-            strm.deflateRefs = new();
+            strm.deflateRefs = new DeflateRefs();
 #endif
-            s.status = InitState; // to pass state test in DeflateReset()
+            s.Status = InitState; // to pass state test in DeflateReset()
 
-            s.wrap = wrap;
-            s.w_bits = (uint)windowBits;
-            s.w_size = 1U << windowBits;
-            s.w_mask = s.w_size - 1;
+            s.Wrap = wrap;
+            s.WBits = (uint)windowBits;
+            s.WSize = 1U << windowBits;
+            s.WMask = s.WSize - 1;
 
             var hash_bits = memLevel + 7;
-            s.hash_bits = (uint)hash_bits;
-            s.hash_size = 1U << hash_bits;
-            s.hash_mask = s.hash_size - 1;
-            s.hash_shift = (hash_bits + MinMatch - 1) / MinMatch;
+            s.HashBits = (uint)hash_bits;
+            s.HashSize = 1U << hash_bits;
+            s.HashMask = s.HashSize - 1;
+            s.HashShift = (hash_bits + MinMatch - 1) / MinMatch;
 
-            var w_size = (int)s.w_size;
-            s.window = ArrayPool<byte>.Shared.Rent(w_size * 2);
-            s.prev = ArrayPool<ushort>.Shared.Rent(w_size);
-            s.head = ArrayPool<ushort>.Shared.Rent((int)s.hash_size);
+            var w_size = (int)s.WSize;
+            s.Window = ArrayPool<byte>.Shared.Rent(w_size * 2);
+            s.Prev = ArrayPool<ushort>.Shared.Rent(w_size);
+            s.Head = ArrayPool<ushort>.Shared.Rent((int)s.HashSize);
 
-            s.high_water = 0; // nothing written to s.window yet
+            s.HighWater = 0; // nothing written to s.window yet
 
-            s.lit_bufsize = 1U << (memLevel + 6); // 16K elements by default
+            s.LitBufsize = 1U << (memLevel + 6); // 16K elements by default
 
-            s.pending_buf_size = s.lit_bufsize * 4;
-            s.pending_buf = ArrayPool<byte>.Shared.Rent((int)s.pending_buf_size);
+            s.PendingBufSize = s.LitBufsize * 4;
+            s.PendingBuf = ArrayPool<byte>.Shared.Rent((int)s.PendingBufSize);
 #if NET7_0_OR_GREATER
             ref var refs = ref strm.deflateRefs;
-            refs.head = ref MemoryMarshal.GetReference<ushort>(s.head);
-            refs.pending_buf = ref MemoryMarshal.GetReference<byte>(s.pending_buf);
+            refs.Head = ref MemoryMarshal.GetReference<ushort>(s.Head);
+            refs.PendingBuf = ref MemoryMarshal.GetReference<byte>(s.PendingBuf);
 #endif
         }
         catch (OutOfMemoryException)
         {
             if (s != default)
             {
-                s.status = FinishState;
+                s.Status = FinishState;
             }
 
             strm.msg = s_z_errmsg[Z_NEED_DICT - Z_MEM_ERROR];
@@ -105,14 +105,14 @@ internal static partial class Deflater
         {
             if (s != default)
             {
-                if (s.window != default)
-                    ArrayPool<byte>.Shared.Return(s.window);
-                if (s.prev != default)
-                    ArrayPool<ushort>.Shared.Return(s.prev);
-                if (s.head != default)
-                    ArrayPool<ushort>.Shared.Return(s.head);
-                if (s.pending_buf != default)
-                    ArrayPool<byte>.Shared.Return(s.pending_buf);
+                if (s.Window != default)
+                    ArrayPool<byte>.Shared.Return(s.Window);
+                if (s.Prev != default)
+                    ArrayPool<ushort>.Shared.Return(s.Prev);
+                if (s.Head != default)
+                    ArrayPool<ushort>.Shared.Return(s.Head);
+                if (s.PendingBuf != default)
+                    ArrayPool<byte>.Shared.Return(s.PendingBuf);
 
                 s_objectPool.Return(s);
             }
@@ -120,9 +120,9 @@ internal static partial class Deflater
             throw;
         }
 
-        s.level = level;
-        s.strategy = strategy;
-        s.method = (byte)method;
+        s.Level = level;
+        s.Strategy = strategy;
+        s.Method = (byte)method;
 
         return DeflateReset(ref strm);
     }

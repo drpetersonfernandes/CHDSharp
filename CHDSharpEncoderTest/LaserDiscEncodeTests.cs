@@ -60,7 +60,7 @@ public class LaserDiscEncodeTests : IDisposable
 
         var info = ChdEncoder.EncodeLaserDisc(aviPath, chdPath);
 
-        Assert.Equal(25000000ul, info.FpsTimes1million);
+        Assert.Equal(25000000ul, info.FpsTimes1Million);
         Assert.False(info.Interlaced);
         Assert.Equal(64u, info.Width);
         Assert.Equal(64u, info.Height);
@@ -80,7 +80,7 @@ public class LaserDiscEncodeTests : IDisposable
         {
             var buffer = new byte[chd.HunkBytes];
             Assert.Equal(ChdError.Chderrnone, chd.ReadHunk(hunk, buffer));
-            var expected = BuildExpectedRawFrame(hunk, aviPath, 2, 48000, info.FpsTimes1million, info.MaxSamplesPerFrame);
+            var expected = BuildExpectedRawFrame(hunk, aviPath, 2, 48000, info.FpsTimes1Million, info.MaxSamplesPerFrame);
             Assert.Equal(expected, buffer);
         }
     }
@@ -145,7 +145,7 @@ public class LaserDiscEncodeTests : IDisposable
         {
             var buffer = new byte[chd.HunkBytes];
             Assert.Equal(ChdError.Chderrnone, chd.ReadHunk(i, buffer));
-            var expected = BuildExpectedRawFrame(i + 3, aviPath, 2, 48000, info.FpsTimes1million, info.MaxSamplesPerFrame);
+            var expected = BuildExpectedRawFrame(i + 3, aviPath, 2, 48000, info.FpsTimes1Million, info.MaxSamplesPerFrame);
             Assert.Equal(expected, buffer);
         }
     }
@@ -222,7 +222,7 @@ public class LaserDiscEncodeTests : IDisposable
             for (var slot = 0; slot < 2; slot++)
             {
                 var expected = BuildExpectedRawFrame((uint)(hunk * 2 + slot), aviPath, 2, 48000,
-                    info.FpsTimes1million, info.MaxSamplesPerFrame);
+                    info.FpsTimes1Million, info.MaxSamplesPerFrame);
                 Assert.Equal(expected, buffer.AsSpan(slot * (int)frameBytes, (int)frameBytes).ToArray());
             }
         }

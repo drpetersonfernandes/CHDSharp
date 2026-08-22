@@ -74,15 +74,11 @@ public static class MapCompressor
         var mapAllocation = nbitsNeeded / 8 + 1;
         var payloadBytes = mapAllocation - 16;
 
-        ulong firstOffset;
-        byte[] compressed;
-        int compressedDataLen;
-
         // pass 1: chdman-sized fixed buffer (drops overflow, counts it)
-        compressed = new byte[mapAllocation];
+        var compressed = new byte[mapAllocation];
         var bs = new BitStreamOut(compressed, 16, payloadBytes);
-        firstOffset = WriteMapPayload(bs);
-        compressedDataLen = bs.Flush();
+        var firstOffset = WriteMapPayload(bs);
+        var compressedDataLen = bs.Flush();
 
         if (compressedDataLen > payloadBytes)
         {
@@ -286,24 +282,26 @@ public static class MapCompressor
             {
                 while (count != 0)
                 {
-                    if (count < 3)
+                    switch (count)
                     {
-                        rleList.Add(lastcomp);
-                        count--;
-                    }
-                    else if (count <= 3 + 15)
-                    {
-                        rleList.Add(CompressionRleSmall);
-                        rleList.Add((byte)(count - 3));
-                        count = 0;
-                    }
-                    else
-                    {
-                        var thisCount = Math.Min(count, 3 + 16 + 255);
-                        rleList.Add(CompressionRleLarge);
-                        rleList.Add((byte)((thisCount - 3 - 16) >> 4));
-                        rleList.Add((byte)((thisCount - 3 - 16) & 15));
-                        count -= thisCount;
+                        case < 3:
+                            rleList.Add(lastcomp);
+                            count--;
+                            break;
+                        case <= 3 + 15:
+                            rleList.Add(CompressionRleSmall);
+                            rleList.Add((byte)(count - 3));
+                            count = 0;
+                            break;
+                        default:
+                        {
+                            var thisCount = Math.Min(count, 3 + 16 + 255);
+                            rleList.Add(CompressionRleLarge);
+                            rleList.Add((byte)((thisCount - 3 - 16) >> 4));
+                            rleList.Add((byte)((thisCount - 3 - 16) & 15));
+                            count -= thisCount;
+                            break;
+                        }
                     }
                 }
 

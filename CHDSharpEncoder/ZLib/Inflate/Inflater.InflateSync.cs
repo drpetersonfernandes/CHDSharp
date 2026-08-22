@@ -54,7 +54,6 @@ internal static partial class Inflater
         if (state.have != 4)
             return Z_DATA_ERROR;
 
-        int flags; // temporary to save header status
         if (state.flags == -1)
         {
             state.wrap = 0;     // if no header yet, treat as raw
@@ -64,11 +63,10 @@ internal static partial class Inflater
             state.wrap &= ~4;   // no point in computing a check value now */
         }
 
-        flags = state.flags;
+        var flags = state.flags; // temporary to save header status
 
-        uint @out; // temporary to total_out
         @in = strm.total_in;
-        @out = strm.total_out;
+        var @out = strm.total_out; // temporary to total_out
         _ = InflateReset(ref strm);
         strm.total_in = @in;
         strm.total_out = @out;

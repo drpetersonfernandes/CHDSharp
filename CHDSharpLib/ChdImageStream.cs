@@ -169,7 +169,7 @@ public sealed class ChdImageStream : Stream
             SeekOrigin.End => offset > 0
                 ? throw new ArgumentOutOfRangeException(nameof(offset), "Seek offset cannot be positive from end.")
                 : _chd.TotalBytes - (ulong)(-offset),
-            _ => throw new ArgumentException("Invalid SeekOrigin.", nameof(origin)),
+            _ => throw new ArgumentException("Invalid SeekOrigin.", nameof(origin))
         };
 
         _position = newPos;

@@ -78,11 +78,7 @@ public static class VbiParse
         {
             vbi.Line1718 = vbi.Line18;
         }
-        else if (vbi.Line18 == 0)
-        {
-            vbi.Line1718 = vbi.Line17;
-        }
-        else if (vbi.Line17 == vbi.Line18)
+        else if (vbi.Line18 == 0 || vbi.Line17 == vbi.Line18)
         {
             vbi.Line1718 = vbi.Line17;
         }

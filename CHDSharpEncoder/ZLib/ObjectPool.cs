@@ -48,7 +48,7 @@ internal class ObjectPool<T> where T : class, new()
             }
 
             // no object available, so go get a brand new one
-            return new();
+            return new T();
         }
 
         return item;

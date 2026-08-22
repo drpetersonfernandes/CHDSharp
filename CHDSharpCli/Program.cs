@@ -670,7 +670,7 @@ internal static class Program
             unitBytes = tpl.SectorSize;
             hunkBytes = Math.Max((4096u / tpl.SectorSize) * tpl.SectorSize, tpl.SectorSize);
             log.Information("  Using template {Id}: {Manufacturer} {Model} ({Cylinders}C/{Heads}H/{Sectors}S, {Size} MB)",
-                templateId.Value, tpl.Manufacturer, tpl.Model, tpl.Cylinders, tpl.Heads, tpl.Sectors, tpl.TotalMB);
+                templateId.Value, tpl.Manufacturer, tpl.Model, tpl.Cylinders, tpl.Heads, tpl.Sectors, tpl.TotalMb);
         }
 
         // -c auto: detect the platform and pick the smart codec preset (CHDlite parity).
@@ -931,7 +931,7 @@ internal static class Program
 
             logger?.LogSummary();
             log.Information("  Created {Size:N0} bytes", new FileInfo(outputPath).Length);
-            VerifyResultChd(outputPath, null);
+            VerifyResultChd(outputPath, parentPath: null);
         }
         catch (Exception ex) when (ex is ArgumentException or IOException or UnauthorizedAccessException)
         {
@@ -1111,7 +1111,7 @@ internal static class Program
             var info = ChdEncoder.EncodeLaserDisc(inputPath, outputPath, hunkBytes, codecTags, encodeOptions,
                 startFrame, lengthFrames);
 
-            log.Information("  Frame rate:   {Fps}.{FpsFrac:D6}", info.FpsTimes1million / 1000000, info.FpsTimes1million % 1000000);
+            log.Information("  Frame rate:   {Fps}.{FpsFrac:D6}", info.FpsTimes1Million / 1000000, info.FpsTimes1Million % 1000000);
             log.Information("  Frame size:   {Width} x {Height}{Interlaced}", info.Width,
                 info.Interlaced ? info.Height * 2 : info.Height, info.Interlaced ? " interlaced" : "");
             log.Information("  Audio:        {Channels} channels at {Rate} Hz", info.Channels, info.SampleRate);
@@ -1193,7 +1193,7 @@ internal static class Program
         {
             var t = HardDiskTemplates.Templates[id];
             Console.WriteLine("{0,2}  {1,-13} {2,-15} {3,9}  {4,5}  {5,7}  {6,11}  {7,7} MB",
-                id, t.Manufacturer, t.Model, t.Cylinders, t.Heads, t.Sectors, t.SectorSize, t.TotalMB);
+                id, t.Manufacturer, t.Model, t.Cylinders, t.Heads, t.Sectors, t.SectorSize, t.TotalMb);
         }
     }
 

@@ -61,11 +61,18 @@ internal static class FlacBitMath
     /// <summary>Signed log2: silog2(v) = ilog2(|v|) + 2 for |v| &gt; 1; silog2(0)=0, silog2(±1)=2. Matches FLAC__bitmath_silog2.</summary>
     public static uint Silog2(long v)
     {
-        if (v == 0) return 0;
-        if (v == -1) return 2;
-
-        var av = (v < 0) ? (ulong)(-(v + 1)) : (ulong)v;
-        return ILog2Wide(av) + 2;
+        switch (v)
+        {
+            case 0:
+                return 0;
+            case -1:
+                return 2;
+            default:
+            {
+                var av = (v < 0) ? (ulong)(-(v + 1)) : (ulong)v;
+                return ILog2Wide(av) + 2;
+            }
+        }
     }
 
     /// <summary>Max Rice partition order for a blocksize: count of trailing zero bits, capped at 15.</summary>
@@ -78,7 +85,7 @@ internal static class FlacBitMath
             blocksize >>= 1;
         }
 
-        return System.Math.Min(MaxRicePartitionOrder, maxOrder);
+        return Math.Min(MaxRicePartitionOrder, maxOrder);
     }
 
     /// <summary>Limits a partition order so that each partition still holds more than the predictor order.</summary>

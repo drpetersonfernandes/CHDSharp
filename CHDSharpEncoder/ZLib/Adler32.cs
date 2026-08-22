@@ -11,7 +11,7 @@ internal static class Adler32
     /// </summary>
     internal static uint Update(uint adler, ref byte buf, uint len)
     {
-        const ushort Base = 65521; // largest prime smaller than 65536
+        const ushort @base = 65521; // largest prime smaller than 65536
 
         // split Adler-32 into component sums
         var sum2 = (adler >> 16) & 0xffff;
@@ -21,15 +21,15 @@ internal static class Adler32
         if (len == 1)
         {
             adler += buf;
-            if (adler >= Base)
+            if (adler >= @base)
             {
-                adler -= Base;
+                adler -= @base;
             }
 
             sum2 += adler;
-            if (sum2 >= Base)
+            if (sum2 >= @base)
             {
-                sum2 -= Base;
+                sum2 -= @base;
             }
 
             return adler | (sum2 << 16);
@@ -48,45 +48,62 @@ internal static class Adler32
                 buf = ref Unsafe.Add(ref buf, 1U);
                 sum2 += adler;
             }
-            if (adler >= Base)
+
+            if (adler >= @base)
             {
-                adler -= Base;
+                adler -= @base;
             }
 
-            sum2 %= Base; // only added so many BASE's
+            sum2 %= @base; // only added so many BASE's
             return adler | (sum2 << 16);
         }
 
-        const ushort NMAX = 5552;
-        uint n;
+        const ushort nmax = 5552;
 #pragma warning disable IDE2001
         // do length NMAX blocks -- requires just one modulo operation
-        while (len >= NMAX)
+        while (len >= nmax)
         {
-            len -= NMAX;
-            n = NMAX / 16; // NMAX is divisible by 16
+            len -= nmax;
+            uint n = nmax / 16;
             do
             {
-                adler += buf; sum2 += adler; // 16 sums unrolled
-                adler += Unsafe.Add(ref buf, 1U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 2U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 3U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 4U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 5U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 6U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 7U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 8U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 9U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 10U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 11U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 12U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 13U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 14U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 15U); sum2 += adler;
+                adler += buf;
+                sum2 += adler; // 16 sums unrolled
+                adler += Unsafe.Add(ref buf, 1U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 2U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 3U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 4U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 5U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 6U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 7U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 8U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 9U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 10U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 11U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 12U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 13U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 14U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 15U);
+                sum2 += adler;
                 buf = ref Unsafe.Add(ref buf, 16U);
             } while (--n > 0);
-            adler %= Base;
-            sum2 %= Base;
+
+            adler %= @base;
+            sum2 %= @base;
         }
 
         // do remaining bytes (less than NMAX, still just one modulo)
@@ -95,32 +112,50 @@ internal static class Adler32
             while (len >= 16)
             {
                 len -= 16;
-                adler += buf; sum2 += adler;
-                adler += Unsafe.Add(ref buf, 1U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 2U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 3U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 4U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 5U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 6U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 7U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 8U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 9U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 10U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 11U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 12U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 13U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 14U); sum2 += adler;
-                adler += Unsafe.Add(ref buf, 15U); sum2 += adler;
+                adler += buf;
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 1U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 2U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 3U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 4U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 5U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 6U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 7U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 8U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 9U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 10U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 11U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 12U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 13U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 14U);
+                sum2 += adler;
+                adler += Unsafe.Add(ref buf, 15U);
+                sum2 += adler;
                 buf = ref Unsafe.Add(ref buf, 16U);
             }
+
             while (len-- > 0)
             {
                 adler += buf;
                 buf = ref Unsafe.Add(ref buf, 1U);
                 sum2 += adler;
             }
-            adler %= Base;
-            sum2 %= Base;
+
+            adler %= @base;
+            sum2 %= @base;
         }
 #pragma warning restore IDE2001
 

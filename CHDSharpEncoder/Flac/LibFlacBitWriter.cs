@@ -8,27 +8,26 @@ namespace CHDSharpEncoder.Flac;
 internal sealed class LibFlacBitWriter
 {
     private byte[] _buffer;
-    private int _bitCount;
 
     public LibFlacBitWriter(int initialCapacityBytes)
     {
         _buffer = new byte[Math.Max(64, initialCapacityBytes)];
-        _bitCount = 0;
+        BitCount = 0;
     }
 
-    public int BitCount => _bitCount;
+    public int BitCount { get; private set; }
 
-    public bool IsByteAligned => (_bitCount & 7) == 0;
+    public bool IsByteAligned => (BitCount & 7) == 0;
 
     public void Reset()
     {
         Array.Clear(_buffer, 0, _buffer.Length);
-        _bitCount = 0;
+        BitCount = 0;
     }
 
     private void EnsureCapacity(int bitsToAdd)
     {
-        var neededBytes = (_bitCount + bitsToAdd + 7) / 8;
+        var neededBytes = (BitCount + bitsToAdd + 7) / 8;
         if (neededBytes <= _buffer.Length) return;
 
         var newSize = _buffer.Length;
@@ -45,7 +44,7 @@ internal sealed class LibFlacBitWriter
         if (bits == 0) return;
 
         EnsureCapacity(bits);
-        _bitCount += bits;
+        BitCount += bits;
     }
 
     public void WriteRawUInt32(uint value, int bits)
@@ -57,14 +56,14 @@ internal sealed class LibFlacBitWriter
         var v = bits < 32 ? value & (0xFFFFFFFFu >> shift) : value;
         for (var i = bits - 1; i >= 0; i--)
         {
-            var bytePos = _bitCount >> 3;
-            var bitPos = 7 - (_bitCount & 7);
+            var bytePos = BitCount >> 3;
+            var bitPos = 7 - (BitCount & 7);
             if (((v >> i) & 1) != 0)
             {
                 _buffer[bytePos] |= (byte)(1 << bitPos);
             }
 
-            _bitCount++;
+            BitCount++;
         }
     }
 
@@ -102,44 +101,41 @@ internal sealed class LibFlacBitWriter
 
     public void WriteUtf8UInt32(uint value)
     {
-        if (value < 0x80)
+        switch (value)
         {
-            WriteRawUInt32(value, 8);
-        }
-        else if (value < 0x800)
-        {
-            WriteRawUInt32(0xC0 | (value >> 6), 8);
-            WriteRawUInt32(0x80 | (value & 0x3F), 8);
-        }
-        else if (value < 0x10000)
-        {
-            WriteRawUInt32(0xE0 | (value >> 12), 8);
-            WriteRawUInt32(0x80 | ((value >> 6) & 0x3F), 8);
-            WriteRawUInt32(0x80 | (value & 0x3F), 8);
-        }
-        else if (value < 0x200000)
-        {
-            WriteRawUInt32(0xF0 | (value >> 18), 8);
-            WriteRawUInt32(0x80 | ((value >> 12) & 0x3F), 8);
-            WriteRawUInt32(0x80 | ((value >> 6) & 0x3F), 8);
-            WriteRawUInt32(0x80 | (value & 0x3F), 8);
-        }
-        else if (value < 0x4000000)
-        {
-            WriteRawUInt32(0xF8 | (value >> 24), 8);
-            WriteRawUInt32(0x80 | ((value >> 18) & 0x3F), 8);
-            WriteRawUInt32(0x80 | ((value >> 12) & 0x3F), 8);
-            WriteRawUInt32(0x80 | ((value >> 6) & 0x3F), 8);
-            WriteRawUInt32(0x80 | (value & 0x3F), 8);
-        }
-        else
-        {
-            WriteRawUInt32(0xFC | (value >> 30), 8);
-            WriteRawUInt32(0x80 | ((value >> 24) & 0x3F), 8);
-            WriteRawUInt32(0x80 | ((value >> 18) & 0x3F), 8);
-            WriteRawUInt32(0x80 | ((value >> 12) & 0x3F), 8);
-            WriteRawUInt32(0x80 | ((value >> 6) & 0x3F), 8);
-            WriteRawUInt32(0x80 | (value & 0x3F), 8);
+            case < 0x80:
+                WriteRawUInt32(value, 8);
+                break;
+            case < 0x800:
+                WriteRawUInt32(0xC0 | (value >> 6), 8);
+                WriteRawUInt32(0x80 | (value & 0x3F), 8);
+                break;
+            case < 0x10000:
+                WriteRawUInt32(0xE0 | (value >> 12), 8);
+                WriteRawUInt32(0x80 | ((value >> 6) & 0x3F), 8);
+                WriteRawUInt32(0x80 | (value & 0x3F), 8);
+                break;
+            case < 0x200000:
+                WriteRawUInt32(0xF0 | (value >> 18), 8);
+                WriteRawUInt32(0x80 | ((value >> 12) & 0x3F), 8);
+                WriteRawUInt32(0x80 | ((value >> 6) & 0x3F), 8);
+                WriteRawUInt32(0x80 | (value & 0x3F), 8);
+                break;
+            case < 0x4000000:
+                WriteRawUInt32(0xF8 | (value >> 24), 8);
+                WriteRawUInt32(0x80 | ((value >> 18) & 0x3F), 8);
+                WriteRawUInt32(0x80 | ((value >> 12) & 0x3F), 8);
+                WriteRawUInt32(0x80 | ((value >> 6) & 0x3F), 8);
+                WriteRawUInt32(0x80 | (value & 0x3F), 8);
+                break;
+            default:
+                WriteRawUInt32(0xFC | (value >> 30), 8);
+                WriteRawUInt32(0x80 | ((value >> 24) & 0x3F), 8);
+                WriteRawUInt32(0x80 | ((value >> 18) & 0x3F), 8);
+                WriteRawUInt32(0x80 | ((value >> 12) & 0x3F), 8);
+                WriteRawUInt32(0x80 | ((value >> 6) & 0x3F), 8);
+                WriteRawUInt32(0x80 | (value & 0x3F), 8);
+                break;
         }
     }
 
@@ -171,14 +167,14 @@ internal sealed class LibFlacBitWriter
 
     public void ZeroPadToByteBoundary()
     {
-        var rem = _bitCount & 7;
+        var rem = BitCount & 7;
         if (rem != 0) WriteZeroes(8 - rem);
     }
 
     /// <summary>Copies the written bytes (padded to a byte boundary) into the destination buffer starting at offset 0.</summary>
     public int CopyTo(Span<byte> destination)
     {
-        var bytes = (_bitCount + 7) / 8;
+        var bytes = (BitCount + 7) / 8;
         _buffer.AsSpan(0, bytes).CopyTo(destination);
         return bytes;
     }
@@ -186,14 +182,14 @@ internal sealed class LibFlacBitWriter
     /// <summary>Computes the FLAC CRC-8 over the written bytes (byte-aligned required).</summary>
     public byte GetWriteCrc8()
     {
-        var bytes = (_bitCount + 7) / 8;
+        var bytes = (BitCount + 7) / 8;
         return FlacCrc.ComputeCrc8(_buffer.AsSpan(0, bytes));
     }
 
     /// <summary>Computes the FLAC CRC-16 over the written bytes (byte-aligned required).</summary>
     public ushort GetWriteCrc16()
     {
-        var bytes = (_bitCount + 7) / 8;
+        var bytes = (BitCount + 7) / 8;
         return FlacCrc.ComputeCrc16(_buffer.AsSpan(0, bytes));
     }
 }

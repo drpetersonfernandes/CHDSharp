@@ -8,34 +8,34 @@ internal ref struct DeflateRefs
 {
     public DeflateRefs()
     {
-        configuration_table = ref MemoryMarshal.GetReference<Config>(Deflater.s_configuration_table);
+        ConfigurationTable = ref MemoryMarshal.GetReference<Config>(Deflater.s_configuration_table);
     }
 
-    internal ref byte pending_buf;
-    internal ref byte pending_out;
+    internal ref byte PendingBuf;
+    internal ref byte PendingOut;
 
-    internal ref byte window;
-    internal ref ushort prev;
-    internal ref ushort head;
+    internal ref byte Window;
+    internal ref ushort Prev;
+    internal ref ushort Head;
 
-    internal ref TreeNode dyn_ltree;
-    internal ref TreeNode dyn_dtree;
-    internal ref TreeNode bl_tree;
+    internal ref TreeNode DynLtree;
+    internal ref TreeNode DynDtree;
+    internal ref TreeNode BlTree;
 
-    internal ref ushort bl_count;
-    internal ref int heap;
-    internal ref byte depth;
+    internal ref ushort BlCount;
+    internal ref int Heap;
+    internal ref byte Depth;
 
-    internal ref TreeNode sta_ltree;
-    internal ref TreeNode sta_dtree;
+    internal ref TreeNode StaLtree;
+    internal ref TreeNode StaDtree;
 
-    internal ref ushort bl_order;
-    internal ref byte dist_code;
-    internal ref byte length_code;
-    internal ref int base_dist;
-    internal ref int base_length;
-    internal ref int extra_dbits;
-    internal ref int extra_lbits;
-    internal ref int extra_blbits;
-    internal readonly ref Config configuration_table;
+    internal ref ushort BlOrder;
+    internal ref byte DistCode;
+    internal ref byte LengthCode;
+    internal ref int BaseDist;
+    internal ref int BaseLength;
+    internal ref int ExtraDbits;
+    internal ref int ExtraLbits;
+    internal ref int ExtraBlbits;
+    internal readonly ref Config ConfigurationTable;
 }

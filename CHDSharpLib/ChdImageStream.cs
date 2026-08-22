@@ -102,12 +102,10 @@ public sealed class ChdImageStream : Stream
             return 0;
 
         var available = (int)Math.Min((ulong)buffer.Length, _chd.TotalBytes - _position);
-        var temp = new byte[available];
-        var err = _chd.Read(_position, temp, 0, available);
+        var err = _chd.Read(_position, buffer, available);
         if (err != ChdError.Chderrnone)
             throw new IOException($"CHD read failed at offset {_position}: {err}");
 
-        temp.AsSpan(0, available).CopyTo(buffer);
         _position += (ulong)available;
         return available;
     }

@@ -1987,6 +1987,32 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     }
 
     /// <summary>
+    /// Decompresses a single hunk into a caller-owned <see cref="Span{T}"/>.
+    /// This overload allocates a temporary internal buffer and copies the result into
+    /// <paramref name="buffer"/>. For zero-copy scenarios where the caller controls the
+    /// buffer lifetime, prefer the <c>byte[]</c> overload.
+    /// </summary>
+    /// <param name="hunknum">Zero-based hunk index (0 to <see cref="HunkCount"/> - 1).</param>
+    /// <param name="buffer">Destination span of at least <see cref="HunkBytes"/> bytes.</param>
+    /// <param name="cancellationToken">A token to cancel the read.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; <see cref="ChdError.Chderrhunkoutofrange"/>
+    /// if <paramref name="hunknum"/> is out of range; <see cref="ChdError.Chderrinvalidparameter"/>
+    /// if <paramref name="buffer"/> is too short; otherwise a decompression error.</returns>
+    public ChdError ReadHunk(uint hunknum, Span<byte> buffer, CancellationToken cancellationToken = default)
+    {
+        if (buffer.Length < (int)_chd.Blocksize)
+            return ChdError.Chderrinvalidparameter;
+
+        _hunkBuffer ??= new byte[_chd.Blocksize];
+        var err = ReadHunk(hunknum, _hunkBuffer, cancellationToken);
+        if (err != ChdError.Chderrnone)
+            return err;
+
+        _hunkBuffer.AsSpan(0, (int)_chd.Blocksize).CopyTo(buffer);
+        return ChdError.Chderrnone;
+    }
+
+    /// <summary>
     /// Decompresses a single hunk into <paramref name="buffer"/> in a way that is safe for
     /// concurrent use on the same <see cref="ChdFile"/> instance from multiple threads
     /// (emulator-style parallel sector loaders). Unlike <see cref="ReadHunk"/>, this method:
@@ -2443,6 +2469,54 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 
             Array.Copy(_hunkBuffer, within, destination, destinationOffset, chunk);
             destinationOffset += chunk;
+            byteOffset += (ulong)chunk;
+            count -= chunk;
+        }
+
+        return ChdError.Chderrnone;
+    }
+
+    /// <summary>
+    /// Reads a contiguous run of bytes from the decompressed image into a caller-owned
+    /// <see cref="Span{T}"/>. Internally reuses the single-hunk cache for efficiency.
+    /// </summary>
+    /// <param name="byteOffset">Byte offset within the decompressed image (0-based).</param>
+    /// <param name="destination">Destination span to fill.</param>
+    /// <param name="count">Number of bytes to read.</param>
+    /// <param name="cancellationToken">A token to cancel the read.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; <see cref="ChdError.Chderrinvalidparameter"/>
+    /// if the requested range is out of bounds; otherwise a hunk read error.</returns>
+    public ChdError Read(ulong byteOffset, Span<byte> destination, int count, CancellationToken cancellationToken = default)
+    {
+        if (count < 0 || count > destination.Length ||
+            byteOffset > _chd.Totalbytes || (ulong)count > _chd.Totalbytes - byteOffset)
+            return ChdError.Chderrinvalidparameter;
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        _hunkBuffer ??= new byte[_chd.Blocksize];
+
+        var destOffset = 0;
+        while (count > 0)
+        {
+            var hunk = (long)(byteOffset / _chd.Blocksize);
+            var within = (int)(byteOffset % _chd.Blocksize);
+            var chunk = Math.Min(count, (int)_chd.Blocksize - within);
+
+            if (hunk != _cachedHunk)
+            {
+                var err = ReadHunk((uint)hunk, _hunkBuffer, cancellationToken);
+                if (err != ChdError.Chderrnone)
+                {
+                    _cachedHunk = -1;
+                    return err;
+                }
+
+                _cachedHunk = hunk;
+            }
+
+            _hunkBuffer.AsSpan(within, chunk).CopyTo(destination.Slice(destOffset, chunk));
+            destOffset += chunk;
             byteOffset += (ulong)chunk;
             count -= chunk;
         }

@@ -418,6 +418,7 @@ Legend — issue references: `#NN` = [rtissera/libchdr issue](https://github.com
 | Field | Value |
 |-------|-------|
 | **Missing Feature** | `ReadHunk` and `Read` accept only `byte[]`. Callers using `stackalloc`, `ArrayPool`, or `Memory<byte>` must allocate a new array to use these APIs. |
-| **Implementation Status** | Not planned |
+| **Implementation Status** | Finished |
 | **Proposed Logic** | Add overloads: `ReadHunk(uint hunknum, Span<byte> buffer)` and `Read(ulong offset, Span<byte> destination, int count)`. Internally, the existing `byte[]`-based logic can work with spans via `MemoryMarshal.TryGetArray`. For `ReadHunk`, copy from the internal `_hunkBuffer` to the caller's span. For `Read`, use the span directly in the cross-hunk loop. `Memory<byte>` overloads can be added later for truly async paths. |
+| **Implemented As** | Added `ReadHunk(uint, Span<byte>)` — validates buffer length, delegates to the `byte[]` overload using `_hunkBuffer`, then copies to the caller's span via `AsSpan().CopyTo()`. Added `Read(ulong, Span<byte>, int)` — reuses the existing `_hunkBuffer` single-hunk cache, copies to the caller's span via `AsSpan().CopyTo()` instead of `Array.Copy`. Updated `ChdImageStream.Read(Span<byte>)` to call the new span overload directly, eliminating the temporary `byte[]` allocation. Added 14 unit tests (`SpanReadTests`) covering: correct data per hunk, cross-hunk boundary reads, single-byte reads, three-hunk reads, last-byte reads, boundary rejections (negative count, offset past end, count exceeding image, count exceeding buffer), and byte-array equivalence. Full suite 4601/4602 (pre-existing LaserDisc flaky test excluded). |
 | **Estimated Time** | 3–4 hours |

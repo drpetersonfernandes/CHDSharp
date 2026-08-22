@@ -12,6 +12,7 @@
 
 ## What's New in v1.2.0
 
+- **Lazy parent resolution (`ParentResolver`)** — Open child CHDs without providing the parent path upfront. Supply a `ParentResolver` callback that resolves the parent by SHA1/MD5 hash on first read. The resolved parent is cached. Also available on `Chd.CheckFileWithParent`.
 - **CD/GD-ROM track (TOC) parsing** — Full track layout via `Tracks` property backed by `ChdTocParser`, exposing `ChdTrackInfo` with track type, sector sizes, pregap/postgap, and GD-ROM support. Legacy GD-ROMs (`CHGT` / `CD_FLAG_GDROMLE`) are detected via `IsLittleEndianAudio` and their AUDIO tracks byte-swapped during extraction. Includes `GenerateCueSheet()`, `GenerateGdiDescriptor()`, `ExportToc()`, `ExtractToDirectory()`.
 - **LBA/MSF sector reads** — `ChdFile.ReadSector(lba)`, `ReadSectorMsf(m, s, f)`, and `ReadFrame(lba)` read CD/GD-ROM sectors or full 2448-byte frames by logical block address, mapped through the track table (pregap-aware). `CdRomAddress` converts between BCD MSF and LBA (with and without the 150-frame lead-in offset).
 - **`UnitBytes` property** — Derives sector size from metadata for all CHD versions: V5 reads from header, V1-V4 detects HDD (512B) or CD (2448B) from metadata tags
@@ -51,6 +52,27 @@ else
 
 ```csharp
 var result = Chd.CheckFileWithParent("child.chd", "parent.chd");
+```
+
+### Open a child CHD with lazy parent resolution
+
+Instead of providing an explicit parent path, you can supply a `ParentResolver` callback
+that resolves the parent by SHA1/MD5 hash at read time. This is useful for frontends that
+manage their own parent lookup (ROM set scanning, database queries, etc.).
+
+```csharp
+ParentResolver resolver = (sha1, md5) =>
+{
+    // Your custom lookup logic here (database, filesystem search, etc.)
+    var parentPath = FindParentByHash(sha1);
+    if (parentPath == null) return null;
+    var err = ChdFile.Open(parentPath, out var parent);
+    return err == ChdError.Chderrnone ? parent : null;
+};
+
+var err = ChdFile.Open("child.chd", resolver, out var chd);
+// Parent is resolved lazily on the first ReadHunk call that needs it,
+// then cached for all subsequent reads.
 ```
 
 ### Random-access reading

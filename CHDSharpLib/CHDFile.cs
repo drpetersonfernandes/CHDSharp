@@ -9,6 +9,16 @@ using Microsoft.Extensions.Logging;
 namespace CHDSharp;
 
 /// <summary>
+/// Callback delegate for lazy parent CHD resolution. Called when a child CHD needs to read
+/// a parent-referenced hunk but no parent was explicitly provided at open time.
+/// </summary>
+/// <param name="parentSha1">The SHA1 hash of the expected parent (V3-V5), or <c>null</c> if not available.</param>
+/// <param name="parentMd5">The MD5 hash of the expected parent (V1-V3), or <c>null</c> if not available.</param>
+/// <returns>An opened <see cref="ChdFile"/> for the parent, or <c>null</c> if the parent cannot be resolved.
+/// The returned instance must remain valid for the lifetime of the child that references it.</returns>
+public delegate ChdFile? ParentResolver(byte[]? parentSha1, byte[]? parentMd5);
+
+/// <summary>
 /// Provides read-only random access to a CHD (Compressed Hunks of Data) file,
 /// supporting format versions 1-5 and parent/child differential CHD chains.
 /// </summary>
@@ -65,6 +75,8 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     private ChdFile? _parent;
 
     private bool _ownsParent;
+
+    private ParentResolver? _parentResolver;
 
     private byte[]? _hunkBuffer;
 
@@ -989,6 +1001,38 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         }, cancellationToken);
     }
 
+    /// <summary>Asynchronously opens a (possibly child) CHD from disk, resolving parent references
+    /// lazily via a <see cref="ParentResolver"/> callback (see <see cref="Open(string, ParentResolver, out ChdFile, CancellationToken)"/>).</summary>
+    /// <param name="filename">Path to the CHD file to open.</param>
+    /// <param name="parentResolver">A callback that resolves parent CHDs by SHA1/MD5 hash, or <c>null</c>.</param>
+    /// <param name="cancellationToken">A token to cancel the open.</param>
+    /// <returns>A task producing a tuple of the <see cref="ChdError"/> result and the opened <see cref="ChdFile"/> (or <c>null</c> on error).</returns>
+    public static Task<(ChdError error, ChdFile? file)> OpenAsync(string filename, ParentResolver? parentResolver, CancellationToken cancellationToken = default)
+    {
+        return Task.Run(() =>
+        {
+            var err = Open(filename, parentResolver, out var chd, cancellationToken);
+            return (err, chd);
+        }, cancellationToken);
+    }
+
+    /// <summary>Asynchronously opens a (possibly child) CHD from an existing seekable stream,
+    /// resolving parent references lazily via a <see cref="ParentResolver"/> callback
+    /// (see <see cref="Open(Stream, bool, ParentResolver, out ChdFile, CancellationToken)"/>).</summary>
+    /// <param name="stream">Seekable, readable stream positioned anywhere; it will be seeked as needed.</param>
+    /// <param name="leaveOpen">If false, the stream is disposed when this instance is disposed.</param>
+    /// <param name="parentResolver">A callback that resolves parent CHDs by SHA1/MD5 hash, or <c>null</c>.</param>
+    /// <param name="cancellationToken">A token to cancel the open.</param>
+    /// <returns>A task producing a tuple of the <see cref="ChdError"/> result and the opened <see cref="ChdFile"/> (or <c>null</c> on error).</returns>
+    public static Task<(ChdError error, ChdFile? file)> OpenAsync(Stream stream, bool leaveOpen, ParentResolver? parentResolver, CancellationToken cancellationToken = default)
+    {
+        return Task.Run(() =>
+        {
+            var err = Open(stream, leaveOpen, parentResolver, out var chd, cancellationToken);
+            return (err, chd);
+        }, cancellationToken);
+    }
+
     /// <summary>Asynchronously decompresses a single hunk into <paramref name="buffer"/> (see <see cref="ReadHunk"/>).
     /// The compressed data is read with real asynchronous I/O (<c>RandomAccess.ReadAsync</c> for
     /// file-backed instances, <c>Stream.ReadExactlyAsync</c> otherwise); decompression itself is
@@ -1052,7 +1096,15 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     private async Task<ChdError> ReadParentHunkAsync(MapEntry me, byte[] buffer, CancellationToken cancellationToken)
     {
         if (_parent == null)
-            return ChdError.Chderrrequiresparent;
+        {
+            // Try lazy resolution via the parent resolver callback.
+            if (_parentResolver == null)
+                return ChdError.Chderrrequiresparent;
+
+            var resolveErr = TryResolveParent();
+            if (resolveErr != ChdError.Chderrnone)
+                return resolveErr;
+        }
 
         var unitbytes = _chd.Unitbytes;
         var hunkbytes = _chd.Blocksize;
@@ -1451,7 +1503,7 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
     public static ChdError Open(Stream stream, bool leaveOpen, out ChdFile? chdFile, CancellationToken cancellationToken = default)
     {
-        return Open(stream, leaveOpen, null, out chdFile, cancellationToken);
+        return Open(stream, leaveOpen, (ChdFile?)null, out chdFile, cancellationToken);
     }
 
     /// <summary>
@@ -1465,6 +1517,23 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     /// <param name="cancellationToken">A token to cancel the open. <see cref="OperationCanceledException"/> is thrown if cancellation is requested.</param>
     /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
     public static ChdError Open(Stream stream, bool leaveOpen, ChdFile? parent, out ChdFile? chdFile, CancellationToken cancellationToken = default)
+    {
+        return Open(stream, leaveOpen, parent, null, out chdFile, cancellationToken);
+    }
+
+    /// <summary>
+    /// Opens a (possibly child) CHD from an existing seekable stream, resolving
+    /// parent references against <paramref name="parent"/> (null = standalone) or
+    /// lazily via <paramref name="parentResolver"/>.
+    /// </summary>
+    /// <param name="stream">Seekable, readable stream positioned anywhere; it will be seeked as needed.</param>
+    /// <param name="leaveOpen">If false, the stream is disposed when this instance is disposed.</param>
+    /// <param name="parent">An already-open parent <see cref="ChdFile"/>, or <c>null</c> for a standalone CHD. The caller retains ownership.</param>
+    /// <param name="parentResolver">A callback for lazy parent resolution, or <c>null</c> to use the explicit <paramref name="parent"/>.</param>
+    /// <param name="chdFile">When this method returns, contains the opened <see cref="ChdFile"/> instance, or <c>null</c> on error.</param>
+    /// <param name="cancellationToken">A token to cancel the open. <see cref="OperationCanceledException"/> is thrown if cancellation is requested.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
+    public static ChdError Open(Stream stream, bool leaveOpen, ChdFile? parent, ParentResolver? parentResolver, out ChdFile? chdFile, CancellationToken cancellationToken = default)
     {
         chdFile = null;
         cancellationToken.ThrowIfCancellationRequested();
@@ -1528,12 +1597,15 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         var needsParent = !Util.IsAllZeroArray(chd.Parentmd5) || !Util.IsAllZeroArray(chd.Parentsha1);
         if (needsParent)
         {
-            if (parent == null)
+            if (parent == null && parentResolver == null)
                 return ChdError.Chderrrequiresparent;
 
-            var verr = ValidateParent(chd, parent._chd);
-            if (verr != ChdError.Chderrnone)
-                return verr;
+            if (parent != null)
+            {
+                var verr = ValidateParent(chd, parent._chd);
+                if (verr != ChdError.Chderrnone)
+                    return verr;
+            }
         }
 
         // Build the codec delegate array for each compression slot.
@@ -1548,7 +1620,67 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
 
         chdFile = new ChdFile(stream, leaveOpen, chd, version);
         chdFile._parent = needsParent ? parent : null;
+        chdFile._parentResolver = parentResolver;
         return ChdError.Chderrnone;
+    }
+
+    /// <summary>
+    /// Opens a (possibly child) CHD from disk, resolving parent references lazily via a
+    /// <see cref="ParentResolver"/> callback. The parent is not opened until the first
+    /// parent-referenced hunk is read, and the resolved instance is cached for subsequent reads.
+    /// </summary>
+    /// <param name="filename">Path to the CHD file to open.</param>
+    /// <param name="parentResolver">A callback that resolves parent CHDs by SHA1/MD5 hash, or <c>null</c> to fail on parent-referenced hunks.</param>
+    /// <param name="chdFile">When this method returns, contains the opened <see cref="ChdFile"/>, or <c>null</c> on error.</param>
+    /// <param name="cancellationToken">A token to cancel the open.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
+    public static ChdError Open(string filename, ParentResolver? parentResolver, out ChdFile? chdFile, CancellationToken cancellationToken = default)
+    {
+        chdFile = null;
+        cancellationToken.ThrowIfCancellationRequested();
+        if (!File.Exists(filename))
+            return ChdError.Chderrfilenotfound;
+
+        FileStream fs;
+        try
+        {
+            fs = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read, 128 * 4096);
+        }
+        catch (FileNotFoundException)
+        {
+            return ChdError.Chderrfilenotfound;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return ChdError.Chderrcannotopenfile;
+        }
+        catch (IOException)
+        {
+            return ChdError.Chderrcannotopenfile;
+        }
+
+        var err = Open(fs, false, parentResolver, out chdFile, cancellationToken);
+        if (err != ChdError.Chderrnone)
+            fs.Dispose();
+        return err;
+    }
+
+    /// <summary>
+    /// Opens a (possibly child) CHD from an existing seekable stream, resolving parent
+    /// references lazily via a <see cref="ParentResolver"/> callback.
+    /// </summary>
+    /// <param name="stream">Seekable, readable stream positioned anywhere; it will be seeked as needed.</param>
+    /// <param name="leaveOpen">If false, the stream is disposed when this instance is disposed.</param>
+    /// <param name="parentResolver">A callback that resolves parent CHDs by SHA1/MD5 hash, or <c>null</c> to fail on parent-referenced hunks.</param>
+    /// <param name="chdFile">When this method returns, contains the opened <see cref="ChdFile"/> instance, or <c>null</c> on error.</param>
+    /// <param name="cancellationToken">A token to cancel the open.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code.</returns>
+    public static ChdError Open(Stream stream, bool leaveOpen, ParentResolver? parentResolver, out ChdFile? chdFile, CancellationToken cancellationToken = default)
+    {
+        // Open without a parent at open time. If the CHD needs a parent, we defer resolution
+        // to ReadHunk via the resolver callback.
+        var err = Open(stream, leaveOpen, (ChdFile?)null, parentResolver, out chdFile, cancellationToken);
+        return err;
     }
 
     private static ChdError ValidateParent(ChdHeader child, ChdHeader parent)
@@ -1809,7 +1941,15 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     private ChdError ReadParentHunkConcurrent(MapEntry me, byte[] buffer)
     {
         if (_parent == null)
-            return ChdError.Chderrrequiresparent;
+        {
+            // Try lazy resolution via the parent resolver callback.
+            if (_parentResolver == null)
+                return ChdError.Chderrrequiresparent;
+
+            var resolveErr = TryResolveParent();
+            if (resolveErr != ChdError.Chderrnone)
+                return resolveErr;
+        }
 
         var unitbytes = _chd.Unitbytes;
         var hunkbytes = _chd.Blocksize;
@@ -2000,7 +2140,15 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
     private ChdError ReadParentHunk(MapEntry me, byte[] buffer)
     {
         if (_parent == null)
-            return ChdError.Chderrrequiresparent;
+        {
+            // Try lazy resolution via the parent resolver callback.
+            if (_parentResolver == null)
+                return ChdError.Chderrrequiresparent;
+
+            var err = TryResolveParent();
+            if (err != ChdError.Chderrnone)
+                return err;
+        }
 
         var unitbytes = _chd.Unitbytes;
         var hunkbytes = _chd.Blocksize;
@@ -2052,6 +2200,41 @@ public sealed class ChdFile : IDisposable, IAsyncDisposable
         var secondBytes = (int)(unitInHunk * unitbytes);
         Array.Copy(_parentScratch, 0, buffer, firstBytes, secondBytes);
 
+        return ChdError.Chderrnone;
+    }
+
+    /// <summary>
+    /// Attempts to resolve the parent CHD via the <see cref="ParentResolver"/> callback.
+    /// On success, validates the resolved parent against the expected hashes and caches it.
+    /// </summary>
+    private ChdError TryResolveParent()
+    {
+        if (_parentResolver == null)
+            return ChdError.Chderrrequiresparent;
+
+        ChdFile? resolved;
+        try
+        {
+            resolved = _parentResolver(_chd.Parentsha1, _chd.Parentmd5);
+        }
+        catch (Exception ex)
+        {
+            Log.LogWarning(ex, "Parent resolver callback threw an exception");
+            return ChdError.Chderrinvalidparent;
+        }
+
+        if (resolved == null)
+            return ChdError.Chderrrequiresparent;
+
+        var verr = ValidateParent(_chd, resolved._chd);
+        if (verr != ChdError.Chderrnone)
+        {
+            // Don't dispose: caller owns the returned instance.
+            return verr;
+        }
+
+        _parent = resolved;
+        _ownsParent = false; // Caller owns the resolved instance.
         return ChdError.Chderrnone;
     }
 

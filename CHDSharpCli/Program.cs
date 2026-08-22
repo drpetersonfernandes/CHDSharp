@@ -1419,7 +1419,7 @@ internal static class Program
                 log.Information("  Fixed mismatched SHA-1 field(s); re-verifying...");
         }
 
-        var result = Chd.CheckFileWithParent(file, null);
+        var result = Chd.CheckFileWithParent(file, (string?)null);
         if (result.IsSuccess)
             log.Information("  Verified OK (V{Version}, sha1={Sha1})", result.Version, result.Sha1Hex);
         else

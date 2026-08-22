@@ -573,6 +573,100 @@ public static partial class Chd
     }
 
     /// <summary>
+    /// Verifies a (possibly child) CHD file by decompressing all hunks and comparing hashes,
+    /// resolving parent references lazily via a <see cref="ParentResolver"/> callback.
+    /// </summary>
+    /// <param name="filename">Path to the CHD file to verify.</param>
+    /// <param name="parentResolver">A callback that resolves parent CHDs by SHA1/MD5 hash, or <c>null</c> to fail on child CHDs.</param>
+    /// <param name="progress">An optional progress reporter, or <c>null</c>.</param>
+    /// <param name="cancellationToken">A token to cancel verification.</param>
+    /// <returns>A <see cref="ChdResult"/> with the verification result, CHD version, and header hashes.</returns>
+    public static ChdResult CheckFileWithParent(string filename, ParentResolver? parentResolver, IProgress<ChdProgress>? progress = null, CancellationToken cancellationToken = default)
+    {
+        var err = CheckFileWithParent(filename, parentResolver, out var ver, out var sha1, out var md5, progress, cancellationToken);
+        return new ChdResult(err, ver, sha1, md5);
+    }
+
+    /// <inheritdoc cref="CheckFileWithParent(string,ParentResolver?,IProgress{CHDSharp.Models.ChdProgress}?,System.Threading.CancellationToken)"/>
+    /// <param name="filename">Path to the CHD file to verify.</param>
+    /// <param name="parentResolver">A callback that resolves parent CHDs by SHA1/MD5 hash, or <c>null</c>.</param>
+    /// <param name="chdVersion">When this method returns, contains the CHD version (1-5), or <c>null</c> if the file could not be opened.</param>
+    /// <param name="chdSha1">When this method returns, contains the SHA1 hash from the header, or <c>null</c> if not available.</param>
+    /// <param name="chdMd5">When this method returns, contains the MD5 hash from the header, or <c>null</c> if not available.</param>
+    /// <param name="progress">An optional progress reporter, or <c>null</c>.</param>
+    /// <param name="cancellationToken">A token to cancel verification.</param>
+    /// <returns><see cref="ChdError.Chderrnone"/> on success; otherwise an error code describing the failure.</returns>
+    public static ChdError CheckFileWithParent(string filename, ParentResolver? parentResolver,
+        out uint? chdVersion, out byte[]? chdSha1, out byte[]? chdMd5, IProgress<ChdProgress>? progress = null, CancellationToken cancellationToken = default)
+    {
+        chdVersion = null;
+        chdSha1 = null;
+        chdMd5 = null;
+
+        var err = ChdFile.Open(filename, parentResolver, out var chd, cancellationToken);
+        if (err != ChdError.Chderrnone)
+            return err;
+
+        using (chd)
+        {
+            chdVersion = chd!.Version;
+            chdSha1 = chd.Sha1;
+            chdMd5 = chd.Md5;
+
+            var expectedSha1 = chd.RawSha1;
+            var expectedMd5 = chd.Md5;
+            var haveSha1 = !Util.IsAllZeroArray(expectedSha1);
+            var haveMd5 = !Util.IsAllZeroArray(expectedMd5);
+
+            using var md5Check = haveMd5 ? MD5.Create() : null;
+            using var sha1Check = haveSha1 ? SHA1.Create() : null;
+
+            var sw = progress != null ? Stopwatch.StartNew() : null;
+            var buffer = new byte[chd.HunkBytes];
+            var sizetoGo = chd.TotalBytes;
+            ulong offset = 0;
+            while (sizetoGo > 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var chunk = (int)Math.Min((ulong)buffer.Length, sizetoGo);
+                err = chd.Read(offset, buffer, 0, chunk, cancellationToken);
+                if (err != ChdError.Chderrnone)
+                    return err;
+
+                md5Check?.TransformBlock(buffer, 0, chunk, null, 0);
+                sha1Check?.TransformBlock(buffer, 0, chunk, null, 0);
+                offset += (ulong)chunk;
+                sizetoGo -= (ulong)chunk;
+
+                if (progress != null)
+                {
+                    var processed = (long)offset;
+                    var currentHunk = processed / chd.HunkBytes;
+                    if (processed % chd.HunkBytes != 0)
+                    {
+                        currentHunk++;
+                    }
+
+                    progress.Report(new ChdProgress(currentHunk, chd.HunkCount, processed, (long)chd.TotalBytes, sw!.Elapsed));
+                }
+            }
+
+            var tmp = Array.Empty<byte>();
+            md5Check?.TransformFinalBlock(tmp, 0, 0);
+            sha1Check?.TransformFinalBlock(tmp, 0, 0);
+
+            var md5Mismatch = haveMd5 && md5Check?.Hash != null && !Util.ByteArrEquals(expectedMd5, md5Check.Hash);
+            var sha1Mismatch = haveSha1 && sha1Check?.Hash != null && !Util.ByteArrEquals(expectedSha1, sha1Check.Hash);
+            if (md5Mismatch || sha1Mismatch)
+            {
+                return ChdError.Chderrdecompressionerror;
+            }
+
+            return ChdError.Chderrnone;
+        }
+    }
+
+    /// <summary>
     /// Quickly checks whether a file at the given path has a valid CHD header.
     /// Only the 16-byte header signature is read; no decompression is performed.
     /// </summary>
